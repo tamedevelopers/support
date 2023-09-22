@@ -1,0 +1,44 @@
+{
+    "name": "tamedevelopers/support",
+    "type": "library",
+    "description": "Support Package For Tamedevelopers",
+    "homepage": "https://github.com/tamedevelopers/support",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Fredrick Peterson", 
+            "email": "fredi.peterson2000@gmail.com"
+        },
+        {
+            "name": "Tame Developers", 
+            "email": "tamedevelopers@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.2.5",
+        "ext-ctype": "*",
+        "psr/log": "^1.0 || ^1.1.4",
+        "ext-mbstring": "*",
+        "vlucas/phpdotenv": "^5.3",
+        "cocur/slugify": "^4.2",
+        "symfony/var-dumper": "^5.4.3"
+    },
+    "suggest": {
+        "symfony/var-dumper": "Required to use the dd function (^6.2).",
+        "vlucas/phpdotenv": "Required to use the Env class and env helper (^5.4.1)."
+    },
+    "conflict": {
+        "symfony/var-dumper": ">=6.0.0",
+        "vlucas/phpdotenv": ">=5.4",
+        "cocur/slugify": ">=4.3"
+    },
+    "autoload": {
+        "files": [
+            "helpers.php"
+        ],
+        "psr-4": {
+            "Tamedevelopers\\Support\\": ""
+        }
+    },
+    "minimum-stability": "dev"
+}
