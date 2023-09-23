@@ -47,7 +47,7 @@ if (! function_exists('bcrypt')) {
      */
     function bcrypt($password)
     {
-        return Hash::hash($password);
+        return Hash::make($password);
     }
 }
 

@@ -28,7 +28,7 @@ class Hash
      * @return string 
      * - The encrypted password.
      */
-    static public function hash($password)
+    static public function make($password)
     {
         // Check if the password exceeds the maximum length
         if (mb_strlen($password, 'UTF-8') > 72) {
