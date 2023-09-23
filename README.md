@@ -1,7 +1,6 @@
-# Tame Developers Support Package
+# Support Package
 
 Support Package For Tamedevelopers
-
 
 ## Documentation
 * [Requirements](#requirements)
