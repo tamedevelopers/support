@@ -16,22 +16,19 @@
     ],
     "require": {
         "php": ">=7.2.5",
-        "ext-ctype": "*",
         "psr/log": "^1.0 || ^1.1.4",
+        "ext-ctype": "*",
         "ext-mbstring": "*",
-        "vlucas/phpdotenv": "^5.3",
-        "cocur/slugify": "^4.2",
         "symfony/var-dumper": "^5.4.3"
     },
     "suggest": {
         "symfony/var-dumper": "Required to use the dd function (^6.0).",
         "dompdf/dompdf": "Required to use the PDF class (^2.0.2).",
-        "vlucas/phpdotenv": "Required to use the Env class and env helper (^5.4.1)."
+        "cocur/slugify": "Required to use the slugify class (^4.2.0).",
+        "vlucas/phpdotenv": "Required to use the Env class and env helper (^5.5.0)."
     },
     "conflict": {
-        "symfony/var-dumper": ">=6.0.0",
-        "vlucas/phpdotenv": ">=5.4",
-        "cocur/slugify": ">=4.3"
+        "symfony/var-dumper": ">=6.0.0"
     },
     "autoload": {
         "files": [

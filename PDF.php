@@ -127,7 +127,6 @@ class PDF
         Tame::readPDFToBrowser($path);
     }
 
-    
     /**
      * Check If DOM PDF has been installed
      *
@@ -140,7 +139,7 @@ class PDF
                 return new Options();
             } else {
                 throw new CustomException(
-                    "Class Dompdf\Options not found: \nRequire he package by running: `composer require dompdf/dompdf`\n" . 
+                    "Class Dompdf\Options not found: \nRequire the package by running: `composer require dompdf/dompdf`\n" . 
                     (new Exception)->getTraceAsString()
                 );
             }

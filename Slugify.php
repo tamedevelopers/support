@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use Exception;
 use Cocur\Slugify\Slugify as CocurSlugify;
+use Tamedevelopers\Support\Capsule\Manager;
+use Tamedevelopers\Support\Capsule\CustomException;
 
 /* 
  * To change this license header, choose License Headers in Project Properties.
@@ -35,6 +38,8 @@ class Slugify
      */
     static public function slug($word, $language = null, $separator = "-", $case = true)
     {
+        self::isSlugifyInstalled();
+
         // get language 
         $language = self::switchLanguage($language); 
 
@@ -153,4 +158,36 @@ class Slugify
             'vietnamese'
         ];
     }
+
+    /**
+     * Check If DOM PDF has been installed
+     *
+     * @return mixed
+     */
+    static private function isSlugifyInstalled()
+    {
+        try {
+            if (class_exists('Cocur\Slugify\Slugify')) {
+                return true;
+            } else {
+                throw new CustomException(
+                    "Class Cocur\Slugify\Slugify not found: \nRequire the package by running: `composer require cocur/slugify`\n" . 
+                    (new Exception)->getTraceAsString()
+                );
+            }
+        } catch (CustomException $e) {
+            // Handle the exception silently (turn off error reporting)
+            error_reporting(0);
+
+            Manager::setHeaders(404, function() use($e){
+
+                // create error logger
+                Env::bootLogger();
+
+                // Trigger a custom error
+                trigger_error($e->getMessage(), E_USER_ERROR);
+            });
+        }
+    }
+
 }
