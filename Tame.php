@@ -1116,75 +1116,91 @@ class Tame
      */
     static public function obFlush()
     {
-        @header("Connection: close");
-        @header("Content-length: " . ob_get_length());
-        @ob_end_flush();
-        @ob_flush();
-        @flush();
-    }
+        // Turn on fastcgi (if available)
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
 
+        // Check if headers are already sent
+        if (!headers_sent()) {
+            // Enable implicit flushing
+            ob_implicit_flush(true);
+
+            // Ignore user abort
+            ignore_user_abort(true);
+
+            // Disable script timeout
+            set_time_limit(0);
+
+            // Set headers for closing the connection and content length
+            header("Connection: close");
+            header("Content-length: " . ob_get_length());
+        }
+
+        // Flush output buffers if active
+        while (ob_get_level() > 0) {
+            @flush();
+            @ob_flush();
+            @ob_end_flush();
+            @session_write_close();
+        }
+
+        // Disable implicit flushing
+        ob_implicit_flush(false);
+    }
+    
     /**
      * OB Crons Flush function
-     * 
+     *
+     * @param  callable $function
      * @return void
      */
     static public function obCronsflush(callable $function = null)
     {
-        @set_time_limit(0);
+        // Prevent the script from timing out due to execution time limits
+        set_time_limit(0);
 
-        // Client disconnect should NOT abort our script execution
-        @ignore_user_abort(true);
+        // Close the session to avoid issues with concurrent requests
+        session_write_close();
 
-        // Turn on output buffering, because ... if it was on.
-        @ob_start();
+        // Continue script execution even if the client disconnects
+        ignore_user_abort(true);
 
-        // turn on fast cgi
-        if (function_exists('fastcgi_finish_request')) {
-            @fastcgi_finish_request();
-        } 
-
-        // Set the HTTP response code ... only available in > PHP 5.4.0
-        @http_response_code(200);
-
-        if(is_callable($function)){
-            $function(self::class);
+        // Clean (erase) the output buffer and turn off output buffering
+        if (ob_get_level() > 0) {
+            @ob_end_clean();
         }
 
-        // send headers to tell the browser to close the connection
-        // remember, the headers must be called prior to any actual
-        // input being sent via our flush(es) below.
-        @header( 'Content-type: text/html; charset=utf-8' );
-        @header("Connection: close\r\n");
-        @header("Content-Encoding: none\r\n");
-        @header("Content-Length: " . ob_get_length());
+        // Start output buffering again
+        ob_start();
 
-        // Flush (send) the output buffer and turn off output buffering
-        ob_end_flush();
+        // Call the provided function if it's callable
+        if (is_callable($function)) {
+            $function();
+        }
 
-        // Flush (send) the output buffer
-        @ob_flush();
+        // Get the content of the output buffer
+        $output = ob_get_contents();
+
+        // Close and flush the output buffer
+        @ob_end_clean();
+
+        // Send headers to tell the browser to close the connection
+        if (!headers_sent()) {
+            @header("Connection: close");
+            @header("Content-Encoding: none");
+            @header("Content-Length: " . strlen($output));
+        }
+
+        // Set the HTTP response code
+        http_response_code(200);
+
+        // Flush the output buffer to the client
+        echo $output;
 
         // Flush system output buffer
-        // to the browser with a few caveats.
         @flush();
     }
-
-    /**
-     * OBFlush function autoflush twice
-     * 
-     * @return void
-     */
-    static public function obAutoflush()
-    {
-        self::obFlush();
-        self::obFlush();
-    }   
-
-
-
-
-
-
 
     /**
      * File exist and not a directory

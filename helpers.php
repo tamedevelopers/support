@@ -1,6 +1,8 @@
 <?php 
 
 use Tamedevelopers\Support\Env;
+use Tamedevelopers\Support\PDF;
+use Tamedevelopers\Support\Hash;
 use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Asset;
 use Tamedevelopers\Support\Server;
@@ -17,6 +19,35 @@ if (! function_exists('Tame')) {
     function Tame()
     {
         return new Tame();
+    }
+}
+
+if (! function_exists('PDF')) {
+    /**
+     * PDF Object
+     *
+     * @return \Tamedevelopers\Support\PDF
+     */
+    function PDF()
+    {
+        return new PDF();
+    }
+}
+
+if (! function_exists('bcrypt')) {
+     /**
+     * Password Encrypter.
+     * This function encrypts a password using bcrypt with a generated salt.
+     *
+     * @param string $password 
+     * - The password to encrypt.
+     * 
+     * @return string 
+     * - The encrypted password.
+     */
+    function bcrypt($password)
+    {
+        return Hash::hash($password);
     }
 }
 

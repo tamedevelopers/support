@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use Tamedevelopers\Support\Env;
+use Tamedevelopers\Support\Capsule\Manager;
+use Tamedevelopers\Support\Capsule\CustomException;
+
 
 class Hash 
 {
@@ -13,6 +17,45 @@ class Hash
      */
     private const PBKDF2_SALT = "\x2d\xb7\x68\x1a";
 
+
+    /**
+     * Password Encrypter.
+     * This function encrypts a password using bcrypt with a generated salt.
+     *
+     * @param string $password 
+     * - The password to encrypt.
+     * 
+     * @return string 
+     * - The encrypted password.
+     */
+    static public function hash($password)
+    {
+        // Check if the password exceeds the maximum length
+        if (mb_strlen($password, 'UTF-8') > 72) {
+            self::passwordLengthVerifier($password, 72);
+        }
+
+        // Hash the password using bcrypt with the generated salt
+        return password_hash($password, PASSWORD_BCRYPT, ['cost' => 10]);
+    }
+
+    /**
+     * Password Verifier.
+     * This function verifies a new password against the old hashed password.
+     *
+     * @param string $newPassword 
+     * - The new password to verify.
+     * 
+     * @param string $oldHashedPassword 
+     * - The old hashed password to verify against.
+     * 
+     * @return bool 
+     * - Returns true if the verification is successful, false otherwise.
+     */
+    static public function check($newPassword, $oldHashedPassword)
+    {
+        return password_verify($newPassword, $oldHashedPassword);
+    }
 
     /**
      * Hash String
@@ -29,50 +72,33 @@ class Hash
     }
 
     /**
-     * Password Encrypter.
-     * This function encrypts a password using bcrypt with a generated salt.
+     * Throw error if password more than maximum allowed legnth
      *
-     * @param string $password The password to encrypt.
-     * @param int $crypt The cost parameter for bcrypt.
-     * @return string The encrypted password.
+     * @param  mixed $password
+     * @param  mixed $maxPasswordLength
+     * @return void
      */
-    static public function encryptPassword($password, $crypt = 10)
+    static private function passwordLengthVerifier($password, $maxPasswordLength = 10)
     {
-        $salt = self::generatePasswordSalt($crypt);
-        return crypt($password, $salt);
-    }
+        try {
+            if (mb_strlen($password, 'UTF-8') > $maxPasswordLength) {
+                throw new CustomException(
+                    "Password exceeds the maximum allowed length of {$maxPasswordLength} bytes."
+                );
+            }
+        } catch (CustomException $e) {
+            // Handle the exception silently (turn off error reporting)
+            error_reporting(0);
 
-    /**
-     * Password Verifier.
-     * This function verifies a new password against the old hashed password.
-     *
-     * @param string $newPassword The new password to verify.
-     * @param string $oldHashedPassword The old hashed password to verify against.
-     * @return bool Returns true if the verification is successful, false otherwise.
-     */
-    static public function verifyPassword($newPassword, $oldHashedPassword)
-    {
-        return password_verify($newPassword, $oldHashedPassword);
-    }
+            Manager::setHeaders(404, function() use($e){
 
-    /**
-     * Password Salter.
-     * This function generates a salt for password hashing.
-     *
-     * @param int $crypt The cost parameter for bcrypt.
-     * @return string The generated salt.
-     */
-    static private function generatePasswordSalt($crypt = 10)
-    {
-        // Define the characters for the salt
-        $charSet = 'abcdefghijklmnopqrstuvwxyz';
-        $numSet = '0123456789';
-        
-        // Generate a salt using bcrypt format and shuffle characters
-        $salt = '$2y$' . $crypt . '$' . str_shuffle($charSet . $numSet);
-        
-        return $salt;
-    }
+                // create error logger
+                Env::bootLogger();
 
+                // Trigger a custom error
+                trigger_error($e->getMessage(), E_USER_ERROR);
+            });
+        }
+    }
 
 }
