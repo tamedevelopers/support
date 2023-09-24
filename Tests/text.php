@@ -3,6 +3,7 @@
 use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Hash;
 use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\Slugify;
 use Tamedevelopers\Support\Capsule\Forge;
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -44,10 +45,11 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // Hash::check('testPassword', '$2y$10$7a90e2de3f5383819f812u2GwVuprKTsAW7IfeskSkn6/Ky9vSQ.2')
 
 
+Slugify::slug('Hi');
+
 dd(
     bcrypt('testPassword'),
     Hash::check('testPassword', '$2y$10$RlIzAs741UcXSnYpgmjTducr8vHPH6BQwyvUlHFSkKCOKhzxy78uK'),
-
 );
 
 echo "hi";

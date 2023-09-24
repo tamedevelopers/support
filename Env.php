@@ -307,6 +307,12 @@ class Env{
      */
     private static function createDir_AndFiles(?string $directory = null, ?string  $filename = null)
     {
+        // if system path is null
+        // calling the `new self()` will initalize the class and set the default path for us
+        if(is_null(self::$sym_path)){
+            new self();
+        }
+
         // if \storage folder not found
         if(!is_dir(self::$sym_path. "storage")){
             @mkdir(self::$sym_path. "storage", 0777);
