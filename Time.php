@@ -7,8 +7,8 @@ namespace Tamedevelopers\Support;
 use DateTime;
 use DateTimeZone;
 
-class Time 
-{   
+class Time {
+     
     /**
      * For storing the time value
      * 

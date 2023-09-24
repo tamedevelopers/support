@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
-class Cookie
-{
+class Cookie{
+    
     /** 
      * Site name 
      * @var string

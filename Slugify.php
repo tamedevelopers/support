@@ -9,15 +9,12 @@ use Cocur\Slugify\Slugify as CocurSlugify;
 use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Capsule\CustomException;
 
-/* 
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- * https://github.com/cocur/slugify
- * composer require cocur/slugify
-*/
-class Slugify
-{
+/**
+ * Cocur\Slugify\Slugify Wrapper
+ * Usage: composer require cocur/slugify
+ * @url https://github.com/cocur/slugify
+ */
+class Slugify{
         
     /**
      * language

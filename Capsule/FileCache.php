@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Capsule;
 
-class FileCache
-{    
+class FileCache{    
 
     /**
      * cachePath

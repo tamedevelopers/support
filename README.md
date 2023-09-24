@@ -13,6 +13,8 @@ Support Package For Tamedevelopers
     * [Env Update](#env-update)
 * [Server](#server)
     * [Get Servers](#get-servers)
+    * [Create Custom Config](#create-custom-config)
+    * [Create Config Template File](#create-config-template-file)
 * [Autoload Register](#autoload-register)
 * [Helpers Functions](#helpers-functions)
 * [Error Dump](#error-dump)
@@ -22,7 +24,7 @@ Support Package For Tamedevelopers
 
 ## Requirements
 
-- `>= php7.2.5+`
+- `>= php 8.0+`
 
 ## Installation
 
@@ -31,7 +33,7 @@ Prior to installing `support package` get the [Composer](https://getcomposer.org
 **Step 1** — update your `composer.json`:
 ```composer.json
 "require": {
-    "tamedevelopers/support": "^1.0.3"
+    "tamedevelopers/support": "^1.0.0"
 }
 ```
 
@@ -143,7 +145,6 @@ Env::updateENV('DB_PASSWORD', 'newPassword');
 env_update('DB_CHARSET', 'utf8', false);
 ```
 
-
 ## Server
 - Return instance of `Server`
 
@@ -161,6 +162,61 @@ Server::getServers();
 - or -- `Helpers Function`
 ```
 server()->getServers('domain');
+```
+
+### Create Custom Config
+- With this helper you can be able to create your own custom config by extending the Default Config Method
+    - When using this model, make sure every of your php file returns an associative array for the key to work
+
+| Params        |  Description      |
+|---------------|-------------------|
+| key           |  File array key   |
+| default       |  Default value if no data is found from the key       |
+| folder        |  Folder to search from and Default folder is `config` |
+
+```
+use Tamedevelopers\Support\Server;
+
+Server::config('tests.lang.email', [], 'Tests');
+```
+
+- Create our own config to extends the default
+```
+/**
+ * Custom Language Handler
+ *
+ * @param  mixed $key
+ * @return mixed
+ */
+function __($key){
+
+    // since the config only takes the filename follow by dot(.) and keyname
+    // then we can manually include additional folder-name followed by / to indicate that it's a folder
+    // then message.key_name
+    // To make this Laravel kind of language, we can add the default value to be returned as the key
+    // Do not forget that it starts from your root base directory, as the Package already has your root path
+
+    return config("en/message.{$key}", "message.{$key}", 'Lang');
+}
+
+
+--- Structure of folder example
+--- (d) for directory and (f) for file
+
+Base -d ---
+    Lang -d --
+        en -d
+            message.php -f
+            error.php -f
+
+        tr -d
+            message.php -f
+            error.php -f
+```
+
+- or -- `Helpers Function`
+```
+server()->config("app.name");
 ```
 
 ## Autoload Register

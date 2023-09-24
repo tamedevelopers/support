@@ -12,7 +12,7 @@ use Tamedevelopers\Support\Traits\ServerTrait;
 use Tamedevelopers\Support\Traits\ReusableTrait;
 use Tamedevelopers\Support\Capsule\CustomException;
 
-class Env{
+class Env {
     
     use ServerTrait, ReusableTrait;
 

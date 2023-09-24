@@ -9,8 +9,8 @@ use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Capsule\CustomException;
 
 
-class Hash 
-{
+final class Hash {
+    
     /**
      * Count
      * @var string

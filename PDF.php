@@ -12,15 +12,16 @@ use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Capsule\CustomException;
 
-/* 
- * DOM PDF
- * @author      DOMPDF
- * @url        composer require dompdf/dompdf
- * @url        https://github.com/dompdf/dompdf/blob/v0.8.2/src/Adapter/CPDF.php#L45
- * @url        https://github.com/dompdf/dompdf
-*/ 
-class PDF
-{ 
+/**
+ * DOM PDF Wrapper
+ * Usage: composer require dompdf/dompdf
+ * @url https://github.com/dompdf/dompdf/blob/v0.8.2/src/Adapter/CPDF.php#L45
+ * @url https://github.com/dompdf/dompdf
+ * 
+ * @property object \Dompdf\Dompdf|object
+ * @property object \Dompdf\Options|object
+ */ 
+class PDF{
 
     /**
      * dompdf
@@ -57,7 +58,7 @@ class PDF
             ]
         ]);
 
-        // instantiate and use the dompdf class
+        // instantiate and use the \Dompdf\Dompdf() class
         self::$dompdf = new Dompdf($options);
     }
 
@@ -83,7 +84,6 @@ class PDF
             'destination'   => strtotime('now') . '.pdf',
             'output'        => 'preview',
         ], $options);
-
         
         // pass html content
         self::$dompdf->loadHtml(self::$options['content']);
@@ -119,7 +119,7 @@ class PDF
     /**
      * READ PDF To Server
      *
-     * @param  string $path -- Absolute path to PDF file
+     * @param  string $path --- Absolute path to PDF file
      * @return void
      */
     static public function read(string $path)
@@ -136,6 +136,7 @@ class PDF
     {
         try {
             if (class_exists('Dompdf\Options')) {
+                // instantiate and use the \Dompdf\Options() class
                 return new Options();
             } else {
                 throw new CustomException(

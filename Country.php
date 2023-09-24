@@ -1,8 +1,10 @@
 <?php
 
-namespace App\Core;
+declare(strict_types=1);
 
-class Core {
+namespace Tamedevelopers\Support;
+
+final class Country {
     
     /**
      * Get Country ISO 3

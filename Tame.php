@@ -8,8 +8,8 @@ use ZipArchive;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Server;
 
-class Tame
-{
+class Tame{
+    
     /**
      * Count
      * @var int
@@ -1226,7 +1226,7 @@ class Tame
      * @return bool 
      * - Whether the email address is valid (true) or not (false).
      */
-    static public function verifyDomain_AndMxRecord(?string $domain = null, ?int $mxCount = 0)
+    static private function verifyDomain_AndMxRecord(?string $domain = null, ?int $mxCount = 0)
     {
         // Method 2: Use DNS check on domain A record
         $domainRecords = dns_get_record($domain, DNS_A);
@@ -1258,7 +1258,7 @@ class Tame
      * @param  mixed $path
      * @return mixed
      */
-    private static function getBasePath(?string $path = null)
+    static private function getBasePath(?string $path = null)
     {
         return self::stringReplacer(base_path()) . $path;
     }
@@ -1269,7 +1269,7 @@ class Tame
      * @param  mixed $path
      * @return mixed
      */
-    private static function getPublicPath(?string $path = null)
+    static private function getPublicPath(?string $path = null)
     {
         return self::stringReplacer(base_path()) . $path;
     }
@@ -1280,7 +1280,7 @@ class Tame
      * @param  mixed $path
      * @return mixed
      */
-    private static function getStoragePath(?string $path = null)
+    static private function getStoragePath(?string $path = null)
     {
         return self::stringReplacer(base_path()) . $path;
     }
@@ -1291,7 +1291,7 @@ class Tame
      * @param  mixed $path
      * @return mixed
      */
-    private static function getAppPath(?string $path = null)
+    static private function getAppPath(?string $path = null)
     {
         return self::stringReplacer(base_path()) . $path;
     }
@@ -1302,7 +1302,7 @@ class Tame
      * @param  mixed $path
      * @return mixed
      */
-    private static function getSvgPath(?string $path = null)
+    static private function getSvgPath(?string $path = null)
     {
         return self::stringReplacer(base_path()) . $path;
     }
@@ -1314,7 +1314,7 @@ class Tame
      * @param string $path
      * @return string
      */
-    static private function stringReplacer(?string $path = null)
+    static protected function stringReplacer(?string $path = null)
     {
         return Server::cleanServerPath($path);
     }

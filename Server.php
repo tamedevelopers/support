@@ -22,16 +22,20 @@ final class Server{
      * @param mixed $default 
      * [optional] The default value to return if the configuration option is not found
      * 
+     * @param mixed $folder 
+     * [optional] Custom base folder after the base_path()
+     * - Default base for config() is 'config' folder.
+     * 
      * @return mixed
      * The value of the configuration option, or null if it doesn't exist
      */
-    public static function config(string $key, $default = null)
+    public static function config(string $key, $default = null, string $folder = null)
     {
         // Convert the key to an array
         $parts = explode('.', $key);
 
         // Get the file name
-        $filePath = base_path("config/{$parts[0]}.php");
+        $filePath = base_path("{$folder}/{$parts[0]}.php");
 
         // Check if the configuration file exists
         if (file_exists($filePath)) {
@@ -51,12 +55,66 @@ final class Server{
             }
         }
 
+        // if config not set
+        if(!isset($config)){
+            $config = null;
+        }
+
         // try merging data if an array
         if(is_array($config) && is_array($default)){
             return array_merge($config, $default);
         }
 
         return $config ?? $default;
+    }
+
+    /**
+     * Create Template File
+     *
+     * @param  array $data
+     * @param  string|null $filename
+     * @return void
+     */
+    static public function createTemplateFile(?array $data = [], ?string $filename = null)
+    {
+        // Get the file name
+        $filePath = base_path($filename);
+
+        // Generate PHP code
+        $exported   = var_export($data, true);
+        $string     = explode("\n", $exported);
+        $string     = array_map('trim', $string);
+        $string     = implode("\n    ", $string);
+        $string     = ltrim($string, 'array (');
+        $string     = rtrim($string, ')');
+        $string     = trim($string);
+
+        // Generate PHP code with specific formatting
+        $phpCode = <<<PHP
+        <?php
+
+        return [
+
+            /*
+            |--------------------------------------------------------------------------
+            | Template File Lines
+            |--------------------------------------------------------------------------
+            |
+            | The following template lines are used during text formatting for various
+            | messages that we need to display to the user. You are free to modify
+            | these template lines according to your application's requirements.
+            |
+            */
+
+            $string
+        ];
+        PHP;
+
+        // to avoid warning error
+        // we check if path is a directory first before executing the code
+        if(is_dir(dirname($filePath))){
+            file_put_contents($filePath, $phpCode);
+        }
     }
     
     /**

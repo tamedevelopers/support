@@ -63,7 +63,7 @@ if (! function_exists('FileCache')) {
     }
 }
 
-if (! function_exists('Server')) {
+if (! function_exists('server')) {
     /**
      * Server Object
      *
@@ -102,12 +102,16 @@ if (! function_exists('config')) {
      * @param mixed $default 
      * [optional] The default value to return if the configuration option is not found
      * 
+     * @param mixed $folder 
+     * [optional] Custom base folder after the base_path()
+     * - Default base for config() is 'config' folder.
+     * 
      * @return mixed
      * The value of the configuration option, or null if it doesn't exist
      */
-    function config(string $key, $default = null)
+    function config(string $key, $default = null, ?string $folder = 'config')
     {
-        return (new Server)->config($key, $default);
+        return server()->config($key, $default, $folder);
     }
 }
 
