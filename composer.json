@@ -21,10 +21,9 @@
         "symfony/var-dumper": "^6.0.0"
     },
     "suggest": {
-        "symfony/var-dumper": "Required to use the dd function (^5.4.3).",
-        "dompdf/dompdf": "Required to use the PDF class (^2.0.2).",
-        "cocur/slugify": "Required to use the slugify class (^4.2.0).",
-        "vlucas/phpdotenv": "Required to use the Env class and env helper (^5.4.1)."
+        "dompdf/dompdf": "Required to use the `PDF` class and helper (^2.0.2).",
+        "cocur/slugify": "Required to use the `Slugify` class (^4.2.0).",
+        "vlucas/phpdotenv": "Required to use the `Env` class and helper (^5.4.1)."
     },
     "conflict": {
         "symfony/var-dumper": ">=6.2"
