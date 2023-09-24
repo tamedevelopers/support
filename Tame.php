@@ -34,6 +34,12 @@ class Tame{
      */
     protected const GB = 1024 * self::MB;
 
+    /**
+     * Salter String
+     * @var string
+     */
+    private const PBKDF2_SALT = "\x2d\xb7\x68\x1a";
+
     
     /**
      * Echo `json_encode` with response and message
@@ -45,6 +51,22 @@ class Tame{
     static public function echoJson(int $response = 0, string $message = 'null')
     {
         echo json_encode(['response' => $response, 'message' => $message]);
+    }
+
+    /**
+     * Check if Class Exists
+     *
+     * @param  string $class
+     * @param  callable $function
+     * @return mixed
+     */
+    static public function class_exists($class, callable $function)
+    {
+        if(class_exists($class)){
+            if(is_callable($function)){
+                $function();
+            }
+        }
     }
 
     /**
@@ -609,10 +631,35 @@ class Tame{
             return null;
         }
 
-        // Remove anything that's not a letter, number, or whitespace
-        $clean = preg_replace('/[^\p{L}\p{N}\s]/u', '', $string);
+        return self::cleanTagsForURL($string);
+    }
 
-        return $clean;
+    /**
+     * Clean tags for use in URLs, considering multiple language modules.
+     *
+     * @param string|null $string The input string to clean.
+     * @return string The cleaned string.
+     */
+    static public function cleanTagsForURL(?string $string = null)
+    {
+        // Remove unwanted characters from the string
+        $string = preg_replace('/[^\p{L}\p{N}\s]/u', '', (string) $string);
+
+        return trim($string);
+    }
+
+    /**
+     * Hash String
+     *
+     * @param  string $string
+     * @param  int $length
+     * @param  string $type
+     * @param  int $interation
+     * @return void
+     */
+    static public function stringHash(?string $string = null, $length = 100, $type = 'sha256', $interation = 100)
+    {
+        return hash_pbkdf2($type, mt_rand() . $string, self::PBKDF2_SALT, $interation, $length);
     }
     
     /**
@@ -639,20 +686,6 @@ class Tame{
         }
 
         return $string;
-    }
-
-    /**
-     * Clean tags for use in URLs, considering multiple language modules.
-     *
-     * @param string|null $string The input string to clean.
-     * @return string The cleaned string.
-     */
-    static public function cleanTagsForURL(?string $string = null)
-    {
-        // Remove unwanted characters from the string
-        $string = preg_replace('/[^\p{L}\p{N}\s]/u', '', (string) $string);
-
-        return trim($string);
     }
 
     /**

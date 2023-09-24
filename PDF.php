@@ -17,9 +17,6 @@ use Tamedevelopers\Support\Capsule\CustomException;
  * Usage: composer require dompdf/dompdf
  * @url https://github.com/dompdf/dompdf/blob/v0.8.2/src/Adapter/CPDF.php#L45
  * @url https://github.com/dompdf/dompdf
- * 
- * @property object \Dompdf\Dompdf|object
- * @property object \Dompdf\Options|object
  */ 
 class PDF{
 

@@ -8,10 +8,9 @@ namespace Tamedevelopers\Support;
 use Tamedevelopers\Support\Traits\ServerTrait;
 use Tamedevelopers\Support\Traits\ReusableTrait;
 
-final class Server{
+class Server{
     
     use ServerTrait, ReusableTrait;
-
     
     /**
      * Get the value of a configuration option.
@@ -186,7 +185,7 @@ final class Server{
     }
 
     /**
-     * Check if a string is valid JSON.
+     * Check if data is valid JSON.
      *
      * @param mixed $data
      * @return bool

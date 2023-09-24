@@ -158,6 +158,40 @@ trait ServerTrait{
     }
 
     /**
+     * cleanServerPath
+     *
+     * @param  string $path
+     * @return string
+     */
+    public static function cleanServerPath(?string $path = null)
+    {
+        $path = str_replace(
+            '\\', 
+            '/', trim((string) $path)
+        );
+
+        return rtrim($path, '/') . '/';
+    }
+
+    /**
+     * Replace path with given string
+     * \ or /
+     * 
+     * @param string  $path
+     * @param string  $replacer
+     * 
+     * @return string
+     */
+    public static function pathReplacer(?string $path, $replacer = '/')
+    {
+        return str_replace(
+            ['\\', '/'], 
+            $replacer, 
+            $path
+        );
+    }
+
+    /**
      * Create Server Absolute Path
      * 
      * @return string
@@ -246,40 +280,6 @@ trait ServerTrait{
         }
 
         return $projectRootPath;
-    }
-    
-    /**
-     * cleanServerPath
-     *
-     * @param  string $path
-     * @return string
-     */
-    public static function cleanServerPath(?string $path = null)
-    {
-        $path = str_replace(
-            '\\', 
-            '/', trim((string) $path)
-        );
-
-        return rtrim($path, '/') . '/';
-    }
-
-    /**
-     * Replace path with given string
-     * \ or /
-     * 
-     * @param string  $path
-     * @param string  $replacer
-     * 
-     * @return string
-     */
-    public static function pathReplacer(?string $path, $replacer = '/')
-    {
-        return str_replace(
-            ['\\', '/'], 
-            $replacer, 
-            $path
-        );
     }
 
 }

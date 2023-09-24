@@ -12,13 +12,6 @@ use Tamedevelopers\Support\Capsule\CustomException;
 final class Hash {
     
     /**
-     * Count
-     * @var string
-     */
-    private const PBKDF2_SALT = "\x2d\xb7\x68\x1a";
-
-
-    /**
      * Password Encrypter.
      * This function encrypts a password using bcrypt with a generated salt.
      *
@@ -55,20 +48,6 @@ final class Hash {
     static public function check($newPassword, $oldHashedPassword)
     {
         return password_verify($newPassword, $oldHashedPassword);
-    }
-
-    /**
-     * Hash String
-     *
-     * @param  string $string
-     * @param  int $length
-     * @param  string $type
-     * @param  int $interation
-     * @return void
-     */
-    static public function stringHash(?string $string, $length = 100, $type = 'sha256', $interation = 100)
-    {
-        return hash_pbkdf2($type, mt_rand() . $string, self::PBKDF2_SALT, $interation, $length);
     }
 
     /**

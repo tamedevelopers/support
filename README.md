@@ -33,7 +33,7 @@ Prior to installing `support package` get the [Composer](https://getcomposer.org
 **Step 1** — update your `composer.json`:
 ```composer.json
 "require": {
-    "tamedevelopers/support": "^1.0.0"
+    "tamedevelopers/support": "^1.0.1"
 }
 ```
 
@@ -203,19 +203,20 @@ function __($key){
 --- Structure of folder example
 --- (d) for directory and (f) for file
 
-Base -d ---
-    Lang -d --
-        en -d
-            message.php -f
-            error.php -f
-
-        tr -d
-            message.php -f
-            error.php -f
+- Base
+  - Lang
+    - en
+      - message.php (File)
+      - error.php (File)
+    - tr
+      - message.php (File)
+      - error.php (File)
 ```
 
 - or -- `Helpers Function`
 ```
+server()->config("en/message.{$key}", "message.{$key}", 'Lang');
+
 server()->config("app.name");
 ```
 
