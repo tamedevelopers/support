@@ -28,6 +28,7 @@
         "vlucas/phpdotenv": "Required to use the Env class and env helper (^5.5.0)."
     },
     "conflict": {
+        "psr/log": ">=3.0",
         "symfony/var-dumper": ">=6.0.0"
     },
     "autoload": {

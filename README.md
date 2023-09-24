@@ -31,7 +31,7 @@ Prior to installing `support package` get the [Composer](https://getcomposer.org
 **Step 1** — update your `composer.json`:
 ```composer.json
 "require": {
-    "tamedevelopers/support": "^1.0.2"
+    "tamedevelopers/support": "^1.0.3"
 }
 ```
 
