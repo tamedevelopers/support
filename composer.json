@@ -25,9 +25,6 @@
         "cocur/slugify": "Required to use the `Slugify` class (^4.2.0).",
         "vlucas/phpdotenv": "Required to use the `Env` class and helper (^5.4.1)."
     },
-    "conflict": {
-        "symfony/var-dumper": "<5.4.3 || >=6.2"
-    },
     "autoload": {
         "files": [
             "helpers.php"
