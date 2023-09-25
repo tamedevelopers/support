@@ -18,11 +18,12 @@
         "php": ">=8.0",
         "ext-ctype": "*",
         "ext-mbstring": "*",
-        "symfony/var-dumper": "^6.0.0 || ^6.2"
+        "symfony/var-dumper": "*",
+        "cocur/slugify": "^4.2.0",
+        "symfony/console": "^6.2"
     },
     "suggest": {
         "dompdf/dompdf": "Required to use the `PDF` class and helper (^2.0.2).",
-        "cocur/slugify": "Required to use the `Slugify` class (^4.2.0).",
         "vlucas/phpdotenv": "Required to use the `Env` class and helper (^5.4.1)."
     },
     "autoload": {
