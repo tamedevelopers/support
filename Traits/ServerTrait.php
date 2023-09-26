@@ -227,7 +227,7 @@ trait ServerTrait{
         $docRoot = $_SERVER['DOCUMENT_ROOT'];
 
         // Get the server name (hostname)
-        $serverName = $_SERVER['SERVER_NAME'];
+        $serverName = $_SERVER['SERVER_NAME'] ?? null;
 
         // Replace Document root inside server path
         $domainPath = str_replace($docRoot, '', $serverPath);
