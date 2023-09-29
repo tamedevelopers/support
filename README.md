@@ -30,19 +30,6 @@ Support Package For Tamedevelopers
 
 Prior to installing `support package` get the [Composer](https://getcomposer.org) dependency manager for PHP because it'll simplify installation.
 
-**Step 1** — update your `composer.json`:
-```composer.json
-"require": {
-    "tamedevelopers/support": "^1.0.3"
-}
-```
-
-**Step 2** — run [Composer](https://getcomposer.org):
-```update
-composer update
-```
-
-**Or composer require**:
 ```
 composer require peterson/database
 ```

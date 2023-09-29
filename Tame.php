@@ -6,9 +6,19 @@ namespace Tamedevelopers\Support;
 
 use ZipArchive;
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Time;
 use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\Traits\TameTrait;
 
+
+/**
+ * @see \Tamedevelopers\Support\Str
+ * @see \Tamedevelopers\Support\Server
+ * @see \Tamedevelopers\Support\Time
+ */
 class Tame{
+
+    use TameTrait;
     
     /**
      * Count
@@ -57,10 +67,10 @@ class Tame{
      * Check if Class Exists
      *
      * @param  string $class
-     * @param  callable $function
+     * @param  callable|null $function
      * @return mixed
      */
-    static public function class_exists($class, callable $function)
+    static public function class_exists($class, callable $function = null)
     {
         if(class_exists($class)){
             if(is_callable($function)){
@@ -75,13 +85,25 @@ class Tame{
      * @param string $version
      * @return bool
      */
-    static public function versionCompare(?string $version)
+    static public function versionCompare($version)
     {
         if(version_compare(PHP_VERSION, $version, '>=')){
             return true;
         }
         
         return false;
+    }
+
+    /**
+     * Instance of Time
+     * @param string|null $time
+     * @param string|null $timezone
+     * 
+     * @return \Tamedevelopers\Support\Time
+     */
+    static public function time(?string $time = 'now', ?string $timezone = 'UTC')
+    {
+        return new Time($time, $timezone);
     }
 
     /**
@@ -96,7 +118,7 @@ class Tame{
      * 
      * @return string
      */
-    static public function timestamp($date, $format = "Y-m-d H:i:s")
+    static public function timestamp($date, ?string $format = "Y-m-d H:i:s")
     {
         if(is_string($date)){
             $date = strtotime($date);   
@@ -122,7 +144,7 @@ class Tame{
      * This function checks if headers have been sent and outputs information about where headers were sent.
      * If headers are sent, it outputs the file and location where the headers were sent and terminates the script.
      */
-    static public function checkHeadersSent()
+    static public function HeadersSent()
     {
         $file = null;
         $location = null;
@@ -139,7 +161,7 @@ class Tame{
      * @param string $path
      * @return void
      */
-    static public function include(?string $path)
+    static public function include($path)
     {
         $fullPath = self::getBasePath($path);
 
@@ -154,7 +176,7 @@ class Tame{
      * @param string $path
      * @return void
      */
-    static public function includeOnce(?string $path)
+    static public function includeOnce($path)
     {
         $fullPath = self::getBasePath($path);
 
@@ -169,7 +191,7 @@ class Tame{
      * @param string $path
      * @return void
      */
-    static public function require(?string $path)
+    static public function require($path)
     {
         $fullPath = self::getBasePath($path);
 
@@ -184,7 +206,7 @@ class Tame{
      * @param string $path
      * @return void
      */
-    static public function requireOnce(?string $path)
+    static public function requireOnce($path)
     {
         $fullPath = self::getBasePath($path);
 
@@ -218,10 +240,10 @@ class Tame{
     /**
      * Convert Megabytes to bytes
      *
-     * @param string $size
+     * @param string|int|float $size
      * @return int
      */
-    static public function sizeToBytes(mixed $size = '1mb')
+    static public function sizeToBytes($size = '1mb')
     {
         $size = strtolower((string) $size);
 
@@ -247,30 +269,57 @@ class Tame{
     }
 
     /**
-     * unziFile
+     * Unzip a file or folder.
      *
-     * @param  mixed $file
-     * @param  mixed $destination
+     * @param  string $sourcePath
+     * @param  string $destination
      * @return bool
      */
-    static public function unziFile(?string $file, string $destination)
+    static public function unzip($sourcePath, $destination)
     {
-        // create object
+        // If it's a zip file, call the unzipFile function
+        if (pathinfo($sourcePath, PATHINFO_EXTENSION) === 'zip') {
+            return self::unzipFile($sourcePath, $destination);
+        }
+
+        // If it's a folder, call the unzipFolder function
+        if (is_dir($sourcePath)) {
+            return self::unzipFolder($sourcePath, $destination);
+        }
+
+        return false; // Unsupported file type
+    }
+
+    /**
+     * Zip a file or folder.
+     *
+     * @param string $sourcePath The path to the file or folder to zip.
+     * @param string $destinationZip The path for the resulting zip file.
+     * @return bool True if the zip operation was successful, false otherwise.
+     */
+    static public function zip($sourcePath, $destinationZip)
+    {
+        // If it's a folder, call the zipFolder function
+        if (is_dir($sourcePath)) {
+            return self::zipFolder($sourcePath, $destinationZip);
+        }
+
+        // If it's a file, create a zip containing just that file
         $zip = new ZipArchive();
 
-        // open archive
-        if ($zip->open($file) !== TRUE) {
+        if ($zip->open($destinationZip, ZipArchive::CREATE) !== true) {
             return false;
         }
 
-        // extract contents to destination directory
-        $zip->extractTo( self::getBasePath($destination) );
+        // Add the file to the zip
+        $zip->addFile($sourcePath, basename($sourcePath));
 
-        // close archive
         $zip->close();
 
-        return true;
+        return file_exists($destinationZip);
     }
+
+    
 
     /**
      * Get file modification time
@@ -1131,111 +1180,6 @@ class Tame{
     }
 
     /**
-     * OS start
-     * 
-     * @return void
-     */
-    static public function obStart()
-    {
-        @ignore_user_abort(true);
-        @set_time_limit(0);
-        @ob_start();
-    }
-
-    /**
-     * OBFlush function
-     * 
-     * @return void
-     */
-    static public function obFlush()
-    {
-        // Turn on fastcgi (if available)
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
-
-        // Check if headers are already sent
-        if (!headers_sent()) {
-            // Enable implicit flushing
-            ob_implicit_flush(true);
-
-            // Ignore user abort
-            ignore_user_abort(true);
-
-            // Disable script timeout
-            set_time_limit(0);
-
-            // Set headers for closing the connection and content length
-            header("Connection: close");
-            header("Content-length: " . ob_get_length());
-        }
-
-        // Flush output buffers if active
-        while (ob_get_level() > 0) {
-            @flush();
-            @ob_flush();
-            @ob_end_flush();
-            @session_write_close();
-        }
-
-        // Disable implicit flushing
-        ob_implicit_flush(false);
-    }
-    
-    /**
-     * OB Crons Flush function
-     *
-     * @param  callable $function
-     * @return void
-     */
-    static public function obCronsflush(callable $function = null)
-    {
-        // Prevent the script from timing out due to execution time limits
-        set_time_limit(0);
-
-        // Close the session to avoid issues with concurrent requests
-        session_write_close();
-
-        // Continue script execution even if the client disconnects
-        ignore_user_abort(true);
-
-        // Clean (erase) the output buffer and turn off output buffering
-        if (ob_get_level() > 0) {
-            @ob_end_clean();
-        }
-
-        // Start output buffering again
-        ob_start();
-
-        // Call the provided function if it's callable
-        if (is_callable($function)) {
-            $function();
-        }
-
-        // Get the content of the output buffer
-        $output = ob_get_contents();
-
-        // Close and flush the output buffer
-        @ob_end_clean();
-
-        // Send headers to tell the browser to close the connection
-        if (!headers_sent()) {
-            @header("Connection: close");
-            @header("Content-Encoding: none");
-            @header("Content-Length: " . strlen($output));
-        }
-
-        // Set the HTTP response code
-        http_response_code(200);
-
-        // Flush the output buffer to the client
-        echo $output;
-
-        // Flush system output buffer
-        @flush();
-    }
-
-    /**
      * File exist and not a directory
      * 
      * @param string $path
@@ -1245,99 +1189,6 @@ class Tame{
     static public function exists(?string $path = null)
     {
         return !is_dir($path) && file_exists($path);
-    }
-
-    /**
-     * Verify the existence of an email address even when the socket connection is blocked.
-     *
-     * @param string $domain 
-     * - The domain extracted from the email address.
-     * 
-     * @param int $mxRecords 
-     * - Counted numbers of MX records associated with the domain.
-     * 
-     * @return bool 
-     * - Whether the email address is valid (true) or not (false).
-     */
-    static private function verifyDomain_AndMxRecord(?string $domain = null, ?int $mxCount = 0)
-    {
-        // Method 2: Use DNS check on domain A record
-        $domainRecords = dns_get_record($domain, DNS_A);
-        if (count($domainRecords) > 0 && $mxCount > 0) {
-            return true; // Consider it valid based on having domain A record
-        }
-        
-        return false;
-    }
-
-    /**
-     * Create OPEN SSL Encryption
-     * 
-     * @return object
-     */
-    static private function openSSLEncrypt()
-    {
-        return (object) [
-            'key'           => bin2hex(random_bytes(8)),
-            'cipher_algo'   => 'BF-CBC',
-            'passphrase'    => bin2hex(random_bytes(4)),
-            'options'       => OPENSSL_CIPHER_RC2_40
-        ];
-    }
-    
-    /**
-     * getBasePath
-     *
-     * @param  mixed $path
-     * @return mixed
-     */
-    static private function getBasePath(?string $path = null)
-    {
-        return self::stringReplacer(base_path()) . $path;
-    }
-    
-    /**
-     * getPublicPath
-     *
-     * @param  mixed $path
-     * @return mixed
-     */
-    static private function getPublicPath(?string $path = null)
-    {
-        return self::stringReplacer(base_path()) . $path;
-    }
-    
-    /**
-     * getStoragePath
-     *
-     * @param  mixed $path
-     * @return mixed
-     */
-    static private function getStoragePath(?string $path = null)
-    {
-        return self::stringReplacer(base_path()) . $path;
-    }
-
-    /**
-     * getAppPath
-     *
-     * @param  mixed $path
-     * @return mixed
-     */
-    static private function getAppPath(?string $path = null)
-    {
-        return self::stringReplacer(base_path()) . $path;
-    }
-    
-    /**
-     * getSvgPath
-     *
-     * @param  mixed $path
-     * @return mixed
-     */
-    static private function getSvgPath(?string $path = null)
-    {
-        return self::stringReplacer(base_path()) . $path;
     }
 
     /**

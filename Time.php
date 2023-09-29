@@ -30,7 +30,7 @@ class Time {
      * @param string|null $time
      * @param string|null $timezone
      */
-    public function __construct(mixed $time = 'now', ?string $timezone = 'UTC') 
+    public function __construct(?string $time = 'now', ?string $timezone = 'UTC')
     {
         self::$time = self::timeFormatNumberic($time);
         self::setTimezone((string) $timezone);

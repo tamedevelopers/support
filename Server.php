@@ -15,26 +15,26 @@ class Server{
     /**
      * Get the value of a configuration option.
      *
-     * @param string $key 
+     * @param mixed $key 
      * The configuration key in dot notation (e.g., 'database.connections.mysql')
      * 
      * @param mixed $default 
      * [optional] The default value to return if the configuration option is not found
      * 
-     * @param mixed $folder 
+     * @param string $base_folder 
      * [optional] Custom base folder after the base_path()
      * - Default base for config() is 'config' folder.
      * 
      * @return mixed
      * The value of the configuration option, or null if it doesn't exist
      */
-    public static function config(string $key, $default = null, string $folder = null)
+    public static function config($key, $default = null, string $base_folder = null)
     {
         // Convert the key to an array
         $parts = explode('.', $key);
 
         // Get the file name
-        $filePath = base_path("{$folder}/{$parts[0]}.php");
+        $filePath = base_path("{$base_folder}/{$parts[0]}.php");
 
         // Check if the configuration file exists
         if (file_exists($filePath)) {

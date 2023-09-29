@@ -6,9 +6,26 @@ use Tamedevelopers\Support\Hash;
 use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Asset;
 use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\Translator;
 use Tamedevelopers\Support\AutoloadRegister;
 use Tamedevelopers\Support\Capsule\FileCache;
 
+
+if (! function_exists('TameIsLaravelDetect')) {
+    /**
+     * Check if Package is inside Laravel Application
+     *
+     * @return bool
+     */
+    function TameIsLaravelDetect()
+    {
+        if(class_exists('Illuminate\Foundation\Application') || class_exists('Illuminate\Container\Container')){
+            return true;
+        }
+
+        return false;
+    }
+}
 
 if (! function_exists('Tame')) {
     /**
@@ -34,7 +51,7 @@ if (! function_exists('PDF')) {
     }
 }
 
-if (! function_exists('bcrypt')) {
+if (! TameIsLaravelDetect() && ! function_exists('bcrypt')) {
      /**
      * Password Encrypter.
      * This function encrypts a password using bcrypt with a generated salt.
@@ -92,30 +109,30 @@ if (! function_exists('autoload_register')) {
     }
 }
 
-if (! function_exists('config')) {
+if (! TameIsLaravelDetect() && ! function_exists('config')) {
     /**
      * Get the value of a configuration option.
      *
-     * @param string $key 
+     * @param mixed $key 
      * The configuration key in dot notation (e.g., 'database.connections.mysql')
      * 
      * @param mixed $default 
      * [optional] The default value to return if the configuration option is not found
      * 
-     * @param mixed $folder 
+     * @param string $base_folder 
      * [optional] Custom base folder after the base_path()
      * - Default base for config() is 'config' folder.
      * 
      * @return mixed
      * The value of the configuration option, or null if it doesn't exist
      */
-    function config(string $key, $default = null, ?string $folder = 'config')
+    function config($key, $default = null, ?string $base_folder = 'config')
     {
-        return server()->config($key, $default, $folder);
+        return server()->config($key, $default, $base_folder);
     }
 }
 
-if (! function_exists('env')) {
+if (! TameIsLaravelDetect() && ! function_exists('env')) {
     /**
      * Get ENV (Enviroment) Data
      * - If .env was not used, 
@@ -158,7 +175,7 @@ if (! function_exists('env_update')) {
     }
 }
 
-if (! function_exists('asset')) {
+if (! TameIsLaravelDetect() && ! function_exists('asset')) {
     /**
      * Create assets Real path url
      * 
@@ -192,6 +209,24 @@ if (! function_exists('asset_config')) {
     function asset_config(?string $base_path = null, ?bool $cache = true)
     {
         Asset::config($base_path, $cache);
+    }
+}
+
+if (! TameIsLaravelDetect() && ! function_exists('__')) {
+    /**
+     * Translate the given message.
+     *
+     * @param  string|null  $key
+     * @param  string|null  $locale
+     * @return string|array|null
+     */
+    function __($key = null, $locale = null)
+    {
+        if (is_null($key)) {
+            return $key;
+        }
+
+        return Translator::trans($key, $locale);
     }
 }
 
