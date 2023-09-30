@@ -4,8 +4,10 @@ use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\PDF;
 use Tamedevelopers\Support\Hash;
 use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\Time;
 use Tamedevelopers\Support\Asset;
 use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\Country;
 use Tamedevelopers\Support\Translator;
 use Tamedevelopers\Support\AutoloadRegister;
 use Tamedevelopers\Support\Capsule\FileCache;
@@ -36,6 +38,30 @@ if (! function_exists('Tame')) {
     function Tame()
     {
         return new Tame();
+    }
+}
+
+if (! function_exists('ttime')) {
+    /**
+     * Time Object
+     * @param int|string|null $time
+     * @param string|null $timezone
+     * @return \Tamedevelopers\Support\Time
+     */
+    function ttime($time = null, $timezone = null)
+    {
+        return new Time($time, $timezone);
+    }
+}
+
+if (! function_exists('country')) {
+    /**
+     * Country Object
+     * @return \Tamedevelopers\Support\Country
+     */
+    function country()
+    {
+        return new Country();
     }
 }
 
@@ -158,20 +184,19 @@ if (! function_exists('env_update')) {
      * 
      * @param string $key \Environment key you want to update
      * 
-     * 
      * @param string|bool $value \Value of Variable to update
      * 
-     * @param bool $allow_quote \Default is true
+     * @param bool $quote \Default is true
      * [optional] Allow quotes around values
      * 
-     * @param bool $allow_space \Default is false
+     * @param bool $space \Default is false
      * [optional] Allow space between key and value
      * 
      * @return bool
      */
-    function env_update(?string $key = null, string|bool $value = null, ?bool $allow_quote = true, ?bool $allow_space = false)
+    function env_update(?string $key = null, string|bool $value = null, ?bool $quote = true, ?bool $space = false)
     {
-        return Env::updateENV($key, $value, $allow_quote, $allow_space);
+        return Env::updateENV($key, $value, $quote, $space);
     }
 }
 
@@ -184,7 +209,7 @@ if (! TameIsLaravelDetect() && ! function_exists('asset')) {
      * 
      * @return string
      */
-    function asset(?string $asset = null)
+    function asset($asset = null)
     {
         return Asset::asset($asset);
     }
@@ -206,7 +231,7 @@ if (! function_exists('asset_config')) {
      * 
      * @return void
      */
-    function asset_config(?string $base_path = null, ?bool $cache = true)
+    function asset_config($base_path = null, ?bool $cache = true)
     {
         Asset::config($base_path, $cache);
     }
@@ -239,7 +264,7 @@ if (! function_exists('base_path')) {
      * 
      * @return string
      */
-    function base_path(?string $path = null)
+    function base_path($path = null)
     {
         return server()->formatWithBaseDirectory($path);
     }
@@ -254,7 +279,7 @@ if (! function_exists('directory')) {
      * 
      * @return string
      */
-    function directory(?string $path = null)
+    function directory($path = null)
     {
         return base_path($path);
     }
@@ -269,7 +294,7 @@ if (! function_exists('storage_path')) {
      * 
      * @return string
      */
-    function storage_path(?string $path = null)
+    function storage_path($path = null)
     {
         return base_path("storage/{$path}");
     }
@@ -284,7 +309,7 @@ if (! function_exists('public_path')) {
      * 
      * @return string
      */
-    function public_path(?string $path = null)
+    function public_path($path = null)
     {
         return base_path("public/{$path}");
     }
@@ -299,7 +324,7 @@ if (! function_exists('app_path')) {
      * 
      * @return string
      */
-    function app_path(?string $path = null)
+    function app_path($path = null)
     {
         return base_path("app/{$path}");
     }
@@ -314,7 +339,7 @@ if (! function_exists('config_path')) {
      * 
      * @return string
      */
-    function config_path(?string $path = null)
+    function config_path($path = null)
     {
         return base_path("config/{$path}");
     }
@@ -329,7 +354,7 @@ if (! function_exists('lang_path')) {
      * 
      * @return string
      */
-    function lang_path(?string $path = null)
+    function lang_path($path = null)
     {
         return base_path("lang/{$path}");
     }
@@ -345,7 +370,7 @@ if (! function_exists('domain')) {
      * 
      * @return string
      */
-    function domain(?string $path = null)
+    function domain($path = null)
     {
         return server()->formatWithDomainURI($path);
     }

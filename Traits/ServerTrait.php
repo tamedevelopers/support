@@ -163,14 +163,12 @@ trait ServerTrait{
      * @param  string $path
      * @return string
      */
-    public static function cleanServerPath(?string $path = null)
+    public static function cleanServerPath(?string $path = null, $replacer = '/')
     {
-        $path = str_replace(
-            '\\', 
-            '/', trim((string) $path)
-        );
-
-        return rtrim($path, '/') . '/';
+        return rtrim(
+            self::pathReplacer($path, $replacer), 
+            '/'
+        ) . '/';
     }
 
     /**
@@ -187,7 +185,7 @@ trait ServerTrait{
         return str_replace(
             ['\\', '/'], 
             $replacer, 
-            $path
+            trim((string) $path)
         );
     }
 

@@ -24,9 +24,7 @@ final class Hash {
     static public function make($password)
     {
         // Check if the password exceeds the maximum length
-        if (mb_strlen($password, 'UTF-8') > 72) {
-            self::passwordLengthVerifier($password, 72);
-        }
+        self::passwordLengthVerifier($password, 72);
 
         // Hash the password using bcrypt with the generated salt
         return password_hash($password, PASSWORD_BCRYPT, ['cost' => 10]);
@@ -57,7 +55,7 @@ final class Hash {
      * @param  mixed $maxPasswordLength
      * @return void
      */
-    static private function passwordLengthVerifier($password, $maxPasswordLength = 10)
+    static private function passwordLengthVerifier($password, $maxPasswordLength = 72)
     {
         try {
             if (mb_strlen($password, 'UTF-8') > $maxPasswordLength) {

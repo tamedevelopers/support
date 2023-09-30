@@ -6,6 +6,8 @@ namespace Tamedevelopers\Support;
 
 use DateTime;
 use DateTimeZone;
+use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Country;
 
 class Time {
      
@@ -15,7 +17,7 @@ class Time {
      * @var mixed
      * - int|string
      */
-    static protected $time;
+    static protected $date;
 
     /**
      * For storing the timezone value
@@ -27,54 +29,63 @@ class Time {
 
     /**
      * Time constructor.
-     * @param string|null $time
+     * @param int|string|null $date
      * @param string|null $timezone
      */
-    public function __construct(?string $time = 'now', ?string $timezone = 'UTC')
+    public function __construct($date = 'now', ?string $timezone = 'UTC')
     {
-        self::$time = self::timeFormatNumberic($time);
-        self::setTimezone((string) $timezone);
+        if(empty(self::$date)){
+            self::setDate($date);
+        }
+
+        if(empty(self::$timezone)){
+            self::setTimezone($timezone);
+        }
     }
 
     /**
      * Handle the calls to non-existent instance methods.
      * @param string $name
-     * @param mixed $arguments
+     * @param mixed $args
      * 
      * @return mixed
      */
-    public function __call($name, $arguments) 
+    public function __call($name, $args) 
     {
-        return self::nonExistMethod($name);
+        return self::nonExistMethod($name, $args);
     }
     
     /**
      * Handle the calls to non-existent static methods.
      * @param string $name
-     * @param mixed $arguments
+     * @param mixed $args
      * 
      * @return mixed
      */
-    static public function __callStatic($name, $arguments) 
+    static public function __callStatic($name, $args) 
     {
-        return self::nonExistMethod($name);
+        return self::nonExistMethod($name, $args);
     }
 
     /**
      * Set the timezone.
      * @param string $timezone
      * 
-     * @return void
+     * @return $this
      */
     static public function setTimezone(?string $timezone = null)
     {
-        try {
-            @date_default_timezone_set((string) $timezone);
-            self::$timezone = date_default_timezone_get();
-        } catch (\Exception $e) {
-            self::$timezone = 'UTC';
-            date_default_timezone_set(self::$timezone);
+        if(in_array($timezone, Country::timeZone())){
+            self::$timezone = $timezone;
+        } else{
+            // get default timezone
+            self::$timezone = date_default_timezone_get() ?? 'UTC';
         }
+
+        // set timezone
+        date_default_timezone_set($timezone);
+
+        return new self(self::$date, self::$timezone);
     }
 
     /**
@@ -87,7 +98,101 @@ class Time {
         if(empty(self::$timezone)){
             self::setTimezone();
         }
+
         return self::$timezone;
+    }
+
+    /**
+     * Set Date Time 
+     * @param int|string|null $date
+     * 
+     * @return $this
+     */
+    static public function setDate($date = null) 
+    {
+        if (is_numeric($date)) {
+            self::$date = (int) $date;
+            return;
+        }
+
+        // if empty date
+        if(empty($date)){
+            $date = 'Jan 01 1970';
+        }
+
+        self::$date = strtotime($date);
+
+        return new self(self::$date);
+    }
+
+    /**
+     * Get the stored date time
+     * @return int
+     */
+    static public function getDate()
+    {
+        if(empty(self::$date)){
+            self::setDate('now');
+        }
+
+        return self::$date;
+    }
+
+    /**
+     * Set time to now
+     * 
+     * @return $this
+     */
+    static public function now() 
+    {
+        return self::format('now');
+    }
+
+    /**
+     * Format time input
+     * @param int|string $date
+     * 
+     * @return $this
+     */
+    static public function format(int|string $date) 
+    {
+        return self::setDate($date);
+    }
+
+    /**
+     * Create timestamp
+     * 
+     * @param int|string $date
+     * - string|int|float
+     * 
+     * @param string $format
+     * - Your defined format type i.e: Y-m-d H:i:s a
+     * - Converted TimeStamp
+     * 
+     * @return string
+     */
+    static public function timestamp($date, ?string $format = "Y-m-d H:i:s")
+    {
+        if(is_string($date)){
+            $date = strtotime($date);   
+        }
+
+        return date($format, $date);
+    }
+
+    /**
+     * Create Javascript timer
+     * 
+     * @param string|int $date
+     * - Converted TimeStamp
+     * 
+     * @return string
+     */
+    static public function toJsTimer($date)
+    {
+        self::setDate($date);
+
+        return self::timestamp($date, 'M j, Y H:i:s');
     }
 
     /**
@@ -121,15 +226,6 @@ class Time {
                 'yesterday' => 'Yesterday',
             ], $options));
         }
-    }
-
-    /**
-     * Get the stored time
-     * @return int
-     */
-    static public function getTime()
-    {
-        return self::$time;
     }
 
     /**
@@ -205,11 +301,11 @@ class Time {
     static public function timeDifference(?string $mode  = null) 
     {
         $now    = new DateTime('now', new DateTimeZone(self::getTimezone()));
-        $time   = new DateTime();
-        $time->setTimestamp(self::carbonInstance());
+        $date   = new DateTime();
+        $date->setTimestamp(self::carbonInstance());
 
         // get difference
-        $difference = $now->diff($time);
+        $difference = $now->diff($date);
 
         $timeData = [
             'year'  => $difference->y,
@@ -281,9 +377,9 @@ class Time {
             ];
         } elseif ($days < 7) {
             // create default
-            $fullText = str_replace('**', $text['at'], date("D ** h:m a", self::getTime()));
+            $fullText = str_replace('**', $text['at'], date("D ** h:m a", self::getDate()));
             if($days === 1){
-                $fullText = "{$text['yesterday']} {$text['at']} " . date("h:m a", self::getTime());
+                $fullText = "{$text['yesterday']} {$text['at']} " . date("h:m a", self::getDate());
             } 
 
             $data = [
@@ -299,7 +395,7 @@ class Time {
             ];
         } else {
             $data = [
-                'full'  => str_replace('**', $text['at'], date("d M ** h:m a", self::getTime())),
+                'full'  => str_replace('**', $text['at'], date("d M ** h:m a", self::getDate())),
                 'short' => "{$weeks}{$text['w']}",
                 'duration'   => $weeks,
             ];
@@ -307,9 +403,10 @@ class Time {
 
         // merge
         $data = array_merge($data, [
-            'time'      => self::getTime(),
-            'date'      => date('d M, Y', self::getTime()),
-            'date_time' => date('d M, Y h:ma', self::getTime()),
+            'time'      => self::getDate(),
+            'date'      => date('d M, Y', self::getDate()),
+            'date_time' => date('d M, Y h:ma', self::getDate()),
+            'time_stamp'=> date('M j, Y H:i:s', self::getDate())
         ]);
 
         return $data[$mode] ?? $data;
@@ -326,47 +423,8 @@ class Time {
         if(!defined('TIME_TEXT')){
             self::config();
         }
+
         return TIME_TEXT[$mode] ?? TIME_TEXT;
-    }
-
-    /**
-     * Convert a string to lowercase.
-     * @param string|null $name
-     * 
-     * @return string
-     */
-    static private function toLower(?string $name = null)
-    {
-        return trim(strtolower((string) $name));
-    }
-
-    /**
-     * Convert the input time to a numeric value.
-     * @param mixed $time_input
-     * 
-     * @return mixed
-     */
-    static private function timeFormatNumberic(mixed $time_input) 
-    {
-        if (is_string($time_input)) {
-            return strtotime($time_input);
-        }
-    
-        return $time_input;
-    }
-
-    /**
-     * Format the input time as a string in the default format.
-     * @param mixed $time_input
-     * @return string
-     */
-    static private function timeFormat(mixed $time_input) 
-    {
-        if (is_numeric($time_input)) {
-            return date('Y-m-d H:i:s', $time_input);
-        }
-    
-        return date('Y-m-d H:i:s', strtotime($time_input));
     }
 
     /**
@@ -378,59 +436,65 @@ class Time {
     static private function carbonInstance() 
     {
         if(class_exists('Illuminate\Support\Carbon')){
-            return self::$time->timestamp;
+            return self::$date->timestamp;
         }
 
-        return self::$time;
+        return self::$date;
     }
 
     /**
      * Handle the calls to non-existent methods.
      * @param string|null $name
+     * @param mixed $args
      * @return mixed
      */
-    static private function nonExistMethod(?string $name = null) 
+    static private function nonExistMethod($name = null, $args = null) 
     {
         // convert to lowercase
-        $name = self::toLower($name);
+        $name = Str::lower($name);
         
-        // for hour
-        if ($name === 'gettimes') {
-            return self::getTime();
+        // to javascrit timer
+        if (in_array($name, ['tojs', 'jstimer'])) {
+            return call_user_func_array([new self(), 'toJsTimer'], $args);
         }
         
         // for hour
-        if (in_array($name, ['gethr', 'gethours'])) {
+        if (in_array($name, ['time', 'gettimes', 'gettime'])) {
+            return self::getDate();
+        }
+        
+        // for hour
+        if (in_array($name, ['hours', 'hr', 'hrs', 'gethr', 'gethours'])) {
             return self::getHour();
         }
         
         // for seconds
-        if (in_array($name, ['getseconds', 'getsec'])) {
+        if (in_array($name, ['getseconds', 'getsec', 'sec', 's'])) {
             return self::getSecond();
         }
         
         // for minutes
-        if (in_array($name, ['getminute', 'getminutes'])) {
+        if (in_array($name, ['min', 'mins', 'getminute', 'getminutes', 'getmins'])) {
             return self::getMin();
         }
         
         // for day
-        if ($name === 'getdays') {
+        if (in_array($name, ['getday', 'getdays', 'getd', 'day', 'days'])) {
             return self::getDay();
         }
         
         // for weeks
-        if ($name === 'getweeks') {
+        if (in_array($name, ['getweek', 'getweeks', 'getw'])) {
             return self::getWeek();
         }
         
         // for months
-        if ($name === 'getmonths') {
+        if (in_array($name, ['getmonths', 'getmonth', 'getm'])) {
             return self::getMonth();
         }
         
         // for year
-        if (in_array($name, ['getyr', 'getyears'])) {
+        if (in_array($name, ['getyr', 'getyears', 'getyear', 'year', 'years', 'yr', 'yrs', 'y'])) {
             return self::getYear();
         }
         
@@ -440,7 +504,7 @@ class Time {
         }
         
         // for timeago
-        if ($name === 'timesago') {
+        if (in_array($name, ['timesago', 'ago', 'timesago'])) {
             return self::timeAgo();
         }
     }

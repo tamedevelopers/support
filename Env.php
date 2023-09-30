@@ -244,12 +244,12 @@ class Env {
      * Update Environment path .env file
      * @param string $key \Environment key you want to update
      * @param string|bool $value \Value allocated to the key
-     * @param bool $allow_quote \Allow quotes around value
-     * @param bool $allow_space \Allow space between key and value
+     * @param bool $quote \Allow quotes around value
+     * @param bool $space \Allow space between key and value
      * 
      * @return bool
      */
-    public static function updateENV(?string $key = null, string|bool $value = null, ?bool $allow_quote = true, ?bool $allow_space = false)
+    public static function updateENV(?string $key = null, string|bool $value = null, ?bool $quote = true, ?bool $space = false)
     {
         $path = self::formatWithBaseDirectory('.env');
 
@@ -267,7 +267,7 @@ class Env {
                     if (strpos($line, $key) === 0) {
 
                         // get space seperator value
-                        $separator = $allow_space ? " = " : "=";
+                        $separator = $space ? " = " : "=";
 
                         // check for boolean value
                         if(is_bool($value)){
@@ -275,7 +275,7 @@ class Env {
                             $line = "{$key}=" . ($value ? 'true' : 'false') . PHP_EOL;
                         }else{
                             // check if quote is allowed
-                            if($allow_quote){
+                            if($quote){
                                 // Update the value of the variable with quotes
                                 $line = "{$key}{$separator}\"{$value}\"" . PHP_EOL;
                             }else{

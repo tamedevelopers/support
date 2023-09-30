@@ -6,7 +6,6 @@ namespace Tamedevelopers\Support;
 
 use ZipArchive;
 use Tamedevelopers\Support\Str;
-use Tamedevelopers\Support\Time;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Traits\TameTrait;
 
@@ -58,7 +57,7 @@ class Tame{
      * @param  mixed $message
      * @return mixed
      */
-    static public function echoJson(int $response = 0, string $message = 'null')
+    static public function echoJson(int $response = 0, $message = null)
     {
         echo json_encode(['response' => $response, 'message' => $message]);
     }
@@ -92,51 +91,6 @@ class Tame{
         }
         
         return false;
-    }
-
-    /**
-     * Instance of Time
-     * @param string|null $time
-     * @param string|null $timezone
-     * 
-     * @return \Tamedevelopers\Support\Time
-     */
-    static public function time(?string $time = 'now', ?string $timezone = 'UTC')
-    {
-        return new Time($time, $timezone);
-    }
-
-    /**
-     * Create timestamp
-     * 
-     * @param mixed $date
-     * - string|int|float
-     * 
-     * @param string $format
-     * - Your defined format type i.e: Y-m-d H:i:s a
-     * - Converted TimeStamp
-     * 
-     * @return string
-     */
-    static public function timestamp($date, ?string $format = "Y-m-d H:i:s")
-    {
-        if(is_string($date)){
-            $date = strtotime($date);   
-        }
-        return date($format, $date);
-    }
-
-    /**
-     * Create Javascript timer
-     * 
-     * @param mixed $time
-     * - Converted TimeStamp
-     * 
-     * @return string
-     */
-    static public function javascriptTimer($time)
-    {
-        return self::timestamp($time, 'M j, Y H:i:s');
     }
 
     /**

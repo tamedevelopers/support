@@ -1,22 +1,16 @@
 <?php 
 
 use Tamedevelopers\Support\Env;
-use Tamedevelopers\Support\Hash;
+use Tamedevelopers\Support\PDF;
 use Tamedevelopers\Support\Tame;
-use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Slugify;
-use Tamedevelopers\Support\Translator;
-use Tamedevelopers\Support\Capsule\Forge;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
 
-// $Json = '{"name":"Peterson","age":20,"food":["Rice","Garri","Fish","Calories"]}';
+$Json = '{"name":"Peterson","age":20,"food":["Rice","Garri","Fish","Calories"]}';
 
 // Env::loadOrFail();
-
-// server()->toArray($Json);
-// to_object($Json);
 
 
 // PDF()->create([
@@ -38,12 +32,6 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // Tame::include('normal.php');
 // Tame()->include('normal.php');
 
-// bcrypt('testPassword')
-// Hash::make('testPassword')
-// $2y$10$Frh7yG3.qnGdQ9Hd8OK/y.aBWXFLiFD3IWqUjIWWodUhzIVF3DpT6 --- testPassword
-
-// Hash::check('testPassword', '$2y$10$7a90e2de3f5383819f812u2GwVuprKTsAW7IfeskSkn6/Ky9vSQ.2')
-
 // Slugify::slug('Hottest Product 2023, For Health Benefits');
 
 // Server::createTemplateFile([
@@ -61,46 +49,11 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // ], 'Tests/en.php');
 
 
-/**
- * Custom Language Handler
- *
- * @param  string $key
- * @return mixed
- */
-function __lang($key){
-    return Translator::trans(
-        "message.{$key}", 
-        Translator::getLocale()
-    );
-}
-
-/**
- * Custom Configuration Handler
- *
- * @param  mixed $key
- * @param  mixed $default
- * @return mixed
- */
-function configuration($key, $default = null){
-
-    // since the config only takes the filename follow by dot(.) and keyname
-    // then we can manually include additional folder-name followed by / to indicate that it's a folder
-    // then message.key_name
-    // To make this Laravel kind of language, we can add the default value to be returned as the key
-
-    return config("configuration/{$key}", $default, 'tests');
-}
-
-
-// Default locale is `en`
-// Translator::setLocale('cn');
-// Translator::getLocale();
-
 dd(
-    // config('log', [], 'storage'),
-    __('message.name'),
-    __lang('confirm_password'),
-    configuration('banners'),
+    Tame::platformIcon('windows'),
+    
+    to_object($Json),
+    
+    // server()->toArray($Json),
 );
 
-echo "hi";
