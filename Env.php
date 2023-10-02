@@ -25,22 +25,22 @@ class Env {
      * 
      * @var mixed
      */
-    private static $sym_path;
+    static private $sym_path;
 
     /**
      * Instance of self class
      * @var mixed
      */
-    private static $class;
+    static private $class;
 
     /**
      * Define custom Server root path
      * 
-     * @param string $path
+     * @param string|null $path
      * 
      * @return void
      */
-    public function __construct(?string $path = null) 
+    public function __construct($path = null) 
     {
         // auto set the base dir property
         self::setDirectory($path);
@@ -56,7 +56,7 @@ class Env {
      * Initialization of self class
      * @return void
      */
-    private static function init() 
+    static private function init() 
     {
         self::$class = new self();
     }
@@ -65,29 +65,28 @@ class Env {
      * Define custom Directory path to .env file
      * By default we use your server root folder
      * 
-     * @param string $path 
+     * @param string|null $path 
      * - [optional] Path to .env Folder Location
      * - Path to .env Folder\Not needed except called statically
      * 
      * @return array
      */
-    public static function load(?string $path = null)
+    static public function load($path = null)
     {
-        // if sym_path is null
-        if(is_null(self::$sym_path) || !(empty($path) && is_null($path))){
-            
-            // init entire class object
-            self::init();
-
-            if(!empty($path)){
-                self::$class->getDirectory($path);
-    
-                // add to global property
-                self::$sym_path = self::$class->cleanServerPath($path);
-            }
-        }
+        self::createSymPath($path);
 
         try{
+            // env class not exists
+            if(!self::isDotenvInstalled()){
+                return [
+                    'status'    => Constant::STATUS_404,
+                    'message'   => sprintf(
+                            "<<Error>> Required to use the `Env` class and helper (^5.4.1). \n%s", 
+                            "run `composer require vlucas/phpdotenv`"),
+                    'path'      => self::$sym_path,
+                ];
+            }
+            
             $dotenv = Dotenv::createImmutable(self::$sym_path);
             $dotenv->load();
             return [
@@ -95,7 +94,7 @@ class Env {
                 'message'   => ".env File Loaded Successfully",
                 'path'      => self::$sym_path,
             ];
-        }catch(Exception $e){
+        } catch(Exception $e){
             return [
                 'status'    => Constant::STATUS_404,
                 'message'   => sprintf("<<Error>> Folder Seems not to be readable or not exists. \n%s", $e->getMessage()),
@@ -107,11 +106,11 @@ class Env {
     /**
      * Inherit the load() method and returns an error message 
      * if any or load environment variables
-     * @param string $path Path to .env Folder\Not needed exept called statically
+     * @param string|null $path Path to .env Folder\Not needed exept called statically
      * 
      * @return void
      */
-    public static function loadOrFail(?string $path = null)
+    static public function loadOrFail($path = null)
     {
         $getStatus = self::load($path);
         if($getStatus['status'] !== Constant::STATUS_200){
@@ -141,7 +140,7 @@ class Env {
      * 
      * @return void
      */
-    public static function createOrIgnore()
+    static public function createOrIgnore()
     {
         // file to file
         $pathToFile = self::formatWithBaseDirectory('.env');
@@ -164,7 +163,7 @@ class Env {
      * 
      * @return void
      */
-    public static function bootLogger() 
+    static public function bootLogger() 
     {
         // Directory path
         $dir = self::formatWithBaseDirectory('storage/logs/');
@@ -221,7 +220,7 @@ class Env {
      * - If .env was not used, 
      * - Then it will get all App Configuration Data as well
      * 
-     * @param string $key
+     * @param string|null $key
      * - [optional] ENV KEY or APP Configuration Key
      * 
      * @param mixed $value
@@ -229,7 +228,7 @@ class Env {
      * 
      * @return mixed
      */
-    public static function env(?string $key = null, mixed $value = null)
+    static public function env($key = null, $value = null)
     {
         // Convert all keys to lowercase
         $envData = array_change_key_case($_ENV, CASE_UPPER);
@@ -242,14 +241,14 @@ class Env {
 
     /**
      * Update Environment path .env file
-     * @param string $key \Environment key you want to update
-     * @param string|bool $value \Value allocated to the key
+     * @param string|null $key \Environment key you want to update
+     * @param string|bool|null $value \Value allocated to the key
      * @param bool $quote \Allow quotes around value
      * @param bool $space \Allow space between key and value
      * 
      * @return bool
      */
-    public static function updateENV(?string $key = null, string|bool $value = null, ?bool $quote = true, ?bool $space = false)
+    static public function updateENV($key = null, $value = null, ?bool $quote = true, ?bool $space = false)
     {
         $path = self::formatWithBaseDirectory('.env');
 
@@ -300,12 +299,12 @@ class Env {
     /**
      * Create needed directory and files
      *
-     *  @param string $directory
-     *  @param string $filename
+     *  @param string|null $directory
+     *  @param string|null $filename
      *  
      * @return void
      */
-    private static function createDir_AndFiles(?string $directory = null, ?string  $filename = null)
+    static private function createDir_AndFiles($directory = null,  $filename = null)
     {
         // if system path is null
         // calling the `new self()` will initalize the class and set the default path for us
@@ -328,14 +327,51 @@ class Env {
             touch($filename);
             chmod($filename, 0777);
         }
-    }    
+    }
+
+    /**
+     * Create SymPath
+     *
+     * @param  string|null $path
+     * @return void
+     */
+    static private function createSymPath($path = null)
+    {
+        // if sym_path is null
+        if(is_null(self::$sym_path) || !(empty($path) && is_null($path))){
+            
+            // init entire class object
+            self::init();
+
+            if(!empty($path)){
+                self::$class->getDirectory($path);
+    
+                // add to global property
+                self::$sym_path = self::$class->cleanServerPath($path);
+            }
+        }
+    }
+
+    /**
+     * isDotenvInstalled
+     *
+     * @return bool
+     */
+    static private function isDotenvInstalled()
+    {
+        if(class_exists('Dotenv\Dotenv')){
+            return true;
+        }
+
+        return false;
+    }
 
     /**
      * GET Error Levels
      *
      * @return array 
      */
-    private static function error_levels()
+    static private function error_levels()
     {
         return array(
             E_ERROR             => 'Fatal Error',
@@ -356,7 +392,7 @@ class Env {
      *
      * @return bool 
      */
-    private static function is_debug() 
+    static private function is_debug() 
     {
         return Manager::isEnvBool(env('APP_DEBUG', true));
     }    
@@ -366,7 +402,7 @@ class Env {
      *
      * @return bool Returns true if the application is running in local environment, false otherwise.
      */
-    private static function is_local()
+    static private function is_local()
     {
         // check using default setting
         if(env('APP_ENV') == 'local'){
@@ -382,7 +418,7 @@ class Env {
      * 
      * @return string
      */
-    private static function envTxt()
+    static private function envTxt()
     {
         return (new Manager)->envDummy();
     }

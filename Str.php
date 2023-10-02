@@ -12,7 +12,7 @@ class Str{
      * @param  mixed  $value
      * @return array
      */
-    public static function wrap($value)
+    static public function wrap($value)
     {
         if (is_null($value)) {
             return [];
@@ -27,7 +27,7 @@ class Str{
      * @param  array  $array
      * @return mixed|null
      */
-    public static function head($array = null)
+    static public function head($array = null)
     {
         return isset($array[0]) ? $array[0] : null;
     }
@@ -38,7 +38,7 @@ class Str{
      * @param array $array
      * @return mixed|null
      */
-    public static function last($array = null)
+    static public function last($array = null)
     {
         if (!is_array($array)) {
             return null;
@@ -53,7 +53,7 @@ class Str{
      * @param array $bindings
      * @return array
      */
-    public static function mergeBinding(array $bindings)
+    static public function mergeBinding(array $bindings)
     {
         // Extract the values from the associative array
         $values = array_values($bindings);
@@ -71,7 +71,7 @@ class Str{
      * @param array $bindings
      * @return array
      */
-    public static function bindings(array $bindings)
+    static public function bindings(array $bindings)
     {
         return self::mergeBinding($bindings);
     }
@@ -82,7 +82,7 @@ class Str{
      * @param array $array The multidimensional array to flatten.
      * @return array The flattened array.
      */
-    public static function flattenValue(array $array)
+    static public function flattenValue(array $array)
     {
         $result = [];
 
@@ -104,7 +104,7 @@ class Str{
      * @param mixed $keys The key(s) to exclude
      * @return array The filtered array
      */
-    public static function exceptArray($array, $keys)
+    static public function exceptArray($array, $keys)
     {
         // Convert single key to an array
         if (!is_array($keys)) {
@@ -125,7 +125,7 @@ class Str{
      * @param  string  $subject  The original string.
      * @return string  The modified string.
      */
-    public static function replaceFirst($search, $replace, $subject)
+    static public function replaceFirst($search, $replace, $subject)
     {
         // Find the position of the first occurrence of the search string
         $pos = strpos($subject, $search);
@@ -147,7 +147,7 @@ class Str{
      * @param  string  $subject  The original string.
      * @return string  The modified string.
      */
-    public static function replaceLast($search, $replace, $subject)
+    static public function replaceLast($search, $replace, $subject)
     {
         // Find the position of the first occurrence of the search string
         $pos = strrpos($subject, $search);
@@ -167,7 +167,7 @@ class Str{
      * @param  string  $value
      * @return string
      */
-    public static function pluralize(?string $value = null)
+    static public function pluralize(?string $value = null)
     {
         $value = (string) $value;
         if (strlen($value) === 1) {
@@ -224,7 +224,7 @@ class Str{
      * @param string $needle
      * @return bool
      */
-    public static function startsWith(string $haystack, string $needle)
+    static public function startsWith(string $haystack, string $needle)
     {
         return strncmp($haystack, $needle, strlen($needle)) === 0;
     }
@@ -236,7 +236,7 @@ class Str{
      * @param string $needle
      * @return bool
      */
-    public static function endsWith(string $haystack, string $needle)
+    static public function endsWith(string $haystack, string $needle)
     {
         return substr($haystack, -strlen($needle)) === $needle;
     }
@@ -247,7 +247,7 @@ class Str{
      * @param int $length
      * @return string
      */
-    public static function random(int $length = 16)
+    static public function random(int $length = 16)
     {
         // Define the character pool for the random string
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -268,7 +268,7 @@ class Str{
      * @param string $delimiter
      * @return string
      */
-    public static function snakeCase(string $value, string $delimiter = '_')
+    static public function snakeCase(string $value, string $delimiter = '_')
     {
         // Replace spaces with delimiter and capitalize each word
         $value = preg_replace('/\s+/u', $delimiter, ucwords($value));
@@ -285,7 +285,7 @@ class Str{
      * @param string $value
      * @return string
      */
-    public static function camelCase(string $value)
+    static public function camelCase(string $value)
     {
         // Remove special characters and spaces
         $value = preg_replace('/[^a-z0-9]+/i', ' ', $value);
@@ -306,7 +306,7 @@ class Str{
      * @param string $separator
      * @return string
      */
-    public static function slug(string $value, string $separator = '-')
+    static public function slug(string $value, string $separator = '-')
     {
         $value = preg_replace('/[^a-zA-Z0-9]+/', $separator, $value);
         $value = trim($value, $separator);
@@ -321,7 +321,7 @@ class Str{
      * @param  string  $value
      * @return string
      */
-    public static function studlyCase(string $value)
+    static public function studlyCase(string $value)
     {
         $value = ucwords(preg_replace('/[\s_]+/', ' ', $value));
         $value = str_replace(' ', '', $value);
@@ -335,10 +335,10 @@ class Str{
      * @param  string  $value
      * @return string
      */
-    public static function kebabCase(string $value)
+    static public function kebabCase(string $value)
     {
         $value = preg_replace('/\s+/u', '-', $value);
-        $value = strtolower(preg_replace('/(.)(?=[A-Z])/u', '$1-', $value));
+        $value = self::lower(preg_replace('/(.)(?=[A-Z])/u', '$1-', $value));
 
         return $value;
     }
@@ -349,7 +349,7 @@ class Str{
      * @param  string  $value
      * @return string
      */
-    public static function titleCase(string $value)
+    static public function titleCase(string $value)
     {
         return ucwords(self::lower($value));
     }
@@ -361,7 +361,7 @@ class Str{
      * @param  string  $separator
      * @return string
      */
-    public static function slugify(string $value, string $separator = '-')
+    static public function slugify(string $value, string $separator = '-')
     {
         // Transliterate special characters to ASCII
         $value = transliterator_transliterate('Any-Latin; Latin-ASCII; Lower()', $value);
@@ -381,7 +381,7 @@ class Str{
      * 
      * @return string
      */
-    public static function lower(?string $value = null)
+    static public function lower(?string $value = null)
     {
         return trim(strtolower((string) $value));
     }
@@ -392,7 +392,7 @@ class Str{
      * 
      * @return string
      */
-    public static function upper(?string $value = null)
+    static public function upper(?string $value = null)
     {
         return trim(strtoupper((string) $value));
     }
@@ -404,7 +404,7 @@ class Str{
      * @param string $needle
      * @return bool
      */
-    public static function contains($haystack, string $needle)
+    static public function contains($haystack, string $needle)
     {
         if (is_array($haystack)) {
             // Check if any word in the array contains the substring
@@ -429,7 +429,7 @@ class Str{
      * @param string $ellipsis
      * @return string
      */
-    public static function truncate(string $value, int $length, string $ellipsis = '...')
+    static public function truncate(string $value, int $length, string $ellipsis = '...')
     {
         // Check if truncation is necessary
         if (strlen($value) <= $length) {
@@ -448,7 +448,7 @@ class Str{
      * @param string $value
      * @return string
      */
-    public static function reverse(string $value)
+    static public function reverse(string $value)
     {
         return strrev($value);
     }
@@ -460,7 +460,7 @@ class Str{
      * @param string $needle
      * @return int
      */
-    public static function countOccurrences(string $haystack, string $needle)
+    static public function countOccurrences(string $haystack, string $needle)
     {
         return substr_count($haystack, $needle);
     }
@@ -471,7 +471,7 @@ class Str{
      * @param string $value
      * @return string
      */
-    public static function removeWhitespace(string $value)
+    static public function removeWhitespace(string $value)
     {
         return preg_replace('/\s+/', '', $value);
     }
@@ -484,7 +484,7 @@ class Str{
      * @param int $maxLength
      * @return string
      */
-    public static function generateRandomWords(int $wordCount, int $minLength = 3, int $maxLength = 10)
+    static public function generateRandomWords(int $wordCount, int $minLength = 3, int $maxLength = 10)
     {
         $words = [];
         $characters = 'abcdefghijklmnopqrstuvwxyz';
@@ -509,7 +509,7 @@ class Str{
      * @param string $filename
      * @return string|null
      */
-    public static function getFileExtension(string $filename)
+    static public function getFileExtension(string $filename)
     {
         $extension = pathinfo($filename, PATHINFO_EXTENSION);
 
@@ -523,7 +523,7 @@ class Str{
      * @param string $delimiter
      * @return string
      */
-    public static function before(string $value, string $delimiter)
+    static public function before(string $value, string $delimiter)
     {
         $pos = strpos($value, $delimiter);
 
@@ -537,7 +537,7 @@ class Str{
      * @param string $delimiter
      * @return string
      */
-    public static function after(string $value, string $delimiter)
+    static public function after(string $value, string $delimiter)
     {
         $pos = strpos($value, $delimiter);
 
@@ -554,7 +554,7 @@ class Str{
      * @param string $end
      * @return string
      */
-    public static function between(string $value, string $start, string $end)
+    static public function between(string $value, string $start, string $end)
     {
         $startPos = strpos($value, $start);
         $endPos = strpos($value, $end, $startPos + strlen($start));
@@ -571,7 +571,7 @@ class Str{
      * @param string $pattern
      * @return bool
      */
-    public static function matchesPattern(string $value, string $pattern)
+    static public function matchesPattern(string $value, string $pattern)
     {
         return preg_match($pattern, $value) === 1;
     }
@@ -583,7 +583,7 @@ class Str{
      * @param string $substring
      * @return string
      */
-    public static function removeSubstring(string $value, string $substring)
+    static public function removeSubstring(string $value, string $substring)
     {
         return str_replace($substring, '', $value);
     }
@@ -597,7 +597,7 @@ class Str{
      * @param int $padType
      * @return string
      */
-    public static function padString(string $value, int $length, string $padChar = ' ', int $padType = STR_PAD_RIGHT)
+    static public function padString(string $value, int $length, string $padChar = ' ', int $padType = STR_PAD_RIGHT)
     {
         return str_pad($value, $length, $padChar, $padType);
     }

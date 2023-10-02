@@ -19,7 +19,7 @@ trait CountryTrait{
      */
     static private function mode($mode = null)
     {
-        return trim(Str::upper($mode));
+        return Str::upper($mode);
     }
 
     /**

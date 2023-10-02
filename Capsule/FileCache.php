@@ -20,7 +20,7 @@ class FileCache{
      * @param string $path
      * @return void
      */
-    public static function setCachePath(string $path = "cache"): void
+    static public function setCachePath(string $path = "cache"): void
     {
         // if \storage folder not found
         $path = storage_path($path);
@@ -39,7 +39,7 @@ class FileCache{
      * @param int|null $expirationTime Expiration time in seconds (null for no expiration)
      * @return void
      */
-    public static function put(string $key, $value, ?int $expirationTime = 604800): void
+    static public function put(string $key, $value, ?int $expirationTime = 604800): void
     {
         $cachePath = self::getCachePath($key);
 
@@ -57,7 +57,7 @@ class FileCache{
      * @param string $key
      * @return mixed|null
      */
-    public static function get(string $key)
+    static public function get(string $key)
     {
         $cachePath = self::getCachePath($key);
         
@@ -81,7 +81,7 @@ class FileCache{
      * @param string $key
      * @return bool
      */
-    public static function exists(string $key)
+    static public function exists(string $key)
     {   
         $key = self::getCachePath($key);
         return file_exists( $key ) && !is_dir($key);
@@ -93,7 +93,7 @@ class FileCache{
      * @param string $key
      * @return bool
      */
-    public static function has(string $key): bool
+    static public function has(string $key): bool
     {
         $cachePath = self::getCachePath($key);
 
@@ -112,7 +112,7 @@ class FileCache{
      * @param string $key
      * @return bool
      */
-    public static function expired(string $key): bool
+    static public function expired(string $key): bool
     {
         $cachePath = self::getCachePath($key);
 
@@ -133,7 +133,7 @@ class FileCache{
      * @param string $key
      * @return void
      */
-    public static function forget(string $key): void
+    static public function forget(string $key): void
     {
         $cachePath = self::getCachePath($key);
 
@@ -147,7 +147,7 @@ class FileCache{
      *
      * @return void
      */
-    public static function clear(): void
+    static public function clear(): void
     {
         $files = glob(self::$cachePath . '/*.cache');
 
@@ -164,7 +164,7 @@ class FileCache{
      * @param string $key
      * @return string
      */
-    protected static function getCachePath(string $key): string
+    static protected function getCachePath(string $key): string
     {
         return self::$cachePath . '/' . md5($key) . '.cache';
     }

@@ -6,6 +6,7 @@ use Tamedevelopers\Support\Hash;
 use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Time;
 use Tamedevelopers\Support\Asset;
+use Tamedevelopers\Support\Cookie;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Country;
 use Tamedevelopers\Support\Translator;
@@ -41,25 +42,37 @@ if (! function_exists('Tame')) {
     }
 }
 
-if (! function_exists('ttime')) {
+if (! function_exists('TameCookie')) {
+    /**
+     * Cookie Object
+     *
+     * @return \Tamedevelopers\Support\Cookie
+     */
+    function TameCookie()
+    {
+        return new Cookie();
+    }
+}
+
+if (! function_exists('TameTime')) {
     /**
      * Time Object
      * @param int|string|null $time
      * @param string|null $timezone
      * @return \Tamedevelopers\Support\Time
      */
-    function ttime($time = null, $timezone = null)
+    function TameTime($time = null, $timezone = null)
     {
         return new Time($time, $timezone);
     }
 }
 
-if (! function_exists('country')) {
+if (! function_exists('TameCountry')) {
     /**
      * Country Object
      * @return \Tamedevelopers\Support\Country
      */
-    function country()
+    function TameCountry()
     {
         return new Country();
     }

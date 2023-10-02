@@ -48,7 +48,7 @@ class Tame{
      * @var string
      */
     private const PBKDF2_SALT = "\x2d\xb7\x68\x1a";
-
+    
     
     /**
      * Echo `json_encode` with response and message
@@ -188,7 +188,7 @@ class Tame{
             $bytes = round(($bytes / 1024)) . 'KB';
         }
 
-        return $format ? $bytes : strtolower((string) $bytes);
+        return $format ? $bytes : Str::lower($bytes);
     }
     
     /**
@@ -199,7 +199,7 @@ class Tame{
      */
     static public function sizeToBytes($size = '1mb')
     {
-        $size = strtolower((string) $size);
+        $size = Str::lower((string) $size);
 
         // Match the size and unit from the input string
         if (preg_match('/^(\d+(\.\d+)?)([kmg]b?)?$/', $size, $matches)) {
@@ -214,7 +214,7 @@ class Tame{
                 case 'gb':
                     return (int) ($value * self::GB);
                 default:
-                    // If no unit specified, default to megabytes
+                    // If no unit specified, default to kilobytes
                     return (int) ($value * self::MB);
             }
         }
@@ -272,8 +272,6 @@ class Tame{
 
         return file_exists($destinationZip);
     }
-
-    
 
     /**
      * Get file modification time
@@ -1060,10 +1058,10 @@ class Tame{
     static public function platformIcon(?string $platform = null, ?string $os_name = null)
     {
         // platform to lower
-        $platform = strtolower((string) basename($platform));
+        $platform = Str::lower(basename($platform));
 
         // os name to lower
-        $os_name = strtolower((string) $os_name);
+        $os_name = Str::lower($os_name);
 
         // set path
         $path = self::stringReplacer( __DIR__ );
@@ -1152,7 +1150,7 @@ class Tame{
      * @param string $path
      * @return string
      */
-    static protected function stringReplacer(?string $path = null)
+    static public function stringReplacer(?string $path = null)
     {
         return Server::cleanServerPath($path);
     }

@@ -112,7 +112,8 @@ class Time {
     {
         if (is_numeric($date)) {
             self::$date = (int) $date;
-            return;
+
+            return new self(self::$date);
         }
 
         // if empty date
@@ -435,11 +436,7 @@ class Time {
      */
     static private function carbonInstance() 
     {
-        if(class_exists('Illuminate\Support\Carbon')){
-            return self::$date->timestamp;
-        }
-
-        return self::$date;
+        return self::$date->timestamp ?? self::$date;
     }
 
     /**

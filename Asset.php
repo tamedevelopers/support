@@ -21,7 +21,7 @@ class Asset{
      * 
      * @return string
      */
-    public static function asset(?string $asset = null)
+    static public function asset(?string $asset = null)
     {
         // if coniguration has not been used in the global space
         // then we call to define paths for us
@@ -61,7 +61,7 @@ class Asset{
      * 
      * @return void
      */
-    public static function config(?string $base_path = null, ?bool $cache = true) 
+    static public function config(?string $base_path = null, ?bool $cache = true) 
     {
         // severs
         $server = self::getServers();
@@ -94,7 +94,7 @@ class Asset{
      * 
      * @return int|false
      */
-    private static function getFiletime(?string $file_path = null) 
+    static private function getFiletime(?string $file_path = null) 
     {
         return file_exists($file_path) 
                 ? "?v=" . filemtime($file_path)

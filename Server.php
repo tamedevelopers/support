@@ -28,7 +28,7 @@ class Server{
      * @return mixed
      * The value of the configuration option, or null if it doesn't exist
      */
-    public static function config($key, $default = null, string $base_folder = null)
+    static public function config($key, $default = null, string $base_folder = null)
     {
         // Convert the key to an array
         $parts = explode('.', $key);
@@ -122,7 +122,7 @@ class Server{
      * @param  mixed $value
      * @return array
      */
-    public static function toArray($value)
+    static public function toArray($value)
     {
         if(self::isNotValidArray($value)){
 
@@ -143,7 +143,7 @@ class Server{
      * @param  mixed $value
      * @return object
      */
-    public static function toObject($value)
+    static public function toObject($value)
     {
         return json_decode(
             json_encode( self::toArray($value) ), 
@@ -157,7 +157,7 @@ class Server{
      * @param  mixed $value
      * @return string
      */
-    public static function toJson($value)
+    static public function toJson($value)
     {
         if(self::isValidJson($value)){
             return $value;
@@ -172,7 +172,7 @@ class Server{
      * @param mixed $data
      * @return bool
      */
-    private static function isNotValidArray(mixed $data = null)
+    static private function isNotValidArray(mixed $data = null)
     {
         if (!is_array($data)) {
             return true;
@@ -190,7 +190,7 @@ class Server{
      * @param mixed $data
      * @return bool
      */
-    private static function isValidJson(mixed $data = null)
+    static private function isValidJson(mixed $data = null)
     {
         if(is_string($data)){
             json_decode($data);

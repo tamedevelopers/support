@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use Tamedevelopers\Support\Time;
+
 class Cookie{
     
     /** 
@@ -16,25 +18,41 @@ class Cookie{
      * Expire Cookie name
      * @var string
      */
-    static protected $expire;
+    static protected $expireName;
 
     /** 
      * Time Cookie name
      * @var string
      */
-    static protected $time;
+    static protected $timeName;
+
+    /** 
+     * Time format
+     * @var string
+     */
+    static protected $timeFormat;
+
+    /** 
+     * Expire time format
+     * @var mixed
+     */
+    static protected $expireFormat;
     
     /** 
      * Create Sitename From .env
      * - APP_NAME
      * 
-     * @return void
+     * @return $this
      */
     static protected function init()
     {
-        self::$name     = strtolower(str_replace([' '], '', $_ENV['APP_NAME']));
-        self::$time     = "__time_" . self::$name;
-        self::$expire   = "__expire_" . self::$name;
+        self::$name         = strtolower(str_replace([' '], '', $_ENV['APP_NAME']));
+        self::$timeName     = "__time_" . self::$name;
+        self::$expireName   = "__expire_" . self::$name;
+        self::$timeFormat   = Time::timestamp('next year', 'Y-m-d');
+        self::$expireFormat = Time::timestamp('last year', 'Y-m-d');
+
+        return new self();
     }
 
     /** 
@@ -42,28 +60,28 @@ class Cookie{
      * @param string $name
      * - Cookie Name
      * 
-     * @param string 
+     * @param string|null
      * - Cookie Value
      * 
-     * @param int|string|null $expires_or_options
+     * @param int|string $minutes
      * [optional] The time the cookie expires. 
      * This is a Unix timestamp so is in number of seconds since the epoch. 
      * In other words, you'll most likely set this with the time function plus the number of seconds before you want it to expire. 
      * Or you might use mktime. time()+606024*30 will set the cookie to expire in 30 days. 
      * If set to 0, or omitted, the cookie will expire at the end of the session (when the browser closes).
      * 
-     * @param string $path
+     * @param string|null $path
      * [optional] The path on the server in which the cookie will be available on. 
      * If set to '/', the cookie will be available within the entire domain.
      * 
-     * @param string $domain
+     * @param string|null $domain
      * [optional] The domain that the cookie is available. 
      * To make the cookie available on all subdomains of example.com then you'd set it to '.example.com'.
      * 
-     * @param bool $secure
+     * @param bool|null $secure
      * [optional] Indicates that the cookie should only be transmitted over a secure HTTPS connection from the client.
      * 
-     * @param bool $httponly 
+     * @param bool|null $httponly 
      * [optional] When true the cookie will be made accessible only through the HTTP protocol. 
      * 
      * @return void
@@ -71,35 +89,51 @@ class Cookie{
      * If setcookie successfully runs, it will return true. 
      * This does not indicate whether the user accepted the cookie.
      */
-    static public function set(
-        ?string $name, 
-        ?string $value, 
-        int|string|null $expires_or_options = 0,
-        ?string $path = '/', 
-        ?string $domain = "", 
-        ?bool $secure = false, 
-        ?bool $httponly = false
-    )
+    static public function set($name, $value, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null)
     {
-        // options
-        if(is_null($expires_or_options)){
-            $expires_or_options = 0;
-        }
+        // minutes
+        $minutes = self::minutesToExpire($minutes);
 
-        // expiration
-        $expires = $expires_or_options;
-        if (!is_int($expires)){
-            if(is_null($expires)){
-                $expires = strtotime('now +10 minutes');
-            } else{
-                $expires = strtotime($expires);
-            }
-        }
+        // create default values
+        [$path, $domain, $secure, $httponly, $force] = self::getDefaultPathAndDomain($path, $domain, $secure, $httponly, $force);
 
         // set cookie
-        if (!headers_sent()) {
-            setcookie($name, $value, $expires, $path, $domain, $secure, $httponly);
+        if ( !headers_sent() || $force === true) {
+            @setcookie($name, $value, $minutes, $path, $domain, $secure, $httponly);
         }
+    }
+
+    /**
+     * Expire the given cookie.
+     *
+     * @param  string  $name
+     * @param  string|null  $path
+     * @param  string  $domain
+     * @return void
+     */
+    static public function forget($name, $path = null, $domain = null)
+    {
+        self::set(
+            name: $name, 
+            value: '', 
+            minutes: 'last year', 
+            path: $path, 
+            domain: $domain,
+            force: true
+        );
+    }
+
+    /**
+     * Expire the given cookie.
+     *
+     * @param  string  $name
+     * @param  string|null  $path
+     * @param  string  $domain
+     * @return void
+     */
+    static public function expire($name, $path = null, $domain = null)
+    {
+        self::forget($name, $path, $domain);
     }
 
     /** 
@@ -109,8 +143,8 @@ class Cookie{
      */
     static public function setTime()
     {
-        self::init();
-        self::set(self::$time, date("Y-m-d", strtotime('next year')));
+        self::init()
+            ->set(self::$timeName, self::$timeFormat);
     }
 
     /** 
@@ -120,8 +154,8 @@ class Cookie{
      */
     static public function setExpire()
     {
-        self::init();
-        self::set(self::$expire, date("Y-m-d", strtotime('last year')));
+        self::init()
+            ->set(self::$expireName, self::$expireFormat);
     }
 
     /** 
@@ -131,8 +165,7 @@ class Cookie{
      */
     static public function getTime()
     {
-        self::init();
-        return self::get(self::$time);
+        return self::init()->get(self::$timeName);
     }
 
     /** 
@@ -142,8 +175,7 @@ class Cookie{
      */
     static public function getExpire()
     {
-        self::init();
-        return self::get(self::$expire);
+        return self::init()->get(self::$expireName);
     }
 
     /** 
@@ -153,7 +185,7 @@ class Cookie{
      * 
      * @return bool
      */
-    static public function has(?string $name = null)
+    static public function has($name = null)
     {
         return isset($_COOKIE[(string) $name]);
     }
@@ -165,11 +197,69 @@ class Cookie{
      * 
      * @return mixed
      */
-    static public function get(?string $name = null)
+    static public function get($name = null)
     {
-        return self::has($name) 
-                ? $_COOKIE[$name]
+        return self::has($name)
+                ? $_COOKIE[(string) $name]
                 : null;
+    }
+
+    /** 
+     * Get all cookie 
+     * @param string $name
+     * 
+     * [optional] Cookiename or return all cookies
+     * 
+     * @return mixed
+     */
+    static public function all($name = null)
+    {
+        return self::get($name) ?? $_COOKIE;
+    }
+
+    /** 
+     * Set minutes
+     * 
+     * @param int|string $minutes
+     * @return int
+     */
+    static private function minutesToExpire($minutes = 0)
+    {
+        // options
+        if(empty($minutes)){
+            $minutes = 0;
+        } elseif(is_numeric($minutes)){
+            $minutes = time() + (((int) $minutes) * 60);
+        } else{
+            $minutes = strtotime($minutes);
+            if ($minutes === false || $minutes === -1) {
+                // Invalid timestamp format, default to 0 (end of session)
+                return 0;
+            }
+        }
+
+        return (int) $minutes;
+    }
+
+    /**
+     * Get the path and domain, or the default values.
+     *
+     * @param  string|null  $path
+     * @param  string|null  $domain
+     * @param  bool|null  $secure
+     * @param  bool|null  $httponly
+     * @param  bool|null  $force
+     * @return array
+     */
+    static private function getDefaultPathAndDomain($path = null, $domain = null, $secure = null, $httponly = null, $force = null)
+    {
+        return [
+            !empty($path) ? $path : '/', 
+            !empty($domain) ? $domain : '', 
+            is_bool($secure) ? $secure : false, 
+            is_bool($httponly) ? $httponly : false,
+            is_bool($force) ? $force : false,
+        ];
     }
     
 }

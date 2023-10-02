@@ -8,7 +8,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 // set the default time and timezone
 // helper function
-ttime(
+TameTime(
     timezone: 'Africa/Lagos',
     time: 'now', 
 );
@@ -17,12 +17,12 @@ ttime(
 // Time::setDate('last week');
 // Time::setTimezone('Asia/Tokyo');
 
-// ttime()->setDate('last week');
-// ttime()->setTimezone('Asia/Tokyo');
+// TameTime()->setDate('last week');
+// TameTime()->setTimezone('Asia/Tokyo');
 
 // Time::setDate('last week');
-// ttime('yesterday')->time();
-// ttime('last week')->sec();
+// TameTime('yesterday')->time();
+// TameTime('last week')->sec();
 
 dd(
 
@@ -31,7 +31,7 @@ dd(
         ->ago()
     ,
 
-    ttime()->format('yesterday')->ago(),
+    TameTime()->format('yesterday')->ago(),
 
-    ttime()->toJs('now')
+    TameTime()->toJs('now')
 );

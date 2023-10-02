@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 use ReflectionClass;
+use Tamedevelopers\Support\Str;
 
 
 trait ServerTrait{
@@ -13,17 +14,17 @@ trait ServerTrait{
      * server base dir
      * @var mixed
      */
-    protected static $base_dir;
+    static protected $base_dir;
 
 
     /**
      * Define custom Server root path
      * 
-     * @param string $path
+     * @param string|null $path
      * 
      * @return string
      */
-    public static function setDirectory(?string $path = null)
+    static public function setDirectory($path = null)
     {
         // if base path was presented
         if(!empty($path)){
@@ -40,7 +41,7 @@ trait ServerTrait{
      * 
      * @return mixed
      */
-    public static function getDirectory()
+    static public function getDirectory()
     {
         if(empty(self::$base_dir)){
             // get default project root path
@@ -61,7 +62,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    private static function serverRoot()
+    static private function serverRoot()
     {
         return self::getServers('server');
     }
@@ -69,13 +70,13 @@ trait ServerTrait{
     /**
      * Format path with Base Directory
      * 
-     * @param string $path
+     * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
      * - Final result: i.e C:/server_path/path
      * 
      * @return string
      */
-    public static function formatWithBaseDirectory(?string $path = null)
+    static public function formatWithBaseDirectory($path = null)
     {
         $server = rtrim(
             self::getDirectory(),
@@ -89,13 +90,13 @@ trait ServerTrait{
     /**
      * Format path with Domain Path
      * 
-     * @param string $path
+     * @param string|null $path
      * - [optional] You can pass a path to include with the domain link
      * - Final result: i.e https://domain.com/path
      * 
      * @return string
      */
-    public static function formatWithDomainURI(?string $path = null)
+    static public function formatWithDomainURI($path = null)
     {
         $server = rtrim(
             self::getServers('domain'),
@@ -109,14 +110,14 @@ trait ServerTrait{
     /**
      * Get the base URL and domain information.
      *
-     * @param string $mode 
+     * @param string|null $mode 
      * - [optional] get direct info of data 
      * - server|domain|protocol
      * 
      * @return mixed
      * - An associative array containing\ server|domain|protocol
      */
-    public static function getServers(?string $mode = null)
+    static public function getServers($mode = null)
     {
         // Only create Base path when `CONSTANT` is not defined
         // - The Constant holds the path setup information
@@ -160,10 +161,12 @@ trait ServerTrait{
     /**
      * cleanServerPath
      *
-     * @param  string $path
+     * @param  string|null $path
+     * @param  string $replacer
+     * 
      * @return string
      */
-    public static function cleanServerPath(?string $path = null, $replacer = '/')
+    static public function cleanServerPath($path = null, $replacer = '/')
     {
         return rtrim(
             self::pathReplacer($path, $replacer), 
@@ -175,12 +178,12 @@ trait ServerTrait{
      * Replace path with given string
      * \ or /
      * 
-     * @param string  $path
+     * @param string|null  $path
      * @param string  $replacer
      * 
      * @return string
      */
-    public static function pathReplacer(?string $path, $replacer = '/')
+    static public function pathReplacer($path, $replacer = '/')
     {
         return str_replace(
             ['\\', '/'], 
@@ -194,7 +197,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    private static function createAbsolutePath()
+    static private function createAbsolutePath()
     {
         // get direct root path
         $projectRootPath = self::getDirectRootPath();
@@ -210,14 +213,14 @@ trait ServerTrait{
 
     /**
      * Create Server Absolute Path
-     * @param string $serverPath 
+     * @param string|null $serverPath 
      * 
      * @return array
      */
-    private static function createAbsoluteDomain(?string $serverPath = null)
+    static private function createAbsoluteDomain($serverPath = null)
     {
         // Determine the protocol (http or https)
-        $protocol = isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) !== 'off' 
+        $protocol = Str::lower($_SERVER['HTTPS'] ?? null) !== 'off' 
                     ? 'https://' 
                     : 'http://';
 
@@ -245,7 +248,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    private static function getVendorRootPath()
+    static private function getVendorRootPath()
     {
         $reflection = new ReflectionClass(\Composer\Autoload\ClassLoader::class);
         $vendorPath = dirname($reflection->getFileName(), 2);
@@ -258,7 +261,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    private static function getDirectRootPath()
+    static private function getDirectRootPath()
     {
         $documentRoot   = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']);
         $currentScript  = str_replace('\\', '/', $_SERVER['SCRIPT_FILENAME']);

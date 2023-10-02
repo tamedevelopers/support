@@ -19,12 +19,12 @@
         "ext-ctype": "*",
         "ext-mbstring": "*",
         "symfony/var-dumper": "*",
+        "symfony/console": "^6.2",
         "cocur/slugify": "^4.2.0",
-        "symfony/console": "^6.2"
+        "vlucas/phpdotenv": "^5.4.1"
     },
     "suggest": {
-        "dompdf/dompdf": "Required to use the `PDF` class and helper (^2.0.2).",
-        "vlucas/phpdotenv": "Required to use the `Env` class and helper (^5.4.1)."
+        "dompdf/dompdf": "Required to use the `PDF` class and helper (^2.0.2)."
     },
     "autoload": {
         "files": [
