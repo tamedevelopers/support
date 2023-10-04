@@ -138,7 +138,7 @@ env_update('DB_CHARSET', 'utf8', false);
 
 ### Get Servers
 - Returns assoc arrays of Server
-    - `server\|domain\|protocol`
+    - `server\|domain`
 
 ```
 use Tamedevelopers\Support\Server;

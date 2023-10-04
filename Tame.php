@@ -79,6 +79,22 @@ class Tame{
     }
 
     /**
+     * Check if at least one class exists
+     *
+     * @param array $classNames Array of class names to check
+     * @return bool True if at least one class exists, false otherwise
+     */
+    static public function checkAnyClassExists(array $classNames)
+    {
+        foreach ($classNames as $className) {
+            if (class_exists($className)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * PHP Version Compare
      * 
      * @param string $version

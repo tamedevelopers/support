@@ -80,7 +80,7 @@ class Asset{
                 'cache'     => $cache,
                 'server'    => self::formatWithBaseDirectory($base_path),
                 'domain'    => rtrim(
-                    self::cleanServerPath("{$server['domain']}/{$base_path}"), 
+                    self::cleanServerPath("{$server['domain']}{$base_path}"), 
                     '/'
                 ),
             ]);

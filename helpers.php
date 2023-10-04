@@ -14,19 +14,22 @@ use Tamedevelopers\Support\AutoloadRegister;
 use Tamedevelopers\Support\Capsule\FileCache;
 
 
-if (! function_exists('TameIsLaravelDetect')) {
+if (! function_exists('AppIsNotCorePHP')) {
     /**
-     * Check if Package is inside Laravel Application
+     * Check if Application is not Core PHP
+     * If running on other frameworks
      *
      * @return bool
      */
-    function TameIsLaravelDetect()
+    function AppIsNotCorePHP()
     {
-        if(class_exists('Illuminate\Foundation\Application') || class_exists('Illuminate\Container\Container')){
-            return true;
-        }
-
-        return false;
+        // get_declared_classes()
+        // using the above `get_declared_classes()` function will return all classes in your project
+        // Check if any classe exist
+        return Tame::checkAnyClassExists([
+            'Illuminate\Foundation\Application',
+            'Illuminate\Container\Container',
+        ]);
     }
 }
 
@@ -90,7 +93,7 @@ if (! function_exists('PDF')) {
     }
 }
 
-if (! TameIsLaravelDetect() && ! function_exists('bcrypt')) {
+if (! AppIsNotCorePHP() && ! function_exists('bcrypt')) {
      /**
      * Password Encrypter.
      * This function encrypts a password using bcrypt with a generated salt.
@@ -148,7 +151,7 @@ if (! function_exists('autoload_register')) {
     }
 }
 
-if (! TameIsLaravelDetect() && ! function_exists('config')) {
+if (! AppIsNotCorePHP() && ! function_exists('config')) {
     /**
      * Get the value of a configuration option.
      *
@@ -171,7 +174,7 @@ if (! TameIsLaravelDetect() && ! function_exists('config')) {
     }
 }
 
-if (! TameIsLaravelDetect() && ! function_exists('env')) {
+if (! AppIsNotCorePHP() && ! function_exists('env')) {
     /**
      * Get ENV (Enviroment) Data
      * - If .env was not used, 
@@ -213,7 +216,7 @@ if (! function_exists('env_update')) {
     }
 }
 
-if (! TameIsLaravelDetect() && ! function_exists('asset')) {
+if (! AppIsNotCorePHP() && ! function_exists('asset')) {
     /**
      * Create assets Real path url
      * 
@@ -250,7 +253,7 @@ if (! function_exists('asset_config')) {
     }
 }
 
-if (! TameIsLaravelDetect() && ! function_exists('__')) {
+if (! AppIsNotCorePHP() && ! function_exists('__')) {
     /**
      * Translate the given message.
      *

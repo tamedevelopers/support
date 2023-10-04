@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 use ReflectionClass;
+use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\UrlHelper;
 
 
 trait ServerTrait{
@@ -112,10 +114,10 @@ trait ServerTrait{
      *
      * @param string|null $mode 
      * - [optional] get direct info of data 
-     * - server|domain|protocol
+     * - server|domain
      * 
      * @return mixed
-     * - An associative array containing\ server|domain|protocol
+     * - An associative array containing\ server|domain
      */
     static public function getServers($mode = null)
     {
@@ -126,15 +128,11 @@ trait ServerTrait{
             $serverPath = self::cleanServerPath(
                 self::createAbsolutePath()
             );
-
-            // Replace Document root inside server path
-            $domainPath = self::createAbsoluteDomain($serverPath);
-
+            
             // Data
             $data = [
                 'server'    => $serverPath,
-                'domain'    => $domainPath['domain'],
-                'protocol'  => $domainPath['protocol'],
+                'domain'    => UrlHelper::url(),
             ];
 
             /*
@@ -151,7 +149,6 @@ trait ServerTrait{
             $data   = [
                 'server'    => $serverData['server'],
                 'domain'    => $serverData['domain'],
-                'protocol'  => $serverData['protocol'],
             ];
         }
 
@@ -197,7 +194,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    static private function createAbsolutePath()
+    static public function createAbsolutePath()
     {
         // get direct root path
         $projectRootPath = self::getDirectRootPath();
@@ -209,38 +206,6 @@ trait ServerTrait{
         }
 
         return $projectRootPath;
-    }
-
-    /**
-     * Create Server Absolute Path
-     * @param string|null $serverPath 
-     * 
-     * @return array
-     */
-    static private function createAbsoluteDomain($serverPath = null)
-    {
-        // Determine the protocol (http or https)
-        $protocol = Str::lower($_SERVER['HTTPS'] ?? null) !== 'off' 
-                    ? 'https://' 
-                    : 'http://';
-
-        // The Document root path
-        $docRoot = $_SERVER['DOCUMENT_ROOT'];
-
-        // Get the server name (hostname)
-        $serverName = $_SERVER['SERVER_NAME'] ?? null;
-
-        // Replace Document root inside server path
-        $domainPath = str_replace($docRoot, '', $serverPath);
-
-        // trim(string, '/) - Trim forward slash from left and right
-        // we using right trim only
-        $domainPath = rtrim((string) $domainPath, '/');
-
-        return [
-            'domain'    => "{$protocol}{$serverName}{$domainPath}",
-            'protocol'  => $protocol,
-        ];
     }
 
     /**
