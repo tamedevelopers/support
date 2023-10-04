@@ -57,7 +57,14 @@ class Manager{
             AWS_SECRET_ACCESS_KEY=
             AWS_DEFAULT_REGION=us-east-1
             AWS_BUCKET=
+            AWS_URL=
             AWS_USE_PATH_STYLE_ENDPOINT=false
+            
+            CLOUDINARY_SECRET_KEY=
+            CLOUDINARY_KEY=
+            CLOUDINARY_NAME=
+            CLOUDINARY_URL=
+            CLOUDINARY_SECURE=false
 
             PUSHER_APP_ID=
             PUSHER_APP_KEY=

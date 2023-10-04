@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Tamedevelopers\Support;
+namespace Tamedevelopers\Support\Collections;
 
 use ArrayAccess;
 use Traversable;
 use ArrayIterator;
 use IteratorAggregate;
+use Tamedevelopers\Support\Server;
 
 class Collection implements IteratorAggregate, ArrayAccess
 {
@@ -25,7 +26,7 @@ class Collection implements IteratorAggregate, ArrayAccess
      */
     public function __construct($items = [])
     {
-        $this->items = $this->convertOnInit($items);
+        $this->items = $items;
     }
     
     /**
@@ -158,9 +159,7 @@ class Collection implements IteratorAggregate, ArrayAccess
      */ 
     public function toArray()
     {
-        return is_array($this->items)
-                ? $this->items
-                : [];
+        return Server::toArray($this->items);
     }
     
     /**
@@ -170,7 +169,7 @@ class Collection implements IteratorAggregate, ArrayAccess
      */ 
     public function toObject()
     {
-        return json_decode( json_encode($this->items), false);
+        return Server::toObject($this->items);
     }
     
     /**
@@ -180,18 +179,7 @@ class Collection implements IteratorAggregate, ArrayAccess
      */ 
     public function toJson()
     {
-        return json_encode($this->items);
-    }
-
-    /**
-     * Convert data to an array on Initializaiton
-     * @param mixed $items
-     * 
-     * @return array
-     */ 
-    private function convertOnInit(mixed $items = null)
-    {
-        return json_decode( json_encode($items), true);
+        return Server::toJson($this->items);
     }
 
 }

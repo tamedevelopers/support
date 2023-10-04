@@ -173,19 +173,22 @@ class Tame{
      * Convert Bytes to Units 
      *
      * @param  float|int $bytes
-     * @param  mixed $format
-     * [optional] Default is true --- UPPER CASE
+     * @param  bool $format
+     * @param  string|null $gb
+     * @param  string|null $mb
+     * @param  string|null $kb
      * 
      * @return string
      */
-    static public function byteToUnit(float|int $bytes = 0, $format = true)
+    static public function byteToUnit($bytes = 0, $format = true, $gb = 'GB', $mb = 'MB', $kb = 'KB')
     {
+        $bytes = (int) $bytes;
         if ($bytes >= 1073741824){
-            $bytes = round(($bytes / 1073741824)) . 'GB';
+            $bytes = round(($bytes / 1073741824)) . $gb;
         } elseif ($bytes >= 1048576){
-            $bytes = round(($bytes / 1048576)) . 'MB';
+            $bytes = round(($bytes / 1048576)) . $mb;
         } elseif ($bytes >= 1024){
-            $bytes = round(($bytes / 1024)) . 'KB';
+            $bytes = round(($bytes / 1024)) . $kb;
         }
 
         return $format ? $bytes : Str::lower($bytes);
@@ -199,7 +202,7 @@ class Tame{
      */
     static public function sizeToBytes($size = '1mb')
     {
-        $size = Str::lower((string) $size);
+        $size = Str::lower(str_replace(' ', '', (string) $size));
 
         // Match the size and unit from the input string
         if (preg_match('/^(\d+(\.\d+)?)([kmg]b?)?$/', $size, $matches)) {
@@ -214,12 +217,16 @@ class Tame{
                 case 'gb':
                     return (int) ($value * self::GB);
                 default:
-                    // If no unit specified, default to kilobytes
+                    // If no unit specified, default to megabytes
                     return (int) ($value * self::MB);
             }
         }
 
-        return false; // Invalid input
+        // Invalid input
+        $size = (int) $size;
+
+        // check if input is greter than 1kb, else default to 1KB
+        return $size > self::KB ? $size : $size * self::KB; 
     }
 
     /**
@@ -1153,6 +1160,27 @@ class Tame{
     static public function stringReplacer(?string $path = null)
     {
         return Server::cleanServerPath($path);
+    }
+
+    /**
+     * Check IF Internet is Available
+     *
+     * @return bool
+     */
+    static public function isInternetAvailable()
+    {
+        // Use cURL to make a request
+        $request = curl_init('https://www.google.com');
+        curl_setopt($request, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($request, CURLOPT_TIMEOUT, 5);
+        curl_exec($request);
+        
+        // Check the HTTP response code
+        $httpCode = curl_getinfo($request, CURLINFO_HTTP_CODE);
+        curl_close($request);
+
+        // HTTP code 200 means the request was successful
+        return $httpCode === 200;
     }
 
 }

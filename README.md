@@ -31,7 +31,7 @@ Support Package For Tamedevelopers
 Prior to installing `support package` get the [Composer](https://getcomposer.org) dependency manager for PHP because it'll simplify installation.
 
 ```
-composer require peterson/database
+composer require tamedevelopers/support
 ```
 
 
