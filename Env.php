@@ -144,6 +144,11 @@ class Env {
     {
         // file to file
         $pathToFile = self::formatWithBaseDirectory('.env');
+
+        // when system path is empty
+        if(empty(self::$sym_path)){
+            new static();
+        }
         
         // only attempt to create file if direcotry if valid
         if(is_dir(self::$sym_path)){
@@ -308,8 +313,8 @@ class Env {
     {
         // if system path is null
         // calling the `new self()` will initalize the class and set the default path for us
-        if(is_null(self::$sym_path)){
-            new self();
+        if(empty(self::$sym_path)){
+            new static();
         }
 
         // if \storage folder not found
