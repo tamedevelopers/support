@@ -449,61 +449,55 @@ class Time {
     {
         // convert to lowercase
         $name = Str::lower($name);
-        
-        // to javascrit timer
-        if (in_array($name, ['tojs', 'jstimer'])) {
-            return call_user_func_array([new self(), 'toJsTimer'], $args);
+
+        switch ($name) {
+            case in_array($name, ['tojs', 'jstimer']):
+                $className = 'toJsTimer';
+                break;
+            
+            case in_array($name, ['time', 'gettimes', 'gettime']):
+                $className = 'getDate';
+                break;
+            
+            case in_array($name, ['hours', 'hr', 'hrs', 'gethr', 'gethours']):
+                $className = 'getHour';
+                break;
+            
+            case in_array($name, ['getseconds', 'getsec', 'sec', 's']):
+                $className = 'getSecond';
+                break;
+            
+            case in_array($name, ['min', 'mins', 'getminute', 'getminutes', 'getmins']):
+                $className = 'getMin';
+                break;
+            
+            case in_array($name, ['getday', 'getdays', 'getd', 'day', 'days']):
+                $className = 'getDay';
+                break;
+            
+            case in_array($name, ['getweek', 'getweeks', 'getw']):
+                $className = 'getWeek';
+                break;
+            
+            case in_array($name, ['getmonths', 'getmonth', 'getm']):
+                $className = 'getMonth';
+                break;
+            
+            case in_array($name, ['getyr', 'getyears', 'getyear', 'year', 'years', 'yr', 'yrs', 'y']):
+                $className = 'getYear';
+                break;
+            
+            case $name === 'greetings':
+                $className = 'greeting';
+                break;
+            
+            default:
+                $className = 'timeAgo';
+                break;
         }
-        
-        // for hour
-        if (in_array($name, ['time', 'gettimes', 'gettime'])) {
-            return self::getDate();
-        }
-        
-        // for hour
-        if (in_array($name, ['hours', 'hr', 'hrs', 'gethr', 'gethours'])) {
-            return self::getHour();
-        }
-        
-        // for seconds
-        if (in_array($name, ['getseconds', 'getsec', 'sec', 's'])) {
-            return self::getSecond();
-        }
-        
-        // for minutes
-        if (in_array($name, ['min', 'mins', 'getminute', 'getminutes', 'getmins'])) {
-            return self::getMin();
-        }
-        
-        // for day
-        if (in_array($name, ['getday', 'getdays', 'getd', 'day', 'days'])) {
-            return self::getDay();
-        }
-        
-        // for weeks
-        if (in_array($name, ['getweek', 'getweeks', 'getw'])) {
-            return self::getWeek();
-        }
-        
-        // for months
-        if (in_array($name, ['getmonths', 'getmonth', 'getm'])) {
-            return self::getMonth();
-        }
-        
-        // for year
-        if (in_array($name, ['getyr', 'getyears', 'getyear', 'year', 'years', 'yr', 'yrs', 'y'])) {
-            return self::getYear();
-        }
-        
-        // for greetings
-        if ($name === 'greetings') {
-            return self::greeting();
-        }
-        
-        // for timeago
-        if (in_array($name, ['timesago', 'ago', 'timesago'])) {
-            return self::timeAgo();
-        }
+
+        // run
+        return call_user_func_array([new static(), $className], $args);
     }
 
 }
