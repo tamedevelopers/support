@@ -441,63 +441,65 @@ class Time {
 
     /**
      * Handle the calls to non-existent methods.
-     * @param string|null $name
+     * @param string|null $method
      * @param mixed $args
      * @return mixed
      */
-    static private function nonExistMethod($name = null, $args = null) 
+    static private function nonExistMethod($method = null, $args = null) 
     {
         // convert to lowercase
-        $name = Str::lower($name);
+        $name = Str::lower($method);
 
         switch ($name) {
             case in_array($name, ['tojs', 'jstimer']):
-                $className = 'toJsTimer';
+                $method = 'toJsTimer';
                 break;
             
             case in_array($name, ['time', 'gettimes', 'gettime']):
-                $className = 'getDate';
+                $method = 'getDate';
                 break;
             
             case in_array($name, ['hours', 'hr', 'hrs', 'gethr', 'gethours']):
-                $className = 'getHour';
+                $method = 'getHour';
                 break;
             
             case in_array($name, ['getseconds', 'getsec', 'sec', 's']):
-                $className = 'getSecond';
+                $method = 'getSecond';
                 break;
             
             case in_array($name, ['min', 'mins', 'getminute', 'getminutes', 'getmins']):
-                $className = 'getMin';
+                $method = 'getMin';
                 break;
             
             case in_array($name, ['getday', 'getdays', 'getd', 'day', 'days']):
-                $className = 'getDay';
+                $method = 'getDay';
                 break;
             
             case in_array($name, ['getweek', 'getweeks', 'getw']):
-                $className = 'getWeek';
+                $method = 'getWeek';
                 break;
             
             case in_array($name, ['getmonths', 'getmonth', 'getm']):
-                $className = 'getMonth';
+                $method = 'getMonth';
                 break;
             
             case in_array($name, ['getyr', 'getyears', 'getyear', 'year', 'years', 'yr', 'yrs', 'y']):
-                $className = 'getYear';
+                $method = 'getYear';
                 break;
             
             case $name === 'greetings':
-                $className = 'greeting';
+                $method = 'greeting';
                 break;
             
             default:
-                $className = 'timeAgo';
+                $method = 'timeAgo';
                 break;
         }
+        
+        // create instance of new static self
+        $instance = new static(self::$date, self::$timezone);
 
-        // run
-        return call_user_func_array([new static(), $className], $args);
+        return $instance->$method(...$args);
     }
 
 }

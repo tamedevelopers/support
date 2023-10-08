@@ -6,6 +6,7 @@ namespace Tamedevelopers\Support;
 
 use Exception;
 use Dotenv\Dotenv;
+use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Constant;
 use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Traits\ServerTrait;
@@ -142,8 +143,11 @@ class Env {
      */
     static public function createOrIgnore()
     {
-        // file to file
-        $pathToFile = self::formatWithBaseDirectory('.env');
+        // file to .env
+        $envPath = self::formatWithBaseDirectory('.env');
+
+        // file env.example
+        $envExamplePath = self::formatWithBaseDirectory('.env.example');
 
         // when system path is empty
         if(empty(self::$sym_path)){
@@ -153,10 +157,17 @@ class Env {
         // only attempt to create file if direcotry if valid
         if(is_dir(self::$sym_path)){
             // if file doesn't exist and not a directory
-            if(!file_exists($pathToFile) && !is_dir($pathToFile)){
+            if(!Tame::exists($envPath)){
                 
                 // Write the contents to the new file
-                file_put_contents($pathToFile, self::envTxt());
+                file_put_contents($envPath, self::envTxt());
+            }
+
+            // if file doesn't exist and not a directory
+            if(!Tame::exists($envExamplePath)){
+                
+                // Write the contents to the new file
+                file_put_contents($envExamplePath, self::envTxt());
             }
         }
     }

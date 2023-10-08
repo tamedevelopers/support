@@ -6,15 +6,15 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 
 // helper function
-// country();
+// TameCountry();
 
 // Country::countryIso3()
 
 dd(
 
-    country()->getTimeZone("Africa/Addis_Ababa"),
+    TameCountry()->getTimeZone("Africa/Addis_Ababa"),
 
-    country()->getCaptchaLocale('ar'),
+    TameCountry()->getCaptchaLocale('ar'),
 
     Country::getCountryIso3('NGA')
 );

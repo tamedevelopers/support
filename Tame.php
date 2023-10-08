@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
-use ZipArchive;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Traits\TameTrait;
-
 
 /**
  * @see \Tamedevelopers\Support\Str
@@ -81,13 +79,14 @@ class Tame{
     /**
      * Check if at least one class exists
      *
-     * @param array $classNames Array of class names to check
+     * @param string|array $classNames Array of class names to check
      * @return bool True if at least one class exists, false otherwise
      */
-    static public function checkAnyClassExists(array $classNames)
+    static public function checkAnyClassExists(...$classNames)
     {
-        foreach ($classNames as $className) {
-            if (class_exists($className)) {
+        $classNames = Str::flattenValue($classNames);
+        foreach ($classNames as $name) {
+            if (class_exists($name)) {
                 return true;
             }
         }
@@ -243,57 +242,6 @@ class Tame{
 
         // check if input is greter than 1kb, else default to 1KB
         return $size > self::KB ? $size : $size * self::KB; 
-    }
-
-    /**
-     * Unzip a file or folder.
-     *
-     * @param  string $sourcePath
-     * @param  string $destination
-     * @return bool
-     */
-    static public function unzip($sourcePath, $destination)
-    {
-        // If it's a zip file, call the unzipFile function
-        if (pathinfo($sourcePath, PATHINFO_EXTENSION) === 'zip') {
-            return self::unzipFile($sourcePath, $destination);
-        }
-
-        // If it's a folder, call the unzipFolder function
-        if (is_dir($sourcePath)) {
-            return self::unzipFolder($sourcePath, $destination);
-        }
-
-        return false; // Unsupported file type
-    }
-
-    /**
-     * Zip a file or folder.
-     *
-     * @param string $sourcePath The path to the file or folder to zip.
-     * @param string $destinationZip The path for the resulting zip file.
-     * @return bool True if the zip operation was successful, false otherwise.
-     */
-    static public function zip($sourcePath, $destinationZip)
-    {
-        // If it's a folder, call the zipFolder function
-        if (is_dir($sourcePath)) {
-            return self::zipFolder($sourcePath, $destinationZip);
-        }
-
-        // If it's a file, create a zip containing just that file
-        $zip = new ZipArchive();
-
-        if ($zip->open($destinationZip, ZipArchive::CREATE) !== true) {
-            return false;
-        }
-
-        // Add the file to the zip
-        $zip->addFile($sourcePath, basename($sourcePath));
-
-        $zip->close();
-
-        return file_exists($destinationZip);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\PDF;
+use Tamedevelopers\Support\Zip;
 use Tamedevelopers\Support\Hash;
 use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Time;
@@ -23,12 +24,14 @@ if (! function_exists('AppIsNotCorePHP')) {
      */
     function AppIsNotCorePHP()
     {
-        // get_declared_classes()
-        // using the above `get_declared_classes()` function will return all classes in your project
+        // using `get_declared_classes()` function will return all classes in your project
         // Check if any classe exist
         return Tame::checkAnyClassExists([
-            'Illuminate\Foundation\Application',
-            'Illuminate\Container\Container',
+            '\Illuminate\Foundation\Application',
+            // '\CI_Controller',
+            // '\Cake\Controller\Controller',
+            // '\Symfony\Component\HttpKernel\Kernel',
+            // '\Symfony\Component\Routing\Annotation\Route',
         ]);
     }
 }
@@ -90,6 +93,18 @@ if (! function_exists('PDF')) {
     function PDF()
     {
         return new PDF();
+    }
+}
+
+if (! function_exists('Zip')) {
+    /**
+     * Zip Object
+     *
+     * @return \Tamedevelopers\Support\Zip
+     */
+    function Zip()
+    {
+        return new Zip();
     }
 }
 
