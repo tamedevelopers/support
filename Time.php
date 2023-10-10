@@ -32,7 +32,7 @@ class Time {
      * @param int|string|null $date
      * @param string|null $timezone
      */
-    public function __construct($date = 'now', ?string $timezone = 'UTC')
+    public function __construct($date = 'now', $timezone = 'UTC')
     {
         if(empty(self::$date)){
             self::setDate($date);
@@ -69,11 +69,11 @@ class Time {
 
     /**
      * Set the timezone.
-     * @param string $timezone
+     * @param string|null $timezone
      * 
      * @return $this
      */
-    static public function setTimezone(?string $timezone = null)
+    static public function setTimezone($timezone = null)
     {
         if(in_array($timezone, Country::timeZone())){
             self::$timezone = $timezone;
@@ -83,7 +83,7 @@ class Time {
         }
 
         // set timezone
-        date_default_timezone_set($timezone);
+        date_default_timezone_set(self::$timezone);
 
         return new self(self::$date, self::$timezone);
     }
@@ -172,7 +172,7 @@ class Time {
      * 
      * @return string
      */
-    static public function timestamp($date, ?string $format = "Y-m-d H:i:s")
+    static public function timestamp($date, $format = "Y-m-d H:i:s")
     {
         if(is_string($date)){
             $date = strtotime($date);   
@@ -299,7 +299,7 @@ class Time {
      * 
      * @return mixed
      */
-    static public function timeDifference(?string $mode  = null) 
+    static public function timeDifference($mode  = null) 
     {
         $now    = new DateTime('now', new DateTimeZone(self::getTimezone()));
         $date   = new DateTime();
@@ -348,7 +348,7 @@ class Time {
      * 
      * @return string
      */
-    static public function timeAgo(?string $mode = null)
+    static public function timeAgo($mode = null)
     {
         $minutes    = self::getMin();
         $seconds    = self::getSecond();
@@ -419,7 +419,7 @@ class Time {
      * 
      * @return mixed
      */
-    static private function getText(?string $mode  = null)
+    static private function getText($mode  = null)
     {
         if(!defined('TIME_TEXT')){
             self::config();
@@ -450,51 +450,20 @@ class Time {
         // convert to lowercase
         $name = Str::lower($method);
 
-        switch ($name) {
-            case in_array($name, ['tojs', 'jstimer']):
-                $method = 'toJsTimer';
-                break;
-            
-            case in_array($name, ['time', 'gettimes', 'gettime']):
-                $method = 'getDate';
-                break;
-            
-            case in_array($name, ['hours', 'hr', 'hrs', 'gethr', 'gethours']):
-                $method = 'getHour';
-                break;
-            
-            case in_array($name, ['getseconds', 'getsec', 'sec', 's']):
-                $method = 'getSecond';
-                break;
-            
-            case in_array($name, ['min', 'mins', 'getminute', 'getminutes', 'getmins']):
-                $method = 'getMin';
-                break;
-            
-            case in_array($name, ['getday', 'getdays', 'getd', 'day', 'days']):
-                $method = 'getDay';
-                break;
-            
-            case in_array($name, ['getweek', 'getweeks', 'getw']):
-                $method = 'getWeek';
-                break;
-            
-            case in_array($name, ['getmonths', 'getmonth', 'getm']):
-                $method = 'getMonth';
-                break;
-            
-            case in_array($name, ['getyr', 'getyears', 'getyear', 'year', 'years', 'yr', 'yrs', 'y']):
-                $method = 'getYear';
-                break;
-            
-            case $name === 'greetings':
-                $method = 'greeting';
-                break;
-            
-            default:
-                $method = 'timeAgo';
-                break;
-        }
+        // create correct method name
+        $method = match ($name) {
+            'greetings' => 'greeting',
+            'tojs', 'jstimer' => 'toJsTimer',
+            'time', 'gettimes', 'gettime' => 'getDate',
+            'hours', 'hr', 'hrs', 'gethr', 'gethours' => 'getHour',
+            'getseconds', 'getsec', 'sec', 's' => 'getSecond',
+            'min', 'mins', 'getminute', 'getminutes', 'getmins' => 'getMin',
+            'getday', 'getdays', 'getd', 'day', 'days' => 'getDay',
+            'getweek', 'getweeks', 'getw' => 'getWeek',
+            'getmonths', 'getmonth', 'getm' => 'getMonth',
+            'getyr', 'getyears', 'getyear', 'year', 'years', 'yr', 'yrs', 'y' => 'getYear',
+            default => 'timeAgo'
+        };
         
         // create instance of new static self
         $instance = new static(self::$date, self::$timezone);

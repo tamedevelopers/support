@@ -24,7 +24,7 @@ class Str{
     /**
      * Get the first element of an array.
      *
-     * @param  array  $array
+     * @param  array|null  $array
      * @return mixed|null
      */
     static public function head($array = null)
@@ -35,7 +35,7 @@ class Str{
     /**
      * Get the last element of an array.
      *
-     * @param array $array
+     * @param array|null $array
      * @return mixed|null
      */
     static public function last($array = null)
@@ -45,6 +45,37 @@ class Str{
         }
 
         return end($array);
+    }
+    
+    /**
+     * Convert array keys to specified key if available, else return the original array.
+     *
+     * @param array $data The input data array.
+     * @param string $key The key to use for conversion.
+     * @param int $case The case sensitivity option for key comparison (upper, lower).
+     * 
+     * @return array
+     * - The converted array with specified key as keys if available, else the original array
+     */
+    static public function convertArrayKey(array $data, string $key, $case = null)
+    {
+        // Extract the specified key values from the sub-arrays
+        $values = array_column($data, $key);
+
+        // Check if specified key values are available
+        if ($values) {
+            // Apply case transformation based on the specified option
+            $matchValue = match (self::lower($case)) {
+                'upper' => array_map('strtoupper', $values),
+                'lower' => array_map('strtolower', $values),
+                default => $values,
+            };
+
+            // Combine specified key values as keys with the original sub-arrays as values
+            return array_combine($matchValue, $data);
+        }
+
+        return $data;
     }
 
     /**
@@ -104,7 +135,7 @@ class Str{
      * @param mixed $keys The key(s) to exclude
      * @return array The filtered array
      */
-    static public function exceptArray($array, $keys)
+    static public function exceptArray(array $array, $keys)
     {
         // Convert single key to an array
         if (!is_array($keys)) {
@@ -123,9 +154,10 @@ class Str{
      * @param  string  $search   The substring to search for.
      * @param  string  $replace  The replacement substring.
      * @param  string  $subject  The original string.
-     * @return string  The modified string.
+     * @return string  
+     * - The modified string.
      */
-    static public function replaceFirst($search, $replace, $subject)
+    static public function replaceFirst(string $search, string $replace, string $subject)
     {
         // Find the position of the first occurrence of the search string
         $pos = strpos($subject, $search);
@@ -145,9 +177,10 @@ class Str{
      * @param  string  $search   The substring to search for.
      * @param  string  $replace  The replacement substring.
      * @param  string  $subject  The original string.
-     * @return string  The modified string.
+     * @return string  
+     * - The modified string.
      */
-    static public function replaceLast($search, $replace, $subject)
+    static public function replaceLast(string $search, string $replace, string $subject)
     {
         // Find the position of the first occurrence of the search string
         $pos = strrpos($subject, $search);
@@ -164,10 +197,10 @@ class Str{
     /**
      * Get the plural form of an English word.
      *
-     * @param  string  $value
+     * @param  string|null  $value
      * @return string
      */
-    static public function pluralize(?string $value = null)
+    static public function pluralize($value = null)
     {
         $value = (string) $value;
         if (strlen($value) === 1) {
@@ -381,7 +414,7 @@ class Str{
      * 
      * @return string
      */
-    static public function lower(?string $value = null)
+    static public function lower($value = null)
     {
         return trim(strtolower((string) $value));
     }
@@ -392,7 +425,7 @@ class Str{
      * 
      * @return string
      */
-    static public function upper(?string $value = null)
+    static public function upper($value = null)
     {
         return trim(strtoupper((string) $value));
     }
@@ -404,7 +437,7 @@ class Str{
      * @param string $needle
      * @return bool
      */
-    static public function contains($haystack, string $needle)
+    static public function contains(string|array $haystack, string $needle)
     {
         if (is_array($haystack)) {
             // Check if any word in the array contains the substring
