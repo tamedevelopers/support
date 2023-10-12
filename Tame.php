@@ -247,12 +247,12 @@ class Tame{
     /**
      * Get file modification time
      *
-     * @param string $path
+     * @param string|null $path
      * 
      * @return mixed 
      * - int|bool
      */
-    static public function getFiletime(?string $path = null) 
+    static public function getFiletime($path = null) 
     {
         $fullPath = self::getBasePath($path);
 
@@ -540,14 +540,14 @@ class Tame{
     /**
      * For sorting muti-dimentional array
      *
-     * @param  string $key
+     * @param  string|null $key
      * @param  array $arry
      * @param  string $type
      * - [asc|desc|snum]
      * 
      * @return void
      */
-    static public function sortMultipleArray(?string $key = null, ?array &$arry = [], ?string $type = 'asc')
+    static public function sortMultipleArray($key = null, ?array &$arry = [], ?string $type = 'asc')
     {
         $id = array_column($arry, $key);
         switch ($type) { 
@@ -568,14 +568,14 @@ class Tame{
     /**
      * Clean phone string
      *
-     * @param string $phone
+     * @param string|null $phone
      * 
      * @param bool $allow --- Default is true
      * [optional] to allow `+` before number
      * 
      * @return string
      */
-    static public function cleanPhoneNumber(?string $phone = null, ?bool $allow = true)
+    static public function cleanPhoneNumber($phone = null, ?bool $allow = true)
     {
         $phone = str_replace(' ', '', str_replace('-', '', $phone));
         $phone = str_replace('(', '', str_replace(')', '', $phone));
@@ -593,11 +593,11 @@ class Tame{
     /**
      * Remove special characters while allowing all languages.
      *
-     * @param string $string
+     * @param string|null $string
      * @return string|null 
      * - The cleaned string or null if the input is empty.
      */
-    static public function removeSpecialChars(?string $string = null)
+    static public function removeSpecialChars($string = null)
     {
         if (empty($string)) {
             return null;
@@ -612,7 +612,7 @@ class Tame{
      * @param string|null $string The input string to clean.
      * @return string The cleaned string.
      */
-    static public function cleanTagsForURL(?string $string = null)
+    static public function cleanTagsForURL($string = null)
     {
         // Remove unwanted characters from the string
         $string = preg_replace('/[^\p{L}\p{N}\s]/u', '', (string) $string);
@@ -623,13 +623,13 @@ class Tame{
     /**
      * Hash String
      *
-     * @param  string $string
+     * @param  string|null $string
      * @param  int $length
      * @param  string $type
      * @param  int $interation
      * @return void
      */
-    static public function stringHash(?string $string = null, $length = 100, $type = 'sha256', $interation = 100)
+    static public function stringHash($string = null, $length = 100, $type = 'sha256', $interation = 100)
     {
         return hash_pbkdf2($type, mt_rand() . $string, self::PBKDF2_SALT, $interation, $length);
     }
@@ -663,21 +663,21 @@ class Tame{
     /**
      * Decode entity html strings
      * 
-     * @param string $string
+     * @param string|null $string
      * @return string
      */
     static public function html($string = null)
     {
-        return html_entity_decode($string, ENT_HTML5, 'UTF-8');
+        return html_entity_decode((string) $string, ENT_HTML5, 'UTF-8');
     }
 
     /**
      * Filter sanitize string
      *
-     * @param string $string
+     * @param string|null $string
      * @return string
     */
-    static public function filter_input(?string $string = null)
+    static public function filter_input($string = null)
     {
         return htmlspecialchars((string) $string, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
@@ -710,35 +710,17 @@ class Tame{
 
         return $number;
     }
-
-    /**
-     * Convert json data to array|object
-     * 
-     * @param string $path
-     * 
-     * @param bool $format
-     * - [optional] Default is true and this converts to an array
-     * false will convert to and object 
-     *
-     * @return array
-     */
-    static public function convertJsonData(?string $path = null, $format = true)
-    {
-        if(self::exists($path)){
-            return json_decode(file_get_contents($path), $format);
-        }
-    }
     
     /**
      * Unlink File from Server
      *
      * @param string $fileToUnlink
-     * @param string $checkFile
+     * @param string|null $checkFile
      * [optional] File to check against before unlinking
      * 
      * @return void
      */
-    static public function unlinkFile(string $fileToUnlink, ?string $checkFile = null)
+    static public function unlinkFile(string $fileToUnlink, $checkFile = null)
     {
         $fileToUnlink = self::getBasePath($fileToUnlink);
         $checkFile = self::getBasePath($checkFile);
@@ -749,40 +731,71 @@ class Tame{
             }
         }
     }
+
+    /**
+     * Convert json data to array|object
+     * 
+     * @param string|null $path
+     * 
+     * @param bool $format
+     * - [optional] Default is true and this converts to an array
+     * false will convert to and object 
+     *
+     * @return array
+     */
+    static public function convertJsonData($path = null, $format = true)
+    {
+        if(self::exists($path)){
+            return json_decode(file_get_contents($path), $format);
+        }
+    }
     
     /**
-     * Save Data to Path
+     * Save Data to Path as a Json Object
      *
-     * @param  mixed $destination
+     * @param  string $destination
      * @param  mixed $data
-     * @param  bool $type
+     * @param  bool $type - default is JSON_PRETTY_PRINT
+     * - will save as JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE
      * 
-     * @return void
+     * @return bool
      */
-    static public function saveDataToPath(?string $destination = null, array $data = [], bool $type = true)
+    static public function saveDataAsJsonObject(string $destination, mixed $data, ?bool $type = true)
     {
         $format = JSON_PRETTY_PRINT;
         if(!$type){
             $format = JSON_UNESCAPED_UNICODE;
         }
 
-        // JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
+        // check or convert data to an array
+        if(!is_array(!$data)){
+            $data = Server::toArray($data);
+        }
+
+        // try to read destination
         $fopen = fopen($destination, "w");
-        @fwrite($fopen, json_encode($data, $format));
-        @fclose(@$fopen); 
+
+        // must be a type of resource
+        if(is_resource($fopen)){
+            fwrite($fopen, json_encode($data, $format));
+            fclose($fopen); 
+            return true;
+        }
+
+        return false;
     }
     
     /**
      * Save File From Url
      *
-     * @param  mixed $urlFile
-     * @param  mixed $destination
+     * @param  string|null $url
+     * @param  string|null $destination
      * @return string
      */
-    static public function saveFileFromURL(?string $urlFile = null, ?string $destination = null)
+    static public function saveFileFromURL($url = null, $destination = null)
     {
-        if(!empty($urlFile)){
-            @file_put_contents($destination, fopen($urlFile, 'r'));
+        if(!empty($url)){
+            @file_put_contents($destination, fopen($url, 'r'));
         }
 
         return $destination;
@@ -791,12 +804,12 @@ class Tame{
     /**
      * Read PDF TO Browser
      *
-     * @param  mixed $path
+     * @param  string|null $path
      * [localhost] PDF path
      * 
      * @return void
      */
-    static public function readPDFToBrowser(?string $path = null)
+    static public function readPDFToBrowser($path = null)
     {
         if(!empty($path) && self::exists($path)){
             // Header content type
@@ -812,10 +825,10 @@ class Tame{
     /**
      * Convert image to base64
      *
-     * @param  mixed $path_to_image
+     * @param  string|null $path_to_image
      * @return null|string
      */
-    static public function imageToBase64(?string $path = null) 
+    static public function imageToBase64($path = null) 
     {
         if(!empty($path) && self::exists($path)){
             $type = pathinfo($path, PATHINFO_EXTENSION);
@@ -843,7 +856,7 @@ class Tame{
      * @return string 
      * - The masked string.
      */
-    static public function mask(?string $str = null, ?int $length = 4, ?string $position = 'right', ?string $mask = '*')
+    static public function mask($str = null, ?int $length = 4, ?string $position = 'right', ?string $mask = '*')
     {
         // Get the length of the string
         $strLength = strlen($str); 
@@ -888,7 +901,7 @@ class Tame{
     /**
      * Validate an email address.
      *
-     * @param string $email 
+     * @param string|null $email 
      * - The email address to validate.
      *
      * @param bool $use_internet 
@@ -901,7 +914,7 @@ class Tame{
      * @return bool 
      * - Whether the email address is valid (true) or not (false).
      */
-    static public function emailValidator(?string $email = null, ?bool $use_internet = true, ?bool $server_verify = false) 
+    static public function emailValidator($email = null, ?bool $use_internet = true, ?bool $server_verify = false) 
     {
         $filteredEmail = filter_var($email, FILTER_VALIDATE_EMAIL);
 
@@ -968,21 +981,16 @@ class Tame{
         // Use openssl_decrypt() function to decrypt the data
         return openssl_decrypt($encryption, $ciphering, $key, $options, $passphrase);
     }
-
-    /**
-     * Encrypt string
-     * 
-     * @return string
-     */    
+    
     /**
      * Encrypt string
      *
-     * @param string $string
+     * @param string|null $string
      * @return string
      * - Uses the Open SSL Encryption
      * - BF-CBC
      */
-    static public function encryptStr(?string $string = null)
+    static public function encryptStr($string = null)
     {
         // get encryption
         $openSSL = self::openSSLEncrypt();
@@ -1018,15 +1026,15 @@ class Tame{
     /**
      * Get platform svg icon set
      * 
-     * @param string $platform
+     * @param string|null $platform
      * - windows|linux|android|mobile|phone|unknown|mac|macintosh|ios|iphone|c|os x
      * 
-     * @param string $os_name
+     * @param string|null $os_name
      * - macos|os x|ios
      * 
      * @return string
      */
-    static public function platformIcon(?string $platform = null, ?string $os_name = null)
+    static public function platformIcon($platform = null, $os_name = null)
     {
         // platform to lower
         $platform = Str::lower(basename($platform));
@@ -1064,14 +1072,14 @@ class Tame{
      * - Storage location
      * - public_path/svg_path/
      * 
-     * @param string $payment
+     * @param string|null $payment
      * -- add-money|alipay|bank|cc|credit-card|discover|faster-pay|groupbuy|maestro|mastercard
      * -- pay|payme|payment-card|payment-wallet|paypal|stripe-circle|tripe-sqaure|stripe|visa
      * 
      * @return mixed
      * - string|null
      */
-    static public function paymentIcon(?string $payment = null)
+    static public function paymentIcon($payment = null)
     {
         // set path
         $path = self::stringReplacer( __DIR__ );
@@ -1105,11 +1113,11 @@ class Tame{
     /**
      * File exist and not a directory
      * 
-     * @param string $path
+     * @param string|null $path
      * @return bool
      * - True|False
      */
-    static public function exists(?string $path = null)
+    static public function exists($path = null)
     {
         return !is_dir($path) && file_exists($path);
     }
@@ -1118,10 +1126,10 @@ class Tame{
      * Replace and recreate path to
      * - (/) slash
      * 
-     * @param string $path
+     * @param string|null $path
      * @return string
      */
-    static public function stringReplacer(?string $path = null)
+    static public function stringReplacer($path = null)
     {
         return Server::cleanServerPath($path);
     }
