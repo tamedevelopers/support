@@ -205,8 +205,8 @@ class Time {
      */
     static public function config(?array $options = [])
     {
-        if(!defined('TIME_TEXT')){
-            define('TIME_TEXT', array_merge([
+        if(!defined('TAME_TIME_CONFIG')){
+            define('TAME_TIME_CONFIG', array_merge([
                 'night'     => 'Good night!',
                 'morning'   => 'Good morning!',
                 'afternoon' => 'Good afternoon!',
@@ -421,11 +421,11 @@ class Time {
      */
     static private function getText($mode  = null)
     {
-        if(!defined('TIME_TEXT')){
+        if(!defined('TAME_TIME_CONFIG')){
             self::config();
         }
 
-        return TIME_TEXT[$mode] ?? TIME_TEXT;
+        return TAME_TIME_CONFIG[$mode] ?? TAME_TIME_CONFIG;
     }
 
     /**
