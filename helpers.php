@@ -176,16 +176,12 @@ if (! AppIsNotCorePHP() && ! function_exists('config')) {
      * @param mixed $default 
      * [optional] The default value to return if the configuration option is not found
      * 
-     * @param string $base_folder 
-     * [optional] Custom base folder after the base_path()
-     * - Default base for config() is 'config' folder.
-     * 
      * @return mixed
      * The value of the configuration option, or null if it doesn't exist
      */
-    function config($key, $default = null, ?string $base_folder = 'config')
+    function config($key, $default = null)
     {
-        return server()->config($key, $default, $base_folder);
+        return server()->config($key, $default);
     }
 }
 

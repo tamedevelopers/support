@@ -28,7 +28,7 @@ class Server{
      * @return mixed
      * The value of the configuration option, or null if it doesn't exist
      */
-    static public function config($key, $default = null, string $base_folder = null)
+    static public function config($key, $default = null, string $base_folder = 'config')
     {
         // Convert the key to an array
         $parts = explode('.', $key);
