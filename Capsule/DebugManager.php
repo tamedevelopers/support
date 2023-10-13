@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tamedevelopers\Database\Capsule;
+namespace Tamedevelopers\Support\Capsule;
 
 use Whoops\Run;
 use Whoops\Handler\PrettyPageHandler;
