@@ -249,8 +249,7 @@ class Tame{
      *
      * @param string|null $path
      * 
-     * @return mixed 
-     * - int|bool
+     * @return int|bool 
      */
     static public function getFiletime($path = null) 
     {
@@ -261,6 +260,18 @@ class Tame{
         }
 
         return false;
+    }
+
+    /**
+     * Get file modification time
+     *
+     * @param string|null $path
+     * 
+     * @return int|bool
+     */
+    static public function fileTime($path = null) 
+    {
+        return self::getFiletime($path);
     }
 
     /**
@@ -669,6 +680,19 @@ class Tame{
     static public function html($string = null)
     {
         return html_entity_decode((string) $string, ENT_HTML5, 'UTF-8');
+    }
+
+    /**
+     * Convert string to clean text without html tags
+     * 
+     * @param string|null $string
+     * 
+     * @return string
+     * - strip all tags from string content
+     */
+    static public function text($string = null)
+    {
+        return strip_tags((string) $string);
     }
 
     /**

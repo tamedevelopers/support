@@ -16,12 +16,11 @@ class Asset{
      * @param string $asset
      * - asset file e.g (style.css | js/main.js)
      * 
-     * @param string $assetDir
-     * - Default is `assets` folder
+     * @param bool $cache
      * 
      * @return string
      */
-    static public function asset(?string $asset = null)
+    static public function asset(?string $asset = null, ?bool $cache = true)
     {
         // if coniguration has not been used in the global space
         // then we call to define paths for us
@@ -40,10 +39,15 @@ class Asset{
         // file server path
         $file_server = "{$assetPath['server']}/{$asset}";
 
-        // cache
-        $cache = $assetPath['cache'] ? self::getFiletime($file_server) : null;
+        // append file update time
+        $cacheTimeAppend = null;
 
-        return "{$file_domain}{$cache}";
+        // cache allow from self method
+        if($cache && $assetPath['cache']){
+            $cacheTimeAppend = self::getFiletime($file_server) ?? null;
+        }
+        
+        return "{$file_domain}{$cacheTimeAppend}";
     }
     
     /**
@@ -53,7 +57,7 @@ class Asset{
      * - [optional] Default is `base_directory/assets`
      * - If set and directory is not found, then we revert back to the default
      * 
-     * @param string $cache
+     * @param bool $cache
      * - [optional] Default is true
      * - End point of link `?v=xxxxxxxx` is with cache of file time change
      * - This will automatically tells the broswer to fetch new file if the time change

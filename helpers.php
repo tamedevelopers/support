@@ -227,22 +227,46 @@ if (! function_exists('env_update')) {
     }
 }
 
-if (! AppIsNotCorePHP() && ! function_exists('asset')) {
+if (! function_exists('asset')) {
     /**
      * Create assets Real path url
      * 
      * @param string $asset
      * - asset file e.g (style.css | js/main.js)
      * 
+     * @param bool $cache
+     * 
      * @return string
      */
-    function asset($asset = null)
+    function asset($asset = null, ?bool $cache = false)
     {
-        return Asset::asset($asset);
+        return Asset::asset($asset, $cache);
     }
 }
 
 if (! function_exists('asset_config')) {
+    /**
+     * Configure Assets Default Directory
+     * 
+     * @param string $base_path
+     * - [optional] Default is `base_directory/assets`
+     * - If set and directory is not found, then we revert back to the default
+     * 
+     * @param string $cache
+     * - [optional] Default is false
+     * - End point of link `?v=xxxxxxxx` is with cache of file time change
+     * - This will automatically tells the broswer to fetch new file if the time change
+     * - Time will only change if you make changes or modify the request file
+     * 
+     * @return void
+     */
+    function asset_config($base_path = null, ?bool $cache = false)
+    {
+        Asset::config($base_path, $cache);
+    }
+}
+
+if (! function_exists('config_asset')) {
     /**
      * Configure Assets Default Directory
      * 
@@ -258,9 +282,9 @@ if (! function_exists('asset_config')) {
      * 
      * @return void
      */
-    function asset_config($base_path = null, ?bool $cache = true)
+    function config_asset($base_path = null, ?bool $cache = true)
     {
-        Asset::config($base_path, $cache);
+        asset_config($base_path, $cache);
     }
 }
 
