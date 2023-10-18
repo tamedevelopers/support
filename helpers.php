@@ -191,7 +191,7 @@ if (! AppIsNotCorePHP() && ! function_exists('env')) {
      * - If .env was not used, 
      * - Then it will get all App Configuration Data as well
      * 
-     * @param string $key
+     * @param string|null $key
      * - [optional] ENV KEY or APP Configuration Key
      * 
      * @param mixed $value
@@ -199,7 +199,7 @@ if (! AppIsNotCorePHP() && ! function_exists('env')) {
      * 
      * @return mixed
      */
-    function env(?string $key = null, mixed $value = null)
+    function env($key = null, $value = null)
     {
         return Env::env($key, $value);
     }
@@ -209,9 +209,9 @@ if (! function_exists('env_update')) {
     /**
      * Update Environment [path .env] variables
      * 
-     * @param string $key \Environment key you want to update
+     * @param string|null $key \Environment key you want to update
      * 
-     * @param string|bool $value \Value of Variable to update
+     * @param string|bool|null $value \Value of Variable to update
      * 
      * @param bool $quote \Default is true
      * [optional] Allow quotes around values
@@ -221,7 +221,7 @@ if (! function_exists('env_update')) {
      * 
      * @return bool
      */
-    function env_update(?string $key = null, string|bool $value = null, ?bool $quote = true, ?bool $space = false)
+    function env_update($key = null, $value = null, ?bool $quote = true, ?bool $space = false)
     {
         return Env::updateENV($key, $value, $quote, $space);
     }
@@ -244,33 +244,11 @@ if (! function_exists('asset')) {
     }
 }
 
-if (! function_exists('asset_config')) {
-    /**
-     * Configure Assets Default Directory
-     * 
-     * @param string $base_path
-     * - [optional] Default is `base_directory/assets`
-     * - If set and directory is not found, then we revert back to the default
-     * 
-     * @param string $cache
-     * - [optional] Default is false
-     * - End point of link `?v=xxxxxxxx` is with cache of file time change
-     * - This will automatically tells the broswer to fetch new file if the time change
-     * - Time will only change if you make changes or modify the request file
-     * 
-     * @return void
-     */
-    function asset_config($base_path = null, ?bool $cache = false)
-    {
-        Asset::config($base_path, $cache);
-    }
-}
-
 if (! function_exists('config_asset')) {
     /**
      * Configure Assets Default Directory
      * 
-     * @param string $base_path
+     * @param string|null $base_path
      * - [optional] Default is `base_directory/assets`
      * - If set and directory is not found, then we revert back to the default
      * 
@@ -284,7 +262,7 @@ if (! function_exists('config_asset')) {
      */
     function config_asset($base_path = null, ?bool $cache = true)
     {
-        asset_config($base_path, $cache);
+        Asset::config($base_path, $cache);
     }
 }
 
@@ -309,7 +287,7 @@ if (! AppIsNotCorePHP() && ! function_exists('__')) {
 if (! function_exists('base_path')) {
     /**
      * Get Base Directory `Path`
-     * @param string $path
+     * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
      * - Final result: i.e C:/server_path/path
      * 
@@ -324,7 +302,7 @@ if (! function_exists('base_path')) {
 if (! function_exists('directory')) {
     /**
      * Get Base Directory `Path`
-     * @param string $path
+     * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
      * - Final result: i.e C:/server_path/path
      * 
@@ -339,7 +317,7 @@ if (! function_exists('directory')) {
 if (! function_exists('storage_path')) {
     /**
      * Get Storage Directory `Path`
-     * @param string $path
+     * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
      * - Final result: i.e C:/storage/path
      * 
@@ -354,7 +332,7 @@ if (! function_exists('storage_path')) {
 if (! function_exists('public_path')) {
     /**
      * Get Public Directory `Path`
-     * @param string $path
+     * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
      * - Final result: i.e C:/public/path
      * 
@@ -369,7 +347,7 @@ if (! function_exists('public_path')) {
 if (! function_exists('app_path')) {
     /**
      * Get Storage Directory `Path`
-     * @param string $path
+     * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
      * - Final result: i.e C:/app/path
      * 
@@ -384,7 +362,7 @@ if (! function_exists('app_path')) {
 if (! function_exists('config_path')) {
     /**
      * Get Config Directory `Path`
-     * @param string $path
+     * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
      * - Final result: i.e C:/server_path/path
      * 
@@ -399,7 +377,7 @@ if (! function_exists('config_path')) {
 if (! function_exists('lang_path')) {
     /**
      * Get Config Directory `Path`
-     * @param string $path
+     * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
      * - Final result: i.e C:/lang/path
      * 
@@ -415,7 +393,7 @@ if (! function_exists('domain')) {
     /**
      * Get Domain `URL` URI
      * 
-     * @param string $path
+     * @param string|null $path
      * - [optional] You can pass a path to include with the domain link
      * - Final result: i.e https://domain.com/path
      * 
@@ -435,7 +413,7 @@ if (! function_exists('to_array')) {
      * @param  mixed $value
      * @return array
      */ 
-    function to_array(mixed $value)
+    function to_array($value)
     {
         return server()->toArray($value);
     }
@@ -448,7 +426,7 @@ if (! function_exists('to_object')) {
      * @param  mixed $value
      * @return object
      */ 
-    function to_object(mixed $value)
+    function to_object($value)
     {
         return server()->toObject($value);
     }

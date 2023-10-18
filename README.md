@@ -70,7 +70,7 @@ http://domain.com/public/storage/[asset_file]
 
 - or -- `Helpers Function`
 ```
-asset_config('public');
+config_asset('public');
 ```
 
 ### Asset Cache
@@ -234,7 +234,7 @@ autoload_register(['folder', 'folder2]);
 | env_update()              | Same as `Env::updateENV` method               |
 | server()                  | Return instance of `(new Server)` class       |
 | asset()                   | Return Absolute path of asset. Same as `Asset::asset()`   |
-| asset_config()            | Same as `Asset::config()`. Configure Asset root directory |
+| config_asset()            | Same as `Asset::config()`. Configure Asset root directory |
 | base_path()               | Get absolute base directory path. It accepts a param as `string` if given, will be appended to the path |
 | directory()               | Same as `base_path()` just naming difference        |
 | domain()                  | Similar to `base_path()` as it returns domain URI. Also accepts path given and this will append to the endpoint of URL. |
