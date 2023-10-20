@@ -747,7 +747,7 @@ class Tame {
     static public function unlinkFile(string $fileToUnlink, $checkFile = null)
     {
         if(self::exists($fileToUnlink)){
-            if(basename($fileToUnlink) != basename($checkFile)){
+            if(basename($fileToUnlink) != basename((string) $checkFile)){
                 @unlink($fileToUnlink);
             }
         }
