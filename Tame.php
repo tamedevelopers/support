@@ -13,7 +13,7 @@ use Tamedevelopers\Support\Traits\TameTrait;
  * @see \Tamedevelopers\Support\Server
  * @see \Tamedevelopers\Support\Time
  */
-class Tame{
+class Tame {
 
     use TameTrait;
     
@@ -64,14 +64,14 @@ class Tame{
      * Check if Class Exists
      *
      * @param  string $class
-     * @param  callable|null $function
-     * @return mixed
+     * @param  Closure|null $closure
+     * @return void
      */
-    static public function class_exists($class, callable $function = null)
+    static public function class_exists($class, $closure = null)
     {
         if(class_exists($class)){
-            if(is_callable($function)){
-                $function();
+            if(self::isClosure($closure)){
+                $closure();
             }
         }
     }
@@ -746,9 +746,6 @@ class Tame{
      */
     static public function unlinkFile(string $fileToUnlink, $checkFile = null)
     {
-        $fileToUnlink = self::getBasePath($fileToUnlink);
-        $checkFile = self::getBasePath($checkFile);
-
         if(self::exists($fileToUnlink)){
             if(basename($fileToUnlink) != basename($checkFile)){
                 @unlink($fileToUnlink);
@@ -836,12 +833,8 @@ class Tame{
     static public function readPDFToBrowser($path = null)
     {
         if(!empty($path) && self::exists($path)){
-            // Header content type
-            header("Content-type: application/pdf");
-            
-            header("Content-Length: " . filesize($path));
-            
-            // Send the file to the browser.
+            @header("Content-type: application/pdf");
+            @header("Content-Length: " . filesize($path));
             readfile($path);
         }
     }
@@ -849,7 +842,9 @@ class Tame{
     /**
      * Convert image to base64
      *
-     * @param  string|null $path_to_image
+     * @param  string|null $path
+     * 
+     * 
      * @return null|string
      */
     static public function imageToBase64($path = null) 

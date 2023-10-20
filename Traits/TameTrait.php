@@ -4,8 +4,24 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Traits;
 
+use Closure;
 
 trait TameTrait{
+
+    /**
+     * isClosure
+     *
+     * @param  Closure|null $closure
+     * @return bool
+     */
+    static public function isClosure($closure = null)
+    {
+        if($closure instanceof Closure){
+            return true;
+        }
+
+        return false;
+    }
 
     /**
      * OS start
@@ -62,10 +78,10 @@ trait TameTrait{
     /**
      * OB Crons Flush function
      *
-     * @param  callable|null $function
+     * @param  Closure|null $closure
      * @return void
      */
-    static public function obCronsflush(callable $function = null)
+    static public function obCronsflush($closure = null)
     {
         // Prevent the script from timing out due to execution time limits
         set_time_limit(0);
@@ -84,9 +100,8 @@ trait TameTrait{
         // Start output buffering again
         ob_start();
 
-        // Call the provided function if it's callable
-        if (is_callable($function)) {
-            $function();
+        if(self::isClosure($closure)){
+            $closure();
         }
 
         // Get the content of the output buffer
@@ -115,7 +130,7 @@ trait TameTrait{
     /**
      * Verify the existence of an email address even when the socket connection is blocked.
      *
-     * @param string $domain 
+     * @param string|null $domain 
      * - The domain extracted from the email address.
      * 
      * @param int $mxRecords 
@@ -124,7 +139,7 @@ trait TameTrait{
      * @return bool 
      * - Whether the email address is valid (true) or not (false).
      */
-    static private function verifyDomain_AndMxRecord(?string $domain = null, ?int $mxCount = 0)
+    static private function verifyDomain_AndMxRecord($domain = null, ?int $mxCount = 0)
     {
         // Method 2: Use DNS check on domain A record
         $domainRecords = dns_get_record($domain, DNS_A);
@@ -153,56 +168,56 @@ trait TameTrait{
     /**
      * getBasePath
      *
-     * @param  mixed $path
+     * @param  string|null $path
      * @return mixed
      */
-    static private function getBasePath(?string $path = null)
+    static private function getBasePath($path = null)
     {
-        return self::stringReplacer(base_path()) . $path;
+        return self::stringReplacer(base_path($path));
     }
     
     /**
      * getPublicPath
      *
-     * @param  mixed $path
+     * @param  string|null $path
      * @return mixed
      */
-    static private function getPublicPath(?string $path = null)
+    static private function getPublicPath($path = null)
     {
-        return self::stringReplacer(base_path()) . $path;
+        return self::stringReplacer(base_path($path));
     }
     
     /**
      * getStoragePath
      *
-     * @param  mixed $path
+     * @param  string|null $path
      * @return mixed
      */
-    static private function getStoragePath(?string $path = null)
+    static private function getStoragePath($path = null)
     {
-        return self::stringReplacer(base_path()) . $path;
+        return self::stringReplacer(base_path($path));
     }
 
     /**
      * getAppPath
      *
-     * @param  mixed $path
+     * @param  string|null $path
      * @return mixed
      */
-    static private function getAppPath(?string $path = null)
+    static private function getAppPath($path = null)
     {
-        return self::stringReplacer(base_path()) . $path;
+        return self::stringReplacer(base_path($path));
     }
     
     /**
      * getSvgPath
      *
-     * @param  mixed $path
+     * @param  string|null $path
      * @return mixed
      */
-    static private function getSvgPath(?string $path = null)
+    static private function getSvgPath($path = null)
     {
-        return self::stringReplacer(base_path()) . $path;
+        return self::stringReplacer(base_path($path));
     }
 
 }

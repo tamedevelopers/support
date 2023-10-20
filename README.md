@@ -37,7 +37,7 @@ composer require tamedevelopers/support
 
 ## Asset
 - Takes a param as `string` path to asset file
-    - Default [dir] is set to `assets`
+    - Default [dir] is set to `public`
 
 ```
 use Tamedevelopers\Support\Asset;
@@ -175,7 +175,7 @@ Server::config('tests.lang.email', [], 'Tests');
  * @param  mixed $key
  * @return mixed
  */
-function __($key){
+function __lang($key){
 
     // since the config only takes the filename follow by dot(.) and keyname
     // then we can manually include additional folder-name followed by / to indicate that it's a folder
@@ -183,7 +183,7 @@ function __($key){
     // To make this Laravel kind of language, we can add the default value to be returned as the key
     // Do not forget that it starts from your root base directory, as the Package already has your root path
 
-    return config("en/message.{$key}", "message.{$key}", 'Lang');
+    return config("en/message.{$key}", "message.{$key}", 'lang');
 }
 
 

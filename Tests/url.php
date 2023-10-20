@@ -8,7 +8,6 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // URL Helpers
 
 
-
 dd(
     domain(), 
 

@@ -20,7 +20,7 @@ class Asset{
      * 
      * @return string
      */
-    static public function asset(?string $asset = null, ?bool $cache = true)
+    static public function asset(?string $asset = null, ?bool $cache = false)
     {
         // if coniguration has not been used in the global space
         // then we call to define paths for us
@@ -70,21 +70,27 @@ class Asset{
         // severs
         $server = self::getServers();
 
-        // set default
+        // set default directory
         if(empty($base_path)){
-            $base_path = "assets";
+            $base_path = "public";
         }
 
         // if not defined
         if(!defined('ASSET_BASE_DIRECTORY')){
             // - Trim forward slash from left and right
             $base_path = trim($base_path, '/');
+            
+            // old url getter helper
+            $urlFromServer = self::cleanServerPath("{$server['domain']}{$base_path}");
+
+            // url helper class
+            $urlFromhelper = UrlHelper::url();
 
             define('ASSET_BASE_DIRECTORY', [
                 'cache'     => $cache,
                 'server'    => self::formatWithBaseDirectory($base_path),
                 'domain'    => rtrim(
-                    self::cleanServerPath("{$server['domain']}{$base_path}"), 
+                    self::cleanServerPath("{$urlFromhelper}{$base_path}"), 
                     '/'
                 ),
             ]);

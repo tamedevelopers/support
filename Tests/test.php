@@ -19,7 +19,7 @@ $Json = '{"name":"Peterson","age":20,"food":["Rice","Garri","Fish","Calories"]}'
 //     'output' => 'download'
 // ]);
 
-// Tame::unlinkFile('welcome.png', 'upload/avatar/default.png')
+// Tame::unlinkFile(base_path('welcome.png'), 'default.png')
 
 // Tame::platformIcon('windows')
 

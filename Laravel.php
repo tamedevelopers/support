@@ -26,22 +26,35 @@ class Laravel{
 
             // Register a Blade directive
             Blade::directive('svg', function ($expression) {
-                // Parse the expression to get the path and classes
-                list($path, $classes) = explode(',', $expression, 2);
 
-                // path
+                list($path, $class) = array_pad(explode(',', $expression, 2), 2, '');
 
-                // Load the SVG file contents
-                $svgContent = file_get_contents(public_path(trim($path, '"')));
+                $path = str_replace(['"', "'"], '', $path);
+                $class = str_replace(['"', "'"], '', $class);
+                
+                // fullpath
+                $fullPath = public_path($path);
 
-                // Add classes to SVG
-                $svg = simplexml_load_string($svgContent);
-                if (!empty($classes)) {
-                    $svg->addAttribute('class', trim($classes, '"'));
-                }
+                // if file exists
+                if(Tame::exists($fullPath)){
+                    // Load the SVG file contents
+                    $svgContent = file_get_contents($fullPath);
 
-                // Return the modified SVG
-                return $svg->asXML();
+                    // Parse the SVG content into a SimpleXMLElement
+                    $svg = simplexml_load_string($svgContent);
+
+                    // If a class is provided, add it to the SVG element
+                    if (!empty($class)) {
+                        if (isset($svg['class'])) {
+                            $svg['class'] .= ' ' . $class;
+                        } else {
+                            $svg->addAttribute('class', $class);
+                        }
+                    }
+
+                    // Return the modified SVG
+                    return $svg->asXML();
+                };
             });
         });
     }

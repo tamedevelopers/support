@@ -52,12 +52,13 @@ class Translator{
      * Translate the given message.
      *
      * @param  string|null  $key
+     * @param  string|null  $locale
      * 
      * @return string|array|null
      */
-    static public function trans($key = null)
+    static public function trans($key = null, $locale = null)
     {
-        $locale = self::getLocale();
+        $locale = $locale ?? self::getLocale();
         
         return Server::config(
             "{$locale}/$key", 

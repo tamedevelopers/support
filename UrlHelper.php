@@ -15,15 +15,19 @@ class UrlHelper {
      */
     static public function url() 
     {
-        $baseURL    = self::getBaseURL();
-        $scriptName = $_SERVER['SCRIPT_NAME'];
-
-        // generate url
-        $url = $baseURL['full_path'] . self::getURLPath($scriptName);
+        // get base url data
+        $baseURL = self::getBaseURL();
 
         // if App is Core PHP
         if(!AppIsNotCorePHP()){
             $url = self::localUrl($baseURL);
+        } else{
+            // get path
+            $url = env('APP_URL') ?? $baseURL['full_path'];
+
+            if(empty($url)){
+                $url = str_replace(trim(self::getServerPath(), '/'), '', self::localUrl($baseURL));
+            }
         }
 
         return trim($url, '\/') . '/';
@@ -47,15 +51,14 @@ class UrlHelper {
     }
 
     /**
-     * Get the URL path
-     *
-     * @param string $scriptName
+     * Get server path
      * @return string
      */
-    static private function getURLPath($scriptName) 
+    static private function getServerPath() 
     {
-        $dir = str_replace(basename($scriptName), '', $scriptName);
-        return $dir;
+        return Server::cleanServerPath(
+            Server::createAbsolutePath()
+        );
     }
 
     /**
@@ -66,16 +69,11 @@ class UrlHelper {
      */
     static private function localUrl($baseURL)
     {
-        // create server path
-        $serverPath = Server::cleanServerPath(
-            Server::createAbsolutePath()
-        );
-
         // Get the server name (hostname)
         $serverName = $_SERVER['SERVER_NAME'] ?? null;
 
         // Replace Document root inside server path
-        $domainPath = str_replace($_SERVER['DOCUMENT_ROOT'], '', $serverPath);
+        $domainPath = str_replace($_SERVER['DOCUMENT_ROOT'], '', self::getServerPath());
 
         // trim(string, '/) - Trim forward slash from left and right
         // we using right trim only

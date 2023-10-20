@@ -6,6 +6,7 @@ namespace Tamedevelopers\Support\Capsule;
 
 use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Tame;
 
 class Manager{
     
@@ -149,16 +150,16 @@ class Manager{
      * Set headers with response code
      *
      * @param  mixed $status
-     * @param  callable $function
+     * @param  Closure|null $closure
      * @return void
      */
-    static public function setHeaders($status = 404, callable $function = null)
+    static public function setHeaders($status = 404, $closure = null)
     {
         // Set HTTP response status code to 404
         @http_response_code($status);
 
-        if(is_callable($function)){
-            $function();
+        if(Tame::isClosure($closure)){
+            $closure();
         }
 
         // Exit with response 404
