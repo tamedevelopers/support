@@ -61,6 +61,27 @@ class Tame {
     }
 
     /**
+     * Check IF Internet is Available
+     *
+     * @return bool
+     */
+    static public function isInternetAvailable()
+    {
+        // Use cURL to make a request
+        $request = curl_init('https://www.google.com');
+        curl_setopt($request, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($request, CURLOPT_TIMEOUT, 5);
+        curl_exec($request);
+        
+        // Check the HTTP response code
+        $httpCode = curl_getinfo($request, CURLINFO_HTTP_CODE);
+        curl_close($request);
+
+        // HTTP code 200 means the request was successful
+        return $httpCode === 200;
+    }
+
+    /**
      * Check if Class Exists
      *
      * @param  string $class
@@ -128,11 +149,13 @@ class Tame {
      * include if file exist
      * 
      * @param string $path
+     * - [do not include base path]
+     * 
      * @return void
      */
     static public function include($path)
     {
-        $fullPath = self::getBasePath($path);
+        $fullPath = trim(self::getBasePath($path), '\/');
 
         if(self::exists($fullPath)){
             include $fullPath;
@@ -143,11 +166,13 @@ class Tame {
      * include once if file exist
      * 
      * @param string $path
+     * - [do not include base path]
+     * 
      * @return void
      */
     static public function includeOnce($path)
     {
-        $fullPath = self::getBasePath($path);
+        $fullPath = trim(self::getBasePath($path), '\/');
 
         if(self::exists($fullPath)){
             include_once $fullPath;
@@ -158,11 +183,13 @@ class Tame {
      * require if file exist
      * 
      * @param string $path
+     * - [do not include base path]
+     * 
      * @return void
      */
     static public function require($path)
     {
-        $fullPath = self::getBasePath($path);
+        $fullPath = trim(self::getBasePath($path), '\/');
 
         if(self::exists($fullPath)){
             require $fullPath;
@@ -173,11 +200,13 @@ class Tame {
      * require_once if file exist
      * 
      * @param string $path
+     * - [do not include base path]
+     * 
      * @return void
      */
     static public function requireOnce($path)
     {
-        $fullPath = self::getBasePath($path);
+        $fullPath = trim(self::getBasePath($path), '\/');
 
         if(self::exists($fullPath)){
             require_once $fullPath;
@@ -248,6 +277,7 @@ class Tame {
      * Get file modification time
      *
      * @param string|null $path
+     * - [do not include base path]
      * 
      * @return int|bool 
      */
@@ -266,6 +296,7 @@ class Tame {
      * Get file modification time
      *
      * @param string|null $path
+     * - [do not include base path]
      * 
      * @return int|bool
      */
@@ -308,13 +339,13 @@ class Tame {
     /**
      * Getting weight calculation
      *
-     * @param mixed @length
+     * @param mixed $length
      * - float|int
      * 
-     * @param mixed @width
+     * @param mixed $width
      * - float|int
      * 
-     * @param mixed @height
+     * @param mixed $height
      * - float|int
      * 
      * @param bool $format
@@ -332,29 +363,23 @@ class Tame {
     /**
      * Getting actual weight length
      *
-     * @param mixed @length
+     * @param mixed $length
      * - float|int
      * 
-     * @param mixed @width
+     * @param mixed $width
      * - float|int
      * 
-     * @param mixed @height
+     * @param mixed $height
      * - float|int
      * 
-     * @param mixed @weight
+     * @param mixed $weight
      * - float|int
      * 
      * @param bool $format
      * 
      * @return int
      */
-    static public function getBetweenBoxLengthAndWeightInKg(
-        mixed $length   = 0, 
-        mixed $width    = 0, 
-        mixed $height   = 0, 
-        mixed $weight   = 0, 
-        ?bool $format   = true
-    ) 
+    static public function getBetweenBoxLengthAndWeightInKg($length = 0, $width = 0, $height = 0, $weight = 0, ?bool $format   = true) 
     {
         $weight = (float) $weight; 
         $dimensional_weight = self::calculateVolumeWeight($length, $width, $height, $format);
@@ -367,10 +392,10 @@ class Tame {
     /**
      * Getting actual weight between Volume/Dimensional weight and Weight in `kg`
      *
-     * @param mixed @dimensional_weight
+     * @param mixed $dimensional_weight
      * - float|int
      * 
-     * @param mixed @actual_weight
+     * @param mixed $actual_weight
      * - float|int
      * 
      * @return int
@@ -480,70 +505,74 @@ class Tame {
     /**
      * Check if array has duplicate value
      *
+     * @param array $data
      * @return bool
      * - true|false
      */
-    static public function isArrayDuplicate(?array $array = [])
+    static public function isArrayDuplicate(?array $data = [])
     {
-        if(count($array) > count(array_unique($array))){
+        if(count($data) > count(array_unique($data))){
             return true;
         }
+        
         return false;
     }
 
     /**
      * Check if all values of array is same
      *
+     * @param array $data
      * @return bool
      * - true|false
      */
-    static public function isArraySame(?array $array = [])
+    static public function isArraySame(?array $data = [])
     {
-        if(count($array) > count(array_unique($array))){
+        if(count($data) > count(array_unique($data))){
             return true;
         }
+
         return false;
     }
 
     /**
      * For sorting array
      *
-     * @param  array $arry
+     * @param  array $data
      * @param  string $type
      * - [rsort|asort|ksort|arsort|krsort|sort]
      * 
      * @return array
      */
-    static public function sortArray(?array $arry = [], ?string $type = 'sort')
+    static public function sortArray(?array $data = [], ?string $type = 'sort')
     {
         switch ($type) {
             case 'rsort':
-                rsort($arry); return $arry; //sort arrays in descending order
+                rsort($data); return $data; //sort arrays in descending order
                 break;
             
             case 'asort':
-                asort($arry);
-                return asort($arry); //sort associative arrays in ascending order, according to the value
+                asort($data);
+                return asort($data); //sort associative arrays in ascending order, according to the value
                 break;
             
             case 'ksort':
-                ksort($arry);  
-                return $arry; //sort associative arrays in ascending order, according to the key
+                ksort($data);  
+                return $data; //sort associative arrays in ascending order, according to the key
                 break;
             
             case 'arsort':
-                arsort($arry); 
-                return $arry; //sort associative arrays in descending order, according to the value
+                arsort($data); 
+                return $data; //sort associative arrays in descending order, according to the value
                 break;
             
             case 'krsort':
-                krsort($arry); 
-                return $arry; //sort associative arrays in descending order, according to the value
+                krsort($data); 
+                return $data; //sort associative arrays in descending order, according to the value
                 break;
     
             default:
-                sort($arry); 
-                return $arry; //sort arrays in descending order
+                sort($data); 
+                return $data; //sort arrays in descending order
                 break;
         }
     }
@@ -552,26 +581,26 @@ class Tame {
      * For sorting muti-dimentional array
      *
      * @param  string|null $key
-     * @param  array $arry
+     * @param  array $data
      * @param  string $type
      * - [asc|desc|snum]
      * 
      * @return void
      */
-    static public function sortMultipleArray($key = null, ?array &$arry = [], ?string $type = 'asc')
+    static public function sortMultipleArray($key = null, ?array &$data = [], ?string $type = 'asc')
     {
-        $id = array_column($arry, $key);
+        $id = array_column($data, $key);
         switch ($type) { 
             case 'desc':
-                array_multisort($id, SORT_DESC, $arry); //sort associative arrays in descending order
+                array_multisort($id, SORT_DESC, $data); //sort associative arrays in descending order
                 break;
             
             case 'snum': 
-                array_multisort($id, SORT_NUMERIC, $arry); //sort associative arrays in numeric order 
+                array_multisort($id, SORT_NUMERIC, $data); //sort associative arrays in numeric order 
                 break;
 
             default:
-                array_multisort($id, SORT_ASC, $arry); //sort arrays in ascending order
+                array_multisort($id, SORT_ASC, $data); //sort arrays in ascending order
                 break;
         }
     }
@@ -582,7 +611,7 @@ class Tame {
      * @param string|null $phone
      * 
      * @param bool $allow --- Default is true
-     * [optional] to allow `+` before number
+     * - [optional] to allow int format `+` (before number)
      * 
      * @return string
      */
@@ -605,15 +634,11 @@ class Tame {
      * Remove special characters while allowing all languages.
      *
      * @param string|null $string
-     * @return string|null 
+     * @return string
      * - The cleaned string or null if the input is empty.
      */
     static public function removeSpecialChars($string = null)
     {
-        if (empty($string)) {
-            return null;
-        }
-
         return self::cleanTagsForURL($string);
     }
 
@@ -647,7 +672,8 @@ class Tame {
     
     /**
      * Shorten String to Given Limit
-     *
+     * @url https://codeflarelimited.com/blog/php-shorten-string-with-three-dots/
+     * 
      * @param  mixed $string
      * @param  mixed $limit
      * @param  mixed $replacer
@@ -661,9 +687,7 @@ class Tame {
         $string = strip_tags($string);
         $string = str_replace("、", '', $string);
         $string = trim(str_replace(PHP_EOL, ' ', $string));
-        // $string = trim(preg_replace('/\s+/', ' ', $string));
         
-        // https://codeflarelimited.com/blog/php-shorten-string-with-three-dots/
         if(strlen($string) > $limit) {
             return mb_strcut($string, 0, $limit) . $replacer; 
         }
@@ -708,22 +732,23 @@ class Tame {
 
     /**
      * Format number to nearest thousand
+     * @url https://code.recuweb.com/2018/php-format-numbers-to-nearest-thousands/
      *
      * @param  float|int $number
      * @return void
      */
     static public function formatNumberToNearestThousand(float|int $number = 0)
     {
-        // https://code.recuweb.com/2018/php-format-numbers-to-nearest-thousands/
         if( $number >= 1000 ) {
-            $x = round($number);
+            $x  = round($number);
             $x_number_format = number_format($x);
             $x_array = explode(',', $x_number_format);
+
             //[t(trillion) - p(quadrillion) - e(quintillion) - z(sextillion) - y(septillion)]
-            $x_parts = array('k', 'm', 'b', 't', 'p', 'e', 'z', 'y');
-            $x_count_parts = count($x_array) - 1;
-            $x_display = $x;
-            $x_display = $x_array[0] . ((int) $x_array[1][0] !== 0 ? '.' . $x_array[1][0] : '');
+            $x_parts        = array('k', 'm', 'b', 't', 'p', 'e', 'z', 'y');
+            $x_count_parts  = count($x_array) - 1;
+            $x_display      = $x;
+            $x_display      = $x_array[0] . ((int) $x_array[1][0] !== 0 ? '.' . $x_array[1][0] : '');
             
             // if amount in array
             if(in_array($x_count_parts - 1, array_keys($x_parts))){
@@ -739,15 +764,17 @@ class Tame {
      * Unlink File from Server
      *
      * @param string $fileToUnlink
+     * - [full path to file]
+     * 
      * @param string|null $checkFile
-     * [optional] File to check against before unlinking
+     * - [optional] file name. <avatar.png>
      * 
      * @return void
      */
-    static public function unlinkFile(string $fileToUnlink, $checkFile = null)
+    static public function unlinkFile(string $fileToUnlink, $fileName = null)
     {
         if(self::exists($fileToUnlink)){
-            if(basename($fileToUnlink) != basename((string) $checkFile)){
+            if(basename($fileToUnlink) != basename((string) $fileName)){
                 @unlink($fileToUnlink);
             }
         }
@@ -756,15 +783,15 @@ class Tame {
     /**
      * Convert json data to array|object
      * 
-     * @param string|null $path
+     * @param string $path
+     * - [full path to file]
      * 
      * @param bool $format
-     * - [optional] Default is true and this converts to an array
-     * false will convert to and object 
+     * - [optional] `true` will convert to an array
      *
-     * @return array
+     * @return array|object|null
      */
-    static public function convertJsonData($path = null, $format = true)
+    static public function convertJsonData($path, $format = true)
     {
         if(self::exists($path)){
             return json_decode(file_get_contents($path), $format);
@@ -775,9 +802,11 @@ class Tame {
      * Save Data to Path as a Json Object
      *
      * @param  string $destination
+     * - [full path to destination]
+     * 
      * @param  mixed $data
-     * @param  bool $type - default is JSON_PRETTY_PRINT
-     * - will save as JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE
+     * @param  bool $type
+     * - Saveas[JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE]
      * 
      * @return bool
      */
@@ -810,10 +839,14 @@ class Tame {
      * Save File From Url
      *
      * @param  string|null $url
-     * @param  string|null $destination
-     * @return string
+     * - [url path] <https://google.com/file.pdf>
+     * 
+     * @param  string $destination
+     * - [full path to destination]
+     * 
+     * @return string|null
      */
-    static public function saveFileFromURL($url = null, $destination = null)
+    static public function saveFileFromURL($url = null, $destination)
     {
         if(!empty($url)){
             @file_put_contents($destination, fopen($url, 'r'));
@@ -826,7 +859,7 @@ class Tame {
      * Read PDF TO Browser
      *
      * @param  string|null $path
-     * [localhost] PDF path
+     * - [full path to file]
      * 
      * @return void
      */
@@ -843,7 +876,7 @@ class Tame {
      * Convert image to base64
      *
      * @param  string|null $path
-     * 
+     * - [full path to file]
      * 
      * @return null|string
      */
@@ -877,43 +910,52 @@ class Tame {
      */
     static public function mask($str = null, ?int $length = 4, ?string $position = 'right', ?string $mask = '*')
     {
+        // Check if the mbstring extension is available
+        if (!extension_loaded('mbstring')) {
+            return $str;
+        }
+
         // Get the length of the string
-        $strLength = strlen($str); 
+        $strLength = mb_strlen($str, 'UTF-8');
 
         // Check if it's an email by finding the last occurrence of "@"
-        $atPosition = strrpos($str, "@"); 
+        $atPosition = mb_strrpos($str, "@", 0, 'UTF-8');
 
-        // check if it's an actual email
+        // Check if it's an actual email
         $isEmail = self::emailValidator($str, false, false);
 
         // Check if the length parameter is greater than the actual length of the string to avoid errors
-        if ($isEmail && $atPosition) {
-            $length = $length >= strlen(substr($str, 0, $atPosition)) ? 4 : $length;
+        if ($isEmail && $atPosition !== false) {
+            $length = $length >= mb_strlen(mb_substr($str, 0, $atPosition, 'UTF-8'), 'UTF-8') ? 4 : $length;
         } else {
             $length = $length >= $strLength ? 4 : $length;
         }
 
-        // string length
-        $strminusLegnth = $strLength - $length;
-        if($strminusLegnth < 0){
-            $strminusLegnth = abs(1);
+        // Calculate string length
+        $strMinusLength = $strLength - $length;
+        if ($strMinusLength < 0) {
+            $strMinusLength = abs(1);
         }
-        
-        // for left position
+
+        // For left position
         if ($position == 'left') {
-            if ($isEmail && $atPosition) {
+            $length = (int) $length;
+            if ($isEmail && $atPosition !== false) {
                 // Mask the left part of the string, including the "@" symbol
-                return substr(substr($str, 0, $atPosition), 0, $length) . str_repeat($mask, $atPosition - $length) . substr($str, $atPosition);
+                return mb_substr(mb_substr($str, 0, $atPosition, 'UTF-8'), 0, $length, 'UTF-8') . str_repeat($mask, $atPosition - $length) . mb_substr($str, $atPosition, null, 'UTF-8');
             } else {
                 // Mask the entire string if it's not an email
-                return substr($str, 0, $length) . str_repeat($mask, $strminusLegnth);
+                return mb_substr($str, 0, $length, 'UTF-8') . str_repeat($mask, $strMinusLength);
             }
         } elseif ($position == 'middle' || $position == 'center') {
             // Mask the middle part of the string
-            return substr($str, 0, $length / 2) . str_repeat($mask, $strminusLegnth) . substr($str, -$length / 2);
+            $length = (int) round($length / 2);
+
+            return mb_substr($str, 0, $length, 'UTF-8') . str_repeat($mask, $strMinusLength) . mb_substr($str, -$length, null, 'UTF-8');
         } else {
             // Mask the right part of the string
-            return str_repeat($mask, $strminusLegnth) . substr($str, -$length);
+            $length = (int) $length;
+            return str_repeat($mask, $strMinusLength) . mb_substr($str, -$length, null, 'UTF-8');
         }
     }
 
@@ -1046,10 +1088,10 @@ class Tame {
      * Get platform svg icon set
      * 
      * @param string|null $platform
-     * - windows|linux|android|mobile|phone|unknown|mac|macintosh|ios|iphone|c|os x
+     * - [windows|linux|android|mobile|phone|unknown|mac|macintosh|ios|iphone|c|os x]
      * 
      * @param string|null $os_name
-     * - macos|os x|ios
+     * - [macos|os x|ios]
      * 
      * @return string
      */
@@ -1088,12 +1130,10 @@ class Tame {
 
     /**
      * Get path to payment svg icon
-     * - Storage location
-     * - public_path/svg_path/
      * 
      * @param string|null $payment
-     * -- add-money|alipay|bank|cc|credit-card|discover|faster-pay|groupbuy|maestro|mastercard
-     * -- pay|payme|payment-card|payment-wallet|paypal|stripe-circle|tripe-sqaure|stripe|visa
+     * - [add-money|alipay|bank|cc|credit-card|discover|faster-pay|groupbuy|maestro|mastercard]
+     * - [pay|payme|payment-card|payment-wallet|paypal|stripe-circle|tripe-sqaure|stripe|visa]
      * 
      * @return mixed
      * - string|null
@@ -1133,8 +1173,9 @@ class Tame {
      * File exist and not a directory
      * 
      * @param string|null $path
+     * - [full path to file]
+     * 
      * @return bool
-     * - True|False
      */
     static public function exists($path = null)
     {
@@ -1146,32 +1187,12 @@ class Tame {
      * - (/) slash
      * 
      * @param string|null $path
+     * 
      * @return string
      */
     static public function stringReplacer($path = null)
     {
         return Server::cleanServerPath($path);
     }
-
-    /**
-     * Check IF Internet is Available
-     *
-     * @return bool
-     */
-    static public function isInternetAvailable()
-    {
-        // Use cURL to make a request
-        $request = curl_init('https://www.google.com');
-        curl_setopt($request, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($request, CURLOPT_TIMEOUT, 5);
-        curl_exec($request);
-        
-        // Check the HTTP response code
-        $httpCode = curl_getinfo($request, CURLINFO_HTTP_CODE);
-        curl_close($request);
-
-        // HTTP code 200 means the request was successful
-        return $httpCode === 200;
-    }
-
+    
 }

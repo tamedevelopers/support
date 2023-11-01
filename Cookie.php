@@ -40,13 +40,12 @@ class Cookie{
     
     /** 
      * Create Sitename From .env
-     * - APP_NAME
      * 
      * @return $this
      */
     static protected function init()
     {
-        self::$name         = strtolower(str_replace([' '], '', $_ENV['APP_NAME']));
+        self::$name         = strtolower(str_replace([' '], '', env('APP_NAME')));
         self::$timeName     = "__time_" . self::$name;
         self::$expireName   = "__expire_" . self::$name;
         self::$timeFormat   = Time::timestamp('next year', 'Y-m-d');
@@ -60,7 +59,7 @@ class Cookie{
      * @param string $name
      * - Cookie Name
      * 
-     * @param string|null
+     * @param string|null $value
      * - Cookie Value
      * 
      * @param int|string $minutes
@@ -89,13 +88,13 @@ class Cookie{
      * If setcookie successfully runs, it will return true. 
      * This does not indicate whether the user accepted the cookie.
      */
-    static public function set($name, $value, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null)
+    static public function set($name, $value = null, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null)
     {
         // minutes
         $minutes = self::minutesToExpire($minutes);
 
         // create default values
-        [$path, $domain, $secure, $httponly, $force] = self::getDefaultPathAndDomain($path, $domain, $secure, $httponly, $force);
+        [$path, $value, $domain, $secure, $httponly, $force] = self::getDefaultPathAndDomain($path, $value, $domain, $secure, $httponly, $force);
 
         // set cookie
         if ( !headers_sent() || $force === true) {
@@ -114,8 +113,7 @@ class Cookie{
     static public function forget($name, $path = null, $domain = null)
     {
         self::set(
-            name: $name, 
-            value: '', 
+            name: $name,
             minutes: 'last year', 
             path: $path, 
             domain: $domain,
@@ -245,16 +243,18 @@ class Cookie{
      * Get the path and domain, or the default values.
      *
      * @param  string|null  $path
+     * @param  string|null  $value
      * @param  string|null  $domain
      * @param  bool|null  $secure
      * @param  bool|null  $httponly
      * @param  bool|null  $force
      * @return array
      */
-    static private function getDefaultPathAndDomain($path = null, $domain = null, $secure = null, $httponly = null, $force = null)
+    static private function getDefaultPathAndDomain($path = null, $value = null, $domain = null, $secure = null, $httponly = null, $force = null)
     {
         return [
             !empty($path) ? $path : '/', 
+            !empty($value) ? $value : '', 
             !empty($domain) ? $domain : '', 
             is_bool($secure) ? $secure : false, 
             is_bool($httponly) ? $httponly : false,

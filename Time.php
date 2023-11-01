@@ -178,7 +178,7 @@ class Time {
             $date = strtotime($date);   
         }
 
-        return date($format, $date);
+        return !is_bool($date) ? date($format, $date) : '';
     }
 
     /**

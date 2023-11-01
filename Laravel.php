@@ -13,49 +13,79 @@ use Illuminate\Support\Facades\Blade;
  */ 
 class Laravel{
 
+
     /**
-     * Create SVG Directrives
-     * 
-     * @usage @svg('path_to_svg')
-     * 
+     * Register a Blade directive
+     *
+     * @return void
+     */
+    public function cssDirective()
+    {
+        Blade::directive('css', function ($expression) {
+            list($path, $class) = array_pad(explode(',', $expression, 2), 2, '');
+
+            $path = str_replace(['"', "'"], '', $path);
+            $class = str_replace(['"', "'"], '', $class);
+
+            // fullpath
+            $assets = asset($path, true);
+
+            return "<link rel='stylesheet' type='text/css' href='{$assets}'>";
+        });
+    }
+    
+    /**
+     * Register a Blade directive
+     *
+     * @return void
+     */
+    public function jsDirective()
+    {
+        Blade::directive('js', function ($expression) {
+            list($path, $class) = array_pad(explode(',', $expression, 2), 2, '');
+
+            $path = str_replace(['"', "'"], '', $path);
+            $class = str_replace(['"', "'"], '', $class);
+
+            // fullpath
+            $assets = asset($path, true);
+
+            return "<script src='{$assets}'></script>";
+        });
+    }
+    
+    /**
+     * Register a Blade directive
+     *
      * @return mixed
      */
-    static public function svgDirective()
+    public function svgDirective()
     {
-        Tame::class_exists('Illuminate\Support\Facades\Blade', function(){
+        Blade::directive('svg', function ($expression) {
+            list($path, $class) = array_pad(explode(',', $expression, 2), 2, '');
 
-            // Register a Blade directive
-            Blade::directive('svg', function ($expression) {
+            $path = str_replace(['"', "'"], '', $path);
+            $class = str_replace(['"', "'"], '', $class);
+            
+            // fullpath
+            $fullPath = public_path($path);
 
-                list($path, $class) = array_pad(explode(',', $expression, 2), 2, '');
-
-                $path = str_replace(['"', "'"], '', $path);
-                $class = str_replace(['"', "'"], '', $class);
+            // if file exists
+            if(Tame::exists($fullPath)){
                 
-                // fullpath
-                $fullPath = public_path($path);
+                $svg = new \DOMDocument();
+                $svg->load($fullPath);
 
-                // if file exists
-                if(Tame::exists($fullPath)){
-                    // Load the SVG file contents
-                    $svgContent = file_get_contents($fullPath);
+                // If a class is provided, add it to the SVG element
+                if (!empty($class)) {
+                    $svg->documentElement->setAttribute("class", $class);
+                }
 
-                    // Parse the SVG content into a SimpleXMLElement
-                    $svg = simplexml_load_string($svgContent);
+                $output = $svg->saveXML($svg->documentElement);
 
-                    // If a class is provided, add it to the SVG element
-                    if (!empty($class)) {
-                        if (isset($svg['class'])) {
-                            $svg['class'] .= ' ' . $class;
-                        } else {
-                            $svg->addAttribute('class', $class);
-                        }
-                    }
-
-                    // Return the modified SVG
-                    return $svg->asXML();
-                };
-            });
+                // Return the modified SVG
+                return $output;
+            };
         });
     }
 
