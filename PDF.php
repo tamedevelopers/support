@@ -15,8 +15,8 @@ use Tamedevelopers\Support\Capsule\CustomException;
 /**
  * DOM PDF Wrapper
  * Usage: composer require dompdf/dompdf
- * @url https://github.com/dompdf/dompdf/blob/v0.8.2/src/Adapter/CPDF.php#L45
- * @url https://github.com/dompdf/dompdf
+ * @link https://github.com/dompdf/dompdf/blob/v0.8.2/src/Adapter/CPDF.php#L45
+ * @link https://github.com/dompdf/dompdf
  */ 
 class PDF{
 

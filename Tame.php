@@ -672,7 +672,7 @@ class Tame {
     
     /**
      * Shorten String to Given Limit
-     * @url https://codeflarelimited.com/blog/php-shorten-string-with-three-dots/
+     * @link https://codeflarelimited.com/blog/php-shorten-string-with-three-dots/
      * 
      * @param  mixed $string
      * @param  mixed $limit
@@ -732,7 +732,7 @@ class Tame {
 
     /**
      * Format number to nearest thousand
-     * @url https://code.recuweb.com/2018/php-format-numbers-to-nearest-thousands/
+     * @link https://code.recuweb.com/2018/php-format-numbers-to-nearest-thousands/
      *
      * @param  float|int $number
      * @return void

@@ -10,7 +10,7 @@ use Cocur\Slugify\Slugify as CocurSlugify;
 /**
  * Cocur\Slugify\Slugify Wrapper
  * Usage: composer require cocur/slugify
- * @url https://github.com/cocur/slugify
+ * @link https://github.com/cocur/slugify
  */
 class Slugify{
         
