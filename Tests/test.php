@@ -13,13 +13,13 @@ $Json = '{"name":"Peterson","age":20,"food":["Rice","Garri","Fish","Calories"]}'
 // Env::loadOrFail();
 
 
-// PDF()->create([
+// TamePDF()->create([
 //     'content' => "<h1>Title First</h1> <br> Hello There i Love You!",
 //     'destination' => base_path('save.pdf'),
 //     'output' => 'download'
 // ]);
 
-// Tame::unlinkFile(base_path('welcome.png'), 'default.png')
+// Tame::unlink('welcome.png', 'default.png')
 
 // Tame::platformIcon('windows')
 

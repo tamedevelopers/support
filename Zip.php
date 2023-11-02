@@ -13,26 +13,32 @@ class Zip {
 
     use TameTrait;
 
-
     /**
      * Unzip a file or folder.
      *
      * @param  string $sourcePath
+     * - [base path will be automatically added]
+     * 
      * @param  string $destination
+     * - [base path will be automatically added]
+     * 
      * @return bool
      */
     static public function unzip($sourcePath, $destination)
     {
+        $sourcePath  = self::getBasePath($sourcePath);
+        $destination = self::getBasePath($destination);
+        
         // If it's a zip file, call the unzipFile function
         if (pathinfo($sourcePath, PATHINFO_EXTENSION) === 'zip') {
             return self::unzipFile($sourcePath, $destination);
         }
-
+        
         // If it's a folder, call the unzipFolder function
         if (is_dir($sourcePath)) {
             return self::unzipFolder($sourcePath, $destination);
         }
-
+        
         return false; // Unsupported file type
     }
 
@@ -40,11 +46,18 @@ class Zip {
      * Zip a file or folder.
      *
      * @param string $sourcePath The path to the file or folder to zip.
+     * - [base path will be automatically added]
+     * 
      * @param string $destinationZip The path for the resulting zip file.
+     * - [base path will be automatically added]
+     * 
      * @return bool True if the zip operation was successful, false otherwise.
      */
     static public function zip($sourcePath, $destinationZip)
     {
+        $sourcePath     = self::getBasePath($sourcePath);
+        $destinationZip = self::getBasePath($destinationZip);
+
         // If it's a folder, call the zipFolder function
         if (is_dir($sourcePath)) {
             return self::zipFolder($sourcePath, $destinationZip);
@@ -83,7 +96,7 @@ class Zip {
         }
 
         // Extract contents to destination directory
-        $zip->extractTo(self::getBasePath($destination));
+        $zip->extractTo($destination);
 
         // Close archive
         $zip->close();
@@ -114,7 +127,11 @@ class Zip {
         foreach ($files as $name => $file) {
             if (!$file->isDir()) {
                 $filePath = $file->getRealPath();
+
+                // Remove the source folder name from the local path
                 $localPath = substr($filePath, strlen($sourceFolder) + 1);
+
+                // Add the contents of the source folder to the zip without the source folder name
                 $zip->addFile($filePath, $localPath);
             }
         }
@@ -146,13 +163,21 @@ class Zip {
         foreach ($files as $name => $file) {
             if (!$file->isDir()) {
                 $filePath = $file->getRealPath();
+
+                // Remove the source folder name from the local path
                 $localPath = substr($filePath, strlen($sourceFolder) + 1);
+
+                // full path
                 $destinationPath = $destination . '/' . $localPath;
+
                 // Ensure the destination directory for the file exists
                 $destinationDir = dirname($destinationPath);
+
                 if (!is_dir($destinationDir)) {
                     mkdir($destinationDir, 0777, true);
                 }
+
+                // copy the contents of the filepath to destinationPath
                 copy($filePath, $destinationPath);
             }
         }

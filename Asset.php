@@ -16,11 +16,11 @@ class Asset{
      * @param string $asset
      * - asset file e.g (style.css | js/main.js)
      * 
-     * @param bool $cache
+     * @param bool|null $cache
      * 
      * @return string
      */
-    static public function asset(?string $asset = null, ?bool $cache = false)
+    static public function asset(?string $asset = null, $cache = null)
     {
         // if coniguration has not been used in the global space
         // then we call to define paths for us
@@ -30,6 +30,12 @@ class Asset{
 
         // asset path
         $assetPath = ASSET_BASE_DIRECTORY;
+
+        // if asset method cache is not null
+        // then we override the global configuration
+        if(!is_bool($cache)){
+            $cache = $assetPath['cache'];
+        }
 
         // trim
         $asset = trim((string) $asset, '/');
@@ -43,7 +49,7 @@ class Asset{
         $cacheTimeAppend = null;
 
         // cache allow from self method
-        if($cache && $assetPath['cache']){
+        if($cache){
             $cacheTimeAppend = self::getFiletime($file_server) ?? null;
         }
         
@@ -65,7 +71,7 @@ class Asset{
      * 
      * @return void
      */
-    static public function config(?string $base_path = null, ?bool $cache = true) 
+    static public function config(?string $base_path = null, ?bool $cache = false) 
     {
         // severs
         $server = self::getServers();

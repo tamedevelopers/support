@@ -8,11 +8,14 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // URL Helpers
 
 
+config_asset('/', true);
+
+
 dd(
     domain(), 
 
     domain('admin'),
 
-    asset('js/app.js'),
+    asset('zip.php'),
 );
 

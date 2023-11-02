@@ -149,13 +149,13 @@ class Tame {
      * include if file exist
      * 
      * @param string $path
-     * - [do not include base path]
+     * - [base path will be automatically added]
      * 
      * @return void
      */
     static public function include($path)
     {
-        $fullPath = trim(self::getBasePath($path), '\/');
+        $fullPath = self::getBasePath($path);
 
         if(self::exists($fullPath)){
             include $fullPath;
@@ -166,13 +166,13 @@ class Tame {
      * include once if file exist
      * 
      * @param string $path
-     * - [do not include base path]
+     * - [base path will be automatically added]
      * 
      * @return void
      */
     static public function includeOnce($path)
     {
-        $fullPath = trim(self::getBasePath($path), '\/');
+        $fullPath = self::getBasePath($path);
 
         if(self::exists($fullPath)){
             include_once $fullPath;
@@ -183,13 +183,13 @@ class Tame {
      * require if file exist
      * 
      * @param string $path
-     * - [do not include base path]
+     * - [base path will be automatically added]
      * 
      * @return void
      */
     static public function require($path)
     {
-        $fullPath = trim(self::getBasePath($path), '\/');
+        $fullPath = self::getBasePath($path);
 
         if(self::exists($fullPath)){
             require $fullPath;
@@ -200,13 +200,13 @@ class Tame {
      * require_once if file exist
      * 
      * @param string $path
-     * - [do not include base path]
+     * - [base path will be automatically added]
      * 
      * @return void
      */
     static public function requireOnce($path)
     {
-        $fullPath = trim(self::getBasePath($path), '\/');
+        $fullPath = self::getBasePath($path);
 
         if(self::exists($fullPath)){
             require_once $fullPath;
@@ -277,7 +277,7 @@ class Tame {
      * Get file modification time
      *
      * @param string|null $path
-     * - [do not include base path]
+     * - [base path will be automatically added]
      * 
      * @return int|bool 
      */
@@ -296,7 +296,7 @@ class Tame {
      * Get file modification time
      *
      * @param string|null $path
-     * - [do not include base path]
+     * - [base path will be automatically added]
      * 
      * @return int|bool
      */
@@ -759,23 +759,38 @@ class Tame {
 
         return $number;
     }
+
+    /**
+     * File exist and not a directory
+     * 
+     * @param string|null $path
+     * - [full path to file]
+     * 
+     * @return bool
+     */
+    static public function exists($path = null)
+    {
+        return !is_dir($path) && file_exists($path);
+    }
     
     /**
      * Unlink File from Server
      *
-     * @param string $fileToUnlink
-     * - [full path to file]
+     * @param string $pathToFile
+     * - [base path will be automatically added]
      * 
-     * @param string|null $checkFile
+     * @param string|null $fileName
      * - [optional] file name. <avatar.png>
      * 
      * @return void
      */
-    static public function unlinkFile(string $fileToUnlink, $fileName = null)
+    static public function unlink(string $pathToFile, $fileName = null)
     {
-        if(self::exists($fileToUnlink)){
-            if(basename($fileToUnlink) != basename((string) $fileName)){
-                @unlink($fileToUnlink);
+        $fullPath = self::getBasePath($pathToFile);
+
+        if(self::exists($fullPath)){
+            if(basename($fullPath) != basename((string) $fileName)){
+                @unlink($fullPath);
             }
         }
     }
@@ -784,7 +799,7 @@ class Tame {
      * Convert json data to array|object
      * 
      * @param string $path
-     * - [full path to file]
+     * - [base path will be automatically added]
      * 
      * @param bool $format
      * - [optional] `true` will convert to an array
@@ -793,8 +808,10 @@ class Tame {
      */
     static public function convertJsonData($path, $format = true)
     {
-        if(self::exists($path)){
-            return json_decode(file_get_contents($path), $format);
+        $fullPath  = self::getBasePath($path);
+
+        if(self::exists($fullPath)){
+            return json_decode(file_get_contents($fullPath), $format);
         }
     }
     
@@ -859,16 +876,18 @@ class Tame {
      * Read PDF TO Browser
      *
      * @param  string|null $path
-     * - [full path to file]
+     * - [base path will be automatically added]
      * 
      * @return void
      */
     static public function readPDFToBrowser($path = null)
     {
-        if(!empty($path) && self::exists($path)){
+        $fullPath  = self::getBasePath($path);
+
+        if(self::exists($fullPath)){
             @header("Content-type: application/pdf");
-            @header("Content-Length: " . filesize($path));
-            readfile($path);
+            @header("Content-Length: " . filesize($fullPath));
+            readfile($fullPath);
         }
     }
 
@@ -876,15 +895,17 @@ class Tame {
      * Convert image to base64
      *
      * @param  string|null $path
-     * - [full path to file]
+     * - [base path will be automatically added]
      * 
      * @return null|string
      */
     static public function imageToBase64($path = null) 
     {
-        if(!empty($path) && self::exists($path)){
-            $type = pathinfo($path, PATHINFO_EXTENSION);
-            $data = file_get_contents($path);
+        $fullPath  = self::getBasePath($path);
+
+        if(self::exists($fullPath)){
+            $type = pathinfo($fullPath, PATHINFO_EXTENSION);
+            $data = file_get_contents($fullPath);
 
             return 'data:image/' . $type . ';base64,' . base64_encode($data);
         }
@@ -1170,19 +1191,6 @@ class Tame {
     }
 
     /**
-     * File exist and not a directory
-     * 
-     * @param string|null $path
-     * - [full path to file]
-     * 
-     * @return bool
-     */
-    static public function exists($path = null)
-    {
-        return !is_dir($path) && file_exists($path);
-    }
-
-    /**
      * Replace and recreate path to
      * - (/) slash
      * 
@@ -1192,7 +1200,11 @@ class Tame {
      */
     static public function stringReplacer($path = null)
     {
-        return Server::cleanServerPath($path);
+        return str_replace(
+            ['\\', '/'], 
+            DIRECTORY_SEPARATOR, 
+            trim((string) $path)
+        );
     }
     
 }

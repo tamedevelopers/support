@@ -173,51 +173,7 @@ trait TameTrait{
      */
     static private function getBasePath($path = null)
     {
-        return self::stringReplacer(base_path($path));
-    }
-    
-    /**
-     * getPublicPath
-     *
-     * @param  string|null $path
-     * @return mixed
-     */
-    static private function getPublicPath($path = null)
-    {
-        return self::stringReplacer(base_path($path));
-    }
-    
-    /**
-     * getStoragePath
-     *
-     * @param  string|null $path
-     * @return mixed
-     */
-    static private function getStoragePath($path = null)
-    {
-        return self::stringReplacer(base_path($path));
-    }
-
-    /**
-     * getAppPath
-     *
-     * @param  string|null $path
-     * @return mixed
-     */
-    static private function getAppPath($path = null)
-    {
-        return self::stringReplacer(base_path($path));
-    }
-    
-    /**
-     * getSvgPath
-     *
-     * @param  string|null $path
-     * @return mixed
-     */
-    static private function getSvgPath($path = null)
-    {
-        return self::stringReplacer(base_path($path));
+        return base_path($path);
     }
 
 }

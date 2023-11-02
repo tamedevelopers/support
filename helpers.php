@@ -84,25 +84,25 @@ if (! function_exists('TameCountry')) {
     }
 }
 
-if (! function_exists('PDF')) {
+if (! function_exists('TamePDF')) {
     /**
      * PDF Object
      *
      * @return \Tamedevelopers\Support\PDF
      */
-    function PDF()
+    function TamePDF()
     {
         return new PDF();
     }
 }
 
-if (! function_exists('Zip')) {
+if (! function_exists('TameZip')) {
     /**
      * Zip Object
      *
      * @return \Tamedevelopers\Support\Zip
      */
-    function Zip()
+    function TameZip()
     {
         return new Zip();
     }
@@ -234,11 +234,11 @@ if (! function_exists('asset')) {
      * @param string $asset
      * - asset file e.g (style.css | js/main.js)
      * 
-     * @param bool $cache
+     * @param bool|null $cache
      * 
      * @return string
      */
-    function asset($asset = null, ?bool $cache = false)
+    function asset($asset = null, $cache = null)
     {
         return Asset::asset($asset, $cache);
     }
@@ -253,14 +253,14 @@ if (! function_exists('config_asset')) {
      * - If set and directory is not found, then we revert back to the default
      * 
      * @param string $cache
-     * - [optional] Default is true
+     * - [optional] Default is false
      * - End point of link `?v=xxxxxxxx` is with cache of file time change
      * - This will automatically tells the broswer to fetch new file if the time change
      * - Time will only change if you make changes or modify the request file
      * 
      * @return void
      */
-    function config_asset($base_path = null, ?bool $cache = true)
+    function config_asset($base_path = null, ?bool $cache = false)
     {
         Asset::config($base_path, $cache);
     }
