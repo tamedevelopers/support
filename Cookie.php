@@ -45,7 +45,7 @@ class Cookie{
      */
     static protected function init()
     {
-        self::$name         = strtolower(str_replace([' '], '', env('APP_NAME')));
+        self::$name         = strtolower(str_replace([' '], '', env('APP_NAME', '')));
         self::$timeName     = "__time_" . self::$name;
         self::$expireName   = "__expire_" . self::$name;
         self::$timeFormat   = Time::timestamp('next year', 'Y-m-d');

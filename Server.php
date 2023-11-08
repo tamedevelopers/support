@@ -72,6 +72,8 @@ class Server{
      *
      * @param  array $data
      * @param  string|null $filename
+     * - [base path will be automatically added]
+     * 
      * @return void
      */
     static public function createTemplateFile(?array $data = [], ?string $filename = null)
@@ -124,17 +126,19 @@ class Server{
      */
     static public function toArray($value)
     {
-        if(self::isNotValidArray($value)){
-
-            // check value is a valid json data
-            if(self::isValidJson($value)){
-                return json_decode($value, true);
-            }
-
-            return json_decode(json_encode($value), true);
+        // check value is a valid json data
+        if(self::isValidJson($value)){
+            return json_decode($value, true);
         }
 
-        return $value;
+        // if not valid array and check if array is greater than one element
+        if(!self::isNotValidArray($value) && count($value) === 1){
+            if(!self::isNotValidArray($value[0])){
+                return $value;
+            }
+        }
+
+        return json_decode(json_encode($value), true);
     }
 
     /**

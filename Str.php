@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use Tamedevelopers\Support\Server;
+
 class Str{
 
     /**
@@ -45,6 +47,53 @@ class Str{
         }
 
         return end($array);
+    }
+
+    /**
+     * Change Keys of Array
+     *
+     * @param  array $data
+     * @param  string $fromKey
+     * @param  string $toKey
+     * @return array
+     */
+    static public function changeKeysFromArray($data = [], $fromKey, $toKey)
+    {
+        // always convert to an array
+        $data = Server::toArray($data);
+        
+        // If you don't want to modify the original array and create a new one without 'id' columns:
+        return array_map(function($data) use($fromKey, $toKey) {
+            if (isset($data[$fromKey])) {
+                $data[$toKey] = $data[$fromKey];
+                unset($data[$fromKey]);
+            }
+            return $data;
+        }, $data);
+    }
+
+    /**
+     * Remove Keys From Array
+     *
+     * @param  array $data
+     * @param  mixed $keys
+     * @return array
+     */
+    static public function removeKeysFromArray($data = [], ...$keys)
+    {
+        // always convert to an array
+        $data = Server::toArray($data);
+        
+        // If you don't want to modify the original array and create a new one without 'id' columns:
+        return array_map(function($data) use($keys) {
+            $keys = self::flattenValue($keys);
+            foreach($keys as $key){
+                if(isset($data[$key])){
+                    unset($data[$key]);
+                }
+            }
+            return $data;
+        }, $data);
     }
     
     /**
@@ -433,11 +482,11 @@ class Str{
     /**
      * Check if a string or an array of words contains a given substring.
      *
-     * @param string|array $haystack
      * @param string $needle
+     * @param string|array $haystack
      * @return bool
      */
-    static public function contains(string|array $haystack, string $needle)
+    static public function contains(string $needle, string|array $haystack)
     {
         if (is_array($haystack)) {
             // Check if any word in the array contains the substring

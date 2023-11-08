@@ -10,6 +10,7 @@ use Tamedevelopers\Support\Asset;
 use Tamedevelopers\Support\Cookie;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Country;
+use Tamedevelopers\Support\UrlHelper;
 use Tamedevelopers\Support\Translator;
 use Tamedevelopers\Support\AutoloadRegister;
 use Tamedevelopers\Support\Capsule\FileCache;
@@ -402,6 +403,18 @@ if (! function_exists('domain')) {
     function domain($path = null)
     {
         return server()->formatWithDomainURI($path);
+    }
+}
+
+if (! function_exists('urlHelper')) {
+    /**
+     * Get URL Helper
+     * 
+     * @return \Tamedevelopers\Support\UrlHelper
+     */
+    function urlHelper()
+    {
+        return new UrlHelper();
     }
 }
 

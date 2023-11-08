@@ -617,10 +617,11 @@ class Tame {
      */
     static public function cleanPhoneNumber($phone = null, ?bool $allow = true)
     {
-        $phone = str_replace(' ', '', str_replace('-', '', $phone));
-        $phone = str_replace('(', '', str_replace(')', '', $phone));
-        $phone = str_replace(' ', '', $phone);
-        if(Str::contains($phone, '+')){
+        $phone = trim((string) $phone);
+        $phone = str_replace([' ', '-'], '', $phone);
+        $phone = str_replace(['(', ')'], '', $phone);
+        
+        if(Str::contains('+', $phone)){
             $phone = str_replace('+', '', $phone);
             if($allow){
                 $phone = "+{$phone}";
@@ -689,7 +690,7 @@ class Tame {
         $string = trim(str_replace(PHP_EOL, ' ', $string));
         
         if(strlen($string) > $limit) {
-            return mb_strcut($string, 0, $limit) . $replacer; 
+            return mb_strcut($string, 0, (int) $limit) . $replacer; 
         }
 
         return $string;
@@ -799,7 +800,7 @@ class Tame {
      * Convert json data to array|object
      * 
      * @param string $path
-     * - [base path will be automatically added]
+     * - [full path to destination]
      * 
      * @param bool $format
      * - [optional] `true` will convert to an array
@@ -808,10 +809,8 @@ class Tame {
      */
     static public function convertJsonData($path, $format = true)
     {
-        $fullPath  = self::getBasePath($path);
-
-        if(self::exists($fullPath)){
-            return json_decode(file_get_contents($fullPath), $format);
+        if(self::exists($path)){
+            return json_decode(file_get_contents($path), $format);
         }
     }
     

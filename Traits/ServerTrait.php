@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 use ReflectionClass;
-use Tamedevelopers\Support\Env;
-use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\UrlHelper;
 
 
@@ -100,12 +98,12 @@ trait ServerTrait{
      */
     static public function formatWithDomainURI($path = null)
     {
-        $server = rtrim(
+        $domain = rtrim(
             self::getServers('domain'),
             '/'
         );
         return self::pathReplacer(
-            "{$server}/{$path}"
+            "{$domain}/{$path}"
         );
     }
 
