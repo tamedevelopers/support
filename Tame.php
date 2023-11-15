@@ -619,16 +619,17 @@ class Tame {
     {
         $phone = trim((string) $phone);
         $phone = str_replace([' ', '-'], '', $phone);
-        $phone = str_replace(['(', ')'], '', $phone);
+        $plus = '';
         
-        if(Str::contains('+', $phone)){
-            $phone = str_replace('+', '', $phone);
-            if($allow){
-                $phone = "+{$phone}";
-            }
+        // if plus sign is found in string
+        if(Str::contains('+', $phone) && $allow){
+            $plus = "+";
         }
 
-        return $phone;
+        // clean any tags
+        $phone = self::removeSpecialChars($phone);
+
+        return "{$plus}{$phone}";
     }
 
     /**
@@ -854,7 +855,7 @@ class Tame {
     /**
      * Save File From Url
      *
-     * @param  string|null $url
+     * @param  string $url
      * - [url path] <https://google.com/file.pdf>
      * 
      * @param  string $destination
@@ -862,13 +863,34 @@ class Tame {
      * 
      * @return string|null
      */
-    static public function saveFileFromURL($url = null, $destination)
+    static public function saveFileFromURL($url, $destination)
     {
-        if(!empty($url)){
-            @file_put_contents($destination, fopen($url, 'r'));
+        // Check if the destination directory exists, if not, create it
+        $directory = dirname($destination);
+        if (!is_dir($directory)) {
+            mkdir($directory, 0755, true);
         }
 
-        return $destination;
+        // Try to open the file and save its contents
+        $fileContents = @file_get_contents($url);
+        if ($fileContents === false) {
+            // Handle error, e.g., log it
+            error_log("Failed to fetch contents from $url");
+            return null;
+        }
+
+        // Try to write the contents to the destination file
+        $writeResult = @file_put_contents($destination, $fileContents);
+        if ($writeResult === false) {
+            // Handle error, e.g., log it
+            error_log("Failed to write contents to $destination");
+            return null;
+        }
+
+        // Extract the file name from the URL and return it
+        $fileName = basename($destination);
+        
+        return $fileName;
     }
     
     /**
@@ -919,7 +941,7 @@ class Tame {
      * @param int $length 
      * - The desired length of the masked string. Default is 4.
      * 
-     * @param string $position 
+     * @param string|null $position 
      * - The position to apply the mask: 'left', 'middle' or 'center', 'right'. Default is 'right'.
      * 
      * @param string $mask 
@@ -928,7 +950,7 @@ class Tame {
      * @return string 
      * - The masked string.
      */
-    static public function mask($str = null, ?int $length = 4, ?string $position = 'right', ?string $mask = '*')
+    static public function mask($str = null, ?int $length = 4, ?string $position = null, ?string $mask = '*')
     {
         // Check if the mbstring extension is available
         if (!extension_loaded('mbstring')) {
@@ -946,9 +968,17 @@ class Tame {
 
         // Check if the length parameter is greater than the actual length of the string to avoid errors
         if ($isEmail && $atPosition !== false) {
+            if(empty($position)){
+                $position = 'left';
+            }
             $length = $length >= mb_strlen(mb_substr($str, 0, $atPosition, 'UTF-8'), 'UTF-8') ? 4 : $length;
         } else {
             $length = $length >= $strLength ? 4 : $length;
+        }
+
+        // position
+        if(empty($position)){
+            $position = 'right';
         }
 
         // Calculate string length
@@ -999,7 +1029,7 @@ class Tame {
     {
         $filteredEmail = filter_var($email, FILTER_VALIDATE_EMAIL);
 
-        // if internet usage if set to false
+        // if internet usage is set to false
         if(!$use_internet){
             return $filteredEmail !== false;
         }
@@ -1010,7 +1040,7 @@ class Tame {
         }
         
         // Extract the domain from the email address
-        $domain     = explode('@', $email)[1];
+        $domain     = Str::contains('@', $email) ? explode('@', $email)[1] : '';
         $mxRecords  = [];
         
         // Check DNS records corresponding to a given Internet host name or IP address
