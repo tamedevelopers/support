@@ -86,8 +86,16 @@ class Asset{
                 // - Trim forward slash from left and right
                 $base_path = trim($base_path, '/');
 
+                // base for url path
+                $baseForUrlPath = $base_path;
+
+                // check if accessed from default ip:address
+                if(UrlHelper::isIpAccessedVia127Port()){
+                    $baseForUrlPath = '';
+                }
+
                 // compile
-                $urlFromhelper = "{$urlFromhelper}/{$base_path}";
+                $urlFromhelper = "{$urlFromhelper}/{$baseForUrlPath}";
             }
 
             define('ASSET_BASE_DIRECTORY', [

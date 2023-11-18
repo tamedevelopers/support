@@ -15,29 +15,20 @@ class UrlHelper {
      */
     static public function url() 
     {
-        // if App is Core PHP
-        if(!AppIsNotCorePHP()){
-            $url = self::local();
-        } else{
-            // get path
-            $url = env('APP_URL') ?? self::full();
-
-            if(empty($url)){
-                $url = str_replace(trim(self::getServerPath(), '/'), '', self::local());
-            }
-        }
+        // create from .env APP_URL or Default path
+        $url = env('APP_URL') ?? self::full();
 
         return trim($url, '\/');
     }
 
     /**
-     * Get Server Name
+     * Get Server Path
      *
      * @return string|null
      */
     static public function server()
     {
-        return $_SERVER['SERVER_NAME'] ?? null;
+        return self::getServerPath();
     }
 
     /**
@@ -89,7 +80,7 @@ class UrlHelper {
      */
     static public function full()
     {
-        return self::http() . self::host();
+        return self::http() . self::host() . self::path();
     }
 
     /**
@@ -100,29 +91,38 @@ class UrlHelper {
      */
     static public function path($path = null)
     {
-        // Parse the URL to get the path
-        $parsedUrl = parse_url(self::full(), PHP_URL_PATH);
-
-        // Check if the "path" key exists in the parsed URL
-        $pathPart = isset($parsedUrl['path']) ? ltrim($parsedUrl['path'], '/') : '';
-
         if (!empty($path)) {
-            $path = '/' . ltrim($path, '/');
+            $path = ltrim($path, '/');
             $path = self::replace($path);
         }
         
-        return $pathPart . "{$path}";
+        return self::localDomainPath() . "{$path}";
     }
 
     /**
-     * Create Local Url path
-     * - [path without using framework]
+     * Is IP accessed via 127.0.0.1 port in browser
+     * 
+     * @return bool
+     */
+    static public function isIpAccessedVia127Port()
+    {
+        return Str::contains($_SERVER['REMOTE_ADDR'], self::host());
+    }
+
+    /**
+     * Local Domain Path
      * 
      * @return array
      */
-    static public function local()
+    static private function localDomainPath()
     {
-        return self::http() . self::server() . self::path();
+        $domainPath = str_replace(
+            $_SERVER['DOCUMENT_ROOT'], 
+            '', 
+            self::getServerPath()
+        );
+
+        return self::isIpAccessedVia127Port() ? '/' : $domainPath;
     }
 
     /**

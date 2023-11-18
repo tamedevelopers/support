@@ -619,17 +619,16 @@ class Tame {
     {
         $phone = trim((string) $phone);
         $phone = str_replace([' ', '-'], '', $phone);
-        $plus = '';
+        $phone = str_replace(['(', ')'], '', $phone);
         
-        // if plus sign is found in string
-        if(Str::contains('+', $phone) && $allow){
-            $plus = "+";
+        if(Str::contains('+', $phone)){
+            $phone = str_replace('+', '', $phone);
+            if($allow){
+                $phone = "+{$phone}";
+            }
         }
 
-        // clean any tags
-        $phone = self::removeSpecialChars($phone);
-
-        return "{$plus}{$phone}";
+        return $phone;
     }
 
     /**
@@ -941,7 +940,7 @@ class Tame {
      * @param int $length 
      * - The desired length of the masked string. Default is 4.
      * 
-     * @param string|null $position 
+     * @param string $position 
      * - The position to apply the mask: 'left', 'middle' or 'center', 'right'. Default is 'right'.
      * 
      * @param string $mask 
@@ -950,7 +949,7 @@ class Tame {
      * @return string 
      * - The masked string.
      */
-    static public function mask($str = null, ?int $length = 4, ?string $position = null, ?string $mask = '*')
+    static public function mask($str = null, ?int $length = 4, ?string $position = 'right', ?string $mask = '*')
     {
         // Check if the mbstring extension is available
         if (!extension_loaded('mbstring')) {
@@ -968,17 +967,9 @@ class Tame {
 
         // Check if the length parameter is greater than the actual length of the string to avoid errors
         if ($isEmail && $atPosition !== false) {
-            if(empty($position)){
-                $position = 'left';
-            }
             $length = $length >= mb_strlen(mb_substr($str, 0, $atPosition, 'UTF-8'), 'UTF-8') ? 4 : $length;
         } else {
             $length = $length >= $strLength ? 4 : $length;
-        }
-
-        // position
-        if(empty($position)){
-            $position = 'right';
         }
 
         // Calculate string length
@@ -1029,7 +1020,7 @@ class Tame {
     {
         $filteredEmail = filter_var($email, FILTER_VALIDATE_EMAIL);
 
-        // if internet usage is set to false
+        // if internet usage if set to false
         if(!$use_internet){
             return $filteredEmail !== false;
         }
@@ -1040,7 +1031,7 @@ class Tame {
         }
         
         // Extract the domain from the email address
-        $domain     = Str::contains('@', $email) ? explode('@', $email)[1] : '';
+        $domain     = explode('@', $email)[1];
         $mxRecords  = [];
         
         // Check DNS records corresponding to a given Internet host name or IP address

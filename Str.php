@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 use Tamedevelopers\Support\Server;
-use Tamedevelopers\Support\Slugify;
 
 class Str{
 
@@ -57,25 +56,19 @@ class Str{
      * @param  string $fromKey
      * @param  string $toKey
      * @return array
-     * - Returns an associative array
      */
     static public function changeKeysFromArray($data, $fromKey, $toKey)
     {
         // always convert to an array
         $data = Server::toArray($data);
-
-        // If $data is an associative array, convert it to a numeric array
-        if (self::isAssoc($data)) {
-            $data = [$data];
-        }
         
         // If you don't want to modify the original array and create a new one without 'id' columns:
-        return array_map(function($item) use($fromKey, $toKey) {
-            if (isset($item[$fromKey])) {
-                $item[$toKey] = $item[$fromKey];
-                unset($item[$fromKey]);
+        return array_map(function($data) use($fromKey, $toKey) {
+            if (isset($data[$fromKey])) {
+                $data[$toKey] = $data[$fromKey];
+                unset($data[$fromKey]);
             }
-            return $item;
+            return $data;
         }, $data);
     }
 
@@ -85,27 +78,21 @@ class Str{
      * @param  array $data
      * @param  mixed $keys
      * @return array
-     * - Returns an associative array
      */
     static public function removeKeysFromArray($data, ...$keys)
     {
         // always convert to an array
         $data = Server::toArray($data);
-
-        // If $data is an associative array, convert it to a numeric array
-        if (self::isAssoc($data)) {
-            $data = [$data];
-        }
         
         // If you don't want to modify the original array and create a new one without 'id' columns:
-        return array_map(function($items) use($keys) {
+        return array_map(function($data) use($keys) {
             $keys = self::flattenValue($keys);
             foreach($keys as $key){
-                if(isset($items[$key])){
-                    unset($items[$key]);
+                if(isset($data[$key])){
+                    unset($data[$key]);
                 }
             }
-            return $items;
+            return $data;
         }, $data);
     }
     
@@ -337,33 +324,6 @@ class Str{
     }
 
     /**
-     * Generate a string with a specified number of random words.
-     *
-     * @param int $wordCount
-     * @param int $minLength
-     * @param int $maxLength
-     * @return string
-     */
-    static public function randomWords(int $wordCount, int $minLength = 3, int $maxLength = 10)
-    {
-        $words = [];
-        $characters = 'abcdefghijklmnopqrstuvwxyz';
-
-        for ($i = 0; $i < $wordCount; $i++) {
-            $length = rand($minLength, $maxLength);
-            $word = '';
-
-            for ($j = 0; $j < $length; $j++) {
-                $word .= $characters[rand(0, strlen($characters) - 1)];
-            }
-
-            $words[] = $word;
-        }
-
-        return implode(' ', $words);
-    }
-
-    /**
      * Generate a random string of a given length.
      *
      * @param int $length
@@ -496,118 +456,26 @@ class Str{
      * Convert a string to a URL-friendly slug.
      *
      * @param  string  $value
-     * @param  string  $language
      * @param  string  $separator
-     * @param  bool  $case
      * @return string
      */
-    static public function slugify(string $value, $language = null, string $separator = '-', $case = true)
+    static public function slugify(string $value, string $separator = '-')
     {
-        return Slugify::slug(
-            $value, $language, $separator, $case
-        );
-    }
+        // Try to transliterate using intl extension
+        if (function_exists('transliterator_transliterate')) {
+            $value = transliterator_transliterate('Any-Latin; Latin-ASCII; Lower()', $value);
+        } else {
+            // Fallback to iconv for transliteration if intl is not available
+            $value = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+        }
 
-    /**
-     * Masks characters in a string.
-     *
-     * @param string|null $str 
-     * - The string to be masked.
-     * 
-     * @param int $length 
-     * - The desired length of the masked string. Default is 4.
-     * 
-     * @param string|null $position 
-     * - The position to apply the mask: 'left', 'middle' or 'center', 'right'. Default is 'right'.
-     * 
-     * @param string $mask 
-     * - The character used for masking. Default is '*'.
-     * 
-     * @return string 
-     * - The masked string.
-     */
-    static public function mask($str = null, ?int $length = 4, ?string $position = null, ?string $mask = '*')
-    {
-        return Tame::mask(
-            $str, $length, $position, $mask
-        );
-    }
+        // Replace non-alphanumeric characters with the separator
+        $value = preg_replace('/[^a-z0-9-]+/', $separator, $value);
 
-    /**
-     * Shorten String to Given Limit
-     * 
-     * @param  mixed $string
-     * 
-     * @param  mixed $limit
-     * [optional] Default 50
-     * 
-     * @param  mixed $replacer
-     * [optional] Default ...
-     * 
-     * @return string
-     */
-    static public function shorten($string = null, $limit = 50, $replacer = '...')
-    {
-        return Tame::shortenString(
-            $string, $limit, $replacer
-        );
-    }
+        // Remove leading and trailing separators
+        $value = trim($value, $separator);
 
-    /**
-     * Decode entity html strings
-     * 
-     * @param string|null $string
-     * @return string
-     */
-    static public function html($string = null)
-    {
-        return Tame::html($string);
-    }
-
-    /**
-     * Convert string to clean text without html tags
-     * 
-     * @param string|null $string
-     * 
-     * @return string
-     * - strip all tags from string content
-     */
-    static public function text($string = null)
-    {
-        return Tame::text($string);
-    }
-
-    /**
-     * Hash String
-     *
-     * @param  string|null $string
-     * @param  int $length
-     * @param  string $type
-     * @param  int $interation
-     * @return void
-     */
-    static public function hash($string = null, $length = 100, $type = 'sha256', $interation = 100)
-    {
-        return Tame::stringHash(
-            $string, $length, $type, $interation 
-        );
-    }
-
-    /**
-     * Clean phone string
-     *
-     * @param string|null $phone
-     * 
-     * @param bool $allow --- Default is true
-     * - [optional] to allow int format `+` (before number)
-     * 
-     * @return string
-     */
-    static public function phone($phone = null, ?bool $allow = true)
-    {
-        return Tame::cleanPhoneNumber(
-            $phone, $allow
-        );
+        return $value;
     }
 
     /**
@@ -712,12 +580,39 @@ class Str{
     }
 
     /**
+     * Generate a string with a specified number of random words.
+     *
+     * @param int $wordCount
+     * @param int $minLength
+     * @param int $maxLength
+     * @return string
+     */
+    static public function generateRandomWords(int $wordCount, int $minLength = 3, int $maxLength = 10)
+    {
+        $words = [];
+        $characters = 'abcdefghijklmnopqrstuvwxyz';
+
+        for ($i = 0; $i < $wordCount; $i++) {
+            $length = rand($minLength, $maxLength);
+            $word = '';
+
+            for ($j = 0; $j < $length; $j++) {
+                $word .= $characters[rand(0, strlen($characters) - 1)];
+            }
+
+            $words[] = $word;
+        }
+
+        return implode(' ', $words);
+    }
+
+    /**
      * Get the file extension from a filename or path.
      *
      * @param string $filename
      * @return string|null
      */
-    static public function fileExtension(string $filename)
+    static public function getFileExtension(string $filename)
     {
         $extension = pathinfo($filename, PATHINFO_EXTENSION);
 
@@ -808,17 +703,6 @@ class Str{
     static public function padString(string $value, int $length, string $padChar = ' ', int $padType = STR_PAD_RIGHT)
     {
         return str_pad($value, $length, $padChar, $padType);
-    }
-
-    /**
-     * Check if an array is associative.
-     *
-     * @param array $array
-     * @return bool
-     */
-    static private function isAssoc(array $array)
-    {
-        return array_keys($array) !== range(0, count($array) - 1);
     }
 
 }
