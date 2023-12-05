@@ -106,7 +106,10 @@ class UrlHelper {
      */
     static public function isIpAccessedVia127Port()
     {
-        return Str::contains($_SERVER['REMOTE_ADDR'], self::host());
+        return Str::contains(
+            $_SERVER['REMOTE_ADDR'] ?? '', 
+            self::host()
+        );
     }
 
     /**
