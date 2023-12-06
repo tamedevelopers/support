@@ -6,8 +6,8 @@ namespace Tamedevelopers\Support;
 
 use Tamedevelopers\Support\Server;
 
-class Str{
-
+class Str
+{
     /**
      * If the given value is not an array and not null, wrap it in one.
      *
@@ -61,9 +61,9 @@ class Str{
     {
         // always convert to an array
         $data = Server::toArray($data);
-        
+
         // If you don't want to modify the original array and create a new one without 'id' columns:
-        return array_map(function($data) use($fromKey, $toKey) {
+        return array_map(function ($data) use ($fromKey, $toKey) {
             if (isset($data[$fromKey])) {
                 $data[$toKey] = $data[$fromKey];
                 unset($data[$fromKey]);
@@ -83,19 +83,19 @@ class Str{
     {
         // always convert to an array
         $data = Server::toArray($data);
-        
+
         // If you don't want to modify the original array and create a new one without 'id' columns:
-        return array_map(function($data) use($keys) {
+        return array_map(function ($data) use ($keys) {
             $keys = self::flattenValue($keys);
-            foreach($keys as $key){
-                if(isset($data[$key])){
+            foreach ($keys as $key) {
+                if (isset($data[$key])) {
                     unset($data[$key]);
                 }
             }
             return $data;
         }, $data);
     }
-    
+
     /**
      * Convert array keys to specified key if available, else return the original array.
      *
@@ -137,10 +137,10 @@ class Str{
     {
         // Extract the values from the associative array
         $values = array_values($bindings);
-        
+
         // Merge all the arrays into a single array
         $mergedBindings = array_merge(...$values);
-        
+
         // Return the merged bindings
         return $mergedBindings;
     }
@@ -190,13 +190,13 @@ class Str{
         if (!is_array($keys)) {
             $keys = [$keys];
         }
-        
+
         // Use array_filter to keep only the elements with keys not present in $keys
         return array_filter($array, function ($key) use ($keys) {
             return !in_array($key, $keys);
         }, ARRAY_FILTER_USE_KEY);
     }
-    
+
     /**
      * Replace the first occurrence of a substring in a string.
      *
@@ -219,7 +219,7 @@ class Str{
         // Return the modified subject string
         return $subject;
     }
-    
+
     /**
      * Replace the last occurrence of a substring in a string.
      *
@@ -241,6 +241,104 @@ class Str{
 
         // Return the modified subject string
         return $subject;
+    }
+
+    /**
+     * Clean phone string
+     *
+     * @param string|null $phone
+     * @param bool $allow
+     * - [optional] to allow int format `+` (before number)
+     * 
+     * @return string
+     */
+    static public function phone($phone = null, ?bool $allow = true)
+    {
+        return Tame::cleanPhoneNumber($phone, $allow);
+    }
+
+    /**
+     * Masks characters in a string.
+     *
+     * @param string|null $str 
+     * - The string to be masked.
+     * 
+     * @param int $length 
+     * - The desired length of the masked string. Default is 4.
+     * 
+     * @param string $position 
+     * - The position to apply the mask: 'left', 'middle' or 'center', 'right'. Default is 'right'.
+     * 
+     * @param string $mask 
+     * - The character used for masking. Default is '*'.
+     * 
+     * @return string 
+     * - The masked string.
+     */
+    static public function mask($str = null, ?int $length = 4, ?string $position = 'right', ?string $mask = '*')
+    {
+        return Tame::mask($str, $length, $position, $mask);
+    }
+
+    /**
+     * Decode entity html strings
+     * 
+     * @param string|null $string
+     * @return string
+     */
+    static public function html($string = null)
+    {
+        return Tame::html($string);
+    }
+
+    /**
+     * Convert string to clean text without html tags
+     * 
+     * @param string|null $string
+     * 
+     * @return string
+     * - strip all tags from string content
+     */
+    static public function text($string = null)
+    {
+        return Tame::text($string);
+    }
+
+    /**
+     * Encrypt string
+     *
+     * @param string|null $string
+     * @return string
+     */
+    static public function encrypt($string = null)
+    {
+        return Tame::encryptStr($string);
+    }
+
+    /**
+     * Derypt string
+     *
+     * @param string|null $jsonString
+     * @return mixed
+     */
+    static public function decrypt($jsonString = null)
+    {
+        return Tame::decryptStr($jsonString);
+    }
+
+    /**
+     * Shorten String to Given Limit
+     * 
+     * @param  mixed $string
+     * @param  mixed $limit
+     * @param  mixed $replacer
+     * [optional]
+     * 
+     * @return string
+     */
+    static public function shorten($string = null, $limit = 50, $replacer = '...')
+    {
+        return Tame::shortenString($string, $limit, $replacer);
     }
 
     /**
@@ -287,7 +385,7 @@ class Str{
             '/(mouse)$/i'                           => '$1mice',
             '/(deer)$/i'                            => '$1',
             '/(sheep)$/i'                           => '$1',
-        ];        
+        ];
 
         foreach ($rules as $pattern => $replacement) {
             if (preg_match($pattern, $value)) {
@@ -344,6 +442,17 @@ class Str{
     }
 
     /**
+     * Generate a string with a specified number of random words.
+     *
+     * @param int $wordCount
+     * @return string
+     */
+    static public function randomWords(int $wordCount)
+    {
+        return self::generateRandomWords($wordCount);
+    }
+
+    /**
      * Generate a UUID (Universally Unique Identifier).
      *
      * @return string
@@ -390,12 +499,11 @@ class Str{
         $value = preg_replace('/[^a-z0-9]+/i', ' ', $value);
 
         // Convert to camelCase
-        $value = ucwords(trim($value));
+        $value = ucwords(self::trim($value));
         $value = str_replace(' ', '', $value);
         $value = lcfirst($value);
 
         return $value;
-
     }
 
     /**
@@ -408,7 +516,7 @@ class Str{
     static public function slug(string $value, string $separator = '-')
     {
         $value = preg_replace('/[^a-zA-Z0-9]+/', $separator, $value);
-        $value = trim($value, $separator);
+        $value = self::trim($value, $separator);
         $value = self::lower($value);
 
         return $value;
@@ -473,9 +581,37 @@ class Str{
         $value = preg_replace('/[^a-z0-9-]+/', $separator, $value);
 
         // Remove leading and trailing separators
-        $value = trim($value, $separator);
+        $value = self::trim($value, $separator);
 
         return $value;
+    }
+
+    /**
+     * Strip whitespace (or other characters) from the beginning and end of a string
+     * @param string|null $string — The string that will be trimmed.
+     *
+     * @param string $characters
+     * [optional] Optionally, the stripped characters can also be specified using the charlist parameter. 
+     * Simply list all characters that you want to be stripped. With .. you can specify a range of characters.
+     * 
+     * @return string
+     */
+    static public function trim($string = null, string $characters = " \n\r\t\v\0")
+    {
+        return trim((string) $string, $characters);
+    }
+
+    /**
+     * Replace all occurrences of the search string with the replacement string
+     * @param string|string[] $search
+     * @param string|string[] $replace
+     * @param string|string[] $subject
+     * 
+     * @return string
+     */
+    static public function replace(array|string $search, array|string $replace, array|string $subject)
+    {
+        return str_replace($search, $replace, $subject);
     }
 
     /**
@@ -486,7 +622,7 @@ class Str{
      */
     static public function lower($value = null)
     {
-        return trim(strtolower((string) $value));
+        return strtolower(self::trim($value));
     }
 
     /**
@@ -497,7 +633,7 @@ class Str{
      */
     static public function upper($value = null)
     {
-        return trim(strtoupper((string) $value));
+        return strtoupper(self::trim($value));
     }
 
     /**
@@ -644,9 +780,9 @@ class Str{
     {
         $pos = strpos($value, $delimiter);
 
-        return $pos !== false 
-                ? substr($value, $pos + strlen($delimiter)) 
-                : '';
+        return $pos !== false
+            ? substr($value, $pos + strlen($delimiter))
+            : '';
     }
 
     /**
@@ -662,9 +798,9 @@ class Str{
         $startPos = strpos($value, $start);
         $endPos = strpos($value, $end, $startPos + strlen($start));
 
-        return $startPos !== false && $endPos !== false 
-                ? substr($value, $startPos + strlen($start), $endPos - $startPos - strlen($start)) 
-                : '';
+        return $startPos !== false && $endPos !== false
+            ? substr($value, $startPos + strlen($start), $endPos - $startPos - strlen($start))
+            : '';
     }
 
     /**
@@ -704,5 +840,4 @@ class Str{
     {
         return str_pad($value, $length, $padChar, $padType);
     }
-
 }

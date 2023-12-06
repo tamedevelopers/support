@@ -6,8 +6,6 @@ use Tamedevelopers\Support\Tame;
 require_once __DIR__ . '/../vendor/autoload.php';
 
 
-
-
 $arrayCollection = [
     0 => [
         'id' => 1,
@@ -34,7 +32,6 @@ $removeArrayKeys = Str::removeKeysFromArray(
     ['is_active', 'id']
 );
 
-
 dd(
     $changeArrayKeys,
     $removeArrayKeys,
@@ -48,12 +45,13 @@ dd(
     Str::random(),
     Str::uuid(),
     Str::randomWords(10),
-    Str::mask('tamedevelopers@gmail.com', 4),
+    Str::mask('tamedevelopers@gmail.com', 2, 'left'),
     Str::shorten('【2023最新】香港郵政本地平郵郵費計算、基本郵費一覽', 20),
     Str::html('<span class="pul-text pul-text--bold smb-web-view-dynamic-list-item-title">lhkexpressvps.com <script></script></span>'),
     Str::text('<span class="pul-text pul-text--bold smb-web-view-dynamic-list-item-title">lhkexpressvps.com <script></script></span>'),
-    Str::hash('hoping for more'),
+    Str::encrypt('hoping for more'),
+    Str::decrypt('{"k":"dadb5dd1a0558257","e":"7ZMcZv6tALEVq4k7MHpJCQ==","s":"cUFmY0ZwRlpobVJ6bGxTYUJrVDdydz09"}'),
     Str::phone('+234 (90) 012-234'),
-    Str::phone('+234 (90) 012-234', false),
+    Str::phone('+234 (90) + - 012-234', false),
 );
 

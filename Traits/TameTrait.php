@@ -159,7 +159,7 @@ trait TameTrait{
     {
         return (object) [
             'key'           => bin2hex(random_bytes(8)),
-            'cipher_algo'   => 'BF-CBC',
+            'cipher_algo'   => 'aes-256-cbc',
             'passphrase'    => bin2hex(random_bytes(4)),
             'options'       => OPENSSL_CIPHER_RC2_40
         ];

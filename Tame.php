@@ -617,7 +617,7 @@ class Tame {
      */
     static public function cleanPhoneNumber($phone = null, ?bool $allow = true)
     {
-        $phone = trim((string) $phone);
+        $phone = Str::trim($phone);
         $phone = str_replace([' ', '-'], '', $phone);
         $phone = str_replace(['(', ')'], '', $phone);
         
@@ -652,9 +652,9 @@ class Tame {
     static public function cleanTagsForURL($string = null)
     {
         // Remove unwanted characters from the string
-        $string = preg_replace('/[^\p{L}\p{N}\s]/u', '', (string) $string);
+        $string = preg_replace('/[^\p{L}\p{N}\s]/u', '', Str::trim($string));
 
-        return trim($string);
+        return Str::trim($string);
     }
 
     /**
@@ -687,9 +687,9 @@ class Tame {
         // clean string before begin
         $string = strip_tags($string);
         $string = str_replace("、", '', $string);
-        $string = trim(str_replace(PHP_EOL, ' ', $string));
+        $string = Str::trim(str_replace(PHP_EOL, ' ', $string));
         
-        if(strlen($string) > $limit) {
+        if(mb_strlen($string) > $limit) {
             return mb_strcut($string, 0, (int) $limit) . $replacer; 
         }
 
@@ -704,7 +704,7 @@ class Tame {
      */
     static public function html($string = null)
     {
-        return html_entity_decode((string) $string, ENT_HTML5, 'UTF-8');
+        return html_entity_decode(Str::trim($string), ENT_HTML5, 'UTF-8');
     }
 
     /**
@@ -717,7 +717,7 @@ class Tame {
      */
     static public function text($string = null)
     {
-        return strip_tags((string) $string);
+        return strip_tags(Str::trim($string));
     }
 
     /**
@@ -728,7 +728,7 @@ class Tame {
     */
     static public function filter_input($string = null)
     {
-        return htmlspecialchars((string) $string, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        return htmlspecialchars(Str::trim($string), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     /**
@@ -1058,30 +1058,39 @@ class Tame {
     /**
      * Decrypt string
      *
-     * @param  string $encryption
-     * @param  string $key
-     * @param  string $passkey
+     * @param  string|null $jsonString
      * @return mixed
      */
-    static public function decryptStr(string $encryption, string $key, string $passkey)
+    static public function decryptStr($jsonString = null)
     {
         // get encryption
         $openSSL = self::openSSLEncrypt();
 
-        // Store the cipher method
-        $ciphering = $openSSL->cipher_algo;
+        // Decode the JSON string
+        $data = Server::toArray($jsonString);
 
-        // Use OpenSSl Encryption method
-        $options = $openSSL->options;
+        if (empty($data)) {
+            return;
+        }
+
+        // Decode base64-encoded IV and encrypted string
+        $iv = base64_decode($data['e']);
+        $encryptedString = base64_decode($data['s']);
+
+        // Get encryption settings
+        $openSSL = self::openSSLEncrypt();
 
         // Store the encryption key
-        $key = $key;
-        
-        // Non-NULL Initialization Vector for encryption
-        $passphrase = $passkey;
-        
-        // Use openssl_decrypt() function to decrypt the data
-        return openssl_decrypt($encryption, $ciphering, $key, $options, $passphrase);
+        $key = $data['k'];
+
+        // Decryption
+        return openssl_decrypt(
+            $encryptedString, 
+            $openSSL->cipher_algo, 
+            $key, 
+            $openSSL->options, 
+            $iv
+        );
     }
     
     /**
@@ -1097,31 +1106,28 @@ class Tame {
         // get encryption
         $openSSL = self::openSSLEncrypt();
 
-        // Store the cipher method
-        $ciphering = $openSSL->cipher_algo;
+        $string = mb_convert_encoding($string, 'UTF-8');
 
         // Store the encryption key
         $key = $openSSL->key;
-        
-        // Use OpenSSl Encryption method
-        $options = $openSSL->options;
-        
-        // Non-NULL Initialization Vector for encryption
-        $passphrase = $openSSL->passphrase;
-        
-        // Use openssl_encrypt() function to encrypt the data
-        $encrypt = openssl_encrypt(
+
+        // Generate a random Initialization Vector (IV) using openssl_random_pseudo_bytes.
+        // The length of the IV is determined by the openssl_cipher_iv_length function for AES-256-CBC.
+        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length($openSSL->cipher_algo));
+
+        // Encryption
+        $encryptedString = openssl_encrypt(
             $string, 
-            $ciphering, 
+            $openSSL->cipher_algo, 
             $key, 
-            $options, 
-            $passphrase
+            $openSSL->options, 
+            $iv
         );
         
         return json_encode([
-            'key'           => $key,
-            'passphrase'    => $passphrase,
-            'encryption'    => $encrypt
+            'k' => $key,
+            'e' => base64_encode($iv),
+            's' => base64_encode($encryptedString),
         ]);
     }
 
@@ -1223,7 +1229,7 @@ class Tame {
         return str_replace(
             ['\\', '/'], 
             DIRECTORY_SEPARATOR, 
-            trim((string) $path)
+            Str::trim($path)
         );
     }
     
