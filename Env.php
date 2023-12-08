@@ -6,6 +6,7 @@ namespace Tamedevelopers\Support;
 
 use Exception;
 use Dotenv\Dotenv;
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Constant;
 use Tamedevelopers\Support\Capsule\Manager;
@@ -250,7 +251,7 @@ class Env {
         $envData = array_change_key_case($_ENV, CASE_UPPER);
 
         // convert to upper-case
-        $key = strtoupper(trim((string) $key));
+        $key = Str::upper(Str::trim($key));
 
         return $envData[$key] ?? $value;
     }

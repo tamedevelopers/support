@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Server;
 
 class UrlHelper {
@@ -18,7 +19,7 @@ class UrlHelper {
         // create from .env APP_URL or Default path
         $url = env('APP_URL') ?? self::full();
 
-        return trim($url, '\/');
+        return Str::trim($url, '\/');
     }
 
     /**

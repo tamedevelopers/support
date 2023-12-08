@@ -175,7 +175,7 @@ class Manager{
      */ 
     static public function replaceWhiteSpace(?string $string = null)
     {
-        return trim(preg_replace(
+        return Str::trim(preg_replace(
             self::$regex_whitespace, 
             " ", 
             $string

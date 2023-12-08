@@ -32,10 +32,16 @@ $removeArrayKeys = Str::removeKeysFromArray(
     ['is_active', 'id']
 );
 
+
 dd(
     $changeArrayKeys,
     $removeArrayKeys,
     
+    Str::convertArrayCase(
+        data: $arrayCollection, 
+        value: 'lower'
+    ),
+
     Str::snake('Peterso More'),
     Str::camel('peterson more'),
     Str::studly('peterson more'),

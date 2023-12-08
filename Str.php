@@ -115,8 +115,8 @@ class Str
         if ($values) {
             // Apply case transformation based on the specified option
             $matchValue = match (self::lower($case)) {
-                'upper' => array_map('strtoupper', $values),
-                'lower' => array_map('strtolower', $values),
+                'upper', 'uppercase', 'upper_case' => array_map('strtoupper', $values),
+                'lower', 'lowercase', 'lower_case' => array_map('strtolower', $values),
                 default => $values,
             };
 
@@ -125,6 +125,35 @@ class Str
         }
 
         return $data;
+    }
+
+    /**
+     * Change the case of keys and/or values in a multi-dimensional array.
+     *
+     * @param array  $data  The input array
+     * @param string $key   The case to convert for keys: 'lower', 'upper', or 'unchanged'
+     * @param string $value The case to convert for values: 'lower', 'upper', or 'unchanged'
+     *
+     * @return array The array with converted case
+     */
+    public static function convertArrayCase(array $data, string $key = 'lower', string $value = 'unchanged'): array
+    {
+        $result = [];
+
+        foreach ($data as $currentKey => $currentValue) {
+            
+            // convert the key at first
+            $convertedKey = self::convertCase($currentKey, $key);
+
+            if (is_array($currentValue)) {
+                $result[$convertedKey] = self::convertArrayCase($currentValue, $key, $value);
+            } else {
+                $convertedValue = self::convertCase($currentValue, $value);
+                $result[$convertedKey] = $convertedValue;
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -840,4 +869,22 @@ class Str
     {
         return str_pad($value, $length, $padChar, $padType);
     }
+
+    /**
+     * Convert the case of a string based on the specified type.
+     *
+     * @param string|int $string The input string
+     * @param string $type   The case to convert: 'lower', 'upper', or 'unchanged'
+     *
+     * @return string The string with converted case
+     */
+    private static function convertCase(string|int $string, string $type)
+    {
+        return match (self::lower($type)) {
+            'upper', 'uppercase', 'upper_case' => self::upper($string),
+            'lower', 'lowercase', 'lower_case' => self::lower($string),
+            default => $string,
+        };
+    }
+
 }

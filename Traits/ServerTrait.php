@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 use ReflectionClass;
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\UrlHelper;
 
 
@@ -183,7 +184,7 @@ trait ServerTrait{
         return str_replace(
             ['\\', '/'], 
             $replacer, 
-            trim((string) $path)
+            Str::trim($path)
         );
     }
 
@@ -233,7 +234,7 @@ trait ServerTrait{
         $projectRootPath = $documentRoot;
         if (strpos($currentScript, $documentRoot) === 0) {
             $projectRootPath = substr($currentScript, strlen($documentRoot));
-            $projectRootPath = trim($projectRootPath, '/');
+            $projectRootPath = Str::trim($projectRootPath, '/');
             $projectRootPath = substr($projectRootPath, 0, (int) strpos($projectRootPath, '/'));
             $projectRootPath = $documentRoot . '/' . $projectRootPath;
             

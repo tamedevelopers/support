@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Traits\ServerTrait;
 
 class Asset{
@@ -38,7 +39,7 @@ class Asset{
         }
 
         // trim
-        $asset = trim((string) $asset, '/');
+        $asset = Str::trim($asset, '/');
 
         $file_domain = "{$assetPath['domain']}/{$asset}";
 
@@ -84,7 +85,7 @@ class Asset{
             if(!empty($base_path)){
 
                 // - Trim forward slash from left and right
-                $base_path = trim($base_path, '/');
+                $base_path = Str::trim($base_path, '/');
 
                 // base for url path
                 $baseForUrlPath = $base_path;

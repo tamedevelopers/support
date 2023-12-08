@@ -956,6 +956,8 @@ class Tame {
             return $str;
         }
 
+        $str = Str::trim($str);
+
         // Get the length of the string
         $strLength = mb_strlen($str, 'UTF-8');
 
