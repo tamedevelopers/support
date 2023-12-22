@@ -22,6 +22,28 @@ trait TimeTrait{
     {
         return self::$staticData instanceof Time;
     }
+    
+    /**
+     * Set Global TimeZone
+     *
+     * @return void
+     */
+    public function __setGlobalTimeZone($timezone = null)
+    {
+        $timezone = TimeHelper::setPassedTimezone($timezone);
+
+        date_default_timezone_set($timezone);
+    }
+
+    /**
+     * Get Global TimeZone
+     *
+     * @return string|null
+     */
+    public function __getGlobalTimeZone()
+    {
+        return date_default_timezone_get();
+    }
 
     /**
      * Get the stored date time
@@ -87,9 +109,7 @@ trait TimeTrait{
         if(!self::isTimeInstance()){
             new static(date: $date);
         } else{
-            self::$staticData->date = TimeHelper::setPassedDate(
-                $date ?? 'now'
-            );
+            self::$staticData->date = TimeHelper::setPassedDate($date);
         }
         
         return self::$staticData;
@@ -108,9 +128,7 @@ trait TimeTrait{
         } 
 
         // set timezone
-        self::$staticData->timezone = TimeHelper::setPassedTimezone(
-            $timezone ?? 'UTC'
-        );
+        self::$staticData->timezone = TimeHelper::setPassedTimezone($timezone);
         
         return self::$staticData;
     }
@@ -144,8 +162,17 @@ trait TimeTrait{
             'gettimezone' => '__getTimeZone',
             'settimezone' => '__setTimeZone',
             'setdate' => '__setDate',
+            'setglobaltimezone' => '__setGlobalTimeZone',
+            'getglobaltimezone' => '__getGlobalTimeZone',
             default => '__timeAgo'
         };
+
+        // this will happen if __construct has not been called 
+        // before calling an existing method
+        // mostly when using [setglobaltimezone|getglobaltimezone] methods
+        if(empty($clone)){
+            $clone = new static();
+        }
 
         return $clone->$method(...$args);
     }

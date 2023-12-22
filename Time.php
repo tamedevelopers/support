@@ -46,15 +46,11 @@ class Time {
     public function __construct($date = null, $timezone = null)
     {
         if(empty($this->date)){
-            $this->date = TimeHelper::setPassedDate(
-                $date ?? 'now'
-            );
+            $this->date = TimeHelper::setPassedDate($date);
         }
 
         if(empty($this->timezone)){
-            $this->timezone = TimeHelper::setPassedTimezone(
-                $timezone ?? 'UTC'
-            );
+            $this->timezone = TimeHelper::setPassedTimezone($timezone);
         }
 
         // clone copy of self
