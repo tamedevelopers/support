@@ -956,6 +956,7 @@ class Tame {
             return $str;
         }
 
+        // trim string
         $str = Str::trim($str);
 
         // Get the length of the string
@@ -980,25 +981,33 @@ class Tame {
             $strMinusLength = abs(1);
         }
 
+        // to int
+        $length = (int) $length;
+
         // For left position
         if ($position == 'left') {
-            $length = (int) $length;
             if ($isEmail && $atPosition !== false) {
-                // Mask the left part of the string, including the "@" symbol
-                return mb_substr(mb_substr($str, 0, $atPosition, 'UTF-8'), 0, $length, 'UTF-8') . str_repeat($mask, $atPosition - $length) . mb_substr($str, $atPosition, null, 'UTF-8');
+                // extract email without the tld (top level domain)
+                $email = mb_substr($str, 0, mb_strpos($str, "@"));
+
+                // extract only the tld, to be added at the end
+                $tld = mb_substr($str, mb_strpos($str, "@"));
+
+                // now mask only the email using the middle position
+                $maskedString = self::mask($email, $length, 'middle');
+
+                return "{$maskedString}{$tld}";
             } else {
-                // Mask the entire string if it's not an email
-                return mb_substr($str, 0, $length, 'UTF-8') . str_repeat($mask, $strMinusLength);
+                return str_repeat($mask, $strMinusLength) . mb_substr($str, -$length, null, 'UTF-8');
             }
-        } elseif ($position == 'middle' || $position == 'center') {
+        } elseif (in_array($position, ['middle', 'center'])) {
             // Mask the middle part of the string
             $length = (int) round($length / 2);
 
             return mb_substr($str, 0, $length, 'UTF-8') . str_repeat($mask, $strMinusLength) . mb_substr($str, -$length, null, 'UTF-8');
         } else {
             // Mask the right part of the string
-            $length = (int) $length;
-            return str_repeat($mask, $strMinusLength) . mb_substr($str, -$length, null, 'UTF-8');
+            return mb_substr($str, 0, $length, 'UTF-8') . str_repeat($mask, $strMinusLength);
         }
     }
 

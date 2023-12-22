@@ -8,30 +8,32 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 // set the default time and timezone
 // helper function
-TameTime(
+$mainTime = TameTime(
     timezone: 'Africa/Lagos',
-    time: 'now', 
+    time: 'now',
 );
 
-
 // Time::setDate('last week');
-// Time::setTimezone('Asia/Tokyo');
+// Time::setTimezone('Pacific/Pago_Pago');
 
-// TameTime()->setDate('last week');
-// TameTime()->setTimezone('Asia/Tokyo');
-
-// Time::setDate('last week');
 // TameTime('yesterday')->time();
 // TameTime('last week')->sec();
 
+$time2 = Time::setTimezone('Atlantic/South_Georgia');
+$time3 = Time::setTimezone('Indian/Antananarivo');
+
 dd(
-
-    Time::setTimezone('Asia/Tokyo')
-        ->format('now')
-        ->ago()
-    ,
-
     TameTime()->format('yesterday')->ago(),
+    TameTime()->toJs('now'),
 
-    TameTime()->toJs('now')
+    Time::setTimezone('Asia/Tokyo'),
+
+    $mainTime->format('last year december'),
+    $mainTime->getTimeZone(),
+
+    $time2->format('this year october')->ago(),
+    $time2->getTimeZone(),
+
+    $time3,
+    $time3->greetings()
 );
