@@ -133,7 +133,7 @@ class Server{
 
         // if not valid array and check if array is greater than one element
         if(!self::isNotValidArray($value) && count($value) === 1){
-            if(!self::isNotValidArray($value[0])){
+            if(!self::isNotValidArray($value[0] ?? $value)){
                 return $value;
             }
         }
