@@ -14,9 +14,9 @@ class NumberToWords {
     /**
      * Allow cents text to be added
      *
-     * @var boolean
+     * @var bool|null
      */
-    static private $allowCents = false;
+    static private $allowCents;
 
     /**
      * Currency data
@@ -26,28 +26,57 @@ class NumberToWords {
     static private $currencyData;
 
     /**
-     * Convert a number to its text representation.
-     * - Can be able to convert numbers unto quintillion
-     *
-     * @param string|int|float $number
-     * 
-     * @param bool $cents
+     * Allow Cents
+     * @param bool|null $cents
      * - [optional] Default is false
+     * 
+     * @return $this
+     */
+    static public function cents($cents = null)
+    {
+        $self = clone new self();
+
+        self::$allowCents = $cents;
+
+        return $self;
+    }
+
+    /**
+     * Country <iso-3></iso-3> code
      * 
      * @param string|null $code
      * - [optional] Currency code
      * 
+     * @return $this
+     */
+    static public function iso($code = null)
+    {
+        $self = clone new self();
+
+        self::$currencyData = self::getCurrencyText($code);
+
+        return $self;
+    }
+
+    /**
+     * Convert a number to its text representation.
+     * - Can be able to convert numbers upto <quintillion>
+     *
+     * @param string|int|float $number
+     * 
+     * @param bool|null $cents
+     * - [optional] Default is false
+     * 
      * @return string
      */
-    static public function text($number, $code = null, $cents = false) 
+    static public function text($number, $cents = null) 
     {
-        self::$allowCents = $cents;
+        if(is_null(self::$allowCents) && is_bool($cents)){
+            self::$allowCents = $cents;
+        }
 
         // trim to convert to string
         $number = Str::trim($number);
-
-        // get currency code
-        self::$currencyData = self::getCurrencyText($code);
 
         // if cents is allowed
         if(self::$allowCents){ 
@@ -98,9 +127,15 @@ class NumberToWords {
                 // allow if not empty
                 $centsText = !empty($centsText) ? " {$centsText}" : '';
 
+                // reset allowCents
+                self::$allowCents = null;
+
                 return ", {$centsCurrency}{$centsText}";
             }
         }
+
+        // reset allowCents
+        self::$allowCents = null;
     }
 
     /**
@@ -173,8 +208,6 @@ class NumberToWords {
         }
 
         return $result;
-
-        
     }
 
     /**

@@ -35,12 +35,18 @@ class TimeHelper {
     static public function setPassedDate($date = null)
     {
         if(empty($date)){
-            $date = date('M d Y', strtotime('this year January'));
+            // $date = date('M d Y', strtotime('this year January'));
             $date = "Jan 01 1970";
         }
 
         if (is_numeric($date)) {
             $date = date('M d Y', (int) $date);
+        }
+
+        // if instance of Carbon
+        // then convert to date time
+        if($date instanceof \Illuminate\Support\Carbon){
+            $date = $date->toDateTimeString();
         }
 
         return strtotime($date);

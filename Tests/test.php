@@ -49,6 +49,12 @@ $Json = '{"name":"Peterson","age":20,"food":["Rice","Garri","Fish","Calories"]}'
 // ], 'Tests/en.php');
 
 
+$svg = Tame::platformIcon('windows');
+
+include $svg;
+
+echo "<img src='$svg'>";
+
 dd(
     Tame::platformIcon('windows'),
     

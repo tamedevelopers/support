@@ -17,6 +17,9 @@ dd(
 
     bcrypt('testPassword'),
 
-    Hash::check('testPassword', '$2y$10$Frh7yG3.qnGdQ9Hd8OK/y.aBWXFLiFD3IWqUjIWWodUhzIVF3DpT6')
+    Hash::check('testPassword', '$2y$10$Frh7yG3.qnGdQ9Hd8OK/y.aBWXFLiFD3IWqUjIWWodUhzIVF3DpT6'),
+
+    // default php password verify function
+    password_verify('testPassword', '$2y$10$Frh7yG3.qnGdQ9Hd8OK/y.aBWXFLiFD3IWqUjIWWodUhzIVF3DpT6')
 );
 

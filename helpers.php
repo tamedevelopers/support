@@ -12,6 +12,7 @@ use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Country;
 use Tamedevelopers\Support\UrlHelper;
 use Tamedevelopers\Support\Translator;
+use Tamedevelopers\Support\NumberToWords;
 use Tamedevelopers\Support\AutoloadRegister;
 use Tamedevelopers\Support\Capsule\FileCache;
 
@@ -82,6 +83,17 @@ if (! function_exists('TameCountry')) {
     function TameCountry()
     {
         return new Country();
+    }
+}
+
+if (! function_exists('NumberToWords')) {
+    /**
+     * NumberToWords Object
+     * @return \Tamedevelopers\Support\NumberToWords
+     */
+    function NumberToWords()
+    {
+        return new NumberToWords();
     }
 }
 

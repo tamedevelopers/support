@@ -157,6 +157,28 @@ class Str
     }
 
     /**
+     * Check if array has duplicate value
+     *
+     * @param array $data
+     * @return bool
+     */
+    static public function arrayDuplicate(?array $data = [])
+    {
+        return count($data) > count(array_unique($data));
+    }
+
+    /**
+     * Check if all values of array is same
+     *
+     * @param array $data
+     * @return bool
+     */
+    static public function arraySame(?array $data = [])
+    {
+        return count(array_unique($data)) === 1;
+    }
+
+    /**
      * Merge the binding arrays into a single array.
      *
      * @param array $bindings

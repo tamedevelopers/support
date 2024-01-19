@@ -27,7 +27,6 @@ dd(
     TameCookie()->get('cookie_name'),
 
     Cookie::forget('cookie_name2'),
-
-
+    
     Cookie::expire('cookie_name2'),
 );

@@ -42,5 +42,7 @@ dd(
     $time3->greetings(),
 
     Time::getGlobalTimeZone(),
+    
+    // Time::allTimezone(),
 
 );

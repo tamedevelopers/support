@@ -61,24 +61,38 @@ class Tame {
     }
 
     /**
+     * Check IF URL Exists
+     * 
+     * @param string $url
+     * @return bool
+     */
+    static public function urlExists($url)
+    {
+        $ch = curl_init($url);
+
+        // Set cURL options
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HEADER, true);
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
+
+        // Execute cURL and get the HTTP status code
+        $httpCode = curl_exec($ch);
+
+        // Close cURL handle
+        curl_close($ch);
+
+        return $httpCode && preg_match('/\b200\b/', $httpCode);
+    }
+
+    /**
      * Check IF Internet is Available
-     *
+     * 
      * @return bool
      */
     static public function isInternetAvailable()
     {
-        // Use cURL to make a request
-        $request = curl_init('https://www.google.com');
-        curl_setopt($request, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($request, CURLOPT_TIMEOUT, 5);
-        curl_exec($request);
-        
-        // Check the HTTP response code
-        $httpCode = curl_getinfo($request, CURLINFO_HTTP_CODE);
-        curl_close($request);
-
-        // HTTP code 200 means the request was successful
-        return $httpCode === 200;
+        return self::urlExists('https://www.google.com');
     }
 
     /**
@@ -511,11 +525,7 @@ class Tame {
      */
     static public function isArrayDuplicate(?array $data = [])
     {
-        if(count($data) > count(array_unique($data))){
-            return true;
-        }
-        
-        return false;
+        return Str::arrayDuplicate($data);
     }
 
     /**
@@ -527,11 +537,7 @@ class Tame {
      */
     static public function isArraySame(?array $data = [])
     {
-        if(count($data) > count(array_unique($data))){
-            return true;
-        }
-
-        return false;
+        return Str::arraySame($data);
     }
 
     /**
@@ -547,34 +553,31 @@ class Tame {
     {
         switch ($type) {
             case 'rsort':
-                rsort($data); return $data; //sort arrays in descending order
+                rsort($data); // sort arrays in descending order
                 break;
-            
+    
             case 'asort':
-                asort($data);
-                return asort($data); //sort associative arrays in ascending order, according to the value
+                asort($data); // sort associative arrays in ascending order, according to the value
                 break;
-            
+    
             case 'ksort':
-                ksort($data);  
-                return $data; //sort associative arrays in ascending order, according to the key
+                ksort($data); // sort associative arrays in ascending order, according to the key
                 break;
-            
+    
             case 'arsort':
-                arsort($data); 
-                return $data; //sort associative arrays in descending order, according to the value
+                arsort($data); // sort associative arrays in descending order, according to the value
                 break;
-            
+    
             case 'krsort':
-                krsort($data); 
-                return $data; //sort associative arrays in descending order, according to the value
+                krsort($data); // sort associative arrays in descending order, according to the value
                 break;
     
             default:
-                sort($data); 
-                return $data; //sort arrays in descending order
+                sort($data); // sort arrays in ascending order
                 break;
         }
+
+        return $data;
     }
     
     /**
@@ -1162,7 +1165,7 @@ class Tame {
         $os_name = Str::lower($os_name);
 
         // set path
-        $path = self::stringReplacer( __DIR__ );
+        $path = self::stringReplacer( __DIR__ ) . DIRECTORY_SEPARATOR;
 
         // Create items data set
         $dataSet = [
@@ -1199,7 +1202,7 @@ class Tame {
     static public function paymentIcon($payment = null)
     {
         // set path
-        $path = self::stringReplacer( __DIR__ );
+        $path = self::stringReplacer( __DIR__ ) . DIRECTORY_SEPARATOR;
 
         // Create items data set
         $dataSet = [

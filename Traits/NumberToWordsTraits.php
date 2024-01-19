@@ -89,6 +89,7 @@ trait NumberToWordsTraits
 
     /**
       * All currency 
+      * - Country <iso-3></iso-3>
       *
       * @return array
       */

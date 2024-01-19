@@ -6,6 +6,7 @@ namespace Tamedevelopers\Support\Traits;
 
 use Closure;
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Country;
 use Tamedevelopers\Support\Capsule\TimeHelper;
 
 /**
@@ -131,6 +132,16 @@ trait TimeTrait{
         self::$staticData->timezone = TimeHelper::setPassedTimezone($timezone);
         
         return self::$staticData;
+    }
+
+    /**
+     * Get all timezones.
+     * 
+     * @return array
+     */
+    static public function allTimezone()
+    {
+        return Country::timeZone();
     }
 
     /**

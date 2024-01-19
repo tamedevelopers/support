@@ -7,16 +7,16 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 dd(
 
-    NumberToWords::text(1205435349345443534),
+    NumberToWords::iso('nga')->text(1205435349345443534, true),
 
-    NumberToWords::text(455987.09, 'nga', true),
+    NumberToWords::cents(true)->iso('nga')->text(455987.09),
 
-    NumberToWords::text(34590323, 'FRA', true),
+    NumberToWords::cents(true)->iso('FRA')->text(34590323),
 
-    NumberToWords::text('120.95', 'tUr', true),
+    NumberToWords::cents(true)->iso('TUR')->text('120.953'),
 
-    NumberToWords::text(1999),
+    NumberToWords()->cents(false)->text(1999),
 
-    // NumberToWords::CurrencyNames()
+    // NumberToWords()->CurrencyNames()
 
 );
