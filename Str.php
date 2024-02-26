@@ -895,12 +895,12 @@ class Str
     /**
      * Convert the case of a string based on the specified type.
      *
-     * @param string|int $string The input string
+     * @param string|null $string The input string
      * @param string $type   The case to convert: 'lower', 'upper', or 'unchanged'
      *
      * @return string The string with converted case
      */
-    private static function convertCase(string|int $string, string $type)
+    private static function convertCase(string|null $string, string $type)
     {
         return match (self::lower($type)) {
             'upper', 'uppercase', 'upper_case' => self::upper($string),
