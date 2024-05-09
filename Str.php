@@ -50,6 +50,35 @@ class Str
     }
 
     /**
+     * For sorting array
+     *
+     * @param  array $data
+     * @param  string $type
+     * - [rsort|asort|ksort|arsort|krsort|sort]
+     * 
+     * @return void
+     */
+    static public function sortArray(?array &$data = [], ?string $type = 'sort')
+    {
+        Tame::sortArray($data, $type);
+    }
+
+    /**
+     * For sorting muti-dimentional array
+     *
+     * @param  array $data
+     * @param  string|null $key
+     * @param  string $type
+     * - [asc|desc|snum]
+     * 
+     * @return void
+     */
+    static public function sortMultipleArray(?array &$data = [], $key = null, ?string $type = 'asc')
+    {
+        Tame::sortMultipleArray($data, $key, $type);
+    }
+
+    /**
      * Change Keys of Array
      *
      * @param  array $data
@@ -82,18 +111,22 @@ class Str
     static public function removeKeysFromArray($data, ...$keys)
     {
         // always convert to an array
-        $data = Server::toArray($data);
+        $data = (array) $data;
+        
+        // flattern keys
+        $keys = self::flattenValue($keys);
 
-        // If you don't want to modify the original array and create a new one without 'id' columns:
-        return array_map(function ($data) use ($keys) {
-            $keys = self::flattenValue($keys);
+        // Iterate through each data item
+        foreach ($data as &$item) {
+            // Remove specified keys from the item
             foreach ($keys as $key) {
-                if (isset($data[$key])) {
-                    unset($data[$key]);
+                if (isset($item[$key])) {
+                    unset($item[$key]);
                 }
             }
-            return $data;
-        }, $data);
+        }
+
+        return $data;
     }
 
     /**

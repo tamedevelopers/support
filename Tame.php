@@ -547,52 +547,74 @@ class Tame {
      * @param  string $type
      * - [rsort|asort|ksort|arsort|krsort|sort]
      * 
-     * @return array
+     * @return void
      */
-    static public function sortArray(?array $data = [], ?string $type = 'sort')
+    static public function sortArray(?array &$data = [], ?string $type = 'sort')
     {
-        switch ($type) {
-            case 'rsort':
-                rsort($data); // sort arrays in descending order
-                break;
-    
-            case 'asort':
-                asort($data); // sort associative arrays in ascending order, according to the value
-                break;
-    
-            case 'ksort':
-                ksort($data); // sort associative arrays in ascending order, according to the key
-                break;
-    
-            case 'arsort':
-                arsort($data); // sort associative arrays in descending order, according to the value
-                break;
-    
-            case 'krsort':
-                krsort($data); // sort associative arrays in descending order, according to the value
-                break;
-    
-            default:
-                sort($data); // sort arrays in ascending order
-                break;
+        // Validate that $data is an array
+        if (!is_array($data)) {
+            return;
         }
 
-        return $data;
+        // Perform sorting based on the specified type
+        switch ($type) {
+            case 'rsort':
+                rsort($data); // Sort arrays in descending order
+                break;
+
+            case 'asort':
+                asort($data); // Sort associative arrays in ascending order, according to the value
+                break;
+
+            case 'ksort':
+                ksort($data); // Sort associative arrays in ascending order, according to the key
+                break;
+
+            case 'arsort':
+                arsort($data); // Sort associative arrays in descending order, according to the value
+                break;
+
+            case 'krsort':
+                krsort($data); // Sort associative arrays in descending order, according to the value
+                break;
+
+            default:
+                sort($data); // Sort arrays in ascending order
+                break;
+        }
     }
     
     /**
      * For sorting muti-dimentional array
      *
-     * @param  string|null $key
      * @param  array $data
+     * @param  string|null $key
      * @param  string $type
      * - [asc|desc|snum]
      * 
      * @return void
      */
-    static public function sortMultipleArray($key = null, ?array &$data = [], ?string $type = 'asc')
+    static public function sortMultipleArray(?array &$data = [], $key = null, ?string $type = 'asc')
     {
+        // Check if $data is an array and not empty
+        if (!is_array($data) || empty($data)) {
+            return;
+        }
+
+        // Check if $key is provided
+        if ($key === null) {
+            // If $key is not provided, return without sorting
+            return;
+        }
+
+        // Extract values of the specified key from each sub-array
         $id = array_column($data, $key);
+
+        // Ensure $id and $data have the same size before sorting
+        if (count($id) !== count($data)) {
+            return;
+        }
+
         switch ($type) { 
             case 'desc':
                 array_multisort($id, SORT_DESC, $data); //sort associative arrays in descending order
@@ -831,10 +853,8 @@ class Tame {
      */
     static public function saveDataAsJsonObject(string $destination, mixed $data, ?bool $type = true)
     {
-        $format = JSON_PRETTY_PRINT;
-        if(!$type){
-            $format = JSON_UNESCAPED_UNICODE;
-        }
+        // Choose the JSON encoding format
+        $format = $type ? JSON_PRETTY_PRINT : JSON_UNESCAPED_UNICODE;
 
         // check or convert data to an array
         if(!is_array(!$data)){

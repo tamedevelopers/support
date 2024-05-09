@@ -127,18 +127,23 @@ class Server{
     static public function toArray($value)
     {
         // check value is a valid json data
-        if(self::isValidJson($value)){
-            return json_decode($value, true);
+        if (is_string($value)) {
+            if(self::isValidJson($value)){
+                return json_decode($value, true);
+            }
         }
 
-        // if not valid array and check if array is greater than one element
+        // if not valid array, check if array is equal to one element
         if(!self::isNotValidArray($value) && count($value) === 1){
             if(!self::isNotValidArray($value[0] ?? $value)){
                 return $value;
             }
         }
 
-        return json_decode(json_encode($value), true);
+        return json_decode(
+            json_encode($value), 
+            true
+        );
     }
 
     /**
@@ -163,10 +168,10 @@ class Server{
      */
     static public function toJson($value)
     {
-        if(self::isValidJson($value)){
+        if (self::isValidJson($value)) {
             return $value;
         }
-
+    
         return json_encode($value);
     }
 
@@ -178,15 +183,22 @@ class Server{
      */
     static private function isNotValidArray(mixed $data = null)
     {
+        // Return true if $data is not an array
         if (!is_array($data)) {
             return true;
         }
 
-        // array filter
-        $filteredArray = array_filter($data, 'is_array');
-    
-        return count($filteredArray) === count($data);
+        // Check if $data contains any non-array values
+        foreach ($data as $value) {
+            if (!is_array($value)) {
+                return true; // Return true if a non-array value is found
+            }
+        }
+
+        // Return false if $data is a valid array
+        return false;
     }
+
 
     /**
      * Check if data is valid JSON.

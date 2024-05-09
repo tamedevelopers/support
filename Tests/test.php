@@ -2,6 +2,7 @@
 
 use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\PDF;
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Slugify;
 
@@ -53,13 +54,21 @@ $svg = Tame::platformIcon('windows');
 
 include $svg;
 
-echo "<img src='$svg'>";
+
+// Define an array to sort
+$data = [4, 2, 7, 1, 5];
+
+Str::sortArray($data, 'krsort');
 
 dd(
-    Tame::platformIcon('windows'),
-    
+    Tame::platformIcon('windows'), 
+
     to_object($Json),
-    
+
+    to_array($Json),
+
+    $data,
+
     // server()->toArray($Json),
 );
 
