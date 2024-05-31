@@ -56,11 +56,11 @@ class Str
      * @param  string $type
      * - [rsort|asort|ksort|arsort|krsort|sort]
      * 
-     * @return void
+     * @return array
      */
     static public function sortArray(?array &$data = [], ?string $type = 'sort')
     {
-        Tame::sortArray($data, $type);
+        return Tame::sortArray($data, $type);
     }
 
     /**
@@ -71,11 +71,11 @@ class Str
      * @param  string $type
      * - [asc|desc|snum]
      * 
-     * @return void
+     * @return array
      */
     static public function sortMultipleArray(?array &$data = [], $key = null, ?string $type = 'asc')
     {
-        Tame::sortMultipleArray($data, $key, $type);
+        return Tame::sortMultipleArray($data, $key, $type);
     }
 
     /**

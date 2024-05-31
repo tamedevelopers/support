@@ -547,13 +547,13 @@ class Tame {
      * @param  string $type
      * - [rsort|asort|ksort|arsort|krsort|sort]
      * 
-     * @return void
+     * @return array
      */
     static public function sortArray(?array &$data = [], ?string $type = 'sort')
     {
         // Validate that $data is an array
         if (!is_array($data)) {
-            return;
+            return [];
         }
 
         // Perform sorting based on the specified type
@@ -582,6 +582,8 @@ class Tame {
                 sort($data); // Sort arrays in ascending order
                 break;
         }
+
+        return $data;
     }
     
     /**
@@ -592,19 +594,19 @@ class Tame {
      * @param  string $type
      * - [asc|desc|snum]
      * 
-     * @return void
+     * @return array
      */
     static public function sortMultipleArray(?array &$data = [], $key = null, ?string $type = 'asc')
     {
         // Check if $data is an array and not empty
         if (!is_array($data) || empty($data)) {
-            return;
+            return [];
         }
 
         // Check if $key is provided
-        if ($key === null) {
-            // If $key is not provided, return without sorting
-            return;
+        // If $key is not provided, return without sorting
+        if (is_null($key)) {
+            return $data;
         }
 
         // Extract values of the specified key from each sub-array
@@ -628,6 +630,8 @@ class Tame {
                 array_multisort($id, SORT_ASC, $data); //sort arrays in ascending order
                 break;
         }
+
+        return $data;
     }
 
     /**
