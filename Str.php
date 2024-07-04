@@ -328,6 +328,19 @@ class Str
     }
 
     /**
+     * Format Strings with Seperator
+     *
+     * @param  string $string
+     * @param  int $number
+     * @param  string $seperator
+     * @return void
+     */
+    static public function formatString($string, $number = 4, $seperator = '-')
+    {
+        return implode($seperator, str_split(self::trim($string), $number));
+    }
+    
+    /**
      * Clean phone string
      *
      * @param string|null $phone

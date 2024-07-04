@@ -2,6 +2,7 @@
 
 use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\PDF;
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Zip;
 use Tamedevelopers\Support\Hash;
 use Tamedevelopers\Support\Tame;
@@ -15,6 +16,7 @@ use Tamedevelopers\Support\Translator;
 use Tamedevelopers\Support\NumberToWords;
 use Tamedevelopers\Support\AutoloadRegister;
 use Tamedevelopers\Support\Capsule\FileCache;
+use Tamedevelopers\Support\Collections\Collection;
 
 
 if (! function_exists('AppIsNotCorePHP')) {
@@ -72,6 +74,18 @@ if (! function_exists('TameTime')) {
     function TameTime($time = null, $timezone = null)
     {
         return new Time($time, $timezone);
+    }
+}
+
+if (! function_exists('Str')) {
+    /**
+     * Str
+     * 
+     * @return \Tamedevelopers\Support\Str
+     */
+    function Str()
+    {
+        return new Str();
     }
 }
 
@@ -159,6 +173,20 @@ if (! function_exists('server')) {
     function server()
     {
         return new Server();
+    }
+}
+
+if (! function_exists('collect')) {
+    /**
+     * Collection of data
+     *
+     * @param array $items 
+     * 
+     * @return \Tamedevelopers\Support\Collections\Collection
+     */
+    function collect($items = [])
+    {
+        return new Collection($items);
     }
 }
 

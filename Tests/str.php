@@ -34,14 +34,15 @@ $removeArrayKeys = Str::removeKeysFromArray(
 
 
 dd(
-    $changeArrayKeys,
-    $removeArrayKeys,
+    // $changeArrayKeys,
+    // $removeArrayKeys,
     
     Str::convertArrayCase(
         data: $arrayCollection, 
         value: 'lower'
     ),
 
+    Str::formatString('892892982982', 5),
     Str::snake('Peterso More'),
     Str::camel('peterson more'),
     Str::studly('peterson more'),
@@ -53,8 +54,8 @@ dd(
     Str::randomWords(10),
     Str::mask('tamedevelopers@gmail.com', 2, 'left'),
     Str::shorten('【2023最新】香港郵政本地平郵郵費計算、基本郵費一覽', 20),
-    Str::html('<span class="pul-text pul-text--bold smb-web-view-dynamic-list-item-title">lhkexpressvps.com <script></script></span>'),
-    Str::text('<span class="pul-text pul-text--bold smb-web-view-dynamic-list-item-title">lhkexpressvps.com <script></script></span>'),
+    Str::html('<span class="pul-text pul-text--bold smb-web-view-dynamic-list-item-title">google.com <script></script></span>'),
+    Str::text('<span class="pul-text pul-text--bold smb-web-view-dynamic-list-item-title">google.com <script></script></span>'),
     Str::encrypt('hoping for more'),
     Str::decrypt('{"k":"dadb5dd1a0558257","e":"7ZMcZv6tALEVq4k7MHpJCQ==","s":"cUFmY0ZwRlpobVJ6bGxTYUJrVDdydz09"}'),
     Str::phone('+234 (90) 012-234'),
