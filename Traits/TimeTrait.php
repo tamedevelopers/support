@@ -6,6 +6,7 @@ namespace Tamedevelopers\Support\Traits;
 
 use Closure;
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Time;
 use Tamedevelopers\Support\Country;
 use Tamedevelopers\Support\Capsule\TimeHelper;
 
@@ -126,7 +127,7 @@ trait TimeTrait{
     {
         if(!self::isTimeInstance()){
             new static(timezone: $timezone);
-        } 
+        }
 
         // set timezone
         self::$staticData->timezone = TimeHelper::setPassedTimezone($timezone);

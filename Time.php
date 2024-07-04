@@ -264,11 +264,18 @@ class Time {
 
     /**
      * Get a greeting based on the current time.
+     * @param string|int $date
+     * 
      * @return string
      */
-    public function __greeting() 
+    public function __greeting($date = 'now') 
     {
-        $now    = new DateTime('now', new DateTimeZone($this->timezone));
+        $dateTime = new DateTime();
+        $dateTime->setTimestamp(
+            TimeHelper::setPassedDate($date)
+        );
+
+        $now    = new DateTime($dateTime->format('M d Y H:i:s'), new DateTimeZone($this->timezone));
         $hour   = (int) $now->format('H');
         $text   = self::getText();
         
