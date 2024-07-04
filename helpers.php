@@ -77,13 +77,28 @@ if (! function_exists('TameTime')) {
     }
 }
 
-if (! function_exists('Str')) {
+
+if (! function_exists('TameCollect')) {
     /**
-     * Str
+     * Collection of data
+     *
+     * @param array $items 
+     * 
+     * @return \Tamedevelopers\Support\Collections\Collection
+     */
+    function TameCollect($items = [])
+    {
+        return new Collection($items);
+    }
+}
+
+if (! function_exists('TameStr')) {
+    /**
+     * Tame Str
      * 
      * @return \Tamedevelopers\Support\Str
      */
-    function Str()
+    function TameStr()
     {
         return new Str();
     }
@@ -173,20 +188,6 @@ if (! function_exists('server')) {
     function server()
     {
         return new Server();
-    }
-}
-
-if (! function_exists('collect')) {
-    /**
-     * Collection of data
-     *
-     * @param array $items 
-     * 
-     * @return \Tamedevelopers\Support\Collections\Collection
-     */
-    function collect($items = [])
-    {
-        return new Collection($items);
     }
 }
 

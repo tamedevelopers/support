@@ -339,7 +339,7 @@ class Str
     {
         return implode($seperator, str_split(self::trim($string), $number));
     }
-    
+
     /**
      * Clean phone string
      *
@@ -946,7 +946,7 @@ class Str
      *
      * @return string The string with converted case
      */
-    private static function convertCase($string = null, string|null $type)
+    private static function convertCase($string = null, $type = null)
     {
         return match (self::lower($type)) {
             'upper', 'uppercase', 'upper_case' => self::upper($string),
