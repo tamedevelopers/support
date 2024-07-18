@@ -941,19 +941,30 @@ class Tame {
     /**
      * Convert image to base64
      *
-     * @param  string|null $path
+     * @param string|null $path
      * - [base path will be automatically added]
+     * 
+     * @param bool $url
+     * - [If path should be treated as direct url]
      * 
      * @return null|string
      */
-    static public function imageToBase64($path = null) 
+    static public function imageToBase64($path = null, $direct = false) 
     {
         $fullPath  = self::getBasePath($path);
 
-        if(self::exists($fullPath)){
-            $type = pathinfo($fullPath, PATHINFO_EXTENSION);
-            $data = file_get_contents($fullPath);
+        if($direct){
+            // Parse the URL to get the path
+            $parse  = parse_url($path, PHP_URL_PATH);
+            $type   = pathinfo($parse, PATHINFO_EXTENSION);
+            $data   = @file_get_contents($path);
+        } else{
+            $type   = pathinfo($fullPath, PATHINFO_EXTENSION);
+            $data   = @file_get_contents($fullPath);
+        }
 
+        // if true
+        if($data){
             return 'data:image/' . $type . ';base64,' . base64_encode($data);
         }
     }

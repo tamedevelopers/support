@@ -118,9 +118,7 @@ class Time {
      */
     static public function timestamp($date, $format = "Y-m-d H:i:s")
     {
-        if(is_string($date)){
-            $date = strtotime($date);
-        }
+        $date = TimeHelper::setPassedDate($date);
 
         return !is_bool($date) ? date($format, $date) : '';
     }

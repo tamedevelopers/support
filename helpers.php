@@ -269,7 +269,7 @@ if (! function_exists('env_update')) {
     }
 }
 
-if (! function_exists('asset')) {
+if (! function_exists('tasset')) {
     /**
      * Create assets Real path url
      * 
@@ -280,7 +280,7 @@ if (! function_exists('asset')) {
      * 
      * @return string
      */
-    function asset($asset = null, $cache = null)
+    function tasset($asset = null, $cache = null)
     {
         return Asset::asset($asset, $cache);
     }
