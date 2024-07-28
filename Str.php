@@ -790,6 +790,17 @@ class Str
     }
 
     /**
+     * Count the length of a string|array
+     *
+     * @param string|array $value
+     * @return int
+     */
+    static public function count($value)
+    {
+        return is_array($value) ? count($value) : self::trim(strlen($value));
+    }
+
+    /**
      * Count the occurrences of a substring in a string.
      *
      * @param string $haystack

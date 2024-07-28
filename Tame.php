@@ -714,7 +714,7 @@ class Tame {
     static public function shortenString($string = null, $limit = 50, $replacer = '...')
     {
         // clean string before begin
-        $string = strip_tags($string);
+        $string = strip_tags(Str::trim($string));
         $string = str_replace("、", '', $string);
         $string = Str::trim(str_replace(PHP_EOL, ' ', $string));
         
