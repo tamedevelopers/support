@@ -11,6 +11,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 // TameZip()->zip('tests', 'newData.zip');
 // TameZip()->unzip('newData.zip', '/');
+// TameZip()->download('newData.zip');
 
 dd(
 

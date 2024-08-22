@@ -7,40 +7,13 @@ namespace Tamedevelopers\Support;
 use ZipArchive;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
+use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Traits\TameTrait;
 
 class Zip {
 
     use TameTrait;
 
-    /**
-     * Unzip a file or folder.
-     *
-     * @param  string $sourcePath
-     * - [base path will be automatically added]
-     * 
-     * @param  string $destination
-     * - [base path will be automatically added]
-     * 
-     * @return bool
-     */
-    static public function unzip($sourcePath, $destination)
-    {
-        $sourcePath  = self::getBasePath($sourcePath);
-        $destination = self::getBasePath($destination);
-        
-        // If it's a zip file, call the unzipFile function
-        if (pathinfo($sourcePath, PATHINFO_EXTENSION) === 'zip') {
-            return self::unzipFile($sourcePath, $destination);
-        }
-        
-        // If it's a folder, call the unzipFolder function
-        if (is_dir($sourcePath)) {
-            return self::unzipFolder($sourcePath, $destination);
-        }
-        
-        return false; // Unsupported file type
-    }
 
     /**
      * Zip a file or folder.
@@ -76,6 +49,62 @@ class Zip {
         $zip->close();
 
         return file_exists($destinationZip);
+    }
+
+    /**
+     * Unzip a file or folder.
+     *
+     * @param  string $sourcePath
+     * - [base path will be automatically added]
+     * 
+     * @param  string $destination
+     * - [base path will be automatically added]
+     * 
+     * @return bool
+     */
+    static public function unzip($sourcePath, $destination)
+    {
+        $sourcePath  = self::getBasePath($sourcePath);
+        $destination = self::getBasePath($destination);
+        
+        // If it's a zip file, call the unzipFile function
+        if (pathinfo($sourcePath, PATHINFO_EXTENSION) === 'zip') {
+            return self::unzipFile($sourcePath, $destination);
+        }
+        
+        // If it's a folder, call the unzipFolder function
+        if (is_dir($sourcePath)) {
+            return self::unzipFolder($sourcePath, $destination);
+        }
+        
+        return false; // Unsupported file type
+    }
+
+    /**
+     * Download Zipped File
+     *
+     * @param  string $fileName
+     * @param  bool $unlink
+     * @return void
+     */
+    static public function download($fileName, $unlink = true)
+    {
+        $zipfilePath = self::getBasePath($fileName);
+
+        if(Tame::exists($zipfilePath)){
+            // Set headers to download the ZIP file
+            header('Content-Type: application/zip');
+            header("Content-Disposition: attachment; filename={$fileName}");
+            header('Content-Length: ' . filesize($zipfilePath));
+    
+            // Read the file to output the download
+            readfile($zipfilePath);
+    
+            // Delete the ZIP file after download (optional)
+            if($unlink){
+                unlink($zipfilePath);
+            }
+        }
     }
 
     /**
