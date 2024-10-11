@@ -60,7 +60,7 @@ composer require tamedevelopers/support
 
 | iso(country iso3)         | cents | text |
 |---------------------------|-------|------|
-| COUNTRY ISO 3  `AFG \| NGA \| GBR \| USA `    | Get abs |
+| COUNTRY ISO 3  `AFG\|NGA\|GBR\|USA `    | Get abs |
 
 
 
