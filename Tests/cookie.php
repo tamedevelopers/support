@@ -6,9 +6,6 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 
 
-
-
-
 // this will return instance of a Cookie
 // since by default the function name cookie already exists
 // so we can't be able to create helper function with that name

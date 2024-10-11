@@ -94,7 +94,9 @@ class Cookie{
         $minutes = self::minutesToExpire($minutes);
 
         // create default values
-        [$path, $value, $domain, $secure, $httponly, $force] = self::getDefaultPathAndDomain($path, $value, $domain, $secure, $httponly, $force);
+        [$path, $value, $domain, $secure, $httponly, $force] = self::getDefaultPathAndDomain(
+            $path, $value, $domain, $secure, $httponly, $force
+        );
 
         // set cookie
         if ( !headers_sent() || $force === true) {

@@ -5,6 +5,15 @@ Support Package For Tamedevelopers
 ## Documentation
 * [Requirements](#requirements)
 * [Installation](#installation)
+* [All Paths](#all-paths)
+* [Number to Words](#number-to-words)
+* [Zip](#zip)
+* [Time](#time)
+* [Cookie](#cookie)
+
+
+
+
 * [Asset](#Asset)
     * [Asset config](#asset-config)
         * [Asset Cache](#asset-cache)
@@ -34,6 +43,26 @@ Prior to installing `support package` get the [Composer](https://getcomposer.org
 composer require tamedevelopers/support
 ```
 
+## All Paths
+
+| function name             | Description                                   |
+|---------------------------|-----------------------------------------------|
+| base_path()               | Get absolute base directory path. Accepts a param `string` if given, and append to path   |
+| directory()               | Same as `base_path()`                         |
+| public_path()             | Root/public path. Accepts a param `string` if given, and append to path                   |
+| app_path()                | Root/app path. Accepts a param `string` if given, and append to path                      |
+| config_path()             | Root/config path. Accepts a param `string` if given, and append to path                   |
+| lang_path()               | Root/lang path. Accepts a param `string` if given, and append to path                     |
+| domain()                  | Returns domain URI. Accepts a param `string` if given, and append to path                 |
+
+
+## Number to Words
+
+| iso(country iso3)         | cents | text |
+|---------------------------|-------|------|
+| COUNTRY ISO 3  `AFG \| NGA \| GBR \| USA `    | Get abs |
+
+
 
 ## Asset
 - Takes a param as `string` path to asset file
@@ -50,14 +79,14 @@ http://domain.com/assets/css/style.css
 
 - or -- `Helpers Function`
 ```
-asset('css/style.css');
+tasset('css/style.css');
 ```
 
 ## Asset Config
 - Takes two param as `string` 
-    - `$base_path` path base directory
-    - `$cache` Tells method to return `cache` of assets.
-        - You'll see a link representation as `http://domain.com/[path_to_asset_file]?v=111111111`
+    - `base_path` path base directory
+    - `cache` Tells method to return `cache` of assets.
+        
 
 ```
 use Tamedevelopers\Support\Asset;
@@ -74,7 +103,8 @@ config_asset('public');
 ```
 
 ### Asset Cache
-- By Default, `$cache` is set to `true`
+- By Default, `cache` is set to `true`
+    - You'll see a link representation as `http://domain.com/[path_to_asset_file]?v=111111111`
 
 ```
 Asset::config('storage', false);
@@ -101,14 +131,14 @@ http://domain.com/storage/[asset_file]?v=111111111
 ```
 use Tamedevelopers\Support\Env;
 
-Env::load('optional_custom_path_to_env_file')
+Env::load('path_to_env_folder')
 ```
 
 - or -- `loadOrFail('optional_path')`
     - Just as the name says. It'll load the `.env` file or fail with status code of 404. An error logger will also be created inside `storage/logs/orm.log`
 
 ```
-Env::loadOrFail('optional_custom_path_to_env_file')
+Env::loadOrFail('path_to_env_folder')
 ```
 
 ### ENV Update
@@ -118,8 +148,8 @@ Env::loadOrFail('optional_custom_path_to_env_file')
 |---------------|-------------------|
 | key           |  ENV key          |
 | value         |  ENV value        |
-| allow_quote   |  `true` \| `false` - Default is true (Allow quotes within value)  |
-| allow_space   | `true` \| `false`  - Default is false (Allow space between key and value)|
+| allow_quote   |  `true \| false` - Default is true (Allow quotes within value)            |
+| allow_space   |  `true \| false`  - Default is false (Allow space between key and value)  |
 
 ```
 use Tamedevelopers\Support\Env;
@@ -233,7 +263,7 @@ autoload_register(['folder', 'folder2]);
 | env()                     | env method `To get environment variable`      |
 | env_update()              | Same as `Env::updateENV` method               |
 | server()                  | Return instance of `(new Server)` class       |
-| asset()                   | Return Absolute path of asset. Same as `Asset::asset()`   |
+| tasset()                  | Return Absolute path of asset. Same as `Asset::asset()`   |
 | config_asset()            | Same as `Asset::config()`. Configure Asset root directory |
 | base_path()               | Get absolute base directory path. It accepts a param as `string` if given, will be appended to the path |
 | directory()               | Same as `base_path()` just naming difference        |
@@ -241,6 +271,7 @@ autoload_register(['folder', 'folder2]);
 | to_array()                | `array` Convert value to array                |
 | to_object()               | `object` Convert value to object              |
 | to_json()                 | `string` Convert value to json                |
+
 
 ## Error Dump
 
