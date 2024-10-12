@@ -26,6 +26,13 @@ class NumberToWords {
     static private $currencyData;
 
     /**
+     * Formatted text data
+     *
+     * @var mixed
+     */
+    static private $text;
+
+    /**
      * Allow Cents
      * @param bool|null $cents
      * - [optional] Default is false
@@ -34,11 +41,11 @@ class NumberToWords {
      */
     static public function cents($cents = null)
     {
-        $self = clone new self();
+        $clone = self::clone();
 
         self::$allowCents = $cents;
 
-        return $self;
+        return $clone;
     }
 
     /**
@@ -51,11 +58,11 @@ class NumberToWords {
      */
     static public function iso($code = null)
     {
-        $self = clone new self();
+        $clone = self::clone();
 
         self::$currencyData = self::getCurrencyText($code);
 
-        return $self;
+        return $clone;
     }
 
     /**
@@ -67,10 +74,12 @@ class NumberToWords {
      * @param bool|null $cents
      * - [optional] Default is false
      * 
-     * @return string
+     * @return $this
      */
-    static public function text($number, $cents = null) 
+    static public function number($number, $cents = null)
     {
+        $clone = self::clone();
+
         if(is_null(self::$allowCents) && is_bool($cents)){
             self::$allowCents = $cents;
         }
@@ -79,7 +88,7 @@ class NumberToWords {
         $number = Str::trim($number);
 
         // if cents is allowed
-        if(self::$allowCents){ 
+        if(self::$allowCents){
 
             // get name of currency
             $currencyText = self::$currencyData['name'] ?? null;
@@ -98,7 +107,20 @@ class NumberToWords {
             Str::replace(["\n", "\r"], '', $numberText)
         );
 
-        return ucfirst($numberText) . $currencyText . self::toCents($number);
+        // add to text
+        self::$text = ucfirst($numberText) . $currencyText . self::toCents($number);
+
+        return $clone;
+    }
+
+    /**
+     * Translate text into readable formats
+     * 
+     * @return string|null
+     */
+    static public function translate()
+    {
+        return self::$text;
     }
 
     /**
@@ -231,6 +253,16 @@ class NumberToWords {
         }
 
         return Str::convertArrayCase($data, 'lower', 'lower');
+    }
+
+    /**
+     * Clone self
+     * 
+     * @return $this
+     */
+    static private function clone()
+    {
+        return clone new self();
     }
 
 }

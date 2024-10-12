@@ -57,11 +57,39 @@ composer require tamedevelopers/support
 
 
 ## Number to Words
+- Has three chainable methods
 
-| iso(country iso3)         | cents | text |
-|---------------------------|-------|------|
-| COUNTRY ISO 3  `AFG\|NGA\|GBR\|USA `    | Get abs |
+| iso (country iso3)         | cents | number |
+|----------------------------|-------|--------|
+| COUNTRY ISO 3  `AFG \| NGA \| GBR \| USA ` | `true \| false` | numeric figures ('4,200') |
+| If so |  | |
 
+
+### ISO
+- Takes param as `string` and case-insensitive
+
+```
+NumberToWords::iso('nga')
+```
+
+### Cents
+- Takes param as `boolean`. Default is `false`
+
+```
+NumberToWords::cents(true)
+```
+
+### Number
+- Takes two param as `int\|float\|string` and `boolean`
+
+```
+NumberToWords::number(1290)->translate()
+```
+
+### Usage
+```
+NumberToWords()->iso('TUR')->number('120.953', true)->translate()
+```
 
 
 ## Asset
