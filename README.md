@@ -89,6 +89,8 @@ NumberToWords::number(1290)->translate()
 ### Usage
 ```
 NumberToWords()->iso('TUR')->number('120.953', true)->translate()
+
+// One hundred and twenty lira, nine hundred and fifty-three kuruş
 ```
 
 
