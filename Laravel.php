@@ -28,7 +28,7 @@ class Laravel{
             $class = str_replace(['"', "'"], '', $class);
 
             // fullpath
-            $assets = asset($path, true);
+            $assets = tasset($path, true);
 
             return "<link rel='stylesheet' type='text/css' href='{$assets}'>";
         });
@@ -48,7 +48,7 @@ class Laravel{
             $class = str_replace(['"', "'"], '', $class);
 
             // fullpath
-            $assets = asset($path, true);
+            $assets = tasset($path, true);
 
             return "<script src='{$assets}'></script>";
         });

@@ -14,7 +14,7 @@ config_asset('/', true);
 dd(
     domain(), 
     domain('admin'),
-    asset('zip.php'),
+    tasset('zip.php'),
 
     urlHelper()->server(),
     
