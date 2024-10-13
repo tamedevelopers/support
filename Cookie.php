@@ -109,7 +109,7 @@ class Cookie{
      *
      * @param  string  $name
      * @param  string|null  $path
-     * @param  string  $domain
+     * @param  string|null  $domain
      * @return void
      */
     static public function forget($name, $path = null, $domain = null)
@@ -179,7 +179,8 @@ class Cookie{
     }
 
     /** 
-     * Cookie has value  
+     * Cookie has name that exists
+     * 
      * @param string $name
      * - Cookie name
      * 

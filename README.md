@@ -119,8 +119,62 @@ TameZip()->download('newData.zip')
 
 ## Time
 
+```
+Visit the Tests/ folder to see more examples.
+```
 
 ## Cookie
+
+| function name   | Description                 |
+|-----------------|-----------------------------|
+| set()           | Used to set cookie          |
+| get()           | Used to get cookie          |
+| forget()        | Used to expire cookie       |
+| exire()         | Same as `forget` method     |
+| all()           | Get all available cookie    |
+| has()           | Cookie exists               |
+
+
+### Set
+- Takes `7 param`
+    - Mandatory `$name` param as `string`
+    - [optional] `$value` param as `string \| null`
+    - [optional] `$minutes` param as `int \| string`
+    - [optional] `$path` param as `string \| null`
+    - [optional] `$domain` param as `string \| null`
+    - [optional] `$secure` param as `bool \| null`
+    - [optional] `$httponly` param as `bool \| null`
+
+```
+Cookie::set('cookie_name', 'value');
+```
+
+### Get
+- Takes param as `string`
+
+```
+Cookie::get('cookie_name');
+```
+
+### Forget
+- Takes `3 param`
+    - Mandatory `$name` param as `string`
+    - [optional] `$path` param as `string \| null`
+    - [optional] `$domain` param as `string \| null`
+
+```
+Cookie::forget('cookie_name');
+```
+
+### Has
+- Takes param as `string`
+    - Returns `bool`
+
+```
+if(Cookie::has('cookie_name')){
+    // execute code
+}
+```
 
 
 ## Asset
