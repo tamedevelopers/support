@@ -10,10 +10,6 @@ Support Package For Tamedevelopers
 * [Zip](#zip)
 * [Time](#time)
 * [Cookie](#cookie)
-
-
-
-
 * [Asset](#Asset)
     * [Asset config](#asset-config)
         * [Asset Cache](#asset-cache)
@@ -80,7 +76,8 @@ NumberToWords::cents(true)
 ```
 
 ### Number
-- Takes two param as `int\|float\|string` and `boolean`
+- Takes two param as `int\|float\|string` and [optional] cents as `boolean`
+    - If you do not want to call the cents method, then we can call it directly here
 
 ```
 NumberToWords::number(1290)->translate()
@@ -92,6 +89,38 @@ NumberToWords()->iso('TUR')->number('120.953', true)->translate()
 
 // One hundred and twenty lira, nine hundred and fifty-three kuruş
 ```
+
+## Zip
+- Takes two param as `string`
+    - [sourcePath] relative path of zip-file
+    - [destination] relative folder path to unzip-file
+
+```
+TameZip()->zip('app/Http', 'app.zip')
+``` 
+
+### Unzip
+- Takes two param as `string`
+    - [sourcePath] relative path of zip-file
+    - [destination] relative folder path to unzip-file
+
+```
+TameZip()->unzip('newData.zip', '/public/zip')
+```
+
+### Download
+- Takes two param as `string \| boolean`
+    - [fileName] relative path of zip-file
+    - [unlink] Default is `true` unlinks file after download
+
+```
+TameZip()->download('newData.zip')
+```
+
+## Time
+
+
+## Cookie
 
 
 ## Asset

@@ -19,6 +19,4 @@ dd(
 
     // NumberToWords()->CurrencyNames()
 
-    NumberToWords()->iso('TUR')->number('120.953', true)->translate()
-
 );
