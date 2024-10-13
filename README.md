@@ -93,7 +93,7 @@ NumberToWords()->iso('TUR')->number('120.953', true)->translate()
 ## Zip
 - Takes two param as `string`
     - [sourcePath] relative path of zip-file
-    - [destination] relative folder path to unzip-file
+    - [destination] relative folder path to save zip file
 
 ```
 TameZip()->zip('app/Http', 'app.zip')
