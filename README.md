@@ -10,6 +10,7 @@ Support Package For Tamedevelopers
 * [Zip](#zip)
 * [Time](#time)
 * [Cookie](#cookie)
+* [Hash](#hash)
 * [Asset](#Asset)
     * [Asset config](#asset-config)
         * [Asset Cache](#asset-cache)
@@ -146,6 +147,8 @@ Visit the Tests/ folder to see more examples.
     - [optional] `$httponly` param as `bool | null`
 
 ```
+use Tamedevelopers\Support\Cookie;
+
 Cookie::set('cookie_name', 'value');
 ```
 
@@ -176,6 +179,32 @@ if(Cookie::has('cookie_name')){
 }
 ```
 
+- or -- `Helpers Function`
+```
+TameCookie()->set('user', '__user');
+```
+
+## Hash
+- Password hashing and verify
+
+```
+use Tamedevelopers\Support\Hash;
+
+bcrypt('testPassword');
+or
+Hash::make('testPassword');
+
+// $2y$10$Frh7yG3.qnGdQ9Hd8OK/y.aBWXFLiFD3IWqUjIWWodUhzIVF3DpT6
+```
+
+### Password verify 
+```
+$oldPassword = "$2y$10$Frh7yG3.qnGdQ9Hd8OK/y.aBWXFLiFD3IWqUjIWWodUhzIVF3DpT6";
+
+Hash::check('testPassword', $oldPassword)
+
+password_verify('testPassword', $oldPassword);
+```
 
 ## Asset
 - Takes a param as `string` path to asset file
@@ -370,20 +399,13 @@ autoload_register(['folder', 'folder2]);
 
 ## Helpers Functions
 
-| function name             | Description                                   |
-|---------------------------|-----------------------------------------------|
-| autoload_register()       | Same as `AutoloadRegister::load()`            |
-| env()                     | env method `To get environment variable`      |
-| env_update()              | Same as `Env::updateENV` method               |
-| server()                  | Return instance of `(new Server)` class       |
-| tasset()                  | Return Absolute path of asset. Same as `Asset::asset()`   |
-| config_asset()            | Same as `Asset::config()`. Configure Asset root directory |
-| base_path()               | Get absolute base directory path. It accepts a param as `string` if given, will be appended to the path |
-| directory()               | Same as `base_path()` just naming difference        |
-| domain()                  | Similar to `base_path()` as it returns domain URI. Also accepts path given and this will append to the endpoint of URL. |
-| to_array()                | `array` Convert value to array                |
-| to_object()               | `object` Convert value to object              |
-| to_json()                 | `string` Convert value to json                |
+| function name    | Description                                   |
+|------------------|-----------------------------------------------|
+| env()            | env method `To get environment variable`      |
+| server()         | Return instance of `(new Server)` class       |
+| to_array()       | `array` Convert value to array                |
+| to_object()      | `object` Convert value to object              |
+| to_json()        | `string` Convert value to json                |
 
 
 ## Error Dump
