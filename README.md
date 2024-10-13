@@ -76,7 +76,7 @@ NumberToWords::cents(true)
 ```
 
 ### Number
-- Takes two param as `int\|float\|string` and [optional] cents as `boolean`
+- Takes two param as `int | float | string` and [optional] cents as `boolean`
     - If you do not want to call the cents method, then we can call it directly here
 
 ```
@@ -109,7 +109,7 @@ TameZip()->unzip('newData.zip', '/public/zip')
 ```
 
 ### Download
-- Takes two param as `string \| boolean`
+- Takes two param as `string | boolean`
     - [fileName] relative path of zip-file
     - [unlink] Default is `true` unlinks file after download
 
@@ -138,12 +138,12 @@ Visit the Tests/ folder to see more examples.
 ### Set
 - Takes `7 param`
     - Mandatory `$name` param as `string`
-    - [optional] `$value` param as `string \| null`
-    - [optional] `$minutes` param as `int \| string`
-    - [optional] `$path` param as `string \| null`
-    - [optional] `$domain` param as `string \| null`
-    - [optional] `$secure` param as `bool \| null`
-    - [optional] `$httponly` param as `bool \| null`
+    - [optional] `$value` param as `string | null`
+    - [optional] `$minutes` param as `int | string`
+    - [optional] `$path` param as `string | null`
+    - [optional] `$domain` param as `string | null`
+    - [optional] `$secure` param as `bool | null`
+    - [optional] `$httponly` param as `bool | null`
 
 ```
 Cookie::set('cookie_name', 'value');
@@ -159,8 +159,8 @@ Cookie::get('cookie_name');
 ### Forget
 - Takes `3 param`
     - Mandatory `$name` param as `string`
-    - [optional] `$path` param as `string \| null`
-    - [optional] `$domain` param as `string \| null`
+    - [optional] `$path` param as `string | null`
+    - [optional] `$domain` param as `string | null`
 
 ```
 Cookie::forget('cookie_name');
