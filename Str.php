@@ -120,7 +120,7 @@ class Str
         foreach ($data as &$item) {
             // Remove specified keys from the item
             foreach ($keys as $key) {
-                if (isset($item[$key])) {
+                if (array_key_exists($key, $item)) {
                     unset($item[$key]);
                 }
             }
