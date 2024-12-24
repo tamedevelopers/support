@@ -363,15 +363,49 @@ class Tame {
      * - float|int
      * 
      * @param bool $format
+     * - [optional] Default is `true` and round using provided or default decimal of `0.5`
+     * if set to false, it return converted value without rounding
+     * 
+     * @param int|float|string $decimal
+     * - [optional] Default is `0.5` value to round to if $format is `true`
      * 
      * @return int
      */
-    static public function calculateVolumeWeight(mixed $length = 0, mixed $width = 0, mixed $height = 0, ?bool $format = true) 
+    static public function calculateVolumeWeight($length = 0, $width = 0, $height = 0, ?bool $format = true, $decimal = 0.5) 
     {
-        $dimension = ((float) $length * (float) $width * (float) $height) / 5000;
+        $value = ((float) $length * (float) $width * (float) $height) / 5000;
         return  $format ? 
-                self::roundToDecimal($dimension) 
-                : $dimension;
+                self::roundToDecimal($value, $decimal)
+                : $value;
+    } 
+
+    /**
+     * Getting weight calculation
+     *
+     * @param mixed $length
+     * - float|int
+     * 
+     * @param mixed $width
+     * - float|int
+     * 
+     * @param mixed $height
+     * - float|int
+     * 
+     * @param bool $format
+     * - [optional] Default is `true` and round using provided or default decimal of `0.1`
+     * if set to false, it return converted value without rounding
+     * 
+     * @param int|float|string $decimal
+     * - [optional] Default is `0.1` value to round to if $format is `true`
+     * 
+     * @return int
+     */
+    static public function calculateCubicMeterWeight($length = 0, $width = 0, $height = 0, ?bool $format = true, $decimal = 0.1)
+    {
+        $value = ((float) $length * (float) $width * (float) $height) / 1000000;
+        return  $format ? 
+                self::roundToDecimal($value, $decimal)
+                : $value;
     } 
 
     /**
@@ -390,17 +424,58 @@ class Tame {
      * - float|int
      * 
      * @param bool $format
+     * - [optional] Default is `true` and round using provided or default decimal of `0.5`
+     * if set to false, it return converted value without rounding
+     * 
+     * @param int|float|string $decimal
+     * - [optional] Default is `0.5` value to round to if $format is `true`
      * 
      * @return int
      */
-    static public function getBetweenBoxLengthAndWeightInKg($length = 0, $width = 0, $height = 0, $weight = 0, ?bool $format   = true) 
+    static public function getBetweenBoxLengthAndWeightInKg($length = 0, $width = 0, $height = 0, $weight = 0, ?bool $format = true, $decimal = 0.5) 
     {
         $weight = (float) $weight; 
-        $dimensional_weight = self::calculateVolumeWeight($length, $width, $height, $format);
+        $dimensional_weight = self::calculateVolumeWeight($length, $width, $height, $format, $decimal);
         if($dimensional_weight > $weight){
             return $dimensional_weight;
         }
-        return $format ? self::roundToDecimal($weight) : $weight;
+        
+        return self::roundToDecimal($weight, $decimal);
+    }
+
+    /**
+     * Getting actual weight length
+     *
+     * @param mixed $length
+     * - float|int
+     * 
+     * @param mixed $width
+     * - float|int
+     * 
+     * @param mixed $height
+     * - float|int
+     * 
+     * @param mixed $weight
+     * - float|int
+     * 
+     * @param bool $format
+     * - [optional] Default is `true` and round using provided or default decimal of `0.1`
+     * if set to false, it return converted value without rounding
+     * 
+     * @param int|float|string $decimal
+     * - [optional] Default is `0.1` value to round to if $format is `true`
+     * 
+     * @return int
+     */
+    static public function getBetweenBoxLengthAndWeightInCMB($length = 0, $width = 0, $height = 0, $weight = 0, ?bool $format = true, $decimal = 0.1) 
+    {
+        $weight = (float) $weight; 
+        $dimensional_weight = self::calculateCubicMeterWeight($length, $width, $height, $format, $decimal);
+        if($dimensional_weight > $weight){
+            return $dimensional_weight;
+        }
+        
+        return self::roundToDecimal($weight, $decimal);
     }
 
     /**
@@ -425,18 +500,36 @@ class Tame {
     } 
 
     /**
+     * Getting actual weight between Volume/Dimensional weight and Weight in `CBM`
+     *
+     * @param mixed $dimensional_weight
+     * - float|int
+     * 
+     * @param mixed $actual_weight
+     * - float|int
+     * 
+     * @return int
+     */
+    static public function getBetweenDimensionalWeightAndWeightInCBM(mixed $dimensional_weight = 0, mixed $actual_weight = 0) 
+    {
+        return self::getBetweenDimensionalWeightAndWeightInKg($dimensional_weight, $actual_weight);
+    } 
+
+    /**
      * Round to decimal point
      * 
      * @param mixed $value
      * - float|int
      * 
      * @param mixed $decimal
-     * - float|int
+     * - float|int|string
      * 
      * @return int
      */
     static public function roundToDecimal(mixed $value = 0, mixed $decimal = 0.5)
     {
+        $decimal = (float) $decimal;
+
         if($decimal == self::COUNT) $decimal = 0.1;
         if($value == self::COUNT) return $value; 
 
@@ -652,9 +745,9 @@ class Tame {
         
         if(Str::contains('+', $phone)){
             $phone = str_replace('+', '', $phone);
-            if($allow){
-                $phone = "+{$phone}";
-            }
+        }
+        if($allow){
+            $phone = "+{$phone}";
         }
 
         return $phone;

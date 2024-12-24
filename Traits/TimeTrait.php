@@ -176,6 +176,7 @@ trait TimeTrait{
             'setdate' => '__setDate',
             'setglobaltimezone' => '__setGlobalTimeZone',
             'getglobaltimezone' => '__getGlobalTimeZone',
+            'formatdaterange', 'formatrange', 'daterange' => '__formatDateRange',
             default => '__timeAgo'
         };
 

@@ -137,6 +137,35 @@ class Time {
     }
 
     /**
+     * Format a date range.
+     *
+     * @param string $value The range in the format "1-7" (days from today).
+     * @param string $format The desired date format, default is 'D, M j'.
+     * 
+     * @return string 
+     * - The formatted date, e.g., "Mon, May 27".
+     */
+    public function __formatDateRange($value, $format = 'D, M j')
+    {
+        // Check if the range has a hyphen
+        if (strpos($value, '-') !== false) {
+            // Split the range into start and end days
+            [$start, $end] = explode('-', $value);
+        } else {
+            [$start, $end] = [0, $value];
+        }
+        
+        // Ensure the end value is the maximum number of days
+        $daysToAdd = (int) trim($end);
+
+        // Calculate the target date
+        $targetDate = now()->addDays($daysToAdd);
+
+        // Format the date as "Mon, May 27"
+        return $targetDate->format($format);
+    }
+
+    /**
      * Set the configuration options for text representations.
      * 
      * @param array|null $options

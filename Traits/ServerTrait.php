@@ -230,6 +230,16 @@ trait ServerTrait{
         $documentRoot   = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']);
         $currentScript  = str_replace('\\', '/', $_SERVER['SCRIPT_FILENAME']);
 
+        // If application is running on other 
+        // frameworks like <laravel>
+        if(AppIsNotCorePHP()){
+            $path = 'public/index.php';
+
+            if(strpos($currentScript, $path) !== false){
+                $currentScript = Str::replace($path, '', $currentScript);
+            }
+        }
+
         // setting default path to doc root
         $projectRootPath = $documentRoot;
         if (strpos($currentScript, $documentRoot) === 0) {
