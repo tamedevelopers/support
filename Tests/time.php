@@ -42,6 +42,9 @@ dd(
     $time3->greetings(),
 
     Time::getGlobalTimeZone(),
+
+    TameTime()->formatRange('1-14')->get(false, true),
+    TameTime()->dateRange('0-40')->get(true, true),
     
     // Time::allTimezone(),
 

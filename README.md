@@ -8,6 +8,7 @@ Support Package For Tamedevelopers
 * [All Paths](#all-paths)
 * [Number to Words](#number-to-words)
 * [Zip](#zip)
+* [PDF](#pdf)
 * [Time](#time)
 * [Cookie](#cookie)
 * [Hash](#hash)
@@ -107,6 +108,25 @@ TameZip()->zip('app/Http', 'app.zip')
 
 ```
 TameZip()->unzip('newData.zip', '/public/zip')
+```
+
+## PDF
+
+| options                   | Description           |
+|-----------------------    |-----------------------|
+| content `string`          | HTML Content          |
+| paper_size `string`       | Default is `A4` | `letter \| legal` |
+| paper_type `string`       | Default is `portrait` | `landscape`    |
+| destination `string`      | Full path to where file has to be save `public_path(invoice/file.pdf)` |
+| output `string`           | Default is `view` | `save \| download`  |
+| isRemoteEnabled `bool`    | Default is `false`  | `true`           |
+
+- Takes two param as `string`
+    - [sourcePath] relative path of zip-file
+    - [destination] relative folder path to unzip-file
+
+```
+`composer require dompdf/dompdf`
 ```
 
 ### Download

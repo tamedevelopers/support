@@ -44,9 +44,9 @@ class PDF{
         $options = self::isDOMPDFInstalled();
         $options->set('defaultMediaType', 'all');
         $options->set('chroot', Server::cleanServerPath( public_path('\\') ) );
-        $options->set('isFontSubsettingEnabled', true);
-        $options->set('isHtml5ParserEnabled', true); 
-        $options->set('isRemoteEnabled', false);
+        $options->set('isFontSubsettingEnabled', self::$options['isFontSubsettingEnabled']);
+        $options->set('isHtml5ParserEnabled', self::$options['isHtml5ParserEnabled']); 
+        $options->set('isRemoteEnabled', self::$options['isRemoteEnabled']);
         $options->set('httpContext', [
             'ssl' => [
                 'verify_peer' => false,
@@ -73,14 +73,18 @@ class PDF{
      */
     static public function create(array $options = [])
     {
-        self::init();
         self::$options = array_merge([
-            'content'       => '',
-            'paper_size'    => 'A4',
-            'paper_type'    => 'portrait',
-            'destination'   => strtotime('now') . '.pdf',
-            'output'        => 'preview',
+            'content'         => '',
+            'paper_size'      => 'A4',
+            'paper_type'      => 'portrait',
+            'destination'     => strtotime('now') . '.pdf',
+            'output'          => 'preview',
+            'isRemoteEnabled' => false,
+            'isFontSubsettingEnabled' => true,
+            'isHtml5ParserEnabled' => true,
         ], $options);
+
+        self::init();
         
         // pass html content
         self::$dompdf->loadHtml(self::$options['content']);

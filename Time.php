@@ -157,17 +157,18 @@ class Time {
         }
         
         // Ensure the end value is the maximum number of days
+        $daysToStart = (int) trim($start);
         $daysToAdd = (int) trim($end);
 
-        // Calculate the target date
-        $targetDate = now()->addDays($daysToAdd);
+        // Create a DateTime object for the current date
+        $startDate = new \DateTime();
+        $endDate = new \DateTime();
 
-        // Format the date as "Mon, May 27"
-        $dateTime = $targetDate->format($format);
+        // Modify the dates based on the range
+        $startDate->modify("+{$daysToStart} days");
+        $endDate->modify("+{$daysToAdd} days");
 
-        return $year 
-                ? "{$dateTime}, " . date('Y', strtotime('now'))
-                : $dateTime;
+        return new TimeHelper($startDate, $endDate, $format); 
     }
 
     /**
