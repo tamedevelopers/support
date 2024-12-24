@@ -533,8 +533,11 @@ class Tame {
         if($decimal == self::COUNT) $decimal = 0.1;
         if($value == self::COUNT) return $value; 
 
-        return ceil($value / $decimal) * $decimal;
-        //return round($value / $decimal, 1, PHP_ROUND_HALF_UP) * $decimal;
+        // Perform the rounding
+        $result = ceil($value / $decimal) * $decimal;
+        // return round($value / $decimal, 1, PHP_ROUND_HALF_UP) * $decimal;
+
+        return round($result, 1);
     }
 
     /**

@@ -140,12 +140,13 @@ class Time {
      * Format a date range.
      *
      * @param string $value The range in the format "1-7" (days from today).
+     * @param bool $year if year should be added of not
      * @param string $format The desired date format, default is 'D, M j'.
      * 
      * @return string 
      * - The formatted date, e.g., "Mon, May 27".
      */
-    public function __formatDateRange($value, $format = 'D, M j')
+    public function __formatDateRange($value, $year = false, $format = 'D, M j')
     {
         // Check if the range has a hyphen
         if (strpos($value, '-') !== false) {
@@ -162,7 +163,11 @@ class Time {
         $targetDate = now()->addDays($daysToAdd);
 
         // Format the date as "Mon, May 27"
-        return $targetDate->format($format);
+        $dateTime = $targetDate->format($format);
+
+        return $year 
+                ? "{$dateTime}, " . date('Y', strtotime('now'))
+                : $dateTime;
     }
 
     /**
