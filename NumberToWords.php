@@ -26,6 +26,20 @@ class NumberToWords {
     static private $currencyData;
 
     /**
+     * Cents passed to number method()
+     *
+     * @var bool|null
+     */
+    static private $cents;
+
+    /**
+     * number figures
+     *
+     * @var mixed
+     */
+    static private $number;
+
+    /**
      * Formatted text data
      *
      * @var mixed
@@ -80,13 +94,25 @@ class NumberToWords {
     {
         $clone = self::clone();
 
-        if(is_null(self::$allowCents) && is_bool($cents)){
-            self::$allowCents = $cents;
-        }
-
         // trim to convert to string
-        $number = Str::trim($number);
+        self::$number = Str::trim($number);
 
+        self::$cents = $cents;
+
+        return $clone;
+    }
+
+    /**
+     * Format the numbers
+     * 
+     * @return string|null
+     */
+    static private function formatNumber()
+    {
+        if(is_null(self::$allowCents) && is_bool(self::$cents)){
+            self::$allowCents = self::$cents;
+        }
+        
         // if cents is allowed
         if(self::$allowCents){
 
@@ -100,7 +126,7 @@ class NumberToWords {
         }
 
         // convert number to text
-        $numberText = self::convertNumberToText($number);
+        $numberText = self::convertNumberToText(self::$number);
 
         // remove line break from text
         $numberText = Str::trim(
@@ -108,9 +134,7 @@ class NumberToWords {
         );
 
         // add to text
-        self::$text = ucfirst($numberText) . $currencyText . self::toCents($number);
-
-        return $clone;
+        self::$text = ucfirst($numberText) . $currencyText . self::toCents(self::$number);
     }
 
     /**
@@ -120,6 +144,8 @@ class NumberToWords {
      */
     static public function translate()
     {
+        self::formatNumber();
+
         return self::$text;
     }
 

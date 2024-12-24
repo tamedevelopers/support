@@ -15,7 +15,7 @@ dd(
 
     NumberToWords::iso('TUR')->number('120.953', true)->translate(),
 
-    NumberToWords()->number(1999),
+    NumberToWords()->number(1999.32, true)->iso('nga')->translate(),
 
     // NumberToWords()->CurrencyNames()
 

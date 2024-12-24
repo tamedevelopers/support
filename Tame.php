@@ -291,26 +291,7 @@ class Tame {
      * Get file modification time
      *
      * @param string|null $path
-     * - [base path will be automatically added]
-     * 
-     * @return int|bool 
-     */
-    static public function getFiletime($path = null) 
-    {
-        $fullPath = self::getBasePath($path);
-
-        if(self::exists($fullPath)) {
-            return filemtime($fullPath);
-        }
-
-        return false;
-    }
-
-    /**
-     * Get file modification time
-     *
-     * @param string|null $path
-     * - [base path will be automatically added]
+     * - [full path to file is required]
      * 
      * @return int|bool
      */
@@ -903,7 +884,7 @@ class Tame {
      * Unlink File from Server
      *
      * @param string $pathToFile
-     * - [base path will be automatically added]
+     * - [full path to file is required]
      * 
      * @param string|null $fileName
      * - [optional] file name. <avatar.png>
@@ -912,7 +893,7 @@ class Tame {
      */
     static public function unlink(string $pathToFile, $fileName = null)
     {
-        $fullPath = self::getBasePath($pathToFile);
+        $fullPath = self::stringReplacer($pathToFile);
 
         if(self::exists($fullPath)){
             if(basename($fullPath) != basename((string) $fileName)){
@@ -1019,18 +1000,51 @@ class Tame {
      * Read PDF TO Browser
      *
      * @param  string|null $path
-     * - [base path will be automatically added]
+     * - [full path to file is required]
+     * 
+     * @param  bool $delete
+     * - [optional] Delete file from server after reading
      * 
      * @return void
      */
-    static public function readPDFToBrowser($path = null)
+    static public function readPDFToBrowser($path = null, $delete = false)
     {
-        $fullPath  = self::getBasePath($path);
+        $fullPath  = self::stringReplacer($path);
 
         if(self::exists($fullPath)){
-            @header("Content-type: application/pdf");
-            @header("Content-Length: " . filesize($fullPath));
+            // Clear any existing output buffer
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            // Force browser preview by setting appropriate headers
+            @header("Content-Type: application/pdf");
+            @header("Content-Disposition: inline; filename=\"" . basename($fullPath) . "\"");
+            @header("Content-Transfer-Encoding: binary");
+            @header("Accept-Ranges: bytes");
+            @header("Cache-Control: no-store, no-cache, must-revalidate");
+            @header("Pragma: public");
+            @header("Expires: 0");
+
+            // Get file size
+            $fileSize = filesize($fullPath);
+            if ($fileSize) {
+                @header("Content-Length: $fileSize");
+            }
+            
+            // Output the PDF content
             readfile($fullPath);
+
+            if($delete){
+                @flush(); // Ensure everything is sent
+                @ob_flush(); // Flush PHP output buffer
+
+                // Check if file is writable before attempting to delete
+                if (is_writable($fullPath)) {
+                    self::unlink($fullPath);
+                }
+            }
+            exit;
         }
     }
 
@@ -1038,7 +1052,7 @@ class Tame {
      * Convert image to base64
      *
      * @param string|null $path
-     * - [base path will be automatically added]
+     * - [full path to file is required]
      * 
      * @param bool $url
      * - [If path should be treated as direct url]
@@ -1047,7 +1061,7 @@ class Tame {
      */
     static public function imageToBase64($path = null, $direct = false) 
     {
-        $fullPath  = self::getBasePath($path);
+        $fullPath  = self::stringReplacer($path);
 
         if($direct){
             // Parse the URL to get the path
@@ -1055,8 +1069,10 @@ class Tame {
             $type   = pathinfo($parse, PATHINFO_EXTENSION);
             $data   = @file_get_contents($path);
         } else{
-            $type   = pathinfo($fullPath, PATHINFO_EXTENSION);
-            $data   = @file_get_contents($fullPath);
+            if(self::exists($fullPath)){
+                $type   = pathinfo($fullPath, PATHINFO_EXTENSION);
+                $data   = @file_get_contents($fullPath);
+            }
         }
 
         // if true
@@ -1376,6 +1392,25 @@ class Tame {
             DIRECTORY_SEPARATOR, 
             Str::trim($path)
         );
+    }
+
+    /**
+     * Get file modification time
+     *
+     * @param string|null $path
+     * - [full path to file is required]
+     * 
+     * @return int|bool 
+     */
+    static private function getFiletime($path = null) 
+    {
+        $fullPath = self::stringReplacer($path);
+
+        if(self::exists($fullPath)) {
+            return filemtime($fullPath);
+        }
+
+        return false;
     }
     
 }

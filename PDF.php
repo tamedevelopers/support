@@ -79,15 +79,33 @@ class PDF{
             'paper_type'      => 'portrait',
             'destination'     => strtotime('now') . '.pdf',
             'output'          => 'preview',
+            'title'           => null,
+            'delete'          => true,
             'isRemoteEnabled' => false,
             'isFontSubsettingEnabled' => true,
             'isHtml5ParserEnabled' => true,
         ], $options);
 
         self::init();
+
+        // Get the HTML content
+        $content = self::$options['content'];
+
+        // if title is empty, then use the file name as title
+        if(empty(self::$options['title'])){
+            self::$options['title'] = pathinfo(self::$options['destination'], PATHINFO_FILENAME);
+        }
+
+        // Check if the content contains <html> or <head> tags
+        if (strpos($content, '<html>') === false && strpos($content, '<head>') === false) {
+            // Add the title tag if <html> or <head> is not present
+            if (!empty(self::$options['title'])) {
+                $content = '<html><head><title>' . htmlspecialchars(self::$options['title']) . '</title></head><body>' . $content . '</body></html>';
+            }
+        }
         
         // pass html content
-        self::$dompdf->loadHtml(self::$options['content']);
+        self::$dompdf->loadHtml($content);
 
         // 'letter', 'legal', 'A4' | array(0,0,609.4488,935.433)
         self::$dompdf->setPaper(self::$options['paper_size'], self::$options['paper_type']);
@@ -95,22 +113,25 @@ class PDF{
         // Render the HTML as PDF
         self::$dompdf->render();
 
-        // save pdf to server and render output to browser
+        // Render PDF output to browser without saving
         if(in_array(self::$options['output'], ['preview', 'view']))
         {
             @file_put_contents(self::$options['destination'], self::$dompdf->output());
 
+            // for reading to browser as well, from package
+            // self::$dompdf->stream(self::$options['destination'], array("Attachment" => false)); 
+
             // render output to browser 
-            self::$dompdf->stream(self::$options['destination'], array("Attachment" => false));
+            Tame::readPDFToBrowser(self::$options['destination'], self::$options['delete']);
         }
         
-        // save pdf to server only
+        // Save PDF to server only
         elseif(in_array(self::$options['output'], ['save', 'saves', 'getsave']))
         {
             @file_put_contents(self::$options['destination'], self::$dompdf->output());
         }
 
-        // stream to browser for download
+        // Stream PDF to browser for download
         elseif(in_array(self::$options['output'], ['download', 'downloads']))
         {
             self::$dompdf->stream();
@@ -120,7 +141,9 @@ class PDF{
     /**
      * READ PDF To Server
      *
-     * @param  string $path --- Absolute path to PDF file
+     * @param  string $path
+     * [Absolute path to PDF file]
+     * 
      * @return void
      */
     static public function read(string $path)

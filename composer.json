@@ -22,7 +22,8 @@
         "symfony/console": "^6.2",
         "cocur/slugify": "^4.2.0",
         "vlucas/phpdotenv": "^5.4.1",
-        "filp/whoops": "^2.15"
+        "filp/whoops": "^2.15",
+        "dompdf/dompdf": "^3.0"
     },
     "suggest": {
         "dompdf/dompdf": "Required to use the `PDF` class and helper (^2.0.2)."
