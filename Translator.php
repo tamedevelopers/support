@@ -53,17 +53,19 @@ class Translator{
      *
      * @param  string|null  $key
      * @param  string|null  $locale
+     * @param  string|null  $base_folder
      * 
      * @return string|array|null
      */
-    static public function trans($key = null, $locale = null)
+    static public function trans($key = null, $locale = null, $base_folder = null)
     {
-        $locale = $locale ?? self::getLocale();
+        $base_folder    = empty($base_folder) ? 'lang' : $base_folder;
+        $locale         = is_null($locale) ? self::getLocale() : $locale;
         
         return Server::config(
             "{$locale}/$key", 
             "{$key}", 
-            'lang'
+            $base_folder
         );
     }
     

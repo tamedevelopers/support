@@ -51,6 +51,7 @@ composer require tamedevelopers/support
 | base_path()               | Get absolute base directory path. Accepts a param `string` if given, and append to path   |
 | directory()               | Same as `base_path()`                         |
 | public_path()             | Root/public path. Accepts a param `string` if given, and append to path                   |
+| storage_path()            | Root/storage path. Accepts a param `string` if given, and append to path                  |
 | app_path()                | Root/app path. Accepts a param `string` if given, and append to path                      |
 | config_path()             | Root/config path. Accepts a param `string` if given, and append to path                   |
 | lang_path()               | Root/lang path. Accepts a param `string` if given, and append to path                     |
@@ -75,24 +76,40 @@ NumberToWords::iso('nga')
 
 ### Cents
 - Takes param as `boolean`. Default is `false`
+    - By default, it doesn't format the decimals `.00` Must be set to true, to format if needed.
 
 ```
 NumberToWords::cents(true)
+            ->iso('nga')
 ```
 
-### Number
-- Takes two param as `int | float | string` and [optional] cents as `boolean`
-    - If you do not want to call the cents method, then we can call it directly here
+### Value
+- Takes one param as `int | float | string`
+    - If numbers is larger than a trillion `1_000_000_000_000`, the value must be passed as a string.
 
 ```
-NumberToWords::number(1290)->translate();
+NumberToWords::value(1290)
+            ->cents(true)
+            ->iso('nga');
 ```
 
-### Usage
+### Usage `toText()`
+- Convert number to readable words
 ```
-NumberToWords()->iso('TUR')->number('120.953', true)->translate();
+NumberToWords()->iso('TUR')->value('120.953', true)->toText();
 
 // One hundred and twenty lira, nine hundred and fifty-three kuruş
+```
+
+### Usage `toNumber()`
+- Convert words to number
+    - comma `, ` is used to seperate decimals in words
+```
+NumberToWords::value('twelve million three hundred thousand, six hundred and ninety-eight')
+        ->cents(true)
+        ->toNumber()
+
+// 12300000.698
 ```
 
 ## Zip

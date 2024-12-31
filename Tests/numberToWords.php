@@ -4,19 +4,21 @@ use Tamedevelopers\Support\NumberToWords;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-
 dd(
+    
+    // NumberToWords::cents(true)->iso('nga')->value('4531232221205435349345443534.21')->toText(),
 
-    NumberToWords::iso('nga')->number(1205435349345443534, true)->translate(),
+    NumberToWords::iso('FRA')->cents(true)->value(34590323.231)->toText(),
 
-    NumberToWords::cents(true)->iso('nga')->number(455987.09)->translate(),
+    NumberToWords::value(12300000.698)->cents(true)->toText(),
 
-    NumberToWords::iso('FRA')->number(34590323, true)->translate(),
+    // comma is used to seperate decimals
+    NumberToWords::value('Thirty-four million five hundred and ninety thousand three hundred and twenty-three euro, two hundred and thirty-one cents')
+        ->cents(false)
+        ->toNumber(),
 
-    NumberToWords::iso('TUR')->number('120.953', true)->translate(),
 
-    NumberToWords()->number(1999.32, true)->iso('nga')->translate(),
-
-    // NumberToWords()->CurrencyNames()
-
+    NumberToWords()->getCurrencyValue('nga'),
+    // NumberToWords()->CurrencyNames(),
+    // NumberToWords::getUnits(),
 );

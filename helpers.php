@@ -314,15 +314,17 @@ if (! AppIsNotCorePHP() && ! function_exists('__')) {
      *
      * @param  string|null  $key
      * @param  string|null  $locale
+     * @param  string|null  $base_folder
+     * 
      * @return string|array|null
      */
-    function __($key = null, $locale = null)
+    function __($key = null, $locale = null, $base_folder = null)
     {
         if (is_null($key)) {
             return $key;
         }
 
-        return Translator::trans($key, $locale);
+        return Translator::trans($key, $locale, $base_folder);
     }
 }
 

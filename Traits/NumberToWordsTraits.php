@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Traits;
 
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\NumberToWords;
 
 
 trait NumberToWordsTraits
@@ -24,21 +26,21 @@ trait NumberToWordsTraits
         'trillion',
         'quadrillion',
         'quintillion',
-        // 'sextillion',
-        // 'septillion',
-        // 'octillion',
-        // 'nonillion',
-        // 'decillion',
-        // 'undecillion',
-        // 'duodecillion',
-        // 'tredecillion',
-        // 'quattuordecillion',
-        // 'quindecillion',
-        // 'sexdecillion',
-        // 'septendecillion',
-        // 'octodecillion',
-        // 'novemdecillion',
-        // 'vigintillion',
+        'sextillion',
+        'septillion',
+        'octillion',
+        'nonillion',
+        'decillion',
+        'undecillion',
+        'duodecillion',
+        'tredecillion',
+        'quattuordecillion',
+        'quindecillion',
+        'sexdecillion',
+        'septendecillion',
+        'octodecillion',
+        'novemdecillion',
+        'vigintillion',
     ];
 
     /**
@@ -86,6 +88,82 @@ trait NumberToWordsTraits
         "eighty",
         "ninety"
     ];
+    
+    /**
+     * numberMap
+     *
+     * @var array
+     */
+    static private $numberMap = [
+        'zero' => 0, 
+        'one' => 1, 
+        'two' => 2, 
+        'three' => 3, 
+        'four' => 4,
+        'five' => 5, 
+        'six' => 6, 
+        'seven' => 7, 
+        'eight' => 8, 
+        'nine' => 9,
+        'ten' => 10, 
+        'eleven' => 11, 
+        'twelve' => 12, 
+        'thirteen' => 13, 
+        'fourteen' => 14,
+        'fifteen' => 15, 
+        'sixteen' => 16, 
+        'seventeen' => 17, 
+        'eighteen' => 18, 
+        'nineteen' => 19,
+        'twenty' => 20, 
+        'thirty' => 30, 
+        'forty' => 40, 
+        'fifty' => 50,
+        'sixty' => 60, 
+        'seventy' => 70, 
+        'eighty' => 80, 
+        'ninety' => 90
+    ];
+    
+    /**
+     * scaleMap
+     *
+     * @var array
+     */
+    static private $scaleMap = [
+        'hundred' => 100, 
+        'thousand' => 1000, 
+        'million' => 1000000, 
+        'billion' => 1000000000, 
+        'trillion' => 1000000000000,
+        'quadrillion' => 1000000000000000, 
+        'quintillion' => 1000000000000000000,
+        'sextillion' => 1000000000000000000000, 
+        'septillion' => 1000000000000000000000000,
+        'octillion' => 1000000000000000000000000000, 
+        'nonillion' => 1000000000000000000000000000000,
+        'decillion' => 1000000000000000000000000000000000, 
+        'undecillion' => 1000000000000000000000000000000000000,
+        'duodecillion' => 1000000000000000000000000000000000000000, 
+        'tredecillion' => 1000000000000000000000000000000000000000000,
+        'quattuordecillion' => 1000000000000000000000000000000000000000000000, 
+        'quindecillion' => 1000000000000000000000000000000000000000000000000,
+        'sexdecillion' => 1000000000000000000000000000000000000000000000000000, 
+        'septendecillion' => 1000000000000000000000000000000000000000000000000000000,
+        'octodecillion' => 1000000000000000000000000000000000000000000000000000000000, 
+        'novemdecillion' => 1000000000000000000000000000000000000000000000000000000000000,
+        'vigintillion' => 1000000000000000000000000000000000000000000000000000000000000000
+    ];
+
+    /**
+     * isWordsInstance
+     *
+     * @return bool
+     */
+    static protected function isWordsInstance()
+    {
+        return self::$staticData instanceof NumberToWords;
+    }
 
     /**
       * All currency 
@@ -862,4 +940,66 @@ trait NumberToWordsTraits
             ],
         ];
     }
+
+    /**
+     * Get the text representation of a currency code.
+     *
+     * @param string|null $code
+     * - [NGA, USD, EUR]
+     * 
+     * @return array|null
+     */
+    static public function getCurrencyValue($code = null) 
+    {
+        // convert code to upper
+        $code = Str::upper($code);
+
+        // get data
+        $data = self::currencyNames()[$code] ?? null;
+
+        if(is_null($data)){
+            return;
+        }
+
+        return Str::convertArrayCase($data, 'lower', 'lower');
+    }
+    
+    /**
+     * Get Units
+     *
+     * @return array
+     */
+    static public function getUnits()
+    {
+        return self::$units;
+    }
+
+    /**
+     * Handle the calls to non-existent methods.
+     * @param string|null $method
+     * @param mixed $args
+     * @param mixed $clone
+     * @return mixed
+     */
+    static private function nonExistMethod($method = null, $args = null, $clone = null) 
+    {
+        // convert to lowercase
+        $name = Str::lower($method);
+
+        // create correct method name
+        $method = match ($name) {
+            'iso', 'greeting' => '__iso',
+            'cent', 'cents' => '__cents',
+            default => '__value'
+        };
+
+        // this will happen if __construct has not been called 
+        // before calling an existing method
+        if(empty($clone)){
+            $clone = new static();
+        }
+
+        return $clone->$method(...$args);
+    }
+
 }
