@@ -13,7 +13,8 @@ dd(
     NumberToWords::value(12300000.698)->cents(true)->toText(),
 
     // comma is used to seperate decimals
-    NumberToWords::value('Thirty-four million five hundred and ninety thousand three hundred and twenty-three euro, two hundred and thirty-one cents')
+    NumberToWords::value('Thirty-four million five hundred and ninety thousand three hundred and 
+        twenty-three euro, two hundred and thirty-one cents')
         ->cents(false)
         ->toNumber(),
 

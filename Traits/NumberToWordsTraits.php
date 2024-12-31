@@ -988,7 +988,7 @@ trait NumberToWordsTraits
 
         // create correct method name
         $method = match ($name) {
-            'iso', 'greeting' => '__iso',
+            'iso', 'iso3', 'locale' => '__iso',
             'cent', 'cents' => '__cents',
             default => '__value'
         };
