@@ -187,6 +187,11 @@ class NumberToWords {
             $currencyText = null;
         }
 
+        // replace thousands with empty string if found
+        if(strpos($this->value, ',') !== false){
+            $this->value = Str::replace(',', '', $this->value);
+        }
+
         // split numbers into two versions
         // set decimal to default null if not found
         [$number, $decimal] = explode('.', $this->value ?? '0') + [1 => null];

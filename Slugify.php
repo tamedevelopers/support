@@ -19,48 +19,47 @@ class Slugify{
      *
      * @var string
      */
-    static private $language;
+    static private $locale;
         
     /**
      * slug
      *
      * @param  string $word
-     * @param  string|null $language
+     * @param  string|null $locale
      * @param  string $separator
      * @param  bool $case
      * @return mixed
      */
-    static public function slug($word, $language = null, $separator = "-", $case = true)
+    static public function slug($word, $locale = null, $separator = "-", $case = true)
     {
         // get language 
-        $language = self::switchLanguage($language); 
+        $locale = self::switchLanguage($locale); 
 
         // if language exists
-        if( in_array($language, self::supportedLanguage()) ){
-            self::$language = $language;
+        if( in_array($locale, self::supportedLanguage()) ){
+            self::$locale = $locale;
         }
         
         // configuration
         $slugify = new CocurSlugify([
             'separator' => $separator, 
             'lowercase' => $case, 
-            'rulesets'  => ['default', self::$language]
+            'rulesets'  => ['default', self::$locale]
         ]);
 
         // set language
-        $slugify->activateRuleSet(self::$language);
+        $slugify->activateRuleSet(self::$locale);
 
         // create slugs
         return $slugify->slugify($word);
     }
     
     /**
-     * switchLanguage
+     * locales
      *
-     * @param  string|null $language
-     * @return string
+     * @return array
      */
-    static private function switchLanguage($language = null)
+    static public function locales()
     {
         return [
             'ar' => 'arabic', 
@@ -100,7 +99,18 @@ class Slugify{
             'tm' => 'turkmen', 
             'ua' => 'ukrainian', 
             'vn' => 'vietnamese'
-        ][$language] ?? 'default';
+        ];
+    }
+    
+    /**
+     * switchLanguage
+     *
+     * @param  string|null $locale
+     * @return string
+     */
+    static private function switchLanguage($locale = null)
+    {
+        return self::locales()[$locale] ?? 'default';
     }
      
     /**

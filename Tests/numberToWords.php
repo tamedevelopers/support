@@ -8,6 +8,8 @@ dd(
     
     // NumberToWords::cents(true)->iso('nga')->value('4531232221205435349345443534.21')->toText(),
 
+    NumberToWords::iso('FRA')->cents(true)->value('1,000,000,000,000,000,057,857,959,942,726,969,827,393,378,689,175,040,438,172,647,424')->toText(),
+
     NumberToWords::iso('FRA')->cents(true)->value(34590323.231)->toText(),
 
     NumberToWords::value(12300000.698)->cents(true)->toText(),

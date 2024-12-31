@@ -60,6 +60,9 @@ composer require tamedevelopers/support
 
 ## Number to Words
 - Has three chainable methods
+    - Can translate all the way to `vigintillion`
+
+![Sample Units](https://raw.githubusercontent.com/tamedevelopers/support/master/thousand_units.png)
 
 | iso (country iso3)         | cents | number |
 |----------------------------|-------|--------|
