@@ -71,7 +71,7 @@ composer require tamedevelopers/support
 - Takes param as `string` and case-insensitive
 
 ```
-NumberToWords::iso('nga')
+NumberToWords::iso('nga');
 ```
 
 ### Cents
@@ -79,8 +79,7 @@ NumberToWords::iso('nga')
     - By default, it doesn't format the decimals `.00` Must be set to true, to format if needed.
 
 ```
-NumberToWords::cents(true)
-            ->iso('nga')
+NumberToWords::cents(true);
 ```
 
 ### Value
@@ -88,15 +87,18 @@ NumberToWords::cents(true)
     - If numbers is larger than a trillion `1_000_000_000_000`, the value must be passed as a string.
 
 ```
-NumberToWords::value(1290)
-            ->cents(true)
-            ->iso('nga');
+NumberToWords::value(1290);
 ```
 
 ### Usage `toText()`
 - Convert number to readable words
+    - Here we're using the function helper method
 ```
-NumberToWords()->iso('TUR')->value('120.953', true)->toText();
+NumberToWords()
+        ->iso('TUR')
+        ->value('120.953')
+        ->cents(true)
+        ->toText();
 
 // One hundred and twenty lira, nine hundred and fifty-three kuruş
 ```
@@ -105,6 +107,9 @@ NumberToWords()->iso('TUR')->value('120.953', true)->toText();
 - Convert words to number
     - comma `, ` is used to seperate decimals in words
 ```
+use Tamedevelopers\Support\NumberToWords;
+
+
 NumberToWords::value('twelve million three hundred thousand, six hundred and ninety-eight')
         ->cents(true)
         ->toNumber()
