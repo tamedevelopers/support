@@ -63,8 +63,8 @@ composer require tamedevelopers/support
 
 | iso (country iso3)         | cents | number |
 |----------------------------|-------|--------|
-| COUNTRY ISO 3  `AFG \| NGA \| GBR \| USA ` | `true \| false` | `int\|float\|string` |
-| If `iso` is given, it'll automatically converts the text into a currency format | cents currency format shows, when there's a decimal point in the number | numeric figures: `299 \| '42,982' \| 3200.98` |
+| `AFG \| NGA \| GBR \| USA `| `true \| false` | `int\|float\|string` |
+| If `iso` is given and found, it'll automatically converts the text into a currency format | If you want the decimals to be translated to text as well. | numeric figures: `299 \| '42,982' \| 3200.98` |
 
 
 ### ISO
