@@ -96,10 +96,10 @@ class PDF{
             self::$options['title'] = pathinfo(self::$options['destination'], PATHINFO_FILENAME);
         }
 
-        // Check if the content contains <html> or <head> tags
-        if (strpos($content, '<html>') === false && strpos($content, '<head>') === false) {
-            // Add the title tag if <html> or <head> is not present
-            if (!empty(self::$options['title'])) {
+        // Add the title tag if <html> or <head> is not present
+        if (!empty(self::$options['title'])) {
+            // Check if the content contains <html> or <head> tags
+            if (strpos($content, '<html>') === false && strpos($content, '<head>') === false) {
                 $content = '<html><head><title>' . htmlspecialchars(self::$options['title']) . '</title></head><body>' . $content . '</body></html>';
             }
         }
