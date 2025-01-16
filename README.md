@@ -260,8 +260,7 @@ PDF::create([
     'output'      => 'view',
 ]);
 ```
--- `or`
-
+- or -- `Helpers Function`
 ```
 TamePDF()->create([
     'content'     => '<h1>Hello World!</h1>',
