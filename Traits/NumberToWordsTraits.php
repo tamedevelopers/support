@@ -43,6 +43,32 @@ trait NumberToWordsTraits
         'vigintillion',
     ];
 
+    // Short unit suffixes
+    static private $suffixes = [
+        '',
+        'k', // Thousand
+        'm', // Million
+        'b', // Billion
+        't', // Trillion
+        'q', // Quadrillion
+        'Q', // Quintillion
+        's', // Sextillion
+        'S', // Septillion
+        'o', // Octillion
+        'n', // Nonillion
+        'd', // Decillion
+        'u', // Undecillion
+        'D', // Duodecillion
+        'T', // Tredecillion
+        'qD', // Quattuordecillion
+        'Qd', // Quindecillion
+        'sD', // Sexdecillion
+        'Sd', // Septendecillion
+        'oD', // Octodecillion
+        'nD', // Novemdecillion
+        'v', // Vigintillion
+    ];
+
     /**
      * Words
      *

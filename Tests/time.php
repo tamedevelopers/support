@@ -44,7 +44,7 @@ dd(
     Time::getGlobalTimeZone(),
 
     TameTime()->formatRange('1-14')->get(false, true),
-    TameTime()->dateRange('0-40')->get(true, true),
+    TameTime()->dateRange('0-40')->get(true),
     
     // Time::allTimezone(),
 

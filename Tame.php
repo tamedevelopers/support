@@ -7,6 +7,7 @@ namespace Tamedevelopers\Support;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Traits\TameTrait;
+use Tamedevelopers\Support\Traits\NumberToWordsTraits;
 
 /**
  * @see \Tamedevelopers\Support\Str
@@ -15,7 +16,8 @@ use Tamedevelopers\Support\Traits\TameTrait;
  */
 class Tame {
 
-    use TameTrait;
+    use TameTrait, 
+        NumberToWordsTraits;
     
     /**
      * Count
@@ -230,26 +232,34 @@ class Tame {
     /**
      * Convert Bytes to Units 
      *
-     * @param  float|int $bytes
-     * @param  bool $format
-     * @param  string|null $gb
-     * @param  string|null $mb
-     * @param  string|null $kb
+     * @param  int|float $bytes The size in bytes to be converted.
+     * @param  bool $format Whether to preserve case (default: lowercase).
+     * @param  string|null $gb Custom label for GB (default: 'GB').
+     * @param  string|null $mb Custom label for MB (default: 'MB').
+     * @param  string|null $kb Custom label for KB (default: 'KB').
      * 
      * @return string
      */
-    static public function byteToUnit($bytes = 0, $format = true, $gb = 'GB', $mb = 'MB', $kb = 'KB')
+    static public function byteToUnit($bytes = 0, $format = false, $gb = 'GB', $mb = 'MB', $kb = 'KB')
     {
-        $bytes = (int) $bytes;
-        if ($bytes >= 1073741824){
-            $bytes = round(($bytes / 1073741824)) . $gb;
-        } elseif ($bytes >= 1048576){
-            $bytes = round(($bytes / 1048576)) . $mb;
-        } elseif ($bytes >= 1024){
-            $bytes = round(($bytes / 1024)) . $kb;
+        // Define byte thresholds.
+        $units = [
+            'GB' => [1073741824, $gb],
+            'MB' => [1048576, $mb],
+            'KB' => [1024, $kb],
+        ];
+
+        if (!is_numeric($bytes) || $bytes < $units['KB'][0]) {
+            return "{$bytes} {$kb}"; // Handle invalid or negative input.
         }
 
-        return $format ? $bytes : Str::lower($bytes);
+        foreach ($units as $unit => [$threshold, $label]) {
+            if ($bytes >= $threshold) {
+                $value = round($bytes / $threshold) . $label;
+
+                return $format ? $value : Str::lower($value); 
+            }
+        }
     }
     
     /**
@@ -417,7 +427,7 @@ class Tame {
     {
         $weight = (float) $weight; 
         $dimensional_weight = self::calculateVolumeWeight($length, $width, $height, $format, $decimal);
-        if($dimensional_weight > $weight){
+        if($dimensional_weight >= $weight){
             return $dimensional_weight;
         }
         
@@ -452,7 +462,7 @@ class Tame {
     {
         $weight = (float) $weight; 
         $dimensional_weight = self::calculateCubicMeterWeight($length, $width, $height, $format, $decimal);
-        if($dimensional_weight > $weight){
+        if($dimensional_weight >= $weight){
             return $dimensional_weight;
         }
         
@@ -497,26 +507,28 @@ class Tame {
     } 
 
     /**
-     * Round to decimal point
+     * Round a value to the nearest specified decimal.
      * 
-     * @param mixed $value
-     * - float|int
+     * @param float|int|string $value The value to be rounded.
+     * @param float|int|string $decimal The decimal value for rounding. Default is 0.5.
      * 
-     * @param mixed $decimal
-     * - float|int|string
-     * 
-     * @return int
+     * @return int|float
      */
     static public function roundToDecimal(mixed $value = 0, mixed $decimal = 0.5)
     {
+        $value  = (float) $value;
         $decimal = (float) $decimal;
 
-        if($decimal == self::COUNT) $decimal = 0.1;
-        if($value == self::COUNT) return $value; 
+        if($decimal == self::COUNT){
+            $decimal = 0.1;
+        } 
 
-        // Perform the rounding
+        if($value == self::COUNT){
+            return $value;
+        }
+
+        // Perform the rounding calculation
         $result = ceil($value / $decimal) * $decimal;
-        // return round($value / $decimal, 1, PHP_ROUND_HALF_UP) * $decimal;
 
         return round($result, 1);
     }
@@ -571,20 +583,20 @@ class Tame {
     /**
      * Calculation Percentage between numbers  
      *
-     * @param float|int $total
+     * @param float|int $number
      * @param float|int $newNumber
      * @return int
      */
-    static public function calPercentageBetweenNumbers(float|int $total = 0, float|int $newNumber = 0)
+    static public function calPercentageBetweenNumbers(float|int $number = 0, float|int $newNumber = 0)
     {
         // default 
         $decreaseValue = self::COUNT;
 
-        if($total > $newNumber){
-            $decreaseValue = ($newNumber / $total) * 100;
+        if($number > $newNumber){
+            $decreaseValue = ($newNumber / $number) * 100;
         } else{
-            if($total != self::COUNT && $newNumber != self::COUNT){
-                $decreaseValue = ($total / $newNumber) * 100;
+            if($number != self::COUNT && $newNumber != self::COUNT){
+                $decreaseValue = ($number / $newNumber) * 100;
             } elseif($newNumber != self::COUNT){
                 $decreaseValue = ($newNumber * 100) / $newNumber;
             }
@@ -839,32 +851,29 @@ class Tame {
 
     /**
      * Format number to nearest thousand
-     * @link https://code.recuweb.com/2018/php-format-numbers-to-nearest-thousands/
-     *
      * @param  float|int $number
      * @return void
      */
     static public function formatNumberToNearestThousand(float|int $number = 0)
     {
-        if( $number >= 1000 ) {
-            $x  = round($number);
-            $x_number_format = number_format($x);
-            $x_array = explode(',', $x_number_format);
-
-            //[t(trillion) - p(quadrillion) - e(quintillion) - z(sextillion) - y(septillion)]
-            $x_parts        = array('k', 'm', 'b', 't', 'p', 'e', 'z', 'y');
-            $x_count_parts  = count($x_array) - 1;
-            $x_display      = $x;
-            $x_display      = $x_array[0] . ((int) $x_array[1][0] !== 0 ? '.' . $x_array[1][0] : '');
-            
-            // if amount in array
-            if(in_array($x_count_parts - 1, array_keys($x_parts))){
-                $x_display .= $x_parts[$x_count_parts - 1];
-            }
-            return $x_display;
+        if ($number < 1000) {
+            return $number; // Return the number as is if it's less than 1000.
         }
 
-        return $number;
+        // Define suffixes for each magnitude
+        $suffixes = self::$suffixes;
+
+        // Calculate the magnitude
+        $magnitude  = floor(log($number, 1000)); // Find the magnitude in powers of 1000
+        $suffix     = $suffixes[$magnitude] ?? ''; // Use suffix if it exists, otherwise empty
+
+        // Scale the number down to the appropriate magnitude
+        $scaledNumber = $number / pow(1000, $magnitude);
+
+        // Keep one decimal place only if the scaled number has significant decimals
+        $formattedNumber = floor($scaledNumber * 10) / 10;
+
+        return "{$formattedNumber}{$suffix}";
     }
 
     /**
@@ -883,20 +892,20 @@ class Tame {
     /**
      * Unlink File from Server
      *
-     * @param string $pathToFile
+     * @param string $file
      * - [full path to file is required]
      * 
-     * @param string|null $fileName
+     * @param string|null $restrictedfileName
      * - [optional] file name. <avatar.png>
      * 
      * @return void
      */
-    static public function unlink(string $pathToFile, $fileName = null)
+    static public function unlink(string $file, $restrictedfileName = null)
     {
-        $fullPath = self::stringReplacer($pathToFile);
+        $fullPath = self::stringReplacer($file);
 
         if(self::exists($fullPath)){
-            if(basename($fullPath) != basename((string) $fileName)){
+            if(basename($fullPath) != basename((string) $restrictedfileName)){
                 @unlink($fullPath);
             }
         }

@@ -7,6 +7,18 @@ Support Package For Tamedevelopers
 * [Installation](#installation)
 * [All Paths](#all-paths)
 * [Number to Words](#number-to-words)
+* [Tame](#tame)
+    * [byteToUnit](#byteToUnit)
+    * [sizeToBytes](#sizeToBytes)
+    * [fileTime](#fileTime)
+    * [exists](#exists)
+    * [unlink](#unlink)
+    * [calPercentageBetweenNumbers](#calPercentageBetweenNumbers)
+    * [formatNumberToNearestThousand](#formatNumberToNearestThousand)
+    * [calculateVolumeWeight](#calculateVolumeWeight)
+    * [calculateCubicMeterWeight](#calculateCubicMeterWeight)
+    * [getBetweenBoxLengthAndWeightInKg](#getBetweenBoxLengthAndWeightInKg)
+    * [getBetweenBoxLengthAndWeightInCMB](#getBetweenBoxLengthAndWeightInCMB)
 * [Zip](#zip)
     * [Unzip](#unzip)
     * [Zip Download](#zip-download)
@@ -118,6 +130,80 @@ NumberToWords::value('twelve million three hundred thousand, six hundred and nin
         ->toNumber()
 
 // 12300000.698
+```
+
+## Tame
+- The Core Class of Components
+    - It's helper class can be called as -- `Tame()`
+
+```
+Tamedevelopers\Support\Tame
+
+Tame::fileTime('absolute_path_to_file');
+``` 
+
+### byteToUnit
+- Accepts 5 param. first param alone is needed
+    - All other params are [optional]
+
+| Params    | Description                                   |
+|-----------|-----------------------------------------------|
+| bytes     | The size in bytes to be converted             |
+| format    | Whether to preserve case (default: lowercase) |
+| gb        | Custom label for GB (default: 'GB')           |
+| mb        | Custom label for MB (default: 'MB')           |
+| kb        | Custom label for KB (default: 'KB')           |
+
+```
+Tame()->byteToUnit(6880);
+
+// 7kb
+```
+
+### sizeToBytes
+
+```
+Tame()->sizeToBytes('24mb');
+
+// 25165824
+```
+
+### fileTime
+- Returns last edited time of the file as an - `int|false`
+
+```
+Tame()->fileTime(base_path('filepath.php'));
+```
+
+### exists
+- Checks if a file exists and is not a directory - `bool`
+
+```
+Tame()->exists(base_path('filepath.php'));
+// Output: true or false
+```
+
+### unlink
+- Deletes a file from the server if it exists and does not match the restricted file name - `void`
+    - [optional] second param <filename.extension>
+
+```
+Tame()->unlink(base_path('path/to/directory/avatar.png'), 'default.png');
+```
+
+### calPercentageBetweenNumbers
+- Calculates the percentage relationship between two numbers as an - `int`
+
+```
+Tame()->calPercentageBetweenNumbers(100, 80);
+```
+
+### formatNumberToNearestThousand
+- Formats a number to its nearest thousand, million, billion, or higher as a - `string|float|int`
+
+```
+Tame()->formatNumberToNearestThousand(1500000);
+// Output: "1.5m"
 ```
 
 ## Zip
