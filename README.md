@@ -257,7 +257,7 @@ Tame()->emailValidator('example@example.com', true, true);
 
 | Params       |Description                  |
 |--------------|-----------------------------|
-| `$platform`  | Platform name `[windows|linux|android|mobile|phone|unknown|mac|macintosh|ios|iphone|c|os x]` |
+| `$platform`  | Platform name `windows\|linux\|android\|mobile\|phone\|unknown\|mac\|macintosh\|ios\|iphone\|c\|os x` |
 | `$os_name`   | OS name `'macos'`, `'os x'`, `'ios'` |
 
 #### Example
@@ -274,7 +274,7 @@ include $platform;
 
 | Params      | Description                                                                                                               |
 |-------------|---------------------------------------------------------------------------------------------------------------------------|
-| `$payment`  | `[add-money|alipay|bank|cc|credit-card|discover|faster-pay|groupbuy|maestro|mastercard|pay|payme|payment-card|payment-wallet|paypal|stripe-circle|tripe-sqaure|stripe|visa]` |
+| `$payment`  | `add-money \| alipay \| bank \| cc \| credit-card \| discover \| faster-pay \| groupbuy \| maestro \| mastercard \| pay \| payme \| payment-card \| payment-wallet \| paypal \| stripe-circle \| tripe-sqaure \| stripe \| visa` |
 
 #### Example
 
