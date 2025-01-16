@@ -252,21 +252,36 @@ Tame()->emailValidator('example@example.com', true, true);
 // Output: true or false (Valid format with domain and server verification)
 ```
 
-### platformIcon
-
 ### platformIcon  
 - Returns the path to the SVG icon for the specified platform or operating system.
 
-| Params       |Description                 |
+| Params       |Description                  |
 |--------------|-----------------------------|
-| `$platform`  | Platform name (e.g., `'windows'`, `'linux'`, `android`, `'iphone'`, `'mac'`, etc.) |
-| `$os_name`   | OS name (e.g., `'macos'`, `'os x'`, `'ios'`) |
+| `$platform`  | Platform name `[windows|linux|android|mobile|phone|unknown|mac|macintosh|ios|iphone|c|os x]` |
+| `$os_name`   | OS name `'macos'`, `'os x'`, `'ios'` |
 
 #### Example
 
 ```php
 $platform = Tame()->platformIcon('windows');
 // Output: /path/to/icons/platform/windows.svg
+
+include $platform;
+```
+
+### paymentIcon  
+- Retrieves the path to the SVG icon for a specified payment method.
+
+| Params      | Description                                                                                                               |
+|-------------|---------------------------------------------------------------------------------------------------------------------------|
+| `$payment`  | `[add-money|alipay|bank|cc|credit-card|discover|faster-pay|groupbuy|maestro|mastercard]`
+`[pay|payme|payment-card|payment-wallet|paypal|stripe-circle|tripe-sqaure|stripe|visa]` |
+
+#### Example
+
+```php
+$platform =  Tame()->paymentIcon('paypal');
+// Output: /path/to/icons/payment/paypal.svg
 
 include $platform;
 ```
@@ -371,7 +386,7 @@ Visit the Tests/ folder to see more examples.
 | set()           | Used to set cookie          |
 | get()           | Used to get cookie          |
 | forget()        | Used to expire cookie       |
-| exire()         | Same as `forget` method     |
+| expire()        | Same as `forget` method     |
 | all()           | Get all available cookie    |
 | has()           | Cookie exists               |
 
@@ -497,7 +512,7 @@ http://domain.com/storage/[asset_file]
 
 - or -- `Helpers Function`
 ```
-asset_config('storage');
+asset_config('storage', true);
 
 http://domain.com/storage/[asset_file]?v=111111111
 ```
