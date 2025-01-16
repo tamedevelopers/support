@@ -25,8 +25,24 @@ Support Package For Tamedevelopers
     * [getBetweenBoxLengthAndWeightInKg](#getBetweenBoxLengthAndWeightInKg)
     * [getBetweenBoxLengthAndWeightInCMB](#getBetweenBoxLengthAndWeightInCMB)
 * [Str](#str)
-    * [byteToUnit](#byteToUnit)
-    * [sizeToBytes](#sizeToBytes)
+    * [phone](#phone)
+    * [mask](#mask)
+    * [html](#html)
+    * [text](#text)
+    * [shorten](#shorten)
+    * [random](#random)
+    * [formatString](#formatString)
+    * [encrypt](#encrypt)
+    * [decrypt](#decrypt)
+    * [bindings](#bindings)
+    * [flattenValue](#flattenValue)
+    * [exceptArray](#exceptArray)
+    * [replaceFirst](#replaceFirst)
+    * [replaceLast](#replaceLast)
+    * [removeKeysFromArray](#removeKeysFromArray)
+    * [changeKeysFromArray](#changeKeysFromArray)
+    * [convertArrayKey](#convertArrayKey)
+    * [convertArrayCase](#convertArrayCase)
 * [Zip](#zip)
     * [Unzip](#unzip)
     * [Zip Download](#zip-download)
@@ -167,7 +183,6 @@ Tame()->byteToUnit(6880);
 ```
 
 ### unitToByte
-
 ```
 Tame()->unitToByte('24mb');
 
@@ -299,6 +314,14 @@ Tame()->calPercentageBetweenNumbers(100, 80);
 Tame()->formatNumberToNearestThousand(1500000);
 // Output: "1.5m"
 ```
+
+## Str
+- The Core Class For String Manipulations
+    - It's helper class can be called, using -- `TameStr()`
+
+```
+Tamedevelopers\Support\Str
+``` 
 
 ## Zip
 - Takes two param as `string`

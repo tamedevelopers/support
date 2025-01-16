@@ -42,6 +42,8 @@ dd(
         value: 'lower'
     ),
 
+    Str::formatString('5441298192889133', 3),
+
     Str::snake('Peterso More'),
     Str::camel('peterson more'),
     Str::studly('peterson more'),

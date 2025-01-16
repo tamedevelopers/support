@@ -341,7 +341,9 @@ class Str
      */
     static public function formatString($string, $number = 4, $seperator = '-')
     {
-        return implode($seperator, str_split(self::trim($string), $number));
+        $string = implode($seperator, str_split(self::trim($string), $number));
+        
+        return self::replace(' ', '', $string);
     }
 
     /**
