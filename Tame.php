@@ -165,16 +165,14 @@ class Tame {
      * include if file exist
      * 
      * @param string $path
-     * - [base path will be automatically added]
+     * - [full path to file]
      * 
      * @return void
      */
     static public function include($path)
     {
-        $fullPath = self::getBasePath($path);
-
-        if(self::exists($fullPath)){
-            include $fullPath;
+        if(self::exists($path)){
+            include $path;
         }
     }
 
@@ -182,16 +180,14 @@ class Tame {
      * include once if file exist
      * 
      * @param string $path
-     * - [base path will be automatically added]
+     * - [full path to file]
      * 
      * @return void
      */
     static public function includeOnce($path)
     {
-        $fullPath = self::getBasePath($path);
-
-        if(self::exists($fullPath)){
-            include_once $fullPath;
+        if(self::exists($path)){
+            include_once $path;
         }
     }
 
@@ -199,16 +195,14 @@ class Tame {
      * require if file exist
      * 
      * @param string $path
-     * - [base path will be automatically added]
+     * - [full path to file]
      * 
      * @return void
      */
     static public function require($path)
     {
-        $fullPath = self::getBasePath($path);
-
-        if(self::exists($fullPath)){
-            require $fullPath;
+        if(self::exists($path)){
+            require $path;
         }
     }
 
@@ -216,16 +210,14 @@ class Tame {
      * require_once if file exist
      * 
      * @param string $path
-     * - [base path will be automatically added]
+     * - [full path to file]
      * 
      * @return void
      */
     static public function requireOnce($path)
     {
-        $fullPath = self::getBasePath($path);
-
-        if(self::exists($fullPath)){
-            require_once $fullPath;
+        if(self::exists($path)){
+            require_once $path;
         }
     }
     
@@ -263,7 +255,7 @@ class Tame {
     }
     
     /**
-     * Convert Megabytes to bytes
+     * Convert Units to bytes
      *
      * @param string|int|float $size
      * @return int
@@ -295,6 +287,17 @@ class Tame {
 
         // check if input is greter than 1kb, else default to 1KB
         return $size > self::KB ? $size : $size * self::KB; 
+    }
+    
+    /**
+     * Convert Units to bytes
+     *
+     * @param string|int|float $size
+     * @return int
+     */
+    static public function unitToByte($size = '1mb')
+    {
+        return self::sizeToBytes($size);
     }
 
     /**
@@ -1068,11 +1071,11 @@ class Tame {
      * 
      * @return null|string
      */
-    static public function imageToBase64($path = null, $direct = false) 
+    static public function imageToBase64($path = null, $url = false) 
     {
         $fullPath  = self::stringReplacer($path);
 
-        if($direct){
+        if($url){
             // Parse the URL to get the path
             $parse  = parse_url($path, PHP_URL_PATH);
             $type   = pathinfo($parse, PATHINFO_EXTENSION);
@@ -1100,7 +1103,7 @@ class Tame {
      * - The desired length of the masked string. Default is 4.
      * 
      * @param string $position 
-     * - The position to apply the mask: 'left', 'middle' or 'center', 'right'. Default is 'right'.
+     * - The position to apply the mask: 'left', 'center', 'right'. Default is 'right'.
      * 
      * @param string $mask 
      * - The character used for masking. Default is '*'.
@@ -1117,6 +1120,7 @@ class Tame {
 
         // trim string
         $str = Str::trim($str);
+        $position = Str::trim($position);
 
         // Get the length of the string
         $strLength = mb_strlen($str, 'UTF-8');
@@ -1127,46 +1131,53 @@ class Tame {
         // Check if it's an actual email
         $isEmail = self::emailValidator($str, false, false);
 
-        // Check if the length parameter is greater than the actual length of the string to avoid errors
-        if ($isEmail && $atPosition !== false) {
-            $length = $length >= mb_strlen(mb_substr($str, 0, $atPosition, 'UTF-8'), 'UTF-8') ? 4 : $length;
-        } else {
-            $length = $length >= $strLength ? 4 : $length;
-        }
-
-        // Calculate string length
-        $strMinusLength = $strLength - $length;
-        if ($strMinusLength < 0) {
-            $strMinusLength = abs(1);
-        }
-
-        // to int
+        // Convert length to integer
         $length = (int) $length;
+
+        // Ensure the mask length does not exceed the string length
+        $length = min($length, $strLength);
+
+        // is length and string length is same, then divide num into two
+        if($strLength === $length){
+            $length = (int) ceil($length / 2);
+        }
+
+        // Calculate number of unmasked characters
+        $unmaskedLength = $strLength - $length;
+
+        // if valid email address and position of email is found
+        if ($isEmail && $atPosition !== false) {
+            // extract email without the tld (top-level domain)
+            $email = mb_substr($str, 0, mb_strpos($str, "@"));
+
+            // extract only the tld, to be added at the end
+            $tld = mb_substr($str, mb_strpos($str, "@"));
+
+            // now mask only the email using the middle position
+            $maskedString = self::mask($email, $length, $position);
+
+            return "{$maskedString}{$tld}";
+        }
 
         // For left position
         if ($position == 'left') {
-            if ($isEmail && $atPosition !== false) {
-                // extract email without the tld (top level domain)
-                $email = mb_substr($str, 0, mb_strpos($str, "@"));
-
-                // extract only the tld, to be added at the end
-                $tld = mb_substr($str, mb_strpos($str, "@"));
-
-                // now mask only the email using the middle position
-                $maskedString = self::mask($email, $length, 'middle');
-
-                return "{$maskedString}{$tld}";
-            } else {
-                return str_repeat($mask, $strMinusLength) . mb_substr($str, -$length, null, 'UTF-8');
-            }
-        } elseif (in_array($position, ['middle', 'center'])) {
-            // Mask the middle part of the string
-            $length = (int) round($length / 2);
-
-            return mb_substr($str, 0, $length, 'UTF-8') . str_repeat($mask, $strMinusLength) . mb_substr($str, -$length, null, 'UTF-8');
-        } else {
+            // Mask the first 'length' characters and leave the rest visible
+            return str_repeat($mask, $length) . mb_substr($str, $length, null, 'UTF-8');
+        } 
+        elseif ($position == 'right') {
             // Mask the right part of the string
-            return mb_substr($str, 0, $length, 'UTF-8') . str_repeat($mask, $strMinusLength);
+            return mb_substr($str, 0, $unmaskedLength, 'UTF-8') . str_repeat($mask, $length);
+        } 
+        else {
+            // Calculate how much to keep visible on both sides
+            $halfLength = (int) floor(($strLength - $length) / 2); // Evenly distribute the mask
+
+            // Ensure the remaining visible part accounts for the total length correctly
+            $start      = mb_substr($str, 0, $halfLength);
+            $end        = mb_substr($str, - $halfLength);
+
+            // Mask the middle portion
+            return $start . str_repeat($mask, $length) . $end;
         }
     }
 
@@ -1177,7 +1188,7 @@ class Tame {
      * - The email address to validate.
      *
      * @param bool $use_internet 
-     * - By default is set to true, Which uses the checkdnsrr() and getmxrr()
+     * - By default is set to false, Which uses the checkdnsrr() and getmxrr()
      * To validate valid domain emails
      *
      * @param bool $server_verify 
@@ -1186,7 +1197,7 @@ class Tame {
      * @return bool 
      * - Whether the email address is valid (true) or not (false).
      */
-    static public function emailValidator($email = null, ?bool $use_internet = true, ?bool $server_verify = false) 
+    static public function emailValidator($email = null, ?bool $use_internet = false, ?bool $server_verify = false) 
     {
         $filteredEmail = filter_var($email, FILTER_VALIDATE_EMAIL);
 
@@ -1342,7 +1353,7 @@ class Tame {
             $platform = 'iphone';
         }
 
-        return $dataSet[$platform] ?? $dataSet['unknown'];
+        return self::stringReplacer($dataSet[$platform] ?? $dataSet['unknown']);
     }
 
     /**
@@ -1383,7 +1394,7 @@ class Tame {
             'visa'          => "{$path}icons/payment/cc.svg",
         ];  
 
-        return $dataSet[$payment] ?? $dataSet['cc'];
+        return self::stringReplacer($dataSet[$payment] ?? $dataSet['cc']);
     }
 
     /**

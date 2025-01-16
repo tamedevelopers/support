@@ -9,16 +9,24 @@ Support Package For Tamedevelopers
 * [Number to Words](#number-to-words)
 * [Tame](#tame)
     * [byteToUnit](#byteToUnit)
-    * [sizeToBytes](#sizeToBytes)
+    * [unitToByte](#unitToByte)
     * [fileTime](#fileTime)
     * [exists](#exists)
     * [unlink](#unlink)
+    * [mask](#mask)
+    * [imageToBase64](#imageToBase64)
+    * [emailValidator](#emailValidator)
+    * [platformIcon](#platformIcon)
+    * [paymentIcon](#paymentIcon)
     * [calPercentageBetweenNumbers](#calPercentageBetweenNumbers)
     * [formatNumberToNearestThousand](#formatNumberToNearestThousand)
     * [calculateVolumeWeight](#calculateVolumeWeight)
     * [calculateCubicMeterWeight](#calculateCubicMeterWeight)
     * [getBetweenBoxLengthAndWeightInKg](#getBetweenBoxLengthAndWeightInKg)
     * [getBetweenBoxLengthAndWeightInCMB](#getBetweenBoxLengthAndWeightInCMB)
+* [Str](#str)
+    * [byteToUnit](#byteToUnit)
+    * [sizeToBytes](#sizeToBytes)
 * [Zip](#zip)
     * [Unzip](#unzip)
     * [Zip Download](#zip-download)
@@ -61,7 +69,7 @@ composer require tamedevelopers/support
 | function name             | Description                                   |
 |---------------------------|-----------------------------------------------|
 | base_path()               | Get absolute base directory path. Accepts a param `string` if given, and append to path   |
-| directory()               | Same as `base_path()`                         |
+| directory()               | Thesame as `base_path()`                         |
 | public_path()             | Root/public path. Accepts a param `string` if given, and append to path                   |
 | storage_path()            | Root/storage path. Accepts a param `string` if given, and append to path                  |
 | app_path()                | Root/app path. Accepts a param `string` if given, and append to path                      |
@@ -78,7 +86,7 @@ composer require tamedevelopers/support
 
 | iso (country iso3)         | cents | number |
 |----------------------------|-------|--------|
-| `AFG \| NGA \| GBR \| USA `| `true \| false` | `int\|float\|string` |
+| `NGA \| GBR \| USA `| `true \| false` | `int\|float\|string` |
 | If `iso` is given and found, it'll automatically converts the text into a currency format | If you want the decimals to be translated to text as well. | numeric figures: `299 \| '42,982' \| 3200.98` |
 
 
@@ -99,15 +107,15 @@ NumberToWords::cents(true);
 
 ### Value
 - Takes one param as `int | float | string`
-    - If numbers is larger than a trillion `1_000_000_000_000`, the value must be passed as a string.
+    - If numbers is larger than a trillion `1_000_000_000_000`, then the value must be passed as a string.
 
 ```
 NumberToWords::value(1290);
 ```
 
-### Usage `toText()`
+### Usage -- `toText()`
 - Convert number to readable words
-    - Here we're using the function helper method
+    - Below, we're using the function helper method
 ```
 NumberToWords()
         ->iso('TUR')
@@ -118,7 +126,7 @@ NumberToWords()
 // One hundred and twenty lira, nine hundred and fifty-three kuruş
 ```
 
-### Usage `toNumber()`
+### Usage -- `toNumber()`
 - Convert words to number
     - comma `, ` is used to seperate decimals in words
 ```
@@ -134,12 +142,10 @@ NumberToWords::value('twelve million three hundred thousand, six hundred and nin
 
 ## Tame
 - The Core Class of Components
-    - It's helper class can be called as -- `Tame()`
+    - It's helper class can be called, using -- `Tame()`
 
 ```
 Tamedevelopers\Support\Tame
-
-Tame::fileTime('absolute_path_to_file');
 ``` 
 
 ### byteToUnit
@@ -157,15 +163,15 @@ Tame::fileTime('absolute_path_to_file');
 ```
 Tame()->byteToUnit(6880);
 
-// 7kb
+// Output: 7kb
 ```
 
-### sizeToBytes
+### unitToByte
 
 ```
-Tame()->sizeToBytes('24mb');
+Tame()->unitToByte('24mb');
 
-// 25165824
+// Output: 25165824
 ```
 
 ### fileTime
@@ -189,6 +195,80 @@ Tame()->exists(base_path('filepath.php'));
 
 ```
 Tame()->unlink(base_path('path/to/directory/avatar.png'), 'default.png');
+```
+
+### mask  
+- Masks characters in a string based on position and length, with support for emails and custom masking characters.
+
+| Params        | Description                                                                                   |
+|---------------|-----------------------------------------------------------------------------------------------|
+| `$str`        | The string to be masked.                                                                      |
+| `$length`     | The number of characters to mask (default is 4).                                              |
+| `$position`   | The position to apply the mask: `'left'`, `'center'`, or `'right'` (default is `'right'`).    |
+| `$mask`       | The character used for masking (default is `*`).                                              |
+
+#### Example:
+```
+Tame()->mask('example@email.com', 4, 'left');
+// Output: "****ple@email.com"
+
+Tame()->mask('example@email.com', 4, 'right');
+// Output: "exa****@email.com"
+
+Tame()->mask('shortstring', 4, 'center');
+// Output: "sho****ing"
+```
+
+### imageToBase64
+- Converts an image file to its Base64 representation. Supports local files and direct URLs - `null|string`
+
+```
+Tame()->imageToBase64(base_path('path/to/image.jpg'));
+// Output: "data:image/jpg;base64,..." (Base64 string for the image)
+
+
+Tame()->imageToBase64('https://example.com/image.png', true);
+// Output: "data:image/png;base64,..." (Base64 string for the URL image)
+```
+
+### emailValidator
+- Validates an email address with optional domain and server verification - `bool`
+
+| Params         | Description                                                                                                   |
+|----------------|---------------------------------------------------------------------------------------------------------------|
+| email          | The email address to validate.                                                                                |
+| use_internet   | By default is set to `false`. If `true`, checks the domain using DNS (`checkdnsrr()` and `getmxrr()`) for validity. If `false`, skips domain validation (default: `false`). |
+| server_verify  | Verifies the mail server by checking MX records (default: `false`). Only used if `use_internet` is `true`.   |
+
+```
+Tame()->emailValidator('example@example.com');
+// Output: true (Valid email with domain check using DNS)
+
+
+Tame()->emailValidator('example@example.com', false);
+// Output: true (Valid format only, no internet or DNS checks)
+
+Tame()->emailValidator('example@example.com', true, true);
+// Output: true or false (Valid format with domain and server verification)
+```
+
+### platformIcon
+
+### platformIcon  
+- Returns the path to the SVG icon for the specified platform or operating system.
+
+| Params       |Description                 |
+|--------------|-----------------------------|
+| `$platform`  | Platform name (e.g., `'windows'`, `'linux'`, `android`, `'iphone'`, `'mac'`, etc.) |
+| `$os_name`   | OS name (e.g., `'macos'`, `'os x'`, `'ios'`) |
+
+#### Example
+
+```php
+$platform = Tame()->platformIcon('windows');
+// Output: /path/to/icons/platform/windows.svg
+
+include $platform;
 ```
 
 ### calPercentageBetweenNumbers
