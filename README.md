@@ -259,7 +259,10 @@ PDF::create([
     'destination' => public_path("invoice/{$generate}"),
     'output'      => 'view',
 ]);
+```
+-- `or`
 
+```
 TamePDF()->create([
     'content'     => '<h1>Hello World!</h1>',
     'destination' => public_path("invoice/{$generate}"),
