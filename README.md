@@ -274,16 +274,15 @@ include $platform;
 
 | Params      | Description                                                                                                               |
 |-------------|---------------------------------------------------------------------------------------------------------------------------|
-| `$payment`  | `[add-money|alipay|bank|cc|credit-card|discover|faster-pay|groupbuy|maestro|mastercard]`
-`[pay|payme|payment-card|payment-wallet|paypal|stripe-circle|tripe-sqaure|stripe|visa]` |
+| `$payment`  | `[add-money|alipay|bank|cc|credit-card|discover|faster-pay|groupbuy|maestro|mastercard|pay|payme|payment-card|payment-wallet|paypal|stripe-circle|tripe-sqaure|stripe|visa]` |
 
 #### Example
 
 ```php
-$platform =  Tame()->paymentIcon('paypal');
+$payment =  Tame()->paymentIcon('paypal');
 // Output: /path/to/icons/payment/paypal.svg
 
-include $platform;
+include $payment;
 ```
 
 ### calPercentageBetweenNumbers
