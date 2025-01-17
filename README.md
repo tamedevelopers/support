@@ -632,7 +632,7 @@ function __lang($key){
     // To make this Laravel kind of language, we can add the default value to be returned as the key
     // Do not forget that it starts from your root base directory, as the Package already has your root path
 
-    return config("en/message.{$key}", "message.{$key}", 'lang');
+    return Server()->config("en/message.{$key}", "message.{$key}", 'lang');
 }
 
 
