@@ -1,6 +1,6 @@
 # Support Package
 
-Support Package For Tamedevelopers
+Support Package For PHP and Laravel
 
 ## Documentation
 * [Requirements](#requirements)
