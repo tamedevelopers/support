@@ -294,11 +294,14 @@ if (! function_exists('tasset')) {
      * 
      * @param bool|null $cache
      * 
+     * @param bool|null $path_type
+     * -[optional] Default is false (Absolute Path)|Else -- False is (Relative path)
+     * 
      * @return string
      */
-    function tasset($asset = null, $cache = null)
+    function tasset($asset = null, $cache = null, $path_type = null)
     {
-        return Asset::asset($asset, $cache);
+        return Asset::asset($asset, $cache, $path_type);
     }
 }
 
@@ -310,17 +313,20 @@ if (! function_exists('config_asset')) {
      * - [optional] Default is `base_directory/assets`
      * - If set and directory is not found, then we revert back to the default
      * 
-     * @param string $cache
+     * @param bool $cache
      * - [optional] Default is false
      * - End point of link `?v=xxxxxxxx` is with cache of file time change
      * - This will automatically tells the broswer to fetch new file if the time change
      * - Time will only change if you make changes or modify the request file
      * 
+     * @param bool $path_type
+     * -[optional] Default is false (Absolute Path)|Else -- False is (Relative path)
+     * 
      * @return void
      */
-    function config_asset($base_path = null, ?bool $cache = false)
+    function config_asset($base_path = null, ?bool $cache = false, ?bool $path_type = false)
     {
-        Asset::config($base_path, $cache);
+        Asset::config($base_path, $cache, $path_type);
     }
 }
 

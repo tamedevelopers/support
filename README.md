@@ -505,9 +505,13 @@ tasset('css/style.css');
 ```
 
 ## Asset Config
-- Takes two param as `string` 
-    - `base_path` path base directory
-    - `cache` Tells method to return `cache` of assets.
+- Takes three param as `string` 
+
+| params        | Description                 |
+|---------------|-----------------------------|
+| base_path     | PAth to file                  |
+| cache         | By Default `cache` is set to `false`. Tell method to include cache for each file  |
+| path_type     | By Default `cache` is set to `false`, which uses absolute path for all files. While `true` will use relative path |
         
 
 ```
@@ -525,7 +529,7 @@ config_asset('public');
 ```
 
 ### Asset Cache
-- By Default, `cache` is set to `true`
+- By Default, `cache` is set to `false`
     - You'll see a link representation as `http://domain.com/[path_to_asset_file]?v=111111111`
 
 ```
@@ -537,9 +541,12 @@ http://domain.com/storage/[asset_file]
 
 - or -- `Helpers Function`
 ```
-asset_config('storage', true);
+asset_config('storage/main.js', true);
+// Output: http://domain.com/storage/main.js?v=111111111
 
-http://domain.com/storage/[asset_file]?v=111111111
+
+asset_config('storage/style.css', true, true);
+// Output: /storage/style.css?v=111111111
 ```
 
 ## ENV

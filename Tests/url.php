@@ -11,13 +11,14 @@ require_once __DIR__ . '/../vendor/autoload.php';
 config_asset('/', true);
 
 
-dd(
+dump(
     domain(), 
     domain('admin'),
     tasset('zip.php'),
+    tasset('zip.php', true, true),
 
     urlHelper()->server(),
-    
+
     [
         urlHelper()->url(),
         urlHelper()->full(),
@@ -26,8 +27,19 @@ dd(
         urlHelper()->http(),
         urlHelper()->host(),
         urlHelper()->path(),
-        urlHelper()->path(),
     ]
 
 );
 
+$unitImg    = tasset('thousand_units.png');
+$unitImg2   = tasset('thousand_units.png', true, true);
+
+?>
+
+<a href="<?= $unitImg?>" target="_blank">
+  <img src="<?= $unitImg?>" alt="units" width="300">  
+</a>
+
+<a href="<?= $unitImg2?>" target="_blank">
+  <img src="<?= $unitImg2?>" alt="units" width="300">  
+</a>

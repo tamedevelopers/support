@@ -18,10 +18,11 @@ class Asset{
      * - asset file e.g (style.css | js/main.js)
      * 
      * @param bool|null $cache
+     * @param bool|null $path_type
      * 
      * @return string
      */
-    static public function asset(?string $asset = null, $cache = null)
+    static public function asset(?string $asset = null, $cache = null, $path_type = null)
     {
         // if coniguration has not been used in the global space
         // then we call to define paths for us
@@ -36,6 +37,12 @@ class Asset{
         // then we override the global configuration
         if(!is_bool($cache)){
             $cache = $assetPath['cache'];
+        }
+
+        // if asset method path_type is not null
+        // then we override the global configuration
+        if(!is_bool($path_type)){
+            $path_type = $assetPath['path_type'];
         }
 
         // trim
@@ -55,7 +62,18 @@ class Asset{
                 $cacheTimeAppend = self::getFiletime($file_server) ?? null;
             }
         }
-        
+
+        // if `$path_type` is true, then we'll use relative path
+        if($path_type){
+
+            // replace domain path
+            $domain = Str::replace($assetPath['removeDomain'], '', $file_domain);
+            $domain = ltrim($domain, '/');
+
+            return "/{$domain}{$cacheTimeAppend}";
+        }
+
+        // Using absolute path
         return "{$file_domain}{$cacheTimeAppend}";
     }
     
@@ -72,9 +90,12 @@ class Asset{
      * - This will automatically tells the broswer to fetch new file if the time change
      * - Time will only change if you make changes or modify the request file
      * 
+     * @param string $path_type
+     * -[optional] Default is false (Absolute Path)|Else -- False is (Relative path)
+     * 
      * @return void
      */
-    static public function config(?string $base_path = null, ?bool $cache = false) 
+    static public function config(?string $base_path = null, ?bool $cache = false, $path_type = false) 
     {
         // if not defined
         if(!defined('ASSET_BASE_DIRECTORY')){
@@ -101,11 +122,13 @@ class Asset{
 
             define('ASSET_BASE_DIRECTORY', [
                 'cache'     => $cache,
+                'path_type' => $path_type,
                 'server'    => self::formatWithBaseDirectory($base_path),
                 'domain'    => rtrim(
                     self::cleanServerPath($urlFromhelper), 
                     '/'
                 ),
+                'removeDomain' => UrlHelper::http() . UrlHelper::host()
             ]);
         }
     }
