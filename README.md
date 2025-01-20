@@ -1,6 +1,9 @@
 # Support Package
-
 Support Package For PHP and Laravel
+
+[![Total Downloads](https://poser.pugx.org/tamedevelopers/support/downloads)](https://packagist.org/packages/tamedevelopers/support)
+[![Latest Stable Version](https://poser.pugx.org/tamedevelopers/support/version)](https://packagist.org/packages/tamedevelopers/support)
+
 
 ## Documentation
 * [Requirements](#requirements)
