@@ -7,6 +7,7 @@ use Tamedevelopers\Support\Zip;
 use Tamedevelopers\Support\Hash;
 use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Time;
+use Tamedevelopers\Support\View;
 use Tamedevelopers\Support\Asset;
 use Tamedevelopers\Support\Cookie;
 use Tamedevelopers\Support\Server;
@@ -266,6 +267,21 @@ if (! function_exists('env_update')) {
     function env_update($key = null, $value = null, ?bool $quote = true, ?bool $space = false)
     {
         return Env::updateENV($key, $value, $quote, $space);
+    }
+}
+
+if (! function_exists('tview')) {
+    /**
+     * View Tenmplate Engine
+     * 
+     * @param string $viewPath The path to the view file.
+     * @param array $data The data to be passed to the view.
+     * 
+     * @return Tamedevelopers\Support\View
+     */
+    function tview($viewPath, $data = [])
+    {
+        return new View($viewPath, $data);
     }
 }
 

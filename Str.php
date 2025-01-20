@@ -31,7 +31,7 @@ class Str
      */
     static public function head($array = null)
     {
-        return isset($array[0]) ? $array[0] : null;
+        return reset($array);
     }
 
     /**
@@ -253,14 +253,10 @@ class Str
     static public function flattenValue(array $array)
     {
         $result = [];
-
-        foreach ($array as $value) {
-            if (is_array($value)) {
-                $result = array_merge($result, self::flattenValue($value));
-            } else {
-                $result[] = $value;
-            }
-        }
+        
+        array_walk_recursive($array, function ($item) use (&$result) {
+            $result[] = $item;
+        });
 
         return $result;
     }
