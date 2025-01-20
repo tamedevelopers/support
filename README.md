@@ -510,8 +510,8 @@ tasset('css/style.css');
 | params        | Description                 |
 |---------------|-----------------------------|
 | base_path     | PAth to file                  |
-| cache         | By Default `cache` is set to `false`. Tell method to include cache for each file  |
-| path_type     | By Default `cache` is set to `false`, which uses absolute path for all files. While `true` will use relative path |
+| cache         | By Default is `false`. Tell method to include cache for each file  |
+| path_type     | By Default is `false`, which uses absolute path for all files. While `true` will use relative path |
         
 
 ```
