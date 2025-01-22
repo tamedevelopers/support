@@ -46,6 +46,21 @@ Support Package For PHP and Laravel
     * [changeKeysFromArray](#changeKeysFromArray)
     * [convertArrayKey](#convertArrayKey)
     * [convertArrayCase](#convertArrayCase)
+* [Mail](#mail)
+    * [config](#config)
+    * [to](#to)
+    * [subject](#subject)
+    * [altBody](#altBody)
+    * [body](#body)
+    * [cc](#cc)
+    * [bcc](#bcc)
+    * [replyTo](#replyTo)
+    * [attach](#attach)
+    * [delete](#delete)
+    * [send](#send)
+    * [flush](#flush)
+    * [obFlush](#obFlush)
+    * [convert](#convert)
 * [Zip](#zip)
     * [Unzip](#unzip)
     * [Zip Download](#zip-download)
@@ -325,6 +340,74 @@ Tame()->formatNumberToNearestThousand(1500000);
 ```
 Tamedevelopers\Support\Str
 ``` 
+
+## Mail
+- The Core Class/Wrapper For `PHPMailer`
+    - It's helper class can be called, using -- `TameMail()`
+
+```
+Tamedevelopers\Support\Mail
+
+Mail::to('email@example.com')
+        ->subject('subject')
+        ->body('<div>Hello Body</div>')
+        ->send();
+``` 
+
+### to
+- Accepts multiple emails as `array|string`
+
+```
+Mail::to('email@example.com')
+
+Mail::to(['email@example.com', 'email2@example.com'])
+
+Mail::to('email@example.com', 'email2@example.com', 'email3@example.com')
+
+Mail::to('email@example.com, email2@example.com')
+```
+
+### attach
+- Accepts multiple complex data as attachment as `array|string`
+
+```
+Mail::attach(public_path("image.png"), 'New File Name')
+
+Mail::attach(['path' => public_path("image.png"), 'as' => 'New name'])
+
+Mail::attach([
+    ['path' => public_path("image.png"), 'as' => 'New name'],
+    ['path' => public_path("image2.zip"), 'as' => 'New name2'],
+    ['path' => public_path("image3.jpeng"), 'as' => 'New name2'],
+])
+```
+
+### subject
+- Accepts mandatory `string`
+
+```
+Mail::subject('subject');
+```
+
+### body
+- Accepts mandatory `string`
+
+```
+Mail::subject('body');
+```
+
+### send
+- Accepts [optional] closure/function
+
+```
+Mail::to('email@example.com')->send();
+
+
+Mail::to('email@example.com')->send(function($reponse){
+
+    // $reponse
+});
+```
 
 ## Zip
 - Takes two param as `string`

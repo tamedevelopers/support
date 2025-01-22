@@ -5,6 +5,7 @@ use Tamedevelopers\Support\PDF;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Zip;
 use Tamedevelopers\Support\Hash;
+use Tamedevelopers\Support\Mail;
 use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Time;
 use Tamedevelopers\Support\View;
@@ -50,6 +51,18 @@ if (! function_exists('Tame')) {
     function Tame()
     {
         return new Tame();
+    }
+}
+
+if (! function_exists('TameMail')) {
+    /**
+     * Mailer Object
+     *
+     * @return \Tamedevelopers\Support\Mail
+     */
+    function TameMail()
+    {
+        return new Mail();
     }
 }
 
@@ -523,7 +536,7 @@ if (! function_exists('to_json')) {
     }
 }
 
-if (! function_exists('dump')) {
+if (! AppIsNotCorePHP() && ! function_exists('dump')) {
     /**
      * Dump Data
      * @param mixed $data
@@ -536,7 +549,7 @@ if (! function_exists('dump')) {
     }
 }
 
-if (! function_exists('dd')) {
+if (! AppIsNotCorePHP() && ! function_exists('dd')) {
     /**
      * Dump and Data
      * @param mixed $data
