@@ -108,9 +108,9 @@ Support Package For PHP and Laravel
     * [subMonths](#subMonths)
     * [addYears](#addYears)
     * [subYears](#subYears)
-    * [dateRange](#dateRange)
     * [greeting](#greeting)
     * [timeDiff](#timeDiff)
+    * [dateRange](#dateRange)
     * [allTimezone](#allTimezone)
     * [setTimeZone](#setTimeZone)
     * [getTimeZone](#getTimeZone)
@@ -551,6 +551,30 @@ This will read the PDF to the browser
 
 ```
 $time = TameTime('now', 'Africa/Lagos');
+```
+
+### dateRange
+- Build date range according to value given
+    - Accepts (2) params `value and format`
+
+```
+use Tamedevelopers\Support\Time;
+$time = new Time();
+
+$time->dateRange('0-10', 'D, M j')
+// Output: returns class of Tamedevelopers\Support\Capsule\TimeHelper
+
+To get the output, we need to call the TimeHelper format method
+The format() method takes two [optional] param. `start, year` as boolean
+
+$time->dateRange('0-10', 'D, M j')
+        ->format(true, true)
+// Output: Thu, Jan 23 - Tue, Mar 4, 2025
+
+
+$time->dateRange('0-10', 'D, M j')
+        ->format()
+// Output: Tue, Mar 4
 ```
 
 ### allTimezone

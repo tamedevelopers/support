@@ -84,7 +84,7 @@ class Time {
     }
 
     /**
-     * Set custome time
+     * Set custom time
      * @param int|string $date
      * @return $this
      */
@@ -100,12 +100,7 @@ class Time {
      */
     public function addSeconds($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'second' : 'seconds';
-
-        $this->date = strtotime("{$date} + {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('second', $value);
     }
 
     /**
@@ -115,12 +110,7 @@ class Time {
      */
     public function subSeconds($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'second' : 'seconds';
-
-        $this->date = strtotime("{$date} - {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('second', $value, true);
     }
 
     /**
@@ -130,12 +120,7 @@ class Time {
      */
     public function addMinutes($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'minute' : 'minutes';
-
-        $this->date = strtotime("{$date} + {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('minute', $value);
     }
 
     /**
@@ -145,12 +130,7 @@ class Time {
      */
     public function subMinutes($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'minute' : 'minutes';
-
-        $this->date = strtotime("{$date} - {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('minute', $value, true);
     }
 
     /**
@@ -160,12 +140,7 @@ class Time {
      */
     public function addHours($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'hour' : 'hours';
-
-        $this->date = strtotime("{$date} + {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('hour', $value);
     }
 
     /**
@@ -175,12 +150,7 @@ class Time {
      */
     public function subHours($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'hour' : 'hours';
-
-        $this->date = strtotime("{$date} - {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('hour', $value, true);
     }
 
     /**
@@ -190,12 +160,7 @@ class Time {
      */
     public function addDays($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'day' : 'days';
-
-        $this->date = strtotime("{$date} + {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('day', $value);
     }
 
     /**
@@ -205,12 +170,7 @@ class Time {
      */
     public function subDays($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'day' : 'days';
-
-        $this->date = strtotime("{$date} - {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('day', $value, true);
     }
 
     /**
@@ -220,12 +180,7 @@ class Time {
      */
     public function addWeeks($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'week' : 'weeks';
-
-        $this->date = strtotime("{$date} + {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('week', $value);
     }
 
     /**
@@ -235,12 +190,7 @@ class Time {
      */
     public function subWeeks($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'week' : 'weeks';
-
-        $this->date = strtotime("{$date} - {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('week', $value, true);
     }
 
     /**
@@ -250,12 +200,7 @@ class Time {
      */
     public function addMonths($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'month' : 'months';
-
-        $this->date = strtotime("{$date} + {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('month', $value);
     }
 
     /**
@@ -265,12 +210,7 @@ class Time {
      */
     public function subMonths($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'month' : 'months';
-
-        $this->date = strtotime("{$date} - {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('month', $value, true);
     }
 
     /**
@@ -280,12 +220,7 @@ class Time {
      */
     public function addYears($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'year' : 'years';
-
-        $this->date = strtotime("{$date} + {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('year', $value);
     }
 
     /**
@@ -295,12 +230,7 @@ class Time {
      */
     public function subYears($value = 0)
     {
-        $date = $this->format();
-        $text = $value <= 1 ? 'year' : 'years';
-
-        $this->date = strtotime("{$date} - {$value}{$text}");
-
-        return $this;
+        return $this->buildTimeModifier('year', $value, true);
     }
 
     /**
@@ -403,13 +333,12 @@ class Time {
      * Format a date range.
      *
      * @param string $value The range in the format "1-7" (days from today).
-     * @param bool $year if year should be added of not
      * @param string $format The desired date format, default is 'D, M j'.
      * 
-     * @return string 
+     * @return Tamedevelopers\Support\Capsule\TimeHelper 
      * - The formatted date, e.g., "Mon, May 27".
      */
-    public function __formatDateRange($value, $year = false, $format = 'D, M j')
+    public function dateRange($value, $format = 'D, M j')
     {
         // Check if the range has a hyphen
         if (strpos($value, '-') !== false) {
@@ -420,16 +349,12 @@ class Time {
         }
         
         // Ensure the end value is the maximum number of days
-        $daysToStart = (int) trim($start);
-        $daysToAdd = (int) trim($end);
+        $daysToStart = (int) Str::trim($start);
+        $daysToAdd = (int) Str::trim($end);
 
         // Create a DateTime object for the current date
-        $startDate = new \DateTime();
-        $endDate = new \DateTime();
-
-        // Modify the dates based on the range
-        $startDate->modify("+{$daysToStart} days");
-        $endDate->modify("+{$daysToAdd} days");
+        $startDate = $this->today()->addDays($daysToStart);
+        $endDate = $this->today()->addDays($daysToAdd);
 
         return new TimeHelper($startDate, $endDate, $format); 
     }

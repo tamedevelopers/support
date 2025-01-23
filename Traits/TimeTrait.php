@@ -26,6 +26,46 @@ trait TimeTrait{
     }
     
     /**
+     * clone
+     *
+     * @return void
+     */
+    private function clone()
+    {
+        return clone $this;
+    }
+    
+    /**
+     * build Time Modifier
+     *
+     * @param  string $mode
+     * @param  int $value
+     * @param  bool $sub
+     * @return $clone
+     */
+    private function buildTimeModifier($mode = 'day', $value = 0, $sub = false)
+    {
+        $clone = $this->clone();
+        $date = $clone->format();
+        $mode = Str::lower($mode);
+        $sign = !$sub ? '+' : '-';
+
+        $text = match ($mode) {
+            'second',  => $value <= 1 ? 'second' : 'seconds',
+            'minute',  => $value <= 1 ? 'minute' : 'minutes',
+            'hour',  => $value <= 1 ? 'hour' : 'hours',
+            'week',  => $value <= 1 ? 'week' : 'weeks',
+            'month',  => $value <= 1 ? 'month' : 'months',
+            'year',  => $value <= 1 ? 'year' : 'years',
+            default => $value <= 1 ? 'day' : 'days',
+        };
+
+        $clone->date = strtotime("{$date} {$sign} {$value}{$text}");
+
+        return $clone;
+    }
+    
+    /**
      * Set Global TimeZone
      *
      * @return void
@@ -175,7 +215,7 @@ trait TimeTrait{
             'setdate' => '__setDate',
             'setglobaltimezone' => '__setGlobalTimeZone',
             'getglobaltimezone' => '__getGlobalTimeZone',
-            'formatdaterange', 'formatrange', 'daterange' => '__formatDateRange',
+            'formatdaterange', 'formatrange', 'daterange' => 'dateRange',
             'ago', 'timeago' => '__timeAgo',
             'addsecond' => 'addSeconds',
             'subsecond' => 'subSeconds',

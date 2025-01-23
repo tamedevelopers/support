@@ -25,6 +25,7 @@ $mainTime = TameTime(
 
 $time2 = Time::setTimezone('Atlantic/South_Georgia');
 $time3 = Time::setTimezone('Indian/Antananarivo');
+$time  = TameTime('first day of December 2008');
 
 dd(
     TameTime()->date('yesterday')->ago(),
@@ -40,12 +41,20 @@ dd(
 
     $time3,
     $time3->greetings(),
-
     Time::getGlobalTimeZone(),
 
-    TameTime()->dateRange('1-14')->get(false, true),
-    TameTime()->dateRange('0-40')->get(true),
-    
+    TameTime()->dateRange('1-14'),
+    TameTime()->dateRange('0-40')->format(true, true),
     // Time::allTimezone(),
+
+    $time->timeDifference(),
+    $time->addDay(2000)->ago('date'),
+    $time->subDay(10)->ago('date'),
+    $time->ago(),
+    $time->date('last week monday')->ago(),
+    $time->today()->format(),
+    $time->now()->addMonth(1)->subDay(1)->format(),
+    $time->yesterday()->toDateTimeString(),
+    $time->format(null, 'first day of December 2008'),
 
 );

@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Capsule;
 
-use DateTime;
 use Tamedevelopers\Support\Country;
 
-
 class TimeHelper {
-
     
     /**
      * startDate
@@ -48,27 +45,20 @@ class TimeHelper {
     }
 
     /**
-     * get
+     * format
      *
      * @param  bool $start Whether to return the start date (true) or the end date (false).
      * @param  bool $year Whether to include the year in the result.
      * @return string The formatted date or range.
      */
-    public function get($start = false, $year = false)
+    public function format($start = false, $year = false)
     {
         // Ensure startDate and endDate are formatted
-        $startFormatted = $this->startDate instanceof \DateTime && !empty($this->format)
-            ? $this->startDate->format($this->format)
-            : $this->startDate;
-
-        $endFormatted = $this->endDate instanceof \DateTime && !empty($this->format)
-            ? $this->endDate->format($this->format)
-            : $this->endDate;
+        $startFormatted = $this->startDate->format($this->format);
+        $endFormatted = $this->endDate->format($this->format);
 
         // Get the year from the relevant date
-        $yearValue = $start
-            ? ($this->startDate instanceof \DateTime ? $this->startDate->format('Y') : null)
-            : ($this->endDate instanceof \DateTime ? $this->endDate->format('Y') : null);
+        $yearValue = $start ? ($this->startDate->format('Y')) : ($this->endDate->format('Y'));
 
         // Build the result
         if ($start) {
