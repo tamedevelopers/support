@@ -27,15 +27,15 @@ $time2 = Time::setTimezone('Atlantic/South_Georgia');
 $time3 = Time::setTimezone('Indian/Antananarivo');
 
 dd(
-    TameTime()->format('yesterday')->ago(),
+    TameTime()->date('yesterday')->ago(),
     TameTime()->toJs('now'),
 
     Time::setTimezone('Asia/Tokyo'),
 
-    $mainTime->format('last year december'),
+    $mainTime->date('last year december')->format(),
     $mainTime->getTimeZone(),
 
-    $time2->format('this year october')->ago(),
+    $time2->date('this year october')->ago(),
     $time2->getTimeZone(),
 
     $time3,
@@ -43,7 +43,7 @@ dd(
 
     Time::getGlobalTimeZone(),
 
-    TameTime()->formatRange('1-14')->get(false, true),
+    TameTime()->dateRange('1-14')->get(false, true),
     TameTime()->dateRange('0-40')->get(true),
     
     // Time::allTimezone(),

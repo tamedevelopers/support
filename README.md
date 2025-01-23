@@ -10,6 +10,11 @@ Support Package For PHP and Laravel
 * [Installation](#installation)
 * [All Paths](#all-paths)
 * [Number to Words](#number-to-words)
+    * [ISO](#iso)
+    * [Cents](#Cents)
+    * [Value](#value)
+    * [toText](#toText)
+    * [toNumber](#toNumber)
 * [Tame](#tame)
     * [byteToUnit](#byteToUnit)
     * [unitToByte](#unitToByte)
@@ -67,7 +72,65 @@ Support Package For PHP and Laravel
 * [PDF](#pdf)
     * [Read PDF](#read-pdf)
 * [Time](#time)
+    * [now](#now)
+    * [ago](#ago)
+    * [sec](#sec)
+    * [min](#min)
+    * [day](#day)
+    * [hour](#hour)
+    * [weeks](#weeks)
+    * [month](#month)
+    * [year](#year)
+    * [today](#today)
+    * [date](#date)
+    * [format](#format)
+    * [yesterday](#yesterday)
+    * [timestamp](#timestamp)
+    * [toJsTimer](#toJsTimer)
+    * [getSeconds](#getSeconds)
+    * [getMinutes](#getMinutes)
+    * [getHours](#getHours)
+    * [getDays](#getDays)
+    * [getWeeks](#getWeeks)
+    * [getMonths](#getMonths)
+    * [getYears](#getYears)
+    * [addSeconds](#addSeconds)
+    * [subSeconds](#subSeconds)
+    * [addMinutes](#addMinutes)
+    * [subMinutes](#subMinutes)
+    * [addHours](#addHours)
+    * [subHours](#subHours)
+    * [addDays](#addDays)
+    * [subDays](#subDays)
+    * [addWeeks](#addWeeks)
+    * [subWeeks](#subWeeks)
+    * [addMonths](#addMonths)
+    * [subMonths](#subMonths)
+    * [addYears](#addYears)
+    * [subYears](#subYears)
+    * [dateRange](#dateRange)
+    * [greeting](#greeting)
+    * [timeDiff](#timeDiff)
+    * [allTimezone](#allTimezone)
+    * [setTimeZone](#setTimeZone)
+    * [getTimeZone](#getTimeZone)
+    * [toDateTimeString](#toDateTimeString)
+    * [setGlobalTimeZone](#setGlobalTimeZone)
+    * [getGlobalTimeZone](#getGlobalTimeZone)
+* [UrlHelper](#UrlHelper)
+    * [url](#url)
+    * [http](#http)
+    * [host](#host)
+    * [full](#full)
+    * [path](#path)
+    * [server](#server)
+    * [request](#request)
+    * [referral](#referral)
 * [Cookie](#cookie)
+    * [Set](#set)
+    * [Get](#get)
+    * [Forget](#forget)
+    * [Has](#has)
 * [Hash](#hash)
 * [Asset](#Asset)
     * [Asset config](#asset-config)
@@ -147,7 +210,7 @@ NumberToWords::cents(true);
 NumberToWords::value(1290);
 ```
 
-### Usage -- `toText()`
+### toText
 - Convert number to readable words
     - Below, we're using the function helper method
 ```
@@ -157,10 +220,10 @@ NumberToWords()
         ->cents(true)
         ->toText();
 
-// One hundred and twenty lira, nine hundred and fifty-three kuruş
+// Output: One hundred and twenty lira, nine hundred and fifty-three kuruş
 ```
 
-### Usage -- `toNumber()`
+### toNumber
 - Convert words to number
     - comma `, ` is used to seperate decimals in words
 ```
@@ -171,7 +234,7 @@ NumberToWords::value('twelve million three hundred thousand, six hundred and nin
         ->cents(true)
         ->toNumber()
 
-// 12300000.698
+// Output: 12300000.698
 ```
 
 ## Tame
@@ -483,8 +546,50 @@ This will read the PDF to the browser
 ```
 
 ## Time
+- Helper function is called using  `TameTime()`
+    - Visit the Tests/ folder to see more examples.
+
 ```
-Visit the Tests/ folder to see more examples.
+$time = TameTime('now', 'Africa/Lagos');
+```
+
+### allTimezone
+```
+Time::allTimezone();
+```
+
+### setTimeZone
+```
+Time::setTimeZone('Pacific/Pago_Pago');
+```
+
+### getTimeZone
+```
+Time::getTimeZone();
+```
+
+### setGlobalTimeZone
+```
+Time::setGlobalTimeZone('Pacific/Pago_Pago');
+```
+
+### getGlobalTimeZone
+```
+Time::getGlobalTimeZone();
+```
+
+## UrlHelper
+```
+[
+    urlHelper()->server(),
+    urlHelper()->url(),
+    urlHelper()->full(),
+    urlHelper()->request(),
+    urlHelper()->referral(),
+    urlHelper()->http(),
+    urlHelper()->host(),
+    urlHelper()->path(),
+]
 ```
 
 ## Cookie

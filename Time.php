@@ -84,24 +84,287 @@ class Time {
     }
 
     /**
-     * Set time to now
+     * Set custome time
+     * @param int|string $date
+     * @return $this
+     */
+    public function date($date)
+    {
+        return $this->__setDate($date);
+    }
+
+    /**
+     * Add Second to curent date
+     * @param int $value
+     * @return $this
+     */
+    public function addSeconds($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'second' : 'seconds';
+
+        $this->date = strtotime("{$date} + {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Substract Second from curent date
+     * @param int $value
+     * @return $this
+     */
+    public function subSeconds($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'second' : 'seconds';
+
+        $this->date = strtotime("{$date} - {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Add Minutes to curent date
+     * @param int $value
+     * @return $this
+     */
+    public function addMinutes($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'minute' : 'minutes';
+
+        $this->date = strtotime("{$date} + {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Substract Minutes from curent date
+     * @param int $value
+     * @return $this
+     */
+    public function subMinutes($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'minute' : 'minutes';
+
+        $this->date = strtotime("{$date} - {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Add Hours to curent date
+     * @param int $value
+     * @return $this
+     */
+    public function addHours($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'hour' : 'hours';
+
+        $this->date = strtotime("{$date} + {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Substract Hours from curent date
+     * @param int $value
+     * @return $this
+     */
+    public function subHours($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'hour' : 'hours';
+
+        $this->date = strtotime("{$date} - {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Add days to curent date
+     * @param int $value
+     * @return $this
+     */
+    public function addDays($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'day' : 'days';
+
+        $this->date = strtotime("{$date} + {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Substract days from curent date
+     * @param int $value
+     * @return $this
+     */
+    public function subDays($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'day' : 'days';
+
+        $this->date = strtotime("{$date} - {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Add Week to curent date
+     * @param int $value
+     * @return $this
+     */
+    public function addWeeks($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'week' : 'weeks';
+
+        $this->date = strtotime("{$date} + {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Substract Week from curent date
+     * @param int $value
+     * @return $this
+     */
+    public function subWeeks($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'week' : 'weeks';
+
+        $this->date = strtotime("{$date} - {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Add Month to curent date
+     * @param int $value
+     * @return $this
+     */
+    public function addMonths($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'month' : 'months';
+
+        $this->date = strtotime("{$date} + {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Substract Month from curent date
+     * @param int $value
+     * @return $this
+     */
+    public function subMonths($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'month' : 'months';
+
+        $this->date = strtotime("{$date} - {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Add Year to curent date
+     * @param int $value
+     * @return $this
+     */
+    public function addYears($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'year' : 'years';
+
+        $this->date = strtotime("{$date} + {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Substract Year from curent date
+     * @param int $value
+     * @return $this
+     */
+    public function subYears($value = 0)
+    {
+        $date = $this->format();
+        $text = $value <= 1 ? 'year' : 'years';
+
+        $this->date = strtotime("{$date} - {$value}{$text}");
+
+        return $this;
+    }
+
+    /**
+     * Set time to `now`
      * 
      * @return $this
      */
-    public function now() 
+    public function now()
     {
-        return $this->format('now');
+        return $this->__setDate('now');
+    }
+
+    /**
+     * Set time to `today`
+     * 
+     * @return $this
+     */
+    public function today()
+    {
+        return $this->__setDate('today');
+    }
+
+    /**
+     * Set time to `yesterday`
+     * 
+     * @return $this
+     */
+    public function yesterday()
+    {
+        return $this->__setDate('yesterday');
     }
 
     /**
      * Format time input
-     * @param int|string $date
      * 
-     * @return $this
+     * @param string|null $format
+     * - Your defined format type i.e: Y-m-d H:i:s a
+     * 
+     * @param int|string $date
+     * - string|int|float
+     * 
+     * @return string
      */
-    public function __format(int|string $date) 
+    public function __format($format = null, $date = null)
     {
-        return $this->__setDate($date);
+        if(!empty($date)){
+            $this->__setDate($date);
+        }
+
+        if(empty($format)){
+            $format = "Y-m-d H:i:s";
+        }
+
+        return date($format, $this->date);
+    }
+
+    /**
+     * toDateTimeString
+     *
+     * @return string
+     */
+    public function toDateTimeString()
+    {
+        return date('Y-m-d H:i:s', $this->date);
     }
 
     /**
@@ -120,7 +383,7 @@ class Time {
     {
         $date = TimeHelper::setPassedDate($date);
 
-        return !is_bool($date) ? date($format, $date) : '';
+        return date($format, $date);
     }
 
     /**

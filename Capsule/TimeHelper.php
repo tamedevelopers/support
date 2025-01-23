@@ -107,9 +107,12 @@ class TimeHelper {
      */
     static public function setPassedDate($date = null)
     {
+        // backdate default time
+        $default = 'Jan 01 1970';
+
         if(empty($date)){
             // $date = date('M d Y', strtotime('this year January'));
-            $date = "Jan 01 1970";
+            $date = $default;
         }
 
         if (is_numeric($date)) {
@@ -121,8 +124,11 @@ class TimeHelper {
         if($date instanceof \Illuminate\Support\Carbon){
             $date = $date->toDateTimeString();
         }
+        
+        // convert to time int
+        $time = strtotime($date);
 
-        return strtotime($date);
+        return !$time ? strtotime($default) : $time;
     }
     
     /**

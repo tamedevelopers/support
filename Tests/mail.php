@@ -16,15 +16,31 @@ $mailer = Mail::config([
 ]);
 
 
-$mailer->to('tamedevelopers@gmail.com, fredi.peter@gmail.com')
-            ->subject('New subject')
-            ->body('Hello this is a body text')
-            ->attach(base_path("thousand_units.png"), 'New Name')
-            ->send(function($response){
-                // dd(
-                //     $response
-                // );
-            });
+$time = TameTime('first day of December 2008');
+
+
+dd(
+    $time->timeDifference(),
+    $time->addDay(2000)->ago('date'),
+    $time->subDay(10)->ago('date'),
+    $time->ago(),
+    $time->today()->format(),
+    $time->now()->addMonth(1)->subDay(1)->format(),
+    $time->yesterday()->toDateTimeString(),
+    $time->format(null, 'first day of December 2008'),
+    // $time->toJs(),
+);
+
+
+// $mailer->to('tamedevelopers@gmail.com, fredi.peter@gmail.com')
+//             ->subject('New subject')
+//             ->body('Hello this is a body text')
+//             ->attach(base_path("thousand_units.png"), 'New Name')
+//             ->send(function($response){
+//                 // dd(
+//                 //     $response
+//                 // );
+//             });
 
 
             

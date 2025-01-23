@@ -169,15 +169,29 @@ trait TimeTrait{
             'getmonths', 'getmonth', 'getm' => '__getMonth',
             'getyr', 'getyears', 'getyear', 'year', 'years', 'yr', 'yrs', 'y' => '__getYear',
             'time', 'gettimes', 'gettime', 'getdate' => '__getDate',
-            'diff', 'difference', 'timedifference' => '__timeDifference',
-            'format' => '__format',
+            'diff', 'difference', 'timedifference', 'timediff' => '__timeDifference',
             'gettimezone' => '__getTimeZone',
             'settimezone' => '__setTimeZone',
             'setdate' => '__setDate',
             'setglobaltimezone' => '__setGlobalTimeZone',
             'getglobaltimezone' => '__getGlobalTimeZone',
             'formatdaterange', 'formatrange', 'daterange' => '__formatDateRange',
-            default => '__timeAgo'
+            'ago', 'timeago' => '__timeAgo',
+            'addsecond' => 'addSeconds',
+            'subsecond' => 'subSeconds',
+            'addminute' => 'addMinutes',
+            'subminute' => 'subMinutes',
+            'addhour' => 'addHours',
+            'subhour' => 'subHours',
+            'addday' => 'addDays',
+            'subday' => 'subDays',
+            'addweek' => 'addWeeks',
+            'subweek' => 'subWeeks',
+            'addmonth' => 'addMonths',
+            'submonth' => 'subMonths',
+            'addyear' => 'addYears',
+            'subyear' => 'subYears',
+            default => '__format'
         };
 
         // this will happen if __construct has not been called 

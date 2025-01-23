@@ -20,6 +20,7 @@ dump(
     urlHelper()->server(),
 
     [
+        urlHelper()->server(),
         urlHelper()->url(),
         urlHelper()->full(),
         urlHelper()->request(),
