@@ -60,31 +60,11 @@ trait TimeTrait{
             default => $value <= 1 ? 'day' : 'days',
         };
 
+        // format text
         $clone->date = strtotime("{$date} {$sign} {$value}{$text}");
+        $clone->timestamp = $clone->buildTimePrint();
 
         return $clone;
-    }
-    
-    /**
-     * Set Global TimeZone
-     *
-     * @return void
-     */
-    public function __setGlobalTimeZone($timezone = null)
-    {
-        $timezone = TimeHelper::setPassedTimezone($timezone);
-
-        date_default_timezone_set($timezone);
-    }
-
-    /**
-     * Get Global TimeZone
-     *
-     * @return string|null
-     */
-    public function __getGlobalTimeZone()
-    {
-        return date_default_timezone_get();
     }
 
     /**
@@ -93,11 +73,7 @@ trait TimeTrait{
      */
     public function __getDate()
     {
-        if(empty($this->date)){
-            $this->__setDate('now');
-        }
-
-        return $this->date;
+        return (int) $this->date;
     }
 
     /**
@@ -122,9 +98,12 @@ trait TimeTrait{
      */
     public function __setTimezone($timezone = null)
     {
-        $this->timezone = TimeHelper::setPassedTimezone($timezone);
+        $clone = $this->clone();
 
-        return $this;
+        $clone->setTimeZoneAndTimeStamp($timezone);
+        $clone->timestamp = $clone->timestampPrint();
+        
+        return $clone;
     }
 
     /**
@@ -135,44 +114,11 @@ trait TimeTrait{
      */
     public function __setDate($date = null)
     {
-        $this->date = TimeHelper::setPassedDate($date);
+        $clone = $this->clone();
+        $clone->date = TimeHelper::setPassedDate($date);
+        $clone->timestamp    = $clone->timestampPrint();
 
-        return $this;
-    }
-
-    /**
-     * Set Date Time 
-     * @param int|string|null $date
-     * 
-     * @return $this
-     */
-    static public function setDate($date = null)
-    {
-        if(!self::isTimeInstance()){
-            new static(date: $date);
-        } else{
-            self::$staticData->date = TimeHelper::setPassedDate($date);
-        }
-        
-        return self::$staticData;
-    }
-
-    /**
-     * Set the timezone.
-     * @param string|null $timezone
-     * 
-     * @return $this
-     */
-    static public function setTimezone($timezone = null)
-    {
-        if(!self::isTimeInstance()){
-            new static(timezone: $timezone);
-        }
-
-        // set timezone
-        self::$staticData->timezone = TimeHelper::setPassedTimezone($timezone);
-        
-        return self::$staticData;
+        return $clone;
     }
 
     /**
@@ -183,6 +129,59 @@ trait TimeTrait{
     static public function allTimezone()
     {
         return Country::timeZone();
+    }
+
+    /**
+     * Set TimeZone And TimeStamp
+     *
+     * @param  mixed $timezone
+     * @return void
+     */
+    private function setTimeZoneAndTimeStamp($timezone = null)
+    {
+        $this->timezone = TimeHelper::configureAndSetTimezone($timezone);
+    }
+
+    /**
+     * create timestamp
+     *
+     * @return string
+     */
+    private function timestampPrint()
+    {
+        // get timezone
+        $this->timezone = $this->getTimeZone();
+
+        // set timezone
+        $this->setTimeZoneAndTimeStamp($this->timezone);
+
+        return $this->buildTimePrint();
+    }
+    
+    /**
+     * buildTimePrint
+     *
+     * @return string
+     */
+    private function buildTimePrint()
+    {
+        $date = date('Y-m-d H:i:s', $this->date);
+        $utc  = date('(P)', $this->date);
+
+        return "{$date}.{$this->microseconds()} {$this->timezone} {$utc}";
+    }
+    
+    /**
+     * create microseconds
+     *
+     * @return string
+     */
+    private function microseconds()
+    {
+        $microtime = explode(' ', microtime());
+        $milliseconds = (int) round($microtime[0] * 1000000); // Get microseconds
+
+        return str_pad(Str::trim($milliseconds), 6, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -205,16 +204,14 @@ trait TimeTrait{
             'getseconds', 'getsec', 'sec', 's' => '__getSecond',
             'min', 'mins', 'getminute', 'getminutes', 'getmins' => '__getMin',
             'getday', 'getdays', 'getd', 'day', 'days' => '__getDay',
-            'getweek', 'getweeks', 'getw' => '__getWeek',
+            'getweek', 'weeks', 'week', 'getweeks', 'getw' => '__getWeek',
             'getmonths', 'getmonth', 'getm' => '__getMonth',
             'getyr', 'getyears', 'getyear', 'year', 'years', 'yr', 'yrs', 'y' => '__getYear',
             'time', 'gettimes', 'gettime', 'getdate' => '__getDate',
-            'diff', 'difference', 'timedifference', 'timediff' => '__timeDifference',
-            'gettimezone' => '__getTimeZone',
-            'settimezone' => '__setTimeZone',
             'setdate' => '__setDate',
-            'setglobaltimezone' => '__setGlobalTimeZone',
-            'getglobaltimezone' => '__getGlobalTimeZone',
+            'gettimezone' => '__getTimezone',
+            'settimezone' => '__setTimezone',
+            'diff', 'difference', 'timedifference', 'timediff' => '__timeDifference',
             'formatdaterange', 'formatrange', 'daterange' => 'dateRange',
             'ago', 'timeago' => '__timeAgo',
             'addsecond' => 'addSeconds',
@@ -231,7 +228,7 @@ trait TimeTrait{
             'submonth' => 'subMonths',
             'addyear' => 'addYears',
             'subyear' => 'subYears',
-            default => '__format'
+            default => 'format'
         };
 
         // this will happen if __construct has not been called 

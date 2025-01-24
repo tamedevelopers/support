@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Capsule;
 
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Country;
 
 class TimeHelper {
@@ -78,12 +79,20 @@ class TimeHelper {
      * 
      * @return string
      */
-    static public function setPassedTimezone($timezone = null)
+    static public function configureAndSetTimezone($timezone = null)
     {
-        if(in_array($timezone, Country::timeZone())){
+        $timezone = Str::trim($timezone);
+
+        if(!empty($timezone) && in_array($timezone, Country::timeZone())){
             $timezone = $timezone;
         } else{
             $timezone = date_default_timezone_get() ?? 'UTC';
+        }
+
+        try {
+            date_default_timezone_set($timezone);
+        } catch (\Throwable $th) {
+            date_default_timezone_set('UTC');
         }
 
         return $timezone;
@@ -93,7 +102,7 @@ class TimeHelper {
      * Set Date Time 
      * @param int|string|null $date
      * 
-     * @return int|false
+     * @return int
      */
     static public function setPassedDate($date = null)
     {

@@ -5,56 +5,75 @@ use Tamedevelopers\Support\Time;
 require_once __DIR__ . '/../vendor/autoload.php';
 
 
-// set global time zone for server
+// set time zone for server
 // now server time will be set to the given timezone as default
-Time::setGlobalTimeZone('Pacific/Pago_Pago');
+// Time::setTimeZone('Pacific/Pago_Pago');
 
 
-// set the default time and timezone
-// helper function
-$mainTime = TameTime(
+// set the default time and timezone for each time 
+// using helper function
+$time = TameTime(
     timezone: 'Africa/Lagos',
     time: 'now',
 );
 
-// Time::setDate('last week');
-// Time::setTimezone('Pacific/Pago_Pago');
+// $test = Time::setDate('2025-01-14 11:11:12');
+// [
+//     $test->time(),
+//     $test->sec(),
+//     $test->min(),
+//     $test->hour(),
+//     $test->day(),
+//     $test->week(),
+// ]
 
-// TameTime('yesterday')->time();
-// TameTime('last week')->sec();
+// Time::allTimezone(),
 
-$time2 = Time::setTimezone('Atlantic/South_Georgia');
-$time3 = Time::setTimezone('Indian/Antananarivo');
-$time  = TameTime('first day of December 2008');
+$time2  = (new Time)->setTimezone('America/St_Barthelemy');
+$time3  = (new Time)->setTimezone('Indian/Antananarivo');
+$time4  = TameTime('first day of December 2008', 'Pacific/Pago_Pago');
 
 dd(
-    TameTime()->date('yesterday')->ago(),
-    TameTime()->toJs('now'),
+    [
+        $time->getTimeZone(),
+        $time2->getTimeZone(),
+        $time3->getTimeZone(),
+        $time4->getTimeZone(),
+    ],
 
-    Time::setTimezone('Asia/Tokyo'),
+    [
+        $time3->date('first day of December 2008')->format(),
+        $time3->yesterday()->format(),
+        $time3->today()->format(),
+        $time3->now()->format(),
+    ],
 
-    $mainTime->date('last year december')->format(),
-    $mainTime->getTimeZone(),
+    $time4->date('first day of this month')->subDays(4),
+    
+    [
+        $time->greetings(),
+        $time2->greetings('now'),
+        $time3->greetings('24 Jan 2025 14:00:00'),
+        TameTime()->toJs('today 9:23pm'),
+        $time->date('last year december')->format(),
+        $time4->addMonth(10)->addWeek(2)->format(),
+        $time4->addDay(2000)->ago('date'),
+        $time4->subDay(10)->ago('date'),
+        $time4->addYear(10)->ago('date'),
+        $time4->date('last week monday')->ago('date_time'),
+        $time4->date('last year december')->diff('weeks'),
+    ],
 
-    $time2->date('this year october')->ago(),
-    $time2->getTimeZone(),
-
-    $time3,
-    $time3->greetings(),
-    Time::getGlobalTimeZone(),
+    [
+        $time4->yesterday()->toDateTimeString(),
+        $time4->format(null, 'first day of December 2008'),
+        $time4->date('last year december')->diff(),
+        $time4->date('last year december')->ago(),
+    ],
+    
 
     TameTime()->dateRange('1-14'),
     TameTime()->dateRange('0-40')->format(true, true),
-    // Time::allTimezone(),
-
-    $time->timeDifference(),
-    $time->addDay(2000)->ago('date'),
-    $time->subDay(10)->ago('date'),
-    $time->ago(),
-    $time->date('last week monday')->ago(),
-    $time->today()->format(),
-    $time->now()->addMonth(1)->subDay(1)->format(),
-    $time->yesterday()->toDateTimeString(),
-    $time->format(null, 'first day of December 2008'),
+    //
 
 );

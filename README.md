@@ -73,7 +73,6 @@ Support Package For PHP and Laravel
     * [Read PDF](#read-pdf)
 * [Time](#time)
     * [now](#now)
-    * [ago](#ago)
     * [sec](#sec)
     * [min](#min)
     * [day](#day)
@@ -82,7 +81,7 @@ Support Package For PHP and Laravel
     * [month](#month)
     * [year](#year)
     * [today](#today)
-    * [date](#date)
+    * [time](#time)
     * [format](#format)
     * [yesterday](#yesterday)
     * [timestamp](#timestamp)
@@ -109,14 +108,13 @@ Support Package For PHP and Laravel
     * [addYears](#addYears)
     * [subYears](#subYears)
     * [greeting](#greeting)
-    * [timeDiff](#timeDiff)
+    * [diff](#diff)
+    * [ago](#ago)
     * [dateRange](#dateRange)
     * [allTimezone](#allTimezone)
     * [setTimeZone](#setTimeZone)
     * [getTimeZone](#getTimeZone)
     * [toDateTimeString](#toDateTimeString)
-    * [setGlobalTimeZone](#setGlobalTimeZone)
-    * [getGlobalTimeZone](#getGlobalTimeZone)
 * [UrlHelper](#UrlHelper)
     * [url](#url)
     * [http](#http)
@@ -550,7 +548,16 @@ This will read the PDF to the browser
     - Visit the Tests/ folder to see more examples.
 
 ```
-$time = TameTime('now', 'Africa/Lagos');
+use Tamedevelopers\Support\Time;
+
+$time = new Time('now', 'Africa/Lagos');
+```
+
+### now
+
+```
+$time->now()
+// returns the Time Object with current timestamp
 ```
 
 ### dateRange
@@ -558,9 +565,6 @@ $time = TameTime('now', 'Africa/Lagos');
     - Accepts (2) params `value and format`
 
 ```
-use Tamedevelopers\Support\Time;
-$time = new Time();
-
 $time->dateRange('0-10', 'D, M j')
 // Output: returns class of Tamedevelopers\Support\Capsule\TimeHelper
 
@@ -590,16 +594,6 @@ Time::setTimeZone('Pacific/Pago_Pago');
 ### getTimeZone
 ```
 Time::getTimeZone();
-```
-
-### setGlobalTimeZone
-```
-Time::setGlobalTimeZone('Pacific/Pago_Pago');
-```
-
-### getGlobalTimeZone
-```
-Time::getGlobalTimeZone();
 ```
 
 ## UrlHelper

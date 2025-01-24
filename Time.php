@@ -25,6 +25,13 @@ class Time {
     protected $date;
 
     /**
+     * For storing the timestamp value
+     * 
+     * @var string
+     */
+    protected $timestamp;
+
+    /**
      * For storing the timezone value
      * 
      * @var string
@@ -45,12 +52,12 @@ class Time {
      */
     public function __construct($date = null, $timezone = null)
     {
-        if(empty($this->date)){
-            $this->date = TimeHelper::setPassedDate($date);
+        if(empty($this->timezone)){
+            $this->timezone = TimeHelper::configureAndSetTimezone($timezone);
         }
 
-        if(empty($this->timezone)){
-            $this->timezone = TimeHelper::setPassedTimezone($timezone);
+        if(empty($this->date)){
+            $this->__setDate($date);
         }
 
         // clone copy of self
@@ -81,16 +88,6 @@ class Time {
     static public function __callStatic($name, $args) 
     {
         return self::nonExistMethod($name, $args, self::$staticData);
-    }
-
-    /**
-     * Set custom time
-     * @param int|string $date
-     * @return $this
-     */
-    public function date($date)
-    {
-        return $this->__setDate($date);
     }
 
     /**
@@ -234,13 +231,23 @@ class Time {
     }
 
     /**
+     * Set custom time
+     * @param int|string $date
+     * @return $this
+     */
+    public function date($date)
+    {
+        return $this->__setDate($date);
+    }
+
+    /**
      * Set time to `now`
      * 
      * @return $this
      */
     public function now()
     {
-        return $this->__setDate('now');
+        return $this->date('now');
     }
 
     /**
@@ -274,10 +281,12 @@ class Time {
      * 
      * @return string
      */
-    public function __format($format = null, $date = null)
+    public function format($format = null, $date = null)
     {
         if(!empty($date)){
-            $this->__setDate($date);
+            $clone = $this->__setDate($date);
+
+            $this->date = $clone->date;
         }
 
         if(empty($format)){
@@ -434,8 +443,7 @@ class Time {
      */
     public function __getWeek() 
     {
-        $days = $this->__timeDifference('days');
-        return (int) floor($days / 7);
+        return $this->__timeDifference('weeks');
     }
     
     /**
@@ -457,33 +465,6 @@ class Time {
     }
 
     /**
-     * Calculate the time difference between the stored time and the current time.
-     * @param string|null $mode
-     * 
-     * @return mixed
-     */
-    public function __timeDifference($mode  = null)
-    {
-        $now    = new DateTime('now', new DateTimeZone($this->timezone));
-        $date   = new DateTime();
-        $date->setTimestamp(TimeHelper::carbonInstance($this->date));
-
-        // get difference
-        $difference = $now->diff($date);
-
-        $timeData = [
-            'year'  => $difference->y,
-            'month' => ($difference->y * 12) + $difference->m,
-            'hour'  => $difference->h,
-            'mins'  => $difference->i,
-            'sec'   => $difference->s,
-            'days'  => $difference->days, //total number of days
-        ];
-
-        return $timeData[$mode] ?? $timeData;
-    }
-
-    /**
      * Get a greeting based on the current time.
      * @param string|int $date
      * 
@@ -491,12 +472,14 @@ class Time {
      */
     public function __greeting($date = 'now') 
     {
-        $dateTime = new DateTime();
-        $dateTime->setTimestamp(
-            TimeHelper::setPassedDate($date)
-        );
+        $clone = $this->clone();
+        $clone->date = TimeHelper::setPassedDate($date);
+        $clone->timestamp = $clone->timestampPrint();
 
-        $now    = new DateTime($dateTime->format('M d Y H:i:s'), new DateTimeZone($this->timezone));
+        $dateTime = new DateTime();
+        $dateTime->setTimestamp($clone->date);
+
+        $now    = new DateTime($dateTime->format('M d Y H:i:s'), new DateTimeZone($clone->timezone));
         $hour   = (int) $now->format('H');
         $text   = self::getText();
         
@@ -512,6 +495,40 @@ class Time {
     }
 
     /**
+     * Calculate the time difference between the stored time and the current time.
+     * @param string|null $mode
+     * 
+     * @return mixed
+     */
+    public function __timeDifference($mode  = null)
+    {
+        $clone = $this->clone();
+
+        $selfDate  = TimeHelper::carbonInstance($clone->date);
+        $now  = new DateTime('now', new DateTimeZone($clone->timezone));
+        $date = new DateTime();
+
+        if(!empty($selfDate)){
+            $date->setTimestamp($selfDate);
+        }
+
+        // get difference
+        $difference = $now->diff($date);
+
+        $timeData = [
+            'year'  => $difference->y,
+            'month' => ($difference->y * 12) + $difference->m,
+            'hour'  => $difference->h,
+            'mins'  => $difference->i,
+            'sec'   => $difference->s,
+            'days'  => $difference->days, //total number of days
+            'weeks' => (int) floor($difference->days / 7), //weeks
+        ];
+
+        return $timeData[$mode] ?? $timeData;
+    }
+
+    /**
      * Get a time ago representation based on the time difference.
      * @param string|null $mode
      * - [optional] int|short|full
@@ -520,12 +537,14 @@ class Time {
      */
     public function __timeAgo($mode = null)
     {
-        $minutes    = $this->__getMin();
-        $seconds    = $this->__getSecond();
-        $hours      = $this->__getHour();
-        $days       = $this->__getDay();
-        $weeks      = $this->__getWeek();
-        $years      = $this->__getYear();
+        $diff = $this->__timeDifference();
+
+        $minutes    = $diff['mins'];
+        $seconds    = $diff['sec'];
+        $hours      = $diff['hour'];
+        $days       = $diff['days'];
+        $weeks      = $diff['weeks'];
+        $years      = $diff['year'];
         $date       = $this->__getDate();
         $text       = self::getText();
 
