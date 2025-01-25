@@ -57,7 +57,11 @@ class Time {
         }
 
         if(empty($this->date)){
-            $this->__setDate($date);
+            $clone = $this->__setDate($date);
+
+            $this->date         = $clone->date;
+            $this->timestamp    = $clone->timestamp;
+            $this->timezone     = $clone->timezone;
         }
 
         // clone copy of self
@@ -286,7 +290,7 @@ class Time {
         if(!empty($date)){
             $clone = $this->__setDate($date);
 
-            $this->date = $clone->date;
+            $this->date = $this->date;
         }
 
         if(empty($format)){
@@ -303,7 +307,7 @@ class Time {
      */
     public function toDateTimeString()
     {
-        return date('Y-m-d H:i:s', $this->date);
+        return $this->format();
     }
 
     /**
@@ -402,6 +406,15 @@ class Time {
     }
 
     /**
+     * Get the stored date time
+     * @return int
+     */
+    public function __getDate()
+    {
+        return (int) $this->date;
+    }
+
+    /**
      * Get the number of seconds between the stored time and the current time.
      * @return mixed
      */
@@ -495,6 +508,30 @@ class Time {
     }
 
     /**
+     * Calculate the time difference between both given time.
+     * 
+     * @param mixed $firstDate
+     * @param mixed $lastDate
+     * @param string|null $mode
+     * 
+     * @return mixed
+     */
+    public function __timeDifferenceBetween($firstDate, $lastDate, $mode = null)
+    {
+        $clone = $this->clone();
+
+        // convert to actual time as int
+        $firstDate = TimeHelper::setPassedDate($firstDate);
+        $lastDate = TimeHelper::setPassedDate($lastDate);
+
+        // Get the current time in the specified timezone
+        $first  = new DateTime($clone->timestamp($firstDate), new DateTimeZone($clone->timezone));
+        $last   = new DateTime($clone->timestamp($lastDate), new DateTimeZone($clone->timezone));
+
+        return $this->calculateTimeDifference($first, $last, $mode);
+    }
+
+    /**
      * Calculate the time difference between the stored time and the current time.
      * @param string|null $mode
      * 
@@ -504,28 +541,17 @@ class Time {
     {
         $clone = $this->clone();
 
-        $selfDate  = TimeHelper::carbonInstance($clone->date);
-        $now  = new DateTime('now', new DateTimeZone($clone->timezone));
-        $date = new DateTime();
-
-        if(!empty($selfDate)){
+        // Convert the stored time to a DateTime object
+        $selfDate   = TimeHelper::carbonInstance($clone->date);
+        $date       = new DateTime();
+        if (!empty($selfDate)) {
             $date->setTimestamp($selfDate);
         }
 
-        // get difference
-        $difference = $now->diff($date);
+        // Get the current time in the specified timezone
+        $now = new DateTime('now', new DateTimeZone($clone->timezone));
 
-        $timeData = [
-            'year'  => $difference->y,
-            'month' => ($difference->y * 12) + $difference->m,
-            'hour'  => $difference->h,
-            'mins'  => $difference->i,
-            'sec'   => $difference->s,
-            'days'  => $difference->days, //total number of days
-            'weeks' => (int) floor($difference->days / 7), //weeks
-        ];
-
-        return $timeData[$mode] ?? $timeData;
+        return $this->calculateTimeDifference($now, $date, $mode);
     }
 
     /**

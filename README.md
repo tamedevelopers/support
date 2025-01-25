@@ -72,27 +72,19 @@ Support Package For PHP and Laravel
 * [PDF](#pdf)
     * [Read PDF](#read-pdf)
 * [Time](#time)
+    * [time-data](#time-data)
     * [now](#now)
-    * [sec](#sec)
-    * [min](#min)
-    * [day](#day)
-    * [hour](#hour)
-    * [weeks](#weeks)
-    * [month](#month)
-    * [year](#year)
+    * [date](#date)
     * [today](#today)
-    * [time](#time)
-    * [format](#format)
     * [yesterday](#yesterday)
     * [timestamp](#timestamp)
     * [toJsTimer](#toJsTimer)
-    * [getSeconds](#getSeconds)
-    * [getMinutes](#getMinutes)
-    * [getHours](#getHours)
-    * [getDays](#getDays)
-    * [getWeeks](#getWeeks)
-    * [getMonths](#getMonths)
-    * [getYears](#getYears)
+    * [diff](#diff)
+    * [diffBetween](#diffBetween)
+    * [ago](#ago)
+    * [range](#range)
+    * [format](#format)
+    * [toDateTimeString](#toDateTimeString)
     * [addSeconds](#addSeconds)
     * [subSeconds](#subSeconds)
     * [addMinutes](#addMinutes)
@@ -108,13 +100,9 @@ Support Package For PHP and Laravel
     * [addYears](#addYears)
     * [subYears](#subYears)
     * [greeting](#greeting)
-    * [diff](#diff)
-    * [ago](#ago)
-    * [dateRange](#dateRange)
     * [allTimezone](#allTimezone)
     * [setTimeZone](#setTimeZone)
     * [getTimeZone](#getTimeZone)
-    * [toDateTimeString](#toDateTimeString)
 * [UrlHelper](#UrlHelper)
     * [url](#url)
     * [http](#http)
@@ -553,31 +541,135 @@ use Tamedevelopers\Support\Time;
 $time = new Time('now', 'Africa/Lagos');
 ```
 
+### time-data
+- Get time date from class
+
+| function name             | Description               |
+|---------------------------|---------------------------|
+| `sec() \| getSec()`       | Get seconds from time     |
+| `min() \| getMin()`       | Get minutes               |
+| `hour() \| getHour()`     | Get hour                  |
+| `day() \| getDay()`       | Get days                  |
+| `week() \| getWeek()`     | Get weeks                 |
+| `month() \| getMonth()`   | Get months                |
+| `year() \| getYear()`     | Get years                 |
+| `time() \| getTime()`     | Get time as int           |
+
+```
+[
+    $time4->time(),
+    $time4->sec(),
+    $time4->min(),
+    $time4->hour(),
+    $time4->day(),
+    $time4->week(),
+    $time4->month(),
+    $time4->year(),
+]
+```
+
 ### now
+- Returns the Time Object with current timestamp of `now`
+```
+$time->now()->format()
+```
+
+### date
+- Accepts one param as (time) `int|string`
+```
+$time->date("first day of this month")->toDateTimeString()
+```
+
+### today
+- Thesame as `now()` with timestamp of `today`
+
+### yesterday
+- Thesame as `now()` with timestamp of `yesterday`
 
 ```
-$time->now()
-// returns the Time Object with current timestamp
+$time->today();
+$time->yesterday();
 ```
 
-### dateRange
+### timestamp
+- Accepts two parameter [date, format]
+    - only [date] is mandatory and returns formated timestamp
+
+```
+$time->timestamp('24 Jan 2025 14:00:00');
+// Output: 2025-01-24 14:00:00
+```
+
+### toJsTimer
+- Accept one parameter as [date]. Returns formated javascript timestamp
+
+```
+$time->toJsTimer('24 Jan 2025 14:00:00');
+$time->jsTimer('24 Jan 2025 14:00:00');
+// Output: Jan 24, 2025 14:00:00
+```
+
+### diff
+- Takes one paramater as `mode`. Different between the given date a current time as `now`
+    - Return an array if [mode] is not found or value of `mode set`
+
+| mode                                                      |
+|-----------------------------------------------------------|
+| `year \| month \| hour \| mins \| sec \| days \| weeks`   |
+
+```
+$time->date('last year december')->diff('month');
+// Output: 1
+```
+
+### diffBetween
+- Takes three paramater as `firstDate \| lastDate \| mode`. Thesame as diff.
+
+```
+$time->diffBetween('last year december', 1737752400, 'weeks');
+// Output: 4
+```
+
+### ago 
+- `ago() or timeAgo()`, Takes one paramater as `mode`
+
+| mode                                                                   |
+|------------------------------------------------------------------------|
+| `full \| short \| duration \| time \| date \| date_time \| time_stamp` |
+
+```
+$time->date('today')->ago()
+$time->date('today')->timeAgo()
+
+// Output: [
+    "full" => "4 hours ago"
+    "short" => "4h"
+    "duration" => 4
+    "time" => 1737752400
+    "date" => "24 Jan, 2025"
+    "date_time" => "24 Jan, 2025 10:01am"
+    "time_stamp" => "Jan 24, 2025 10:00:00"
+]
+```
+
+### range
 - Build date range according to value given
     - Accepts (2) params `value and format`
 
 ```
-$time->dateRange('0-10', 'D, M j')
+$time->range('0-10', 'D, M j')
 // Output: returns class of Tamedevelopers\Support\Capsule\TimeHelper
+```
 
-To get the output, we need to call the TimeHelper format method
-The format() method takes two [optional] param. `start, year` as boolean
+#### get output
+- To get the output, we need to call the TimeHelper format method
+    - The format() method takes two [optional] param. `start, year` as boolean
 
-$time->dateRange('0-10', 'D, M j')
-        ->format(true, true)
+```
+$time->range('0-10')->format(true, true)
 // Output: Thu, Jan 23 - Tue, Mar 4, 2025
 
-
-$time->dateRange('0-10', 'D, M j')
-        ->format()
+$time->range('0-10')->format()
 // Output: Tue, Mar 4
 ```
 

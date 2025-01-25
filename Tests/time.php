@@ -35,6 +35,18 @@ $time4  = TameTime('first day of December 2008', 'Pacific/Pago_Pago');
 
 dd(
     [
+        $time->toJsTimer('24 Jan 2025 14:00:00'),
+        $time4->time(),
+        $time4->sec(),
+        $time4->min(),
+        $time4->hour(),
+        $time4->day(),
+        $time4->week(),
+        $time4->month(),
+        $time4->year(),
+    ],
+
+    [
         $time->getTimeZone(),
         $time2->getTimeZone(),
         $time3->getTimeZone(),
@@ -67,13 +79,14 @@ dd(
     [
         $time4->yesterday()->toDateTimeString(),
         $time4->format(null, 'first day of December 2008'),
-        $time4->date('last year december')->diff(),
-        $time4->date('last year december')->ago(),
+        $time4->date('last year december')->diff('weeks'),
+        $time4->setTimezone('Indian/Antananarivo')->diffBetween('last year', 'today', 'weeks'),
+        $time4->date('today')->ago(),
     ],
     
 
-    TameTime()->dateRange('1-14'),
-    TameTime()->dateRange('0-40')->format(true, true),
+    TameTime()->range('1-14'),
+    TameTime()->range('0-40')->format(true, true),
     //
 
 );

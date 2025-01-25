@@ -343,6 +343,19 @@ if (! function_exists('config_asset')) {
     }
 }
 
+if (! function_exists('config_time')) {
+    /**
+     * Set the configuration options for text representations of time greeting()
+     * @param array|null $options
+     * 
+     * @return void
+     */
+    function config_time(?array $options = [])
+    {
+        (new Time)->config($options);
+    }
+}
+
 if (! AppIsNotCorePHP() && ! function_exists('__')) {
     /**
      * Translate the given message.

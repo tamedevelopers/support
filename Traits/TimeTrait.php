@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 use Closure;
+use DateTime;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Time;
 use Tamedevelopers\Support\Country;
@@ -65,15 +66,6 @@ trait TimeTrait{
         $clone->timestamp = $clone->buildTimePrint();
 
         return $clone;
-    }
-
-    /**
-     * Get the stored date time
-     * @return int
-     */
-    public function __getDate()
-    {
-        return (int) $this->date;
     }
 
     /**
@@ -185,6 +177,34 @@ trait TimeTrait{
     }
 
     /**
+     * Helper method to calculate the time difference between two dates.
+     * 
+     * @param DateTime $firstDate
+     * @param DateTime $lastDate
+     * @param string|null $mode
+     * 
+     * @return mixed
+     */
+    private function calculateTimeDifference(DateTime $firstDate, DateTime $lastDate, $mode = null)
+    {
+        // Get difference
+        $difference = $firstDate->diff($lastDate);
+
+        // Time difference breakdown
+        $timeData = [
+            'year'  => $difference->y,
+            'month' => ($difference->y * 12) + $difference->m,
+            'hour'  => $difference->h,
+            'mins'  => $difference->i,
+            'sec'   => $difference->s,
+            'days'  => $difference->days, // Total number of days
+            'weeks' => (int) floor($difference->days / 7), // Weeks
+        ];
+
+        return $timeData[$mode] ?? $timeData;
+    }
+
+    /**
      * Handle the calls to non-existent methods.
      * @param string|null $method
      * @param mixed $args
@@ -200,19 +220,20 @@ trait TimeTrait{
         $method = match ($name) {
             'greetings', 'greeting' => '__greeting',
             'tojs', 'jstimer' => 'toJsTimer',
-            'hours', 'hour', 'hr', 'hrs', 'gethr', 'gethours', 'gethour' => '__getHour',
-            'getseconds', 'getsec', 'sec', 's' => '__getSecond',
-            'min', 'mins', 'getminute', 'getminutes', 'getmins' => '__getMin',
+            's', 'sec', 'secs', 'getseconds', 'getsec' => '__getSecond',
+            'min', 'mins', 'getminute', 'getminutes', 'getmin', 'getmins' => '__getMin',
+            'hr', 'hrs', 'hour', 'hours', 'gethr', 'gethours', 'gethour' => '__getHour',
             'getday', 'getdays', 'getd', 'day', 'days' => '__getDay',
-            'getweek', 'weeks', 'week', 'getweeks', 'getw' => '__getWeek',
-            'getmonths', 'getmonth', 'getm' => '__getMonth',
+            'getweek', 'getweeks', 'week', 'weeks', 'getw' => '__getWeek',
+            'getmonths', 'getmonth', 'getm', 'month', 'months' => '__getMonth',
             'getyr', 'getyears', 'getyear', 'year', 'years', 'yr', 'yrs', 'y' => '__getYear',
             'time', 'gettimes', 'gettime', 'getdate' => '__getDate',
             'setdate' => '__setDate',
             'gettimezone' => '__getTimezone',
             'settimezone' => '__setTimezone',
-            'diff', 'difference', 'timedifference', 'timediff' => '__timeDifference',
-            'formatdaterange', 'formatrange', 'daterange' => 'dateRange',
+            'diffbetween', 'timediffbetween' => '__timeDifferenceBetween',
+            'diff', 'timediff' => '__timeDifference',
+            'daterange', 'range' => 'dateRange',
             'ago', 'timeago' => '__timeAgo',
             'addsecond' => 'addSeconds',
             'subsecond' => 'subSeconds',
