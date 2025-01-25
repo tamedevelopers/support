@@ -5,14 +5,21 @@ use Tamedevelopers\Support\Mail;
 require_once __DIR__ . '/../vendor/autoload.php';
 
 
+$env = TameEnv();
+
+// $env->createOrIgnore();
+// $env->load();
+
+
+// config mail manually here or .env file
 $mailer = Mail::config([
-    'host' => 'sandbox.smtp.mailtrap.io',
-    'port' => 2525,
-    'username' => '19e021f96b1434',
-    'password' => 'ac7fc974df4844',
-    'encryption' => 'ssl',
-    'from_email' => 'noreply@mailtrap.io',
-    'from_name' => 'Tame Developers',
+    // 'host' => 'sandbox.smtp.mailtrap.io',
+    // 'port' => 2525,
+    // 'username' => '19e021f96b1434',
+    // 'password' => 'ac7fc974df4844',
+    // 'encryption' => 'ssl',
+    // 'from_email' => 'noreply@mailtrap.io',
+    // 'from_name' => 'Tame Developers',
 ]);
 
 $mailer->to('tamedevelopers@gmail.com')
@@ -23,9 +30,7 @@ $mailer->to('tamedevelopers@gmail.com')
                 'New Name'
             )
             ->send(function($response){
-                // dd(
-                //     $response
-                // );
+                //
             });
 
 

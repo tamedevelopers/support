@@ -122,6 +122,7 @@ Support Package For PHP and Laravel
     * [Asset config](#asset-config)
         * [Asset Cache](#asset-cache)
 * [Env](#env)
+    * [Env Create](#env-create)
     * [Env Load](#env-load)
     * [Env Update](#env-update)
 * [Server](#server)
@@ -673,6 +674,20 @@ $time->range('0-10')->format()
 // Output: Tue, Mar 4
 ```
 
+### addSeconds
+- Can be called using boht [plural|singular] formats. To add more dates with already existing time.
+
+```
+$time4->now()->addMonth(3)->addSeconds(2)->addDays(2)->format()
+```
+
+### subSeconds
+- Can be called using boht [plural|singular] formats. To subtract dates from already existing time.
+
+```
+$time4->now()->subMonth(3)->subSecond(2)->subDays(2)->format()
+```
+
 ### allTimezone
 ```
 Time::allTimezone();
@@ -850,6 +865,15 @@ asset_config('storage/style.css', true, true);
 ## ENV
 - By default it use the default root as `.env` path, so mandatory to install vendor in root directory.
 
+
+### ENV Create
+- To create an environment `.env` file. Create or ignore if exists
+
+```
+use Tamedevelopers\Support\Env;
+
+Env::createOrIgnore()
+```
 
 ### ENV Load
 - To load the environment `.env` file

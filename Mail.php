@@ -417,13 +417,11 @@ class Mail{
         // Flush email sending queue
         if ($options['flush'] && $options['debug'] === 0) {
             if (!headers_sent()) {
-                // @header('Surrogate-Control: BigPipe/1.0');
-                // @header('X-Accel-Buffering: no');
-                // @header("Content-Encoding: none");  
-                // @header("Connection: close");
-                // @header("Content-Length: " . ob_get_length());
-
-                // $this->obFlush();
+                @header('Surrogate-Control: BigPipe/1.0');
+                @header('X-Accel-Buffering: no');
+                @header("Content-Encoding: none");  
+                @header("Connection: close");
+                @header("Content-Length: " . ob_get_length());
             }
         }
 

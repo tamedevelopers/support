@@ -66,6 +66,18 @@ if (! function_exists('TameMail')) {
     }
 }
 
+if (! function_exists('TameEnv')) {
+    /**
+     * Env Object
+     * @param  mixed $path
+     * @return \Tamedevelopers\Support\Env
+     */
+    function TameEnv($path = null)
+    {
+        return new Env($path);
+    }
+}
+
 if (! function_exists('TameCookie')) {
     /**
      * Cookie Object

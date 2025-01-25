@@ -3,4 +3,6 @@
 /.idea
 /.vscode
 /.github
+/.env
+/.env.example
 composer.lock
