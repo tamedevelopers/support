@@ -286,12 +286,15 @@ class Str
      *
      * @param  string  $search   The substring to search for.
      * @param  string  $replace  The replacement substring.
-     * @param  string  $subject  The original string.
+     * @param  string|null  $subject  The original string.
      * @return string  
      * - The modified string.
      */
-    static public function replaceFirst(string $search, string $replace, string $subject)
+    static public function replaceFirst(string $search, string $replace, $subject = null)
     {
+        $subject = self::replaceSubject($subject);
+        $replace = self::replaceSubject($replace);
+
         // Find the position of the first occurrence of the search string
         $pos = strpos($subject, $search);
 
@@ -309,12 +312,15 @@ class Str
      *
      * @param  string  $search   The substring to search for.
      * @param  string  $replace  The replacement substring.
-     * @param  string  $subject  The original string.
+     * @param  string|null  $subject  The original string.
      * @return string  
      * - The modified string.
      */
-    static public function replaceLast(string $search, string $replace, string $subject)
+    static public function replaceLast(string $search, string $replace, $subject = null)
     {
+        $subject = self::replaceSubject($subject);
+        $replace = self::replaceSubject($replace);
+
         // Find the position of the first occurrence of the search string
         $pos = strrpos($subject, $search);
 
@@ -343,6 +349,25 @@ class Str
     }
 
     /**
+     * Format String Once with Separator
+     *
+     * @param  string $string
+     * @param  int $number
+     * @param  string $separator
+     * @return string
+     */
+    static public function formatOnlyString($string, $number = 4, $separator = '-')
+    {
+        $string = self::trim($string);
+        
+        if (strlen($string) > $number) {
+            $string = substr_replace($string, $separator, $number, 0);
+        }
+        
+        return self::replace(' ', '', $string);
+    }
+
+    /**
      * Clean phone string
      *
      * @param string|null $phone
@@ -363,7 +388,7 @@ class Str
      * - The string to be masked.
      * 
      * @param int $length 
-     * - The desired length of the masked string. Default is 4.
+     * - The number of visible characters. Default is 4.
      * 
      * @param string $position 
      * - The position to apply the mask: 'left', 'middle' or 'center', 'right'. Default is 'right'.
@@ -702,14 +727,17 @@ class Str
 
     /**
      * Replace all occurrences of the search string with the replacement string
-     * @param string|string[] $search
-     * @param string|string[] $replace
-     * @param string|string[] $subject
+     * @param array|string $search
+     * @param array|string $replace
+     * @param string|null $subject
      * 
      * @return string
      */
-    static public function replace(array|string $search, array|string $replace, array|string $subject)
+    static public function replace($search, $replace, $subject = null)
     {
+        $subject = self::replaceSubject($subject);
+        $replace = self::replaceSubject($replace);
+
         return str_replace($search, $replace, $subject);
     }
 
@@ -949,6 +977,17 @@ class Str
     static public function padString(string $value, int $length, string $padChar = ' ', int $padType = STR_PAD_RIGHT)
     {
         return str_pad($value, $length, $padChar, $padType);
+    }
+    
+    /**
+     * Replace Subject
+     *
+     * @param  mixed $subject
+     * @return void
+     */
+    static private function replaceSubject($subject = null)
+    {
+        return is_null($subject) ? (string) $subject : $subject;
     }
 
     /**

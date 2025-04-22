@@ -195,799 +195,242 @@ trait NumberToWordsTraits
       * All currency 
       * - Country <iso-3></iso-3>
       *
+      * @param string|null $iso3 Country iso3
       * @return array
       */
-    static public function CurrencyNames()
+    static public function allCurrency($iso3 = null)
     {
-        return [
-            'AFG' => [
-                'name' => 'Afghani',
-                'cents' => 'puls (پول)',
-            ],
-            'ALB' => [
-                'name' => 'Lek',
-                'cents' => 'qindarkë',
-            ],
-            'DZA' => [
-                'name' => 'Dinar',
-                'cents' => 'centimes',
-            ],
-            'AND' => [
-                'name' => 'Euro',
-                'cents' => 'cents',
-            ],
-            'AGO' => [
-                'name' => 'Kwanza',
-                'cents' => 'cêntimos',
-            ],
-            'AIA' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'ATG' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'ARG' => [
-                'name' => 'Peso',
-                'cents' => 'cents',
-            ],
-            'ARM' => [
-                'name' => 'Dram',
-                'cents' => 'luma (լումա)',
-            ],
-            'AUS' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'AUT' => [
-                'name' => 'Euro',
-                'cents' => 'cents',
-            ],
-            'AZE' => [
-                'name' => 'Manat',
-                'cents' => 'qəpik (qəpiklər)',
-            ],
-            'BHS' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'BHR' => [
-                'name' => 'Dinar',
-                'cents' => 'fils',
-            ],
-            'BGD' => [
-                'name' => 'Taka',
-                'cents' => 'poisha',
-            ],
-            'BRB' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'BLR' => [
-                'name' => 'Ruble',
-                'cents' => 'cents',
-            ],
-            'BEL' => [
-                'name' => 'Euro',
-                'cents' => 'cents',
-            ],
-            'BLZ' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'BEN' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'BTN' => [
-                'name' => 'Ngultrum',
-                'cents' => 'chhertum (ཕྱེད་ཏམ)',
-            ],
-            'BOL' => [
-                'name' => 'Boliviano',
-                'cents' => 'cents',
-            ],
-            'BIH' => [
-                'name' => 'Mark',
-                'cents' => 'feninga',
-            ],
-            'BWA' => [
-                'name' => 'Pula',
-                'cents' => 'thebe',
-            ],
-            'BRA' => [
-                'name' => 'Real',
-                'cents' => 'cents',
-            ],
-            'BRN' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'BGR' => [
-                'name' => 'Lev',
-                'cents' => 'cents',
-            ],
-            'BFA' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'BDI' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'CPV' => [
-                'name' => 'Escudo',
-                'cents' => 'Centavos',
-            ],
-            'KHM' => [
-                'name' => 'Riel',
-                'cents' => 'Sen',
-            ],
-            'CMR' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'CAN' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'CAF' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'TCD' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'CHL' => [
-                'name' => 'Peso',
-                'cents' => 'cents',
-            ],
-            'CHN' => [
-                'name' => 'Yuan',
-                'cents' => 'fen',
-            ],
-            'COL' => [
-                'name' => 'Peso',
-                'cents' => 'cents',
-            ],
-            'COM' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'COG' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'CRI' => [
-                'name' => 'Colón',
-                'cents' => 'Céntimos',
-            ],
-            'CIV' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'HRV' => [
-                'name' => 'Kuna',
-                'cents' => 'Lipa',
-            ],
-            'CUB' => [
-                'name' => 'Peso',
-                'cents' => 'cents',
-            ],
-            'CYP' => [
-                'name' => 'Euro',
-                'cents' => 'cents',
-            ],
-            'CZE' => [
-                'name' => 'Koruna',
-                'cents' => 'haléřů',
-            ],
-            'DNK' => [
-                'name' => 'Krone',
-                'cents' => 'øre',
-            ],
-            'DJI' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'DMA' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'DOM' => [
-                'name' => 'Peso',
-                'cents' => 'cents',
-            ],
-            'ECU' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'EGY' => [
-                'name' => 'Pound',
-                'cents' => 'piastres',
-            ],
-            'SLV' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'GNQ' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'ERI' => [
-                'name' => 'Nakfa',
-                'cents' => 'cents',
-            ],
-            'EST' => [
-                'name' => 'Euro',
-                'cents' => 'cents',
-            ],
-            'SWZ' => [
-                'name' => 'Lilangeni',
-                'cents' => 'cents',
-            ],
-            'ETH' => [
-                'name' => 'Birr',
-                'cents' => 'cents',
-            ],
-            'FJI' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'FIN' => [
-                'name' => 'Euro',
-                'cents' => 'cents',
-            ],
-            'FRA' => [
-                'name' => 'Euro',
-                'cents' => 'cents',
-            ],
-            'GAB' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'GMB' => [
-                'name' => 'Dalasi',
-                'cents' => 'Butut',
-            ],
-            'GEO' => [
-                'name' => 'Lari',
-                'cents' => 'Tetri',
-            ],
-            'DEU' => [
-                'name' => 'Euro',
-                'cents' => 'cents',
-            ],
-            'GHA' => [
-                'name' => 'Cedi',
-                'cents' => 'Pesewas',
-            ],
-            'GRC' => [
-                'name' => 'Euro',
-                'cents' => 'cents',
-            ],
-            'GRD' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'GTM' => [
-                'name' => 'Quetzal',
-                'cents' => 'Centavo',
-            ],
-            'GIN' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'GNB' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'GUY' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'HTI' => [
-                'name' => 'Gourde',
-                'cents' => 'centime',
-            ],
-            'HND' => [
-                'name' => 'Lempira',
-                'cents' => 'centavo',
-            ],
-            'HKG' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'HUN' => [
-                'name' => 'Forint',
-                'cents' => 'fillér',
-            ], 
-            'ISL' => [
-                'name' => 'Króna',
-                'cents' => 'aurar',
-            ],
-            'IND' => [
-                'name' => 'Rupee',
-                'cents' => 'paise',
-            ],
-            'IDN' => [
-                'name' => 'Rupiah',
-                'cents' => 'sen',
-            ],
-            'IRN' => [
-                'name' => 'Rial',
-                'cents' => 'rial',
-            ],
-            'IRQ' => [
-                'name' => 'Dinar',
-                'cents' => 'fils',
-            ],
-            'IRL' => [
-                'name' => 'Euro',
-                'cents' => 'cents',
-            ],
-            'ISR' => [
-                'name' => 'New Shekel',
-                'cents' => 'cents',
-            ],
-            'ITA' => [
-                'name' => 'Euro',
-                'cents' => 'cents',
-            ],
-            'JAM' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ], 
-            'JPN' => [
-                'name' => 'Yen',
-                'cents' => 'sen',
-            ],
-            'JOR' => [
-                'name' => 'Dinar',
-                'cents' => 'piastres',
-            ],
-            'KAZ' => [
-                'name' => 'Tenge',
-                'cents' => 'tyn',
-            ],
-            'KEN' => [
-                'name' => 'Shilling',
-                'cents' => 'cents',
-            ],
-            'KIR' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'KWT' => [
-                'name' => 'Dinar',
-                'cents' => 'fils',
-            ],
-            'KGZ' => [
-                'name' => 'Som',
-                'cents' => 'tyiyn',
-            ],
-            'LAO' => [
-                'name' => 'Kip',
-                'cents' => 'att',
-            ],
-            'LVA' => [
-                'name' => 'Euro',
-                'cents' => 'cents',
-            ],
-            'LBN' => [
-                'name' => 'Pound',
-                'cents' => 'Piastre',
-            ],
-            'LSO' => [
-                'name' => 'Lesotho',
-                'cents' => 'Sente',
-            ],
-            'LBR' => [
-                'name' => 'Liberia',
-                'cents' => 'Cent',
-            ],
-            'LBY' => [
-                'name' => 'Dinar',
-                'cents' => 'dirham',
-            ],
-            'LIE' => [
-                'name' => 'Franc',
-                'cents' => 'Rappen',
-            ],
-            'LTU' => [
-                'name' => 'Lithuania',
-                'cents' => 'Centas',
-            ],
-            'LUX' => [
-                'name' => 'Luxembourg',
-                'cents' => 'Euro',
-            ],
-            'MKD' => [
-                'name' => 'Macedonia',
-                'cents' => 'Denar',
-            ],
-            'MDG' => [
-                'name' => 'Malagasy Ariary',
-                'cents' => 'Iraimbilanja',
-            ],
-            'MWI' => [
-                'name' => 'Malawi',
-                'cents' => 'Tambala',
-            ],
-            'MYS' => [
-                'name' => 'Malaysia',
-                'cents' => 'Sen',
-            ],
-            'MDV' => [
-                'name' => 'Maldives Rufiyaa',
-                'cents' => 'Laari',
-            ],
-            'MLI' => [
-                'name' => 'Franc',
-                'cents' => 'Centime',
-            ],
-            'MLT' => [
-                'name' => 'Malta',
-                'cents' => 'Euro',
-            ],
-            'MHL' => [
-                'name' => 'Marshall Islands',
-                'cents' => 'Dollar',
-            ],
-            'MRT' => [
-                'name' => 'Mauritanian Ouguiya',
-                'cents' => 'Khoums',
-            ],
-            'MUS' => [
-                'name' => 'Mauritius Rupee',
-                'cents' => 'Cent',
-            ],
-            'MEX' => [
-                'name' => 'Mexico Peso',
-                'cents' => 'Centavo',
-            ],
-            'FSM' => [
-                'name' => 'Micronesia',
-                'cents' => 'Dollar',
-            ],
-            'MDA' => [
-                'name' => 'Moldovan Leu',
-                'cents' => 'Ban',
-            ],
-            'MCO' => [
-                'name' => 'Monaco',
-                'cents' => 'Euro',
-            ],
-            'MNG' => [
-                'name' => 'Mongolian Tugrik',
-                'cents' => 'Möngö',
-            ],
-            'MNE' => [
-                'name' => 'Montenegro',
-                'cents' => 'Euro',
-            ],
-            'MAR' => [
-                'name' => 'Moroccan Dirham',
-                'cents' => 'Centime',
-            ],
-            'MOZ' => [
-                'name' => 'Mozambican Metical',
-                'cents' => 'Centavo',
-            ],
-            'MMR' => [
-                'name' => 'Myanmar Kyat',
-                'cents' => 'Pya',
-            ],
-            'NAM' => [
-                'name' => 'Namibian Dollar',
-                'cents' => 'Cent',
-            ],
-            'NRU' => [
-                'name' => 'Nauruan Dollar',
-                'cents' => 'Cent',
-            ],
-            'NPL' => [
-                'name' => 'Nepalese Rupee',
-                'cents' => 'Paisa',
-            ],
-            'NLD' => [
-                'name' => 'Netherlands',
-                'cents' => 'Euro',
-            ],
-            'NZL' => [
-                'name' => 'New Zealand Dollar',
-                'cents' => 'Cent',
-            ],
-            'NIC' => [
-                'name' => 'Nicaragua Córdoba',
-                'cents' => 'Centavo',
-            ],
-            'NER' => [
-                'name' => 'Niger Franc',
-                'cents' => 'centimes',
-            ],
-            'NGA' => [
-                'name' => 'Naira',
-                'cents' => 'Kobo',
-            ],
-            'PRK' => [
-                'name' => 'North Korean Won',
-                'cents' => 'Chon',
-            ],
-            'NOR' => [
-                'name' => 'Norwegian Krone',
-                'cents' => 'Øre',
-            ],
-            'OMN' => [
-                'name' => 'Omani Rial',
-                'cents' => 'Baisa',
-            ],
-            'PAK' => [
-                'name' => 'Pakistani Rupee',
-                'cents' => 'Paisa',
-            ],
-            'PLW' => [
-                'name' => 'Palauan Dollar',
-                'cents' => 'Cent',
-            ],
-            'PAN' => [
-                'name' => 'Panamanian Dollar',
-                'cents' => 'Centésimo',
-            ],
-            'PNG' => [
-                'name' => 'Papua New Guinean Kina',
-                'cents' => 'Toea',
-            ],
-            'PRY' => [
-                'name' => 'Paraguayan Guarani',
-                'cents' => 'Céntimo',
-            ],
-            'PER' => [
-                'name' => 'Peruvian Nuevo Sol',
-                'cents' => 'Céntimo',
-            ],
-            'PHL' => [
-                'name' => 'Philippine Peso',
-                'cents' => 'Sentimo',
-            ],
-            'POL' => [
-                'name' => 'Polish Złoty',
-                'cents' => 'Grosz',
-            ],
-            'PRT' => [
-                'name' => 'Euro',
-                'cents' => 'Centavo',
-            ],
-            'QAT' => [
-                'name' => 'Rial',
-                'cents' => 'Dirham',
-            ],
-            'KOR' => [
-                'name' => 'Won',
-                'cents' => 'Jeon',
-            ],
-            'ROU' => [
-                'name' => 'Leu',
-                'cents' => 'Bani',
-            ],
-            'RUS' => [
-                'name' => 'Ruble',
-                'cents' => 'Kopek',
-            ],
-            'RWA' => [
-                'name' => 'Franc',
-                'cents' => 'centimes',
-            ],
-            'WSM' => [
-                'name' => 'Tala',
-                'cents' => 'Sene',
-            ],
-            'SMR' => [
-                'name' => 'San Marino Euro',
-                'cents' => 'Centesimo',
-            ],
-            'STP' => [
-                'name' => 'São Tomé and Príncipe Dobra',
-                'cents' => 'Cêntimo',
-            ],
-            'SAU' => [
-                'name' => 'Saudi Riyal',
-                'cents' => 'Halala',
-            ],
-            'SEN' => [
-                'name' => 'Senegalese Franc',
-                'cents' => 'Centime',
-            ],
-            'SRB' => [
-                'name' => 'Serbian Dinar',
-                'cents' => 'Para',
-            ],
-            'SYC' => [
-                'name' => 'Seychellois Rupee',
-                'cents' => 'Cent',
-            ],
-            'SLE' => [
-                'name' => 'Sierra Leone Leone',
-                'cents' => 'Cent',
-            ],
-            'SGP' => [
-                'name' => 'Singapore Dollar',
-                'cents' => 'Cent',
-            ],
-            'SVK' => [
-                'name' => 'Slovak Euro',
-                'cents' => 'Cent',
-            ],
-            'SVN' => [
-                'name' => 'Slovenian Euro',
-                'cents' => 'Cent',
-            ],
-            'SLB' => [
-                'name' => 'Solomon Islands Dollar',
-                'cents' => 'Cent',
-            ],
-            'SOM' => [
-                'name' => 'Somali Shilling',
-                'cents' => 'Centesimi',
-            ],
-            'ZAF' => [
-                'name' => 'South African Rand',
-                'cents' => 'Cent',
-            ],
-            'SSD' => [
-                'name' => 'South Sudanese Pound',
-                'cents' => 'Piaster',
-            ],
-            'ESP' => [
-                'name' => 'Spanish Euro',
-                'cents' => 'Cent',
-            ],
-            'LKA' => [
-                'name' => 'Sri Lankan Rupee',
-                'cents' => 'Cent',
-            ],
-            'SDN' => [
-                'name' => 'Sudanese Pound',
-                'cents' => 'Piastre',
-            ],
-            'SUR' => [
-                'name' => 'Surinamese Dollar',
-                'cents' => 'Cent',
-            ],
-            'SWZ' => [
-                'name' => 'Swazi Lilangeni',
-                'cents' => 'Cent',
-            ],
-            'SWE' => [
-                'name' => 'Swedish Krona',
-                'cents' => 'Öre',
-            ],
-            'CHE' => [
-                'name' => 'Swiss Franc',
-                'cents' => 'Rappen',
-            ],
-            'SYR' => [
-                'name' => 'Syrian Pound',
-                'cents' => 'Piastre',
-            ],
-            'TJK' => [
-                'name' => 'Tajikistani Somoni',
-                'cents' => 'Diram',
-            ],
-            'TZA' => [
-                'name' => 'Shilling',
-                'cents' => 'Cent',
-            ],
-            'THA' => [
-                'name' => 'Thai Baht',
-                'cents' => 'Satang',
-            ],
-            'TGO' => [
-                'name' => 'Franc',
-                'cents' => 'Centime',
-            ],
-            'TON' => [
-                'name' => 'Tongan Paʻanga',
-                'cents' => 'Seniti',
-            ],
-            'TTO' => [
-                'name' => 'Dollar',
-                'cents' => 'Cent',
-            ],
-            'TUN' => [
-                'name' => 'Dinar',
-                'cents' => 'Millime',
-            ],
-            'TUR' => [
-                'name' => 'Lira',
-                'cents' => 'Kuruş',
-            ],
-            'TKM' => [
-                'name' => 'Manat',
-                'cents' => 'Tenge',
-            ],
-            'TUV' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'UGA' => [
-                'name' => 'Shilling',
-                'cents' => 'cents',
-            ],
-            'UKR' => [
-                'name' => 'Hryvnia',
-                'cents' => 'Kopiyka',
-            ],
-            'ARE' => [
-                'name' => 'Dirham',
-                'cents' => 'Fils',
-            ],
-            'GBR' => [
-                'name' => 'Pound',
-                'cents' => 'Penny',
-            ],
-            'USA' => [
-                'name' => 'Dollar',
-                'cents' => 'cents',
-            ],
-            'URY' => [
-                'name' => 'Peso',
-                'cents' => 'centésimo',
-            ],
-            'UZB' => [
-                'name' => 'Uzbekistani Som',
-                'cents' => 'Tiyin',
-            ],
-            'VUT' => [
-                'name' => 'Vanuatu Vatu',
-                'cents' => 'hào',
-            ],
-            'VEN' => [
-                'name' => 'Bolívar',
-                'cents' => 'céntimo',
-            ],
-            'VNM' => [
-                'name' => 'Đồng',
-                'cents' => 'xu',
-            ],
-            'YEM' => [
-                'name' => 'Yemeni Rial',
-                'cents' => 'Fils',
-            ],
-            'ZMB' => [
-                'name' => 'Kwacha',
-                'cents' => 'Ngwee',
-            ],
-            'ZWE' => [
-                'name' => 'Zimbabwean Dollar',
-                'cents' => 'cents',
-            ],
+        $data = [
+            'AFG' => ['country' => 'Afghan', 'name' => 'Afghani', 'code' => 'AFN', 'cents' => 'puls (پول)'],
+            'ALB' => ['country' => 'Albanian', 'name' => 'Lek', 'code' => 'ALL', 'cents' => 'qindarkë'],
+            'DZA' => ['country' => 'Algerian', 'name' => 'Dinar', 'code' => 'DZD', 'cents' => 'centimes'],
+            'AND' => ['country' => 'Andorran', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cents'],
+            'AGO' => ['country' => 'Angolan', 'name' => 'Kwanza', 'code' => 'AOA', 'cents' => 'cêntimos'],
+            'AIA' => ['country' => 'Anguillan', 'name' => 'Dollar', 'code' => 'XCD', 'cents' => 'cents'],
+            'ATG' => ['country' => 'Antiguan', 'name' => 'Dollar', 'code' => 'XCD', 'cents' => 'cents'],
+            'ARG' => ['country' => 'Argentine', 'name' => 'Peso', 'code' => 'ARS', 'cents' => 'cents'],
+            'ARM' => ['country' => 'Armenian', 'name' => 'Dram', 'code' => 'AMD', 'cents' => 'luma (լումա)'],
+            'AUS' => ['country' => 'Australian', 'name' => 'Dollar', 'code' => 'AUD', 'cents' => 'cents'],
+            'AUT' => ['country' => 'Austrian', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cents'],
+            'AZE' => ['country' => 'Azerbaijani', 'name' => 'Manat', 'code' => 'AZN', 'cents' => 'qəpik (qəpiklər)'],
+            'BHS' => ['country' => 'Bahamian', 'name' => 'Dollar', 'code' => 'BSD', 'cents' => 'cents'],
+            'BHR' => ['country' => 'Bahraini', 'name' => 'Dinar', 'code' => 'BHD', 'cents' => 'fils'],
+            'BGD' => ['country' => 'Bangladeshi', 'name' => 'Taka', 'code' => 'BDT', 'cents' => 'poisha'],
+            'BRB' => ['country' => 'Barbadian', 'name' => 'Dollar', 'code' => 'BBD', 'cents' => 'cents'],
+            'BLR' => ['country' => 'Belarusian', 'name' => 'Ruble', 'code' => 'BYN', 'cents' => 'cents'],
+            'BEL' => ['country' => 'Belgian', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cents'],
+            'BLZ' => ['country' => 'Belizean', 'name' => 'Dollar', 'code' => 'BZD', 'cents' => 'cents'],
+            'BEN' => ['country' => 'Beninese', 'name' => 'CFA Franc', 'code' => 'XOF', 'cents' => 'centime'],
+            'BMU' => ['country' => 'Bermudian', 'name' => 'Dollar', 'code' => 'BMD', 'cents' => 'cents'],
+            'BTN' => ['country' => 'Bhutanese', 'name' => 'Ngultrum', 'code' => 'BTN', 'cents' => 'chhertum (ཕྱེད་ཏམ)'],
+            'BOL' => ['country' => 'Bolivian', 'name' => 'Boliviano', 'code' => 'BOB', 'cents' => 'centavo'],
+            'BES' => ['country' => 'Bonairean', 'name' => 'US Dollar', 'code' => 'USD', 'cents' => 'cents'],
+            'BIH' => ['country' => 'Bosnian', 'name' => 'Convertible Mark', 'code' => 'BAM', 'cents' => 'fening'],
+            'BWA' => ['country' => 'Botswana', 'name' => 'Pula', 'code' => 'BWP', 'cents' => 'thebe'],
+            'BRA' => ['country' => 'Brazilian', 'name' => 'Real', 'code' => 'BRL', 'cents' => 'centavo'],
+            'BRN' => ['country' => 'Bruneian', 'name' => 'Dollar', 'code' => 'BND', 'cents' => 'cents'],
+            'BGR' => ['country' => 'Bulgarian', 'name' => 'Lev', 'code' => 'BGN', 'cents' => 'stotinki'],
+            'BFA' => ['country' => 'Burkinese', 'name' => 'CFA Franc', 'code' => 'XOF', 'cents' => 'centime'],
+            'BDI' => ['country' => 'Burundian', 'name' => 'Burundi Franc', 'code' => 'BIF', 'cents' => 'centime'],
+            'CPV' => ['country' => 'Cape Verdean', 'name' => 'Escudo', 'code' => 'CVE', 'cents' => 'centavo'],
+            'KHM' => ['country' => 'Cambodian', 'name' => 'Riel', 'code' => 'KHR', 'cents' => 'sen'],
+            'CMR' => ['country' => 'Cameroonian', 'name' => 'CFA Franc', 'code' => 'XAF', 'cents' => 'centime'],
+            'CAN' => ['country' => 'Canadian', 'name' => 'Dollar', 'code' => 'CAD', 'cents' => 'cent'],
+            'CAF' => ['country' => 'Central African', 'name' => 'CFA Franc', 'code' => 'XAF', 'cents' => 'centime'],
+            'TCD' => ['country' => 'Chadian', 'name' => 'CFA Franc', 'code' => 'XAF', 'cents' => 'centime'],
+            'CHL' => ['country' => 'Chilean', 'name' => 'Peso', 'code' => 'CLP', 'cents' => 'centavo'],
+            'CHN' => ['country' => 'Chinese', 'name' => 'Yuan', 'code' => 'CNY', 'cents' => 'jiao (角)'],
+            'CXR' => ['country' => 'Christmas Island', 'name' => 'Dollar', 'code' => 'AUD', 'cents' => 'cents'],
+            'CCK' => ['country' => 'Cocos Islands', 'name' => 'Dollar', 'code' => 'AUD', 'cents' => 'cents'],
+            'COL' => ['country' => 'Colombian', 'name' => 'Peso', 'code' => 'COP', 'cents' => 'centavo'],
+            'COM' => ['country' => 'Comorian', 'name' => 'Franc', 'code' => 'KMF', 'cents' => 'centime'],
+            'COG' => ['country' => 'Congolese', 'name' => 'CFA Franc', 'code' => 'CFA', 'cents' => 'centime'],
+            'COD' => ['country' => 'Congolese (DRC)', 'name' => 'Franc', 'code' => 'CDF', 'cents' => 'centime'],
+            'COK' => ['country' => 'Cook Islands', 'name' => 'Dollar', 'code' => 'NZD', 'cents' => 'cents'],
+            'CRI' => ['country' => 'Costa Rican', 'name' => 'Colón', 'code' => 'CRC', 'cents' => 'céntimo'],
+            'CIV' => ['country' => 'Ivorian', 'name' => 'CFA Franc', 'code' => 'XOF', 'cents' => 'centime'],
+            'HRV' => ['country' => 'Croatian', 'name' => 'Kuna', 'code' => 'HRK', 'cents' => 'lipa'],
+            'CUB' => ['country' => 'Cuban', 'name' => 'Peso', 'code' => 'CUP', 'cents' => 'centavo'],
+            'CYP' => ['country' => 'Cypriot', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cents'],
+            'CZE' => ['country' => 'Czech', 'name' => 'Koruna', 'code' => 'CZK', 'cents' => 'haléř'],
+            'DMA' => ['country' => 'Dominican', 'name' => 'Dollar', 'code' => 'XCD', 'cents' => 'cents'],
+            'DOM' => ['country' => 'Dominican Republic', 'name' => 'Peso', 'code' => 'DOP', 'cents' => 'centavo'],
+            'DJI' => ['country' => 'Djiboutian', 'name' => 'Franc', 'code' => 'DJF', 'cents' => 'centime'],
+            'DNK' => ['country' => 'Danish', 'name' => 'Krone', 'code' => 'DKK', 'cents' => 'øre'],
+            'ECU' => ['country' => 'Ecuadorian', 'name' => 'Dollar', 'code' => 'USD', 'cents' => 'cent'],
+            'EGY' => ['country' => 'Egyptian', 'name' => 'Pound', 'code' => 'EGP', 'cents' => 'piastre'],
+            'SLV' => ['country' => 'Salvadoran', 'name' => 'Dollar', 'code' => 'USD', 'cents' => 'centavos'],
+            'GNQ' => ['country' => 'Equatorial Guinean', 'name' => 'CFA Franc', 'code' => 'XAF', 'cents' => 'centime'],
+            'ERI' => ['country' => 'Eritrean', 'name' => 'Nakfa', 'code' => 'ERN', 'cents' => 'cents'],
+            'EST' => ['country' => 'Estonian', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cents'],
+            'ETH' => ['country' => 'Ethiopian', 'name' => 'Birr', 'code' => 'ETB', 'cents' => 'cent'],
+            'FRO' => ['country' => 'Faroese', 'name' => 'Króna', 'code' => 'DKK', 'cents' => 'øre'],
+            'FIN' => ['country' => 'Finnish', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cents'],
+            'FJI' => ['country' => 'Fijian', 'name' => 'Dollar', 'code' => 'FJD', 'cents' => 'cents'],
+            'FRA' => ['country' => 'French', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cents'],
+            'GAB' => ['country' => 'Gabonese', 'name' => 'CFA Franc', 'code' => 'XAF', 'cents' => 'centime'],
+            'GMB' => ['country' => 'Gambian', 'name' => 'Dalasi', 'code' => 'GMD', 'cents' => 'butut'],
+            'GEO' => ['country' => 'Georgian', 'name' => 'Lari', 'code' => 'GEL', 'cents' => 'tetri'],
+            'DEU' => ['country' => 'German', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cents'],
+            'GHA' => ['country' => 'Ghanaian', 'name' => 'Cedi', 'code' => 'GHS', 'cents' => 'pesewa'],
+            'GRC' => ['country' => 'Greek', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cents'],
+            'GRD' => ['country' => 'Grenadian', 'name' => 'Dollar', 'code' => 'XCD', 'cents' => 'cents'],
+            'GUM' => ['country' => 'Guamanian', 'name' => 'Dollar', 'code' => 'USD', 'cents' => 'cents'],
+            'GTM' => ['country' => 'Guatemalan', 'name' => 'Quetzal', 'code' => 'GTQ', 'cents' => 'centavo'],
+            'GIN' => ['country' => 'Guinean', 'name' => 'Franc', 'code' => 'GNF', 'cents' => 'santim'],
+            'GNB' => ['country' => 'Guinea-Bissauan', 'name' => 'CFA Franc', 'code' => 'XOF', 'cents' => 'centime'],
+            'GUY' => ['country' => 'Guyanese', 'name' => 'Dollar', 'code' => 'GYD', 'cents' => 'cent'],
+            'HTI' => ['country' => 'Haitian', 'name' => 'Gourde', 'code' => 'HTG', 'cents' => 'centime'],
+            'HKG' => ['country' => 'Hong Kong', 'name' => 'Dollar', 'code' => 'HKD', 'cents' => 'cent'],
+            'HND' => ['country' => 'Honduran', 'name' => 'Lempira', 'code' => 'HNL', 'cents' => 'centavo'],
+            'HUN' => ['country' => 'Hungarian', 'name' => 'Forint', 'code' => 'HUF', 'cents' => 'filler'],
+            'ISL' => ['country' => 'Icelandic', 'name' => 'Króna', 'code' => 'ISK', 'cents' => 'aurar'],
+            'IND' => ['country' => 'Indian', 'name' => 'Rupee', 'code' => 'INR', 'cents' => 'paisa'],
+            'IDN' => ['country' => 'Indonesian', 'name' => 'Rupiah', 'code' => 'IDR', 'cents' => 'sen'],
+            'IRN' => ['country' => 'Iranian', 'name' => 'Rial', 'code' => 'IRR', 'cents' => 'rial'],
+            'IRQ' => ['country' => 'Iraqi', 'name' => 'Dinar', 'code' => 'IQD', 'cents' => 'fils'],
+            'IRL' => ['country' => 'Irish', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'ISR' => ['country' => 'Israeli', 'name' => 'New Shekel', 'code' => 'ILS', 'cents' => 'agora'],
+            'ITA' => ['country' => 'Italian', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'JAM' => ['country' => 'Jamaican', 'name' => 'Dollar', 'code' => 'JMD', 'cents' => 'cent'],
+            'JPN' => ['country' => 'Japanese', 'name' => 'Yen', 'code' => 'JPY', 'cents' => 'sen'],
+            'JOR' => ['country' => 'Jordanian', 'name' => 'Dinar', 'code' => 'JOD', 'cents' => 'piastre'],
+            'KAZ' => ['country' => 'Kazakh', 'name' => 'Tenge', 'code' => 'KZT', 'cents' => 'tiyn'],
+            'KEN' => ['country' => 'Kenyan', 'name' => 'Shilling', 'code' => 'KES', 'cents' => 'cent'],
+            'KIR' => ['country' => 'Kiribati', 'name' => 'Dollar', 'code' => 'AUD', 'cents' => 'cents'],
+            'PRK' => ['country' => 'North Korean', 'name' => 'Won', 'code' => 'KPW', 'cents' => 'chon'],
+            'KOR' => ['country' => 'South Korean', 'name' => 'Won', 'code' => 'KRW', 'cents' => 'jeon'],
+            'KWT' => ['country' => 'Kuwaiti', 'name' => 'Dinar', 'code' => 'KWD', 'cents' => 'fils'],
+            'KGZ' => ['country' => 'Kyrgyz', 'name' => 'Som', 'code' => 'KGS', 'cents' => 'tyiyn'],
+            'LAO' => ['country' => 'Laotian', 'name' => 'Kip', 'code' => 'LAK', 'cents' => 'att'],
+            'LVA' => ['country' => 'Latvian', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'LBN' => ['country' => 'Lebanese', 'name' => 'Pound', 'code' => 'LBP', 'cents' => 'piastre'],
+            'LSO' => ['country' => 'Lesotho', 'name' => 'Loti', 'code' => 'LSL', 'cents' => 'lisente'],
+            'LBR' => ['country' => 'Liberian', 'name' => 'Dollar', 'code' => 'LRD', 'cents' => 'cent'],
+            'LBY' => ['country' => 'Libyan', 'name' => 'Dinar', 'code' => 'LYD', 'cents' => 'dirham'],
+            'LIE' => ['country' => 'Liechtenstein', 'name' => 'Franc', 'code' => 'CHF', 'cents' => 'rappen'],
+            'LTU' => ['country' => 'Lithuanian', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'LUX' => ['country' => 'Luxembourg', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'MKD' => ['country' => 'Macedonian', 'name' => 'Denar', 'code' => 'MKD', 'cents' => 'deni'],
+            'MDG' => ['country' => 'Malagasy', 'name' => 'Ariary', 'code' => 'MGA', 'cents' => 'iraimbilanja'],
+            'MWI' => ['country' => 'Malawian', 'name' => 'Kwacha', 'code' => 'MWK', 'cents' => 'ngwee'],
+            'MYS' => ['country' => 'Malaysian', 'name' => 'Ringgit', 'code' => 'MYR', 'cents' => 'sen'],
+            'MDV' => ['country' => 'Maldivian', 'name' => 'Rufiyaa', 'code' => 'MVR', 'cents' => 'laari'],
+            'MLI' => ['country' => 'Malian', 'name' => 'CFA Franc', 'code' => 'XOF', 'cents' => 'centime'],
+            'MLT' => ['country' => 'Maltese', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'MHL' => ['country' => 'Marshall Islands', 'name' => 'Dollar', 'code' => 'USD', 'cents' => 'cent'],
+            'MRT' => ['country' => 'Mauritanian', 'name' => 'Ouguiya', 'code' => 'MRU', 'cents' => 'Khoums'],
+            'MUS' => ['country' => 'Mauritian', 'name' => 'Rupee', 'code' => 'MUR', 'cents' => 'Cent'],
+            'MEX' => ['country' => 'Mexican', 'name' => 'Peso', 'code' => 'MXN', 'cents' => 'centavo'],
+            'FSM' => ['country' => 'Micronesian', 'name' => 'Dollar', 'code' => 'USD', 'cents' => 'cent'],
+            'MDA' => ['country' => 'Moldovan', 'name' => 'Leu', 'code' => 'MDL', 'cents' => 'bani'],
+            'MCO' => ['country' => 'Monacan', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'MNG' => ['country' => 'Mongolian', 'name' => 'Tugrik', 'code' => 'MNT', 'cents' => 'möngö'],
+            'MNE' => ['country' => 'Montenegrin', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'MAR' => ['country' => 'Moroccan', 'name' => 'Dirham', 'code' => 'MAD', 'cents' => 'Centime'],
+            'MOZ' => ['country' => 'Mozambican', 'name' => 'Metical', 'code' => 'MZN', 'cents' => 'centavo'],
+            'MMR' => ['country' => 'Burmese', 'name' => 'Kyat', 'code' => 'MMK', 'cents' => 'pya'],
+            'NAM' => ['country' => 'Namibian', 'name' => 'Dollar', 'code' => 'NAD', 'cents' => 'cents'],
+            'NRU' => ['country' => 'Nauruan', 'name' => 'Dollar', 'code' => 'AUD', 'cents' => 'cents'],
+            'NPL' => ['country' => 'Nepali', 'name' => 'Rupee', 'code' => 'NPR', 'cents' => 'paisa'],
+            'NLD' => ['country' => 'Dutch', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'NCL' => ['country' => 'New Caledonian', 'name' => 'CFA Franc', 'code' => 'XPF', 'cents' => 'centime'],
+            'NZL' => ['country' => 'New Zealand', 'name' => 'Dollar', 'code' => 'NZD', 'cents' => 'cents'],
+            'NIC' => ['country' => 'Nicaraguan', 'name' => 'Córdoba', 'code' => 'NIO', 'cents' => 'centavo'],
+            'NER' => ['country' => 'Nigerien', 'name' => 'CFA Franc', 'code' => 'XOF', 'cents' => 'centime'],
+            'NGA' => ['country' => 'Nigerian', 'name' => 'Naira', 'code' => 'NGN', 'cents' => 'kobo'],
+            'NOR' => ['country' => 'Norwegian', 'name' => 'Krone', 'code' => 'NOK', 'cents' => 'øre'],
+            'OMN' => ['country' => 'Omani', 'name' => 'Rial', 'code' => 'OMR', 'cents' => 'Baisa'],
+            'NVA' => ['country' => 'Navajo Nation', 'name' => 'Dollar', 'code' => 'USD', 'cents' => 'cent'],
+            'PAK' => ['country' => 'Pakistani', 'name' => 'Rupee', 'code' => 'PKR', 'cents' => 'paisa'],
+            'PLW' => ['country' => 'Palauan', 'name' => 'Dollar', 'code' => 'USD', 'cents' => 'cent'],
+            'PAN' => ['country' => 'Panamanian', 'name' => 'Balboa', 'code' => 'PAB', 'cents' => 'centavo'],
+            'PNG' => ['country' => 'Papua New Guinea', 'name' => 'Kina', 'code' => 'PGK', 'cents' => 'toea'],
+            'PRY' => ['country' => 'Paraguayan', 'name' => 'Guarani', 'code' => 'PYG', 'cents' => 'Céntimo'],
+            'PER' => ['country' => 'Peruvian', 'name' => 'Nuevo Sol', 'code' => 'PEN', 'cents' => 'Céntimo'],
+            'PHL' => ['country' => 'Philippine', 'name' => 'Peso', 'code' => 'PHP', 'cents' => 'Sentimo'],
+            'POL' => ['country' => 'Polish', 'name' => 'Złoty', 'code' => 'PLN', 'cents' => 'Grosz'],
+            'PRT' => ['country' => 'Portuguese', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'QAT' => ['country' => 'Qatari', 'name' => 'Riyal', 'code' => 'QAR', 'cents' => 'dirham'],
+            'ROU' => ['country' => 'Romanian', 'name' => 'Leu', 'code' => 'RON', 'cents' => 'bani'],
+            'RUS' => ['country' => 'Russian', 'name' => 'Ruble', 'code' => 'RUB', 'cents' => 'kopeck'],
+            'RWA' => ['country' => 'Rwandan', 'name' => 'Franc', 'code' => 'RWF', 'cents' => 'centime'],
+            'WSM' => ['country' => 'Samoan', 'name' => 'Tala', 'code' => 'WST', 'cents' => 'Sene'],
+            'KNA' => ['country' => 'Saint Kitts and Nevis', 'name' => 'Dollar', 'code' => 'XCD', 'cents' => 'cent'],
+            'VCT' => ['country' => 'Saint Vincent and the Grenadines', 'name' => 'Dollar', 'code' => 'XCD', 'cents' => 'cent'],
+            'SMR' => ['country' => 'San Marino', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'STP' => ['country' => 'São Toméan', 'name' => 'Dobra', 'code' => 'STN', 'cents' => 'cent'],
+            'SAU' => ['country' => 'Saudi', 'name' => 'Riyal', 'code' => 'SAR', 'cents' => 'halala'],
+            'SEN' => ['country' => 'Senegalese', 'name' => 'CFA Franc', 'code' => 'XOF', 'cents' => 'centime'],
+            'SRB' => ['country' => 'Serbian', 'name' => 'Dinar', 'code' => 'RSD', 'cents' => 'Para'],
+            'SYC' => ['country' => 'Seychellois', 'name' => 'Rupee', 'code' => 'SCR', 'cents' => 'cent'],
+            'SLE' => ['country' => 'Sierra Leonean', 'name' => 'Leone', 'code' => 'SLL', 'cents' => 'cent'],
+            'SGP' => ['country' => 'Singaporean', 'name' => 'Dollar', 'code' => 'SGD', 'cents' => 'cent'],
+            'SVK' => ['country' => 'Slovak', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'SVN' => ['country' => 'Slovenian', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'SLB' => ['country' => 'Solomon Islands', 'name' => 'Dollar', 'code' => 'SBD', 'cents' => 'cent'],
+            'SOM' => ['country' => 'Somali', 'name' => 'Shilling', 'code' => 'SOS', 'cents' => 'cent'],
+            'ZAF' => ['country' => 'South African', 'name' => 'Rand', 'code' => 'ZAR', 'cents' => 'cent'],
+            'SSD' => ['country' => 'South Sudanese', 'name' => 'Pound', 'code' => 'SSP', 'cents' => 'Piaster'],
+            'SDN' => ['country' => 'Sudanese', 'name' => 'Pound', 'code' => 'SDG', 'cents' => 'Piastre'],
+            'ESP' => ['country' => 'Spanish', 'name' => 'Euro', 'code' => 'EUR', 'cents' => 'cent'],
+            'LKA' => ['country' => 'Sri Lankan', 'name' => 'Rupee', 'code' => 'LKR', 'cents' => 'Cent'],
+            'SUR' => ['country' => 'Surinamese', 'name' => 'Dollar', 'code' => 'SRD', 'cents' => 'cent'],
+            'SWZ' => ['country' => 'Swazi', 'name' => 'Lilangeni', 'code' => 'SZL', 'cents' => 'cent'],
+            'SWE' => ['country' => 'Swedish', 'name' => 'Krona', 'code' => 'SEK', 'cents' => 'öre'],
+            'CHE' => ['country' => 'Swiss', 'name' => 'Franc', 'code' => 'CHF', 'cents' => 'rappen'],
+            'SYR' => ['country' => 'Syrian', 'name' => 'Pound', 'code' => 'SYP', 'cents' => 'piastre'],
+            'TWN' => ['country' => 'Taiwanese', 'name' => 'Dollar', 'code' => 'TWD', 'cents' => 'cent'],
+            'TJK' => ['country' => 'Tajik', 'name' => 'Somoni', 'code' => 'TJS', 'cents' => 'diram'],
+            'TZA' => ['country' => 'Tanzanian', 'name' => 'Shilling', 'code' => 'TZS', 'cents' => 'Cent'],
+            'THA' => ['country' => 'Thai', 'name' => 'Baht', 'code' => 'THB', 'cents' => 'Satang'],
+            'TGO' => ['country' => 'Togolese', 'name' => 'CFA Franc', 'code' => 'XOF', 'cents' => 'centime'],
+            'TON' => ['country' => 'Tongan', 'name' => 'Paʻanga', 'code' => 'TOP', 'cents' => 'seniti'],
+            'TTO' => ['country' => 'Trinidad and Tobagonian', 'name' => 'Dollar', 'code' => 'TTD', 'cents' => 'Cent'],
+            'TUN' => ['country' => 'Tunisian', 'name' => 'Dinar', 'code' => 'TND', 'cents' => 'Millime'],
+            'TUR' => ['country' => 'Turkish', 'name' => 'Lira', 'code' => 'TRY', 'cents' => 'kuruş'],
+            'TKM' => ['country' => 'Turkmen', 'name' => 'Manat', 'code' => 'TMT', 'cents' => 'tenge'],
+            'TUV' => ['country' => 'Tuvaluan', 'name' => 'Dollar', 'code' => 'AUD', 'cents' => 'cents'],
+            'UGA' => ['country' => 'Ugandan', 'name' => 'Shilling', 'code' => 'UGX', 'cents' => 'cent'],
+            'UKR' => ['country' => 'Ukrainian', 'name' => 'Hryvnia', 'code' => 'UAH', 'cents' => 'kopiyka'],
+            'ARE' => ['country' => 'Emirati', 'name' => 'Dirham', 'code' => 'AED', 'cents' => 'fils'],
+            'GBR' => ['country' => 'British', 'name' => 'Pound', 'code' => 'GBP', 'cents' => 'pence'],
+            'USA' => ['country' => 'United States', 'name' => 'Dollar', 'code' => 'USD', 'cents' => 'cent'],
+            'URY' => ['country' => 'Uruguayan', 'name' => 'Peso', 'code' => 'UYU', 'cents' => 'centésimo'],
+            'UZB' => ['country' => 'Uzbekistani', 'name' => 'Som', 'code' => 'UZS', 'cents' => 'tiyin'],
+            'VUT' => ['country' => 'Vanuatu', 'name' => 'Vatu', 'code' => 'VUV', 'cents' => 'cent'],
+            'VEN' => ['country' => 'Venezuelan', 'name' => 'Bolívar', 'code' => 'VES', 'cents' => 'centimo'],
+            'VNM' => ['country' => 'Vietnamese', 'name' => 'Dong', 'code' => 'VND', 'cents' => 'hào'],
+            'WLF' => ['country' => 'Wallis and Futuna', 'name' => 'CFP Franc', 'code' => 'CFP', 'cents' => 'centime'],
+            'YEM' => ['country' => 'Yemeni', 'name' => 'Rial', 'code' => 'YER', 'cents' => 'fils'],
+            'ZMB' => ['country' => 'Zambian', 'name' => 'Kwacha', 'code' => 'ZMW', 'cents' => 'ngwee'],
+            'ZWE' => ['country' => 'Zimbabwean', 'name' => 'Dollar', 'code' => 'ZWD', 'cents' => 'cent'],
         ];
+
+        return $data[$iso3] ?? $data;
     }
 
     /**
      * Get the text representation of a currency code.
      *
      * @param string|null $code
-     * - [NGA, USD, EUR]
+     * - [NGA, USA, FRA]
      * 
      * @return array|null
      */
-    static public function getCurrencyValue($code = null) 
+    static public function getCurrencyByIso3($code = null) 
     {
         // convert code to upper
         $code = Str::upper($code);
 
         // get data
-        $data = self::currencyNames()[$code] ?? null;
+        $data = self::allCurrency()[$code] ?? null;
 
         if(is_null($data)){
             return;
         }
 
-        return Str::convertArrayCase($data, 'lower', 'lower');
+        return $data;
     }
     
     /**

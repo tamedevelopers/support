@@ -346,6 +346,50 @@ class Collection implements IteratorAggregate, ArrayAccess
     }
 
     /**
+     * Needed key from items
+     * @param array|string|null  $keys of input
+     * 
+     * @return static
+     */
+    public function only(...$keys)
+    {
+        $keys = Str::flattenValue($keys);
+
+        $data = [];
+
+        foreach($keys as $key){
+            if(in_array($key, array_keys($this->items))){
+                $data[$key] = $this->items[$key];
+            }
+        }
+
+        return new static(
+            $data
+        );
+    }
+
+    /**
+     * Remove key from items
+     * @param array|string|null  $keys of input
+     * 
+     * @return static
+     */
+    public function except(...$keys)
+    {
+        $keys = Str::flattenValue($keys);
+
+        foreach($keys as $key){
+            if(in_array($key, array_keys($this->items))){
+                unset($this->items[$key]);
+            }
+        }
+
+        return new static(
+            $this->items
+        );
+    }
+
+    /**
      * Chunk the collection into arrays with a specified size.
      *
      * @param  int $size

@@ -1094,16 +1094,16 @@ class Tame {
     }
     
     /**
-     * Masks characters in a string.
+     * Masks characters in a string while keeping a specified number of visible characters.
      *
      * @param string|null $str 
      * - The string to be masked.
      * 
      * @param int $length 
-     * - The desired length of the masked string. Default is 4.
+     * - The number of visible characters. Default is 4.
      * 
      * @param string $position 
-     * - The position to apply the mask: 'left', 'center', 'right'. Default is 'right'.
+     * - The position to keep visible: 'left', 'center', 'right'. Default is 'right'.
      * 
      * @param string $mask 
      * - The character used for masking. Default is '*'.
@@ -1118,69 +1118,52 @@ class Tame {
             return $str;
         }
 
-        // trim string
+        // Trim string and position input
         $str = Str::trim($str);
         $position = Str::trim($position);
 
         // Get the length of the string
         $strLength = mb_strlen($str, 'UTF-8');
 
+        // If length is greater than or equal to the string length, return the original string (nothing to mask)
+        if ($length >= $strLength) {
+            return $str;
+        }
+
+        // Calculate the number of masked characters
+        $maskedLength = max(0, $strLength - $length);
+
         // Check if it's an email by finding the last occurrence of "@"
         $atPosition = mb_strrpos($str, "@", 0, 'UTF-8');
-
-        // Check if it's an actual email
         $isEmail = self::emailValidator($str, false, false);
 
-        // Convert length to integer
-        $length = (int) $length;
-
-        // Ensure the mask length does not exceed the string length
-        $length = min($length, $strLength);
-
-        // is length and string length is same, then divide num into two
-        if($strLength === $length){
-            $length = (int) ceil($length / 2);
-        }
-
-        // Calculate number of unmasked characters
-        $unmaskedLength = $strLength - $length;
-
-        // if valid email address and position of email is found
+        // If it's a valid email, mask only the email part (excluding the domain)
         if ($isEmail && $atPosition !== false) {
-            // extract email without the tld (top-level domain)
             $email = mb_substr($str, 0, mb_strpos($str, "@"));
-
-            // extract only the tld, to be added at the end
             $tld = mb_substr($str, mb_strpos($str, "@"));
 
-            // now mask only the email using the middle position
-            $maskedString = self::mask($email, $length, $position);
-
-            return "{$maskedString}{$tld}";
+            // Mask only the email part, keeping visibility as per the $length
+            $maskedEmail = self::mask($email, $length, $position);
+            return "{$maskedEmail}{$tld}";
         }
 
-        // For left position
-        if ($position == 'left') {
-            // Mask the first 'length' characters and leave the rest visible
-            return str_repeat($mask, $length) . mb_substr($str, $length, null, 'UTF-8');
+        // Left masking: Show first 'length' characters, mask the rest
+        if ($position === 'left') {
+            return mb_substr($str, 0, $length, 'UTF-8') . str_repeat($mask, $maskedLength);
         } 
-        elseif ($position == 'right') {
-            // Mask the right part of the string
-            return mb_substr($str, 0, $unmaskedLength, 'UTF-8') . str_repeat($mask, $length);
+        // Right masking: Mask everything except the last 'length' characters
+        elseif ($position === 'right') {
+            return str_repeat($mask, $maskedLength) . mb_substr($str, -$length, null, 'UTF-8');
         } 
+        // Center masking: Keep equal parts visible on both sides
         else {
-            // Calculate how much to keep visible on both sides
-            $halfLength = (int) floor(($strLength - $length) / 2); // Evenly distribute the mask
-
-            // Ensure the remaining visible part accounts for the total length correctly
-            $start      = mb_substr($str, 0, $halfLength);
-            $end        = mb_substr($str, - $halfLength);
-
-            // Mask the middle portion
-            return $start . str_repeat($mask, $length) . $end;
+            $halfVisible = (int) floor($length / 2);
+            $start = mb_substr($str, 0, $halfVisible, 'UTF-8');
+            $end = mb_substr($str, -$halfVisible, null, 'UTF-8');
+            return $start . str_repeat($mask, $maskedLength) . $end;
         }
     }
-
+    
     /**
      * Validate an email address.
      *

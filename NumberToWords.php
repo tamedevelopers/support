@@ -98,7 +98,7 @@ class NumberToWords {
      */
     public function __iso($code = null)
     {
-        $this->currencyData = self::getCurrencyValue($code);
+        $this->currencyData = self::getCurrencyByIso3($code);
 
         return $this;
     }
@@ -362,8 +362,8 @@ class NumberToWords {
      */
     static private function removeCurrencyNames($value)
     {
-        // Get all currency and cent names from the CurrencyNames() method
-        $currencyData = self::CurrencyNames();
+        // Get all currency and cent names from the allCurrency() method
+        $currencyData = self::allCurrency();
 
         // Loop through each currency and remove the corresponding names from the value string
         foreach ($currencyData as $currency) {

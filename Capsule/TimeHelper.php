@@ -115,7 +115,7 @@ class TimeHelper {
         }
 
         if (is_numeric($date)) {
-            $date = date('M d Y', (int) $date);
+            $date = date('M d Y h:ia', (int) $date);
         }
 
         // if instance of Carbon

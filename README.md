@@ -40,6 +40,7 @@ Support Package For PHP and Laravel
     * [shorten](#shorten)
     * [random](#random)
     * [formatString](#formatString)
+    * [formatOnlyString](#formatOnlyString)
     * [encrypt](#encrypt)
     * [decrypt](#decrypt)
     * [bindings](#bindings)
@@ -77,6 +78,7 @@ Support Package For PHP and Laravel
     * [date](#date)
     * [today](#today)
     * [yesterday](#yesterday)
+    * [createFromFormat](#createFromFormat)
     * [timestamp](#timestamp)
     * [toJsTimer](#toJsTimer)
     * [diff](#diff)
@@ -286,20 +288,20 @@ Tame()->unlink(base_path('path/to/directory/avatar.png'), 'default.png');
 | Params        | Description                                                                                   |
 |---------------|-----------------------------------------------------------------------------------------------|
 | `$str`        | The string to be masked.                                                                      |
-| `$length`     | The number of characters to mask (default is 4).                                              |
+| `$length`     | The number of visible characters. Default is 4.                                              |
 | `$position`   | The position to apply the mask: `'left'`, `'center'`, or `'right'` (default is `'right'`).    |
 | `$mask`       | The character used for masking (default is `*`).                                              |
 
 #### Example:
 ```
 Tame()->mask('example@email.com', 4, 'left');
-// Output: "****ple@email.com"
+// Output: "exam***@email.com"
 
 Tame()->mask('example@email.com', 4, 'right');
-// Output: "exa****@email.com"
+// Output: "e***mple@email.com"
 
 Tame()->mask('shortstring', 4, 'center');
-// Output: "sho****ing"
+// Output: "sh*******ng"
 ```
 
 ### imageToBase64
@@ -590,6 +592,15 @@ $time->date("first day of this month")->toDateTimeString()
 ```
 $time->today();
 $time->yesterday();
+```
+
+### createFromFormat
+- Accepts two parameter [date, format]
+    - only [date] is mandatory and returns the Time(object)
+
+```
+$time->createFromFormat('24 Jan 2025 14:00:00', 'm/d/Y h:ia');
+// object(Tamedevelopers\Support\Time)
 ```
 
 ### timestamp

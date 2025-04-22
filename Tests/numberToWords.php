@@ -21,7 +21,7 @@ dd(
         ->toNumber(),
 
 
-    NumberToWords()->getCurrencyValue('nga'),
-    // NumberToWords()->CurrencyNames(),
+    NumberToWords()->getCurrencyByIso3('nga'),
+    // NumberToWords()->allCurrency(),
     // NumberToWords::getUnits(),
 );

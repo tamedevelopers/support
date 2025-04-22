@@ -233,6 +233,20 @@ class Time {
     {
         return $this->buildTimeModifier('year', $value, true);
     }
+    
+    /**
+     * Create date from Format
+     *
+     * @param  int|string $datetime
+     * @param  string $format
+     * @return void
+     */
+    public function createFromFormat($datetime, $format = 'm/d/Y h:i:sa')
+    {
+        return $this->__setDate(
+            self::timestamp($datetime, $format)
+        );
+    }
 
     /**
      * Set custom time
