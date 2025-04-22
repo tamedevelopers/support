@@ -15,7 +15,7 @@ dump(
     domain(), 
     domain('admin'),
     tasset('zip.php'),
-    tasset('zip.php', true, true),
+    tasset('zip.php', true, false),
 
     urlHelper()->server(),
 

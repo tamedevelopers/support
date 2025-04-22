@@ -41,7 +41,7 @@ class UrlHelper {
     {
         $request = $_SERVER['REQUEST_URI'] ?? null;
 
-        return str_replace(self::path(), '', $request);
+        return Str::replace(self::path(), '', $request);
     }
 
     /**

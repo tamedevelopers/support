@@ -320,7 +320,7 @@ if (! function_exists('tasset')) {
      * @param bool|null $cache
      * 
      * @param bool|null $path_type
-     * -[optional] Default is false (Absolute Path)|Else -- False is (Relative path)
+     * -[optional] Default is true (Absolute Path)|Else -- false is (Relative path)
      * 
      * @return string
      */
@@ -345,7 +345,7 @@ if (! function_exists('config_asset')) {
      * - Time will only change if you make changes or modify the request file
      * 
      * @param bool $path_type
-     * -[optional] Default is false (Absolute Path)|Else -- False is (Relative path)
+     * -[optional] Default is false[Absolute Path] | true[Relative path]
      * 
      * @return void
      */

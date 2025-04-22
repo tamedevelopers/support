@@ -91,7 +91,7 @@ class Asset{
      * - Time will only change if you make changes or modify the request file
      * 
      * @param string $path_type
-     * -[optional] Default is false (Absolute Path)|Else -- False is (Relative path)
+     * -[optional] Default is false[Absolute Path] | true[Relative path]
      * 
      * @return void
      */
