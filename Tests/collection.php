@@ -56,6 +56,10 @@ $collection = TameCollect($data);
 $iterator = $collection->getIterator();
 foreach ($iterator as $item) {
     // Process each item
+
+    dd(
+        $item
+    );
 }
 
 

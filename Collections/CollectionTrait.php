@@ -8,14 +8,9 @@ use Exception;
 use Traversable;
 use JsonSerializable;
 use Tamedevelopers\Support\Server;
-
-/** @psalm-suppress UndefinedClass @phpstan-ignore-next-line */
 use Tamedevelopers\Database\Collections\Collection as DBCollection;
 
 
-/**
- * @var \Tamedevelopers\Database\Collections\Collection $items
- */
 trait CollectionTrait{
 
     /**
