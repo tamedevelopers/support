@@ -10,7 +10,7 @@ Support Package For PHP and Laravel
 * [Installation](#installation)
 * [All Paths](#all-paths)
 * [Number to Words](#number-to-words)
-    * [ISO](#iso)
+    * [Iso](#iso)
     * [Cents](#Cents)
     * [Value](#value)
     * [toText](#toText)
