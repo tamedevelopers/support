@@ -389,9 +389,79 @@ Tame()->formatNumberToNearestThousand(1500000);
 - The Core Class For String Manipulations
     - It's helper class can be called, using -- `TameStr()`
 
+```php
+use Tamedevelopers\Support\Str;
+
+// Quick examples
+Str::replaceFirst('foo', 'bar', 'foofoo'); // 'barfoo'
+Str::words('The quick brown fox jumps', 3); // 'The quick brown...'
+Str::ascii('Jürgen'); // 'Jurgen'
+Str::padLeft('7', 3, '0'); // '007'
+Str::is('user/*', 'user/42'); // true
+Str::exceptArray(['a'=>1,'b'=>2], 'a'); // ['b'=>2]
+Str::convertArrayCase(['Name' => ['Age' => 1]], 'lower', 'upper'); // ['name' => ['age' => 1]]
 ```
-Tamedevelopers\Support\Str
-``` 
+
+## File
+- The Core File utilities (read, write, copy, move, info).
+    - Class: `Tamedevelopers\Support\Capsule\File`
+
+```php
+use Tamedevelopers\Support\Capsule\File;
+
+// Create directory
+File::makeDirectory(storage_path('logs'));
+
+// Write & read
+File::put(storage_path('logs/app.log'), 'Hello');
+$content = File::get(storage_path('logs/app.log')); // 'Hello'
+
+// Info
+File::exists(storage_path('logs/app.log')); // true
+File::size(storage_path('logs/app.log')); // int bytes
+File::extension(storage_path('logs/app.log')); // 'log'
+File::lastModified(storage_path('logs/app.log')); // timestamp
+
+// Move/Copy/Delete
+File::copy(storage_path('logs/app.log'), storage_path('logs/app_copy.log'));
+File::move(storage_path('logs/app_copy.log'), storage_path('logs/app_moved.log'));
+File::delete(storage_path('logs/app_moved.log'));
+
+// List files
+$files = File::files(storage_path('logs')); // array of SplFileInfo
+```
+
+## Collection
+- Lightweight collection utilities.
+    - Class: `Tamedevelopers\Support\Collections\Collection`
+
+```php
+use Tamedevelopers\Support\Collections\Collection;
+
+$users = new Collection([
+    ['id' => 1, 'name' => 'Ada'],
+    ['id' => 2, 'name' => 'Ben'],
+    ['id' => 3, 'name' => 'Cee'],
+]);
+
+$users->isEmpty();       // false
+$users->count();         // 3
+$users->keys()->all();   // [0,1,2]
+$users->values()->all(); // same as original but reindexed
+
+// Keep only specific keys from an associative array
+$profile = new Collection(['id'=>1,'name'=>'Ada','role'=>'admin']);
+$profile->only('id', 'name')->all();     // ['id'=>1,'name'=>'Ada']
+$profile->except('role')->all();         // ['id'=>1,'name'=>'Ada']
+
+// Filtering
+$even = (new Collection([1,2,3,4]))->filter(fn($v) => $v % 2 === 0)->all(); // [2,4]
+
+// Merge/Chunk/Reverse
+(new Collection([1,2]))->merge([3,4])->all(); // [1,2,3,4]
+(new Collection(range(1,6)))->chunk(2)->all(); // [[1,2],[3,4],[5,6]]
+(new Collection([1,2,3]))->reverse()->all(); // [3,2,1]
+```
 
 ## Mail
 - The Core Class/Wrapper For `PHPMailer`
