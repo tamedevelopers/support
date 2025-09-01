@@ -239,7 +239,7 @@ trait TimeTrait{
      * @param mixed $clone
      * @return mixed
      */
-    static private function nonExistMethod($method = null, $args = null, $clone = null) 
+    private static function nonExistMethod($method = null, $args = null, $clone = null) 
     {
         // convert to lowercase
         $name = Str::lower($method);

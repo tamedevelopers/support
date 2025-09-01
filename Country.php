@@ -10,103 +10,94 @@ use Tamedevelopers\Support\Traits\CountryTrait;
 class Country {
 
     use CountryTrait;
+
     
     /**
-     * Get Country ISO 3
-     * @param  string|null $mode
-     * @return string|null
-     */
-    public static function getCountryIso3($mode = null)
-    {
-        return self::countryIso3()[self::mode($mode)] ?? null;
-    }
-
-    /**
-     * Get Country ISO 2
-     * @param  string|null $mode
-     * @return string|null
-     */
-    public static function getCountryIso2($mode = null)
-    {
-        return self::countryIso2()[self::mode($mode)] ?? null;
-    }
-
-    /**
-     * Get Country Flags for ISO 3
-     * @param  string|null $mode
-     * @return string|null
-     */
-    public static function getCountryFlagIso3($mode = null)
-    {
-        return self::countryFlagIso3()[self::mode($mode)] ?? null;
-    }
-
-    /**
-     * Get Country Flags for ISO 2
-     * @param  string|null $mode
-     * @return string|null
-     */
-    public static function getCountryFlagIso2($mode = null)
-    {
-        return self::countryFlagIso2()[self::mode($mode)] ?? null;
-    }
-
-    /**
-     * Get Months Data
+     * Alias for getCountryIso3() method
      * 
+     * @param  string|null $mode 
      * @return string|null
      */
-    public static function getMonths($mode = null)
+    public static function iso3($mode = null)
     {
-        return self::months()[$mode] ?? null;
+        return self::getCountryIso3($mode);
     }
-
+    
     /**
-     * Get Week
-     * @param  string|null $mode
-     * @return string|null
-     */
-    public static function getWeeks($mode = null)
-    {
-        return self::weeks()[$mode] ?? null;
-    }
-
-    /**
-     * Get Time Zones
-     *
-     * @param  string|null $mode
-     * @param  string|null $default
+     * Alias for getCountryIso2() method
      * 
+     * @param  string|null $mode 
      * @return string|null
      */
-    public static function getTimeZone($mode = null, ?string $default = 'UTC')
+    public static function iso2($mode = null)
     {
-        $data = self::timeZone();
-
-        // check if mode is numeric
-        if(is_numeric($mode)){
-            return $data[(int) $mode] ?? $default;
-        }
-
-        // flip array to get position num
-        $flip = array_flip($data);
-
-        return $data[$flip[$mode] ?? null] ?? $default;
+        return self::getCountryIso2($mode);
     }
 
     /**
-     * Get Captcha Locale
-     * @param  string|null $mode
+     * Alias for getCountryFlagIso3() method
      * 
+     * @param  string|null $mode 
      * @return string|null
      */
-    public static function getCaptchaLocale($mode = null)
+    public static function flagIso3($mode = null)
     {
-        $data = self::captchaLocale();
-
-        return $data[$mode] 
-                ?? array_flip($data)[$mode]
-                ?? null;
+        return self::getCountryFlagIso3($mode);
     }
+
+    /**
+     * Alias for getCountryFlagIso2() method
+     * 
+     * @param  string|null $mode 
+     * @return string|null
+     */
+    public static function flagIso2($mode = null)
+    {
+        return self::getCountryFlagIso2($mode);
+    }
+
+    /**
+     * Alias for getMonths() method
+     * 
+     * @param  string|null $mode 
+     * @return string|null
+     */
+    public static function month($mode = null)
+    {
+        return self::getMonths($mode);
+    }
+
+    /**
+     * Alias for getWeeks() method
+     * 
+     * @param  string|null $mode 
+     * @return string|null
+     */
+    public static function week($mode = null)
+    {
+        return self::getWeeks($mode);
+    }
+
+    /**
+     * Alias for getTimeZone() method
+     * 
+     * @param  string|null $mode 
+     * @return string|null
+     */
+    public static function zone($mode = null)
+    {
+        return self::getTimeZone($mode);
+    }
+
+    /**
+     * Alias for getCaptchaLocale() method
+     * 
+     * @return array
+     */
+    public static function captcha()
+    {
+        return self::getCaptchaLocale();
+    }
+    
 
 }

@@ -19,7 +19,7 @@ class Slugify{
      *
      * @var string
      */
-    static private $locale;
+    private static $locale;
         
     /**
      * slug
@@ -108,7 +108,7 @@ class Slugify{
      * @param  string|null $locale
      * @return string
      */
-    static private function switchLanguage($locale = null)
+    private static function switchLanguage($locale = null)
     {
         return self::locales()[$locale] ?? 'default';
     }
@@ -118,7 +118,7 @@ class Slugify{
      *
      * @return array
      */
-    static private function supportedLanguage()
+    private static function supportedLanguage()
     {
         return [
             'arabic', 

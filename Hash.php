@@ -55,7 +55,7 @@ final class Hash {
      * @param  mixed $maxPasswordLength
      * @return void
      */
-    static private function passwordLengthVerifier($password, $maxPasswordLength = 72)
+    private static function passwordLengthVerifier($password, $maxPasswordLength = 72)
     {
         try {
             if (mb_strlen($password, 'UTF-8') > $maxPasswordLength) {

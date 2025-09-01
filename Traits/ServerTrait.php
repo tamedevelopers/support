@@ -63,7 +63,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    static private function serverRoot()
+    private static function serverRoot()
     {
         return self::getServers('server');
     }
@@ -212,7 +212,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    static private function getVendorRootPath()
+    private static function getVendorRootPath()
     {
         $reflection = new ReflectionClass(\Composer\Autoload\ClassLoader::class);
         $vendorPath = dirname($reflection->getFileName(), 2);
@@ -225,7 +225,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    static private function getDirectRootPath()
+    private static function getDirectRootPath()
     {
         $documentRoot   = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']);
         $currentScript  = str_replace('\\', '/', $_SERVER['SCRIPT_FILENAME']);

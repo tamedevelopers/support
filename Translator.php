@@ -74,7 +74,7 @@ class Translator{
      *
      * @return void
      */
-    static private function isLanguagePublished()
+    private static function isLanguagePublished()
     {
         if(! is_dir(lang_path())){
             // create directory

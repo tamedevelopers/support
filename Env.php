@@ -28,13 +28,13 @@ class Env {
      * 
      * @var mixed
      */
-    static private $sym_path;
+    private static $sym_path;
 
     /**
      * Instance of self class
      * @var mixed
      */
-    static private $class;
+    private static $class;
 
     /**
      * Define custom Server root path
@@ -59,7 +59,7 @@ class Env {
      * Initialization of self class
      * @return void
      */
-    static private function init() 
+    private static function init() 
     {
         self::$class = new self();
     }
@@ -333,7 +333,7 @@ class Env {
      *  
      * @return void
      */
-    static private function createDir_AndFiles($directory = null,  $filename = null)
+    private static function createDir_AndFiles($directory = null,  $filename = null)
     {
         // if system path is null
         // calling the `new self()` will initalize the class and set the default path for us
@@ -364,7 +364,7 @@ class Env {
      * @param  string|null $path
      * @return void
      */
-    static private function createSymPath($path = null)
+    private static function createSymPath($path = null)
     {
         // if sym_path is null
         if(is_null(self::$sym_path) || !(empty($path) && is_null($path))){
@@ -386,7 +386,7 @@ class Env {
      *
      * @return bool
      */
-    static private function isDotenvInstalled()
+    private static function isDotenvInstalled()
     {
         if(class_exists('Dotenv\Dotenv')){
             return true;
@@ -400,7 +400,7 @@ class Env {
      *
      * @return array 
      */
-    static private function error_levels()
+    private static function error_levels()
     {
         return array(
             E_ERROR             => 'Fatal Error',
@@ -421,7 +421,7 @@ class Env {
      *
      * @return bool 
      */
-    static private function is_debug() 
+    private static function is_debug() 
     {
         return Manager::isEnvBool(env('APP_DEBUG', true));
     }    
@@ -431,7 +431,7 @@ class Env {
      *
      * @return bool Returns true if the application is running in local environment, false otherwise.
      */
-    static private function is_local()
+    private static function is_local()
     {
         // check using default setting
         if(env('APP_ENV') == 'local'){
@@ -447,7 +447,7 @@ class Env {
      * 
      * @return string
      */
-    static private function envTxt()
+    private static function envTxt()
     {
         return (new Manager)->envDummy();
     }

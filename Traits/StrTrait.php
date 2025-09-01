@@ -173,7 +173,7 @@ trait StrTrait{
      * @param  mixed $subject
      * @return mixed
      */
-    static private function replaceSubject($subject = null): mixed
+    private static function replaceSubject($subject = null): mixed
     {
         return is_null($subject) ? (string) $subject : $subject;
     }
@@ -186,7 +186,7 @@ trait StrTrait{
      *
      * @return string The string with converted case
      */
-    static private function convertCase($string = null, $type = null): string
+    private static function convertCase($string = null, $type = null): string
     {
         return match (self::lower($type)) {
             'upper', 'uppercase', 'upper_case' => self::upper($string),

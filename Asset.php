@@ -140,7 +140,7 @@ class Asset{
      * 
      * @return int|false
      */
-    static private function getFiletime(?string $file_path = null) 
+    private static function getFiletime(?string $file_path = null) 
     {
         return file_exists($file_path) 
                 ? "?v=" . filemtime($file_path)

@@ -82,7 +82,7 @@ class Manager{
      * 
      * @return string
      */
-    static private function generate($length = 32)
+    private static function generate($length = 32)
     {
         $randomBytes = random_bytes($length);
         $appKey = 'base64:' . rtrim(strtr(base64_encode($randomBytes), '+/', '-_'), '=');

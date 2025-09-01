@@ -182,7 +182,7 @@ class Server{
      * @param mixed $data
      * @return bool
      */
-    static private function isNotValidArray(mixed $data = null)
+    private static function isNotValidArray(mixed $data = null)
     {
         // Return true if $data is not an array
         if (!is_array($data)) {
@@ -207,7 +207,7 @@ class Server{
      * @param mixed $data
      * @return bool
      */
-    static private function isValidJson(mixed $data = null)
+    private static function isValidJson(mixed $data = null)
     {
         if(is_string($data)){
             json_decode($data);

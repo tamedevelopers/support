@@ -224,7 +224,7 @@ class Cookie{
      * @param int|string $minutes
      * @return int
      */
-    static private function minutesToExpire($minutes = 0)
+    private static function minutesToExpire($minutes = 0)
     {
         // options
         if(empty($minutes)){
@@ -253,7 +253,7 @@ class Cookie{
      * @param  bool|null  $force
      * @return array
      */
-    static private function getDefaultPathAndDomain($path = null, $value = null, $domain = null, $secure = null, $httponly = null, $force = null)
+    private static function getDefaultPathAndDomain($path = null, $value = null, $domain = null, $secure = null, $httponly = null, $force = null)
     {
         return [
             !empty($path) ? $path : '/', 

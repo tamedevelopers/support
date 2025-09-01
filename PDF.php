@@ -26,21 +26,21 @@ class PDF{
      *
      * @var mixed
      */
-    static private $dompdf;    
+    private static $dompdf;    
      
     /**
      * options
      *
      * @var array
      */
-    static private $options = []; 
+    private static $options = []; 
 
     /**
      * init
      *
      * @return void
      */
-    static private function init() 
+    private static function init() 
     {
         $options = self::isDOMPDFInstalled();
         $options->set('defaultMediaType', 'all');
@@ -157,7 +157,7 @@ class PDF{
      *
      * @return mixed
      */
-    static private function isDOMPDFInstalled()
+    private static function isDOMPDFInstalled()
     {
         try {
             if (class_exists('Dompdf\Options')) {

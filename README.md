@@ -33,6 +33,7 @@ Support Package For PHP and Laravel
     * [getBetweenBoxLengthAndWeightInKg](#getBetweenBoxLengthAndWeightInKg)
     * [getBetweenBoxLengthAndWeightInCMB](#getBetweenBoxLengthAndWeightInCMB)
 * [Str](#str)
+    * [Usage](#str-usage)
     * [phone](#phone)
     * [mask](#mask)
     * [html](#html)
@@ -52,6 +53,117 @@ Support Package For PHP and Laravel
     * [changeKeysFromArray](#changeKeysFromArray)
     * [convertArrayKey](#convertArrayKey)
     * [convertArrayCase](#convertArrayCase)
+* [Country](#country)
+    * [Usage](#country-usage)
+    * [iso3](#country-iso3)
+    * [iso2](#country-iso2)
+    * [flagIso3](#country-flagIso3)
+    * [flagIso2](#country-flagIso2)
+    * [month](#country-month)
+    * [week](#country-week)
+    * [zone](#country-zone)
+    * [captcha](#country-captcha)
+* [File](#file)
+    * [Usage](#file-usage)
+    * [files](#file-files) 
+    * [makeDirectory](#file-makedirectory) 
+    * [exists](#file-exists) 
+    * [get](#file-get)
+    * [put](#file-put)
+    * [delete](#file-delete) 
+    * [copy](#file-copy) 
+    * [move](#file-move)
+    * [size](#file-size) 
+    * [lastModified](#file-lastmodified) 
+    * [extension](#file-extension) 
+    * [name](#file-name) 
+    * [mimeType](#file-mimetype) 
+    * [type](#file-type) 
+    * [permissions](#file-permissions)
+    * [isReadable](#file-isreadable) 
+    * [isWritable](#file-iswritable) 
+    * [isDirectory](#file-isdirectory) 
+    * [isFile](#file-isfile) 
+    * [isFileType](#file-isfiletype)
+* [Collection](#collection)
+    * [Usage](#collection-usage)
+    * [has](#collection-has)
+    * [count](#collection-count)
+    * [all](#collection-all)
+    * [isNotEmpty](#collection-isnotempty)
+    * [isEmpty](#collection-isempty)
+    * [isSame](#collection-issame)
+    * [isDuplicate](#collection-isduplicate)
+    * [reverse](#collection-reverse)
+    * [pad](#collection-pad)
+    * [combine](#collection-combine)
+    * [collapse](#collection-collapse)
+    * [flatten](#collection-flatten)
+    * [zip](#collection-zip)
+    * [merge](#collection-merge)
+    * [only](#collection-only)
+    * [except](#collection-except)
+    * [chunk](#collection-chunk)
+    * [keys](#collection-keys)
+    * [values](#collection-values)
+    * [filter](#collection-filter)
+    * [reject](#collection-reject)
+    * [where](#collection-where)
+    * [whereIn](#collection-wherein)
+    * [whereNotIn](#collection-wherenotin)
+    * [whereNull](#collection-wherenull)
+    * [whereNotNull](#collection-wherenotnull)
+    * [first](#collection-first)
+    * [firstWhere](#collection-firstwhere)
+    * [last](#collection-last)
+    * [contains](#collection-contains)
+    * [doesntContain](#collection-doesntcontain)
+    * [every](#collection-every)
+    * [some](#collection-some)
+    * [select](#collection-select)
+    * [map](#collection-map)
+    * [mapWithKeys](#collection-mapwithkeys)
+    * [pluck](#collection-pluck)
+    * [pluckDot](#collection-pluckdot)
+    * [groupBy](#collection-groupby)
+    * [search](#collection-search)
+    * [sort](#collection-sort)
+    * [sortBy](#collection-sortby)
+    * [sortByMany](#collection-sortbymany)
+    * [sortByDesc](#collection-sortbydesc)
+    * [sortKeys](#collection-sortkeys)
+    * [sortKeysDesc](#collection-sortkeysdesc)
+    * [keyBy](#collection-keyby)
+    * [slice](#collection-slice)
+    * [take](#collection-take)
+    * [takeUntil](#collection-takeuntil)
+    * [skip](#collection-skip)
+    * [concat](#collection-concat)
+    * [union](#collection-union)
+    * [toBase](#collection-tobase)
+    * [pipe](#collection-pipe)
+    * [crossJoin](#collection-crossjoin)
+    * [join](#collection-join)
+    * [unique](#collection-unique)
+    * [each](#collection-each)
+    * [forget](#collection-forget)
+    * [changeKeyCase](#collection-changekeycase)
+    * [reduce](#collection-reduce)
+    * [shuffle](#collection-shuffle)
+    * [partition](#collection-partition)
+    * [tap](#collection-tap)
+    * [chunkWhile](#collection-chunkwhile)
+    * [nth](#collection-nth)
+    * [paginate](#collection-paginate)
+    * [zipWith](#collection-zipwith)
+    * [countBy](#collection-countby)
+    * [duplicates](#collection-duplicates)
+    * [shuffleKeys](#collection-shufflekeys)
+    * [average](#collection-average)
+    * [avg](#collection-avg)
+    * [sum](#collection-sum)
+    * [max](#collection-max)
+    * [min](#collection-min)
 * [Mail](#mail)
     * [config](#config)
     * [to](#to)
@@ -115,11 +227,17 @@ Support Package For PHP and Laravel
     * [request](#request)
     * [referral](#referral)
 * [Cookie](#cookie)
-    * [Set](#set)
-    * [Get](#get)
-    * [Forget](#forget)
-    * [Has](#has)
+    * [Usage](#cookie-usage)
+    * [set](#cookie-set) 
+    * [get](#cookie-get) 
+    * [forget](#cookie-forget) 
+    * [expire](#cookie-expire) 
+    * [all](#cookie-all) 
+    * [has](#cookie-has)
 * [Hash](#hash)
+    * [Usage](#hash-usage)
+    * [make](#hash-make) 
+    * [check](#hash-check)
 * [Asset](#Asset)
     * [Asset config](#asset-config)
         * [Asset Cache](#asset-cache)
@@ -176,7 +294,7 @@ composer require tamedevelopers/support
 | If `iso` is given and found, it'll automatically converts the text into a currency format | If you want the decimals to be translated to text as well. | numeric figures: `299 \| '42,982' \| 3200.98` |
 
 
-### ISO
+### Iso
 - Takes param as `string` and case-insensitive
 
 ```
@@ -389,6 +507,11 @@ Tame()->formatNumberToNearestThousand(1500000);
 - The Core Class For String Manipulations
     - It's helper class can be called, using -- `TameStr()`
 
+### Str Usage
+
+### Methods
+- replaceFirst · replaceLast · words · ascii · padLeft · is · exceptArray · convertArrayCase · flattenValue · bindings · formatString · formatOnlyString · phone · mask · html · text · shorten · random
+
 ```php
 use Tamedevelopers\Support\Str;
 
@@ -405,6 +528,8 @@ Str::convertArrayCase(['Name' => ['Age' => 1]], 'lower', 'upper'); // ['name' =>
 ## File
 - The Core File utilities (read, write, copy, move, info).
     - Class: `Tamedevelopers\Support\Capsule\File`
+
+### File Usage
 
 ```php
 use Tamedevelopers\Support\Capsule\File;
@@ -434,6 +559,9 @@ $files = File::files(storage_path('logs')); // array of SplFileInfo
 ## Collection
 - Lightweight collection utilities.
     - Class: `Tamedevelopers\Support\Collections\Collection`
+    - It's helper class can be called, using -- `TameCollect() | tcollect()`
+
+### Collection Usage
 
 ```php
 use Tamedevelopers\Support\Collections\Collection;
@@ -800,6 +928,8 @@ Time::getTimeZone();
 
 ## Cookie
 
+### Cookie Usage
+
 | function name   | Description                 |
 |-----------------|-----------------------------|
 | set()           | Used to set cookie          |
@@ -859,24 +989,30 @@ TameCookie()->set('user', '__user');
 ```
 
 ## Hash
+
+### Hash Usage
 - Password hashing and verify
 
-```
+```php
 use Tamedevelopers\Support\Hash;
 
 bcrypt('testPassword');
-or
+// or
 Hash::make('testPassword');
 
 // $2y$10$Frh7yG3.qnGdQ9Hd8OK/y.aBWXFLiFD3IWqUjIWWodUhzIVF3DpT6
 ```
 
-### Password verify 
+### hash-make
+```php
+Hash::make('secret');
 ```
+
+### hash-check
+```php
 $oldPassword = "$2y$10$Frh7yG3.qnGdQ9Hd8OK/y.aBWXFLiFD3IWqUjIWWodUhzIVF3DpT6";
-
-Hash::check('testPassword', $oldPassword)
-
+Hash::check('testPassword', $oldPassword);
+// or native
 password_verify('testPassword', $oldPassword);
 ```
 
@@ -943,11 +1079,11 @@ asset_config('storage/style.css', true, true);
 // Output: /storage/style.css?v=111111111
 ```
 
-## ENV
+## Env
 - By default it use the default root as `.env` path, so mandatory to install vendor in root directory.
 
 
-### ENV Create
+### Env Create
 - To create an environment `.env` file. Create or ignore if exists
 
 ```
@@ -956,7 +1092,7 @@ use Tamedevelopers\Support\Env;
 Env::createOrIgnore()
 ```
 
-### ENV Load
+### Env Load
 - To load the environment `.env` file
     - Takes optional param as `string` $path
 
@@ -973,7 +1109,7 @@ Env::load('path_to_env_folder')
 Env::loadOrFail('path_to_env_folder')
 ```
 
-### ENV Update
+### Env Update
 - Returns `true|false`. Used to update env variables
 
 | Params        |  Description      |

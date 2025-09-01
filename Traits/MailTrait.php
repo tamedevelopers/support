@@ -129,14 +129,14 @@ trait MailTrait{
      *
      * @var string
      */
-    static private $constantName = 'TAME_MAILER_CONFIG___';
+    private static $constantName = 'TAME_MAILER_CONFIG___';
     
     /**
      * static
      *
      * @var mixed
      */
-    static private $staticData;
+    private static $staticData;
     
 
     /**
@@ -458,7 +458,7 @@ trait MailTrait{
      *
      * @return array
      */
-    static private function getConfig()
+    private static function getConfig()
     {
         return defined(self::$constantName) 
             ? constant(self::$constantName)
@@ -470,7 +470,7 @@ trait MailTrait{
      *
      * @return bool
      */
-    static private function isMailInstance()
+    private static function isMailInstance()
     {
         return self::$staticData instanceof Mail;
     }
@@ -482,7 +482,7 @@ trait MailTrait{
      * @param mixed $clone
      * @return mixed
      */
-    static private function nonExistMethod($method = null, $args = null, $clone = null) 
+    private static function nonExistMethod($method = null, $args = null, $clone = null) 
     {
         // convert to lowercase
         $name = Str::lower($method);

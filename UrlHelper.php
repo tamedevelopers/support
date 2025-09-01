@@ -118,7 +118,7 @@ class UrlHelper {
      * 
      * @return array
      */
-    static private function localDomainPath()
+    private static function localDomainPath()
     {
         $domainPath = str_replace(
             $_SERVER['DOCUMENT_ROOT'], 
@@ -135,7 +135,7 @@ class UrlHelper {
      * @param string|null $path
      * @return string
      */
-    static private function replace($path = null) 
+    private static function replace($path = null) 
     {
         return Server::pathReplacer($path);
     }
@@ -144,7 +144,7 @@ class UrlHelper {
      * Get server path
      * @return string
      */
-    static private function getServerPath() 
+    private static function getServerPath() 
     {
         return Server::cleanServerPath(
             Server::createAbsolutePath()

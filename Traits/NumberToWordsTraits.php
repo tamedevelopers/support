@@ -22,7 +22,7 @@ trait NumberToWordsTraits
      *
      * @var array
      */
-    static private $units = [
+    private static $units = [
         '',
         'thousand',
         'million',
@@ -48,7 +48,7 @@ trait NumberToWordsTraits
     ];
 
     // Short unit suffixes
-    static private $suffixes = [
+    private static $suffixes = [
         '',
         'k', // Thousand
         'm', // Million
@@ -78,7 +78,7 @@ trait NumberToWordsTraits
      *
      * @var array
      */
-    static private $words = [
+    private static $words = [
         "",
         "one",
         "two",
@@ -106,7 +106,7 @@ trait NumberToWordsTraits
      *
      * @var array
      */
-    static private $tens = [
+    private static $tens = [
         "",
         "",
         "twenty",
@@ -124,7 +124,7 @@ trait NumberToWordsTraits
      *
      * @var array
      */
-    static private $numberMap = [
+    private static $numberMap = [
         'zero' => 0, 
         'one' => 1, 
         'two' => 2, 
@@ -160,7 +160,7 @@ trait NumberToWordsTraits
      *
      * @var array
      */
-    static private $scaleMap = [
+    private static $scaleMap = [
         'hundred' => 100, 
         'thousand' => 1000, 
         'million' => 1000000, 
@@ -454,7 +454,7 @@ trait NumberToWordsTraits
      * @param mixed $clone
      * @return mixed
      */
-    static private function nonExistMethod($method = null, $args = null, $clone = null) 
+    private static function nonExistMethod($method = null, $args = null, $clone = null) 
     {
         // convert to lowercase
         $name = Str::lower($method);

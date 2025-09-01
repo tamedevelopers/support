@@ -139,7 +139,7 @@ trait TameTrait{
      * @return bool 
      * - Whether the email address is valid (true) or not (false).
      */
-    static private function verifyDomain_AndMxRecord($domain = null, ?int $mxCount = 0)
+    private static function verifyDomain_AndMxRecord($domain = null, ?int $mxCount = 0)
     {
         // Method 2: Use DNS check on domain A record
         $domainRecords = dns_get_record($domain, DNS_A);
@@ -155,7 +155,7 @@ trait TameTrait{
      * 
      * @return object
      */
-    static private function openSSLEncrypt()
+    private static function openSSLEncrypt()
     {
         return (object) [
             'key'           => bin2hex(random_bytes(8)),
@@ -171,7 +171,7 @@ trait TameTrait{
      * @param  string|null $path
      * @return mixed
      */
-    static private function getBasePath($path = null)
+    private static function getBasePath($path = null)
     {
         return base_path($path);
     }

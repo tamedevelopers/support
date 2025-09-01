@@ -114,7 +114,7 @@ class Zip {
      * @param string $destination The path to the destination directory where the contents will be extracted.
      * @return bool True if the unzip operation was successful, false otherwise.
      */
-    static private function unzipFile($file, $destination)
+    private static function unzipFile($file, $destination)
     {
         // Create object
         $zip = new ZipArchive();
@@ -140,7 +140,7 @@ class Zip {
      * @param string $destinationZip The path for the resulting zip file.
      * @return bool True if the zip operation was successful, false otherwise.
      */
-    static private function zipFolder($sourceFolder, $destinationZip)
+    private static function zipFolder($sourceFolder, $destinationZip)
     {
         $zip = new ZipArchive();
 
@@ -177,7 +177,7 @@ class Zip {
      * @param string $destination The path to the destination directory where the contents will be extracted.
      * @return bool True if the unzip operation was successful, false otherwise.
      */
-    static private function unzipFolder($sourceFolder, $destination)
+    private static function unzipFolder($sourceFolder, $destination)
     {
         // Ensure the destination directory exists
         if (!is_dir($destination)) {

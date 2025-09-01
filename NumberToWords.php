@@ -37,7 +37,7 @@ class NumberToWords {
      *
      * @var mixed
      */
-    static private $staticData;
+    private static $staticData;
 
     /**
      * Words constructor.
@@ -243,7 +243,7 @@ class NumberToWords {
      * @param  mixed $words
      * @return void
      */
-    static private function convertWordsToNumber($words)
+    private static function convertWordsToNumber($words)
     {
         // Lowercase and trim the string
         $words = Str::lower(Str::trim($words));
@@ -278,7 +278,7 @@ class NumberToWords {
      * @param string $number
      * @return string
      */
-    static private function convertNumberToText($number) 
+    private static function convertNumberToText($number) 
     {
         $number = (string) $number;
         
@@ -295,7 +295,7 @@ class NumberToWords {
      * @param string $number
      * @return string
      */
-    static private function convertIntegerToText($number)
+    private static function convertIntegerToText($number)
     {
         $result = '';
         $i = 0;
@@ -324,7 +324,7 @@ class NumberToWords {
      * @param string $number
      * @return string
      */
-    static private function convertChunkToText($number) 
+    private static function convertChunkToText($number) 
     {
         $result = '';
 
@@ -360,7 +360,7 @@ class NumberToWords {
      * @param  mixed $value
      * @return void
      */
-    static private function removeCurrencyNames($value)
+    private static function removeCurrencyNames($value)
     {
         // Get all currency and cent names from the allCurrency() method
         $currencyData = self::allCurrency();

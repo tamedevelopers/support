@@ -1407,7 +1407,7 @@ class Tame {
      * 
      * @return int|bool 
      */
-    static private function getFiletime($path = null) 
+    private static function getFiletime($path = null) 
     {
         $fullPath = self::stringReplacer($path);
 

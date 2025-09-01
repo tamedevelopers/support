@@ -41,7 +41,7 @@ class Time {
      *
      * @var mixed
      */
-    static private $staticData;
+    private static $staticData;
 
     /**
      * Time constructor.
@@ -649,7 +649,7 @@ class Time {
      * 
      * @return mixed
      */
-    static private function getText($mode  = null)
+    private static function getText($mode  = null)
     {
         if(!defined('TAME_TIME_CONFIG')){
             self::config();
