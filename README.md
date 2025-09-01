@@ -10,7 +10,7 @@ Support Package For PHP and Laravel
 * [Installation](#installation)
 * [All Paths](#all-paths)
 * [Number to Words](#number-to-words)
-    * [Iso](#iso)
+    * [ISO](#iso)
     * [Cents](#Cents)
     * [Value](#value)
     * [toText](#toText)
@@ -49,10 +49,36 @@ Support Package For PHP and Laravel
     * [exceptArray](#exceptArray)
     * [replaceFirst](#replaceFirst)
     * [replaceLast](#replaceLast)
-    * [removeKeysFromArray](#removeKeysFromArray)
-    * [changeKeysFromArray](#changeKeysFromArray)
-    * [convertArrayKey](#convertArrayKey)
+    * [renameArrayKeys](#renameArrayKeys)
+    * [forgetArrayKeys](#forgetArrayKeys)
+    * [changeKeyCase](#changeKeyCase)
     * [convertArrayCase](#convertArrayCase)
+    * [padLeft](#padLeft)
+    * [padRight](#padRight)
+    * [words](#words)
+    * [ascii](#ascii)
+    * [is](#is)
+    * [snake](#snake)
+    * [camel](#camel)
+    * [kebab](#kebab)
+    * [title](#title)
+    * [studly](#studly)
+    * [slugify](#slugify)
+    * [slug](#slug)
+    * [before](#before)
+    * [after](#after)
+    * [between](#between)
+    * [contains](#contains)
+    * [truncate](#truncate)
+    * [reverse](#reverse)
+    * [count](#count)
+    * [countOccurrences](#countOccurrences)
+    * [uuid](#uuid)
+    * [randomWords](#randomWords)
+    * [extension](#extension)
+    * [wrap](#wrap)
+    * [head](#head)
+    * [last](#last)
 * [Country](#country)
     * [Usage](#country-usage)
     * [iso3](#country-iso3)
@@ -185,7 +211,7 @@ Support Package For PHP and Laravel
 * [PDF](#pdf)
     * [Read PDF](#read-pdf)
 * [Time](#time)
-    * [time-data](#time-data)
+    * [time-usage](#time-usage)
     * [now](#now)
     * [date](#date)
     * [today](#today)
@@ -509,25 +535,95 @@ Tame()->formatNumberToNearestThousand(1500000);
 
 ### Str Usage
 
-### Methods
-- replaceFirst · replaceLast · words · ascii · padLeft · is · exceptArray · convertArrayCase · flattenValue · bindings · formatString · formatOnlyString · phone · mask · html · text · shorten · random
-
 ```php
 use Tamedevelopers\Support\Str;
 
-// Quick examples
-Str::replaceFirst('foo', 'bar', 'foofoo'); // 'barfoo'
-Str::words('The quick brown fox jumps', 3); // 'The quick brown...'
-Str::ascii('Jürgen'); // 'Jurgen'
-Str::padLeft('7', 3, '0'); // '007'
-Str::is('user/*', 'user/42'); // true
-Str::exceptArray(['a'=>1,'b'=>2], 'a'); // ['b'=>2]
-Str::convertArrayCase(['Name' => ['Age' => 1]], 'lower', 'upper'); // ['name' => ['age' => 1]]
+// Replace first/last occurrence
+Str::replaceFirst('foo', 'bar', 'foofoo');        // 'barfoo'
+Str::replaceLast('foo', 'bar', 'foofoo');         // 'foobar'
+
+// Word limiting & ASCII
+Str::words('The quick brown fox jumps', 3);       // 'The quick brown...'
+Str::ascii('Jürgen');                              // 'Jurgen'
+
+// Padding
+Str::padLeft('7', 3, '0');                         // '007'
+Str::padRight('7', 3, '0');                        // '700'
+
+// Pattern matching
+Str::is('user/*', 'user/42');                      // true
+Str::contains('brown', 'The quick brown fox');     // true
+
+// Case/format helpers
+Str::snake('Hello World');                         // 'hello_world'
+Str::camel('hello world');                         // 'helloWorld'
+Str::kebab('Hello World');                         // 'hello-world'
+Str::title('hello world');                         // 'Hello World'
+Str::studly('hello world');                        // 'HelloWorld'
+Str::slug('Hello World!');                         // 'hello-world'
+Str::slugify('À bientôt');                         // 'a-bientot'
+
+// Slicing
+Str::before('user:42', ':');                       // 'user'
+Str::after('user:42', ':');                        // '42'
+Str::between('a[core]z', '[', ']');                // 'core'
+
+// Transformations
+Str::reverse('abc');                               // 'cba'
+Str::truncate('lorem ipsum', 5);                   // 'lo...'
+
+// Randoms
+Str::random(8);                                    // 'a1B9...'
+Str::uuid();                                       // 'xxxxxxxx-xxxx-4xxx-...'
+Str::randomWords(3);                               // 'lor em ip'
+
+// Arrays
+Str::exceptArray(['a'=>1,'b'=>2], 'a');            // ['b'=>2]
+Str::renameArrayKeys([['id'=>1]], 'id', 'user_id');// [['user_id'=>1]]
+Str::forgetArrayKeys(['a'=>1,'b'=>2], 'a');        // ['b'=>2]
+Str::bindings(['where'=>[1,2], 'join'=>[3]]);      // [1,2,3]
+Str::flattenValue([[1,2],[3]]);                    // [1,2,3]
+Str::convertArrayCase(['Name'=>['Age'=>1]], 'lower', 'upper'); // ['name'=>['age'=>1]]
+
+// Security/text helpers
+Str::phone('+1 (555) 123-4567');                   // '+15551234567'
+Str::mask('1234567890', 4, 'right');               // '******7890'
+Str::html('&lt;b&gt;Hi&lt;/b&gt;');                  // '<b>Hi</b>'
+Str::text('<b>Hi</b>');                            // 'Hi'
+Str::shorten('Long sentence here', 10);            // 'Long sente...'
+Str::encrypt('secret');                            // encrypted
+Str::decrypt('...');                               // original
+```
+
+## Country
+- Country data and helpers
+    - Class: `Tamedevelopers\Support\Country`
+    - It's helper class can be called, using -- `TameCountry()`
+
+### Country Usage
+
+- ISO codes and flags
+```php
+use Tamedevelopers\Support\Country;
+
+Country::getCountryIso3('name');
+Country::getCountryIso2('name');
+Country::getCountryFlagIso3('name');
+Country::getCountryFlagIso2('name');
+```
+
+- Months, Weeks, Time Zones, Captcha Locale
+```php
+Country::getMonths('short');
+Country::getWeeks('mon');
+Country::getTimeZone('Europe/London');
+Country::getCaptchaLocale('en');
 ```
 
 ## File
 - The Core File utilities (read, write, copy, move, info).
     - Class: `Tamedevelopers\Support\Capsule\File`
+    - It's helper class can be called, using -- `TameFile()`
 
 ### File Usage
 
@@ -688,6 +784,7 @@ TameZip()->download('newData.zip')
 
 ## PDF
 - Require package to be installed - `composer require dompdf/dompdf`
+    - It's helper class can be called, using -- `TamePDF()`
 
 | options                   | Description           |
 |-----------------------    |-----------------------|
@@ -713,14 +810,6 @@ PDF::create([
     'output'      => 'view',
 ]);
 ```
-- or -- `Helpers Function`
-```
-TamePDF()->create([
-    'content'     => '<h1>Hello World!</h1>',
-    'destination' => public_path("invoice/{$generate}"),
-    'output'      => 'save',
-]);
-```
 
 ### Read PDF
 - Takes one param as `string`
@@ -733,16 +822,10 @@ This will read the PDF to the browser
 ```
 
 ## Time
-- Helper function is called using  `TameTime()`
-    - Visit the Tests/ folder to see more examples.
+- Class: `\Tamedevelopers\Support\Time`
+    - It's helper class can be called, using -- `TameTime()`
 
-```
-use Tamedevelopers\Support\Time;
-
-$time = new Time('now', 'Africa/Lagos');
-```
-
-### time-data
+### Time Usage
 - Get time date from class
 
 | function name             | Description               |
@@ -757,6 +840,8 @@ $time = new Time('now', 'Africa/Lagos');
 | `time() \| getTime()`     | Get time as int           |
 
 ```
+$time = new Time('now', 'Africa/Lagos');
+
 [
     $time4->time(),
     $time4->sec(),
@@ -927,6 +1012,8 @@ Time::getTimeZone();
 ```
 
 ## Cookie
+- Class: `\Tamedevelopers\Support\Cookie`
+    - It's helper class can be called, using -- `TameCookie()`
 
 ### Cookie Usage
 
@@ -950,7 +1037,7 @@ Time::getTimeZone();
     - [optional] `$secure` param as `bool | null`
     - [optional] `$httponly` param as `bool | null`
 
-```
+```php
 use Tamedevelopers\Support\Cookie;
 
 Cookie::set('cookie_name', 'value');
@@ -959,7 +1046,7 @@ Cookie::set('cookie_name', 'value');
 ### Get
 - Takes param as `string`
 
-```
+```php
 Cookie::get('cookie_name');
 ```
 
@@ -969,7 +1056,7 @@ Cookie::get('cookie_name');
     - [optional] `$path` param as `string | null`
     - [optional] `$domain` param as `string | null`
 
-```
+```php
 Cookie::forget('cookie_name');
 ```
 
@@ -977,14 +1064,14 @@ Cookie::forget('cookie_name');
 - Takes param as `string`
     - Returns `bool`
 
-```
+```php
 if(Cookie::has('cookie_name')){
     // execute code
 }
 ```
 
 - or -- `Helpers Function`
-```
+```php
 TameCookie()->set('user', '__user');
 ```
 

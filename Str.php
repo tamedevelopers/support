@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
-use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Traits\StrTrait;
 
 class Str

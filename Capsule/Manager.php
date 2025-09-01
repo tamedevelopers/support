@@ -127,9 +127,7 @@ class Manager{
     public static function isEnvBool($value)
     {
         if(is_string($value)){
-            return Str::lower($value) === 'true'
-                    ? true
-                    : false;
+            return Str::lower($value) === 'true';
         }
 
         return $value;

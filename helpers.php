@@ -15,6 +15,7 @@ use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Country;
 use Tamedevelopers\Support\UrlHelper;
 use Tamedevelopers\Support\Translator;
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\NumberToWords;
 use Tamedevelopers\Support\AutoloadRegister;
 use Tamedevelopers\Support\Capsule\FileCache;
@@ -68,7 +69,7 @@ if (! function_exists('TameMail')) {
 
 if (! function_exists('TameEnv')) {
     /**
-     * Env Object
+     * Env Class
      * @param  mixed $path
      * @return \Tamedevelopers\Support\Env
      */
@@ -78,9 +79,20 @@ if (! function_exists('TameEnv')) {
     }
 }
 
+if (! function_exists('TameFile')) {
+    /**
+     * File Class
+     * @return \Tamedevelopers\Support\Capsule\File
+     */
+    function TameFile()
+    {
+        return new File();
+    }
+}
+
 if (! function_exists('TameCookie')) {
     /**
-     * Cookie Object
+     * Cookie Class
      *
      * @return \Tamedevelopers\Support\Cookie
      */
@@ -92,7 +104,7 @@ if (! function_exists('TameCookie')) {
 
 if (! function_exists('TameTime')) {
     /**
-     * Time Object
+     * Time Class
      * @param int|string|null $time
      * @param string|null $timezone
      * @return \Tamedevelopers\Support\Time
@@ -106,7 +118,7 @@ if (! function_exists('TameTime')) {
 
 if (! function_exists('TameCollect')) {
     /**
-     * Collection of data
+     * Collection Class
      *
      * @param array $items 
      * 
@@ -120,7 +132,7 @@ if (! function_exists('TameCollect')) {
 
 if (! function_exists('tcollect')) {
     /**
-     * Collection of data
+     * Collection Class
      *
      * @param array $items 
      * 
@@ -146,7 +158,7 @@ if (! function_exists('TameStr')) {
 
 if (! function_exists('TameCountry')) {
     /**
-     * Country Object
+     * Country Class
      * @return \Tamedevelopers\Support\Country
      */
     function TameCountry()
@@ -157,7 +169,7 @@ if (! function_exists('TameCountry')) {
 
 if (! function_exists('NumberToWords')) {
     /**
-     * NumberToWords Object
+     * NumberToWords Class
      * @return \Tamedevelopers\Support\NumberToWords
      */
     function NumberToWords()
@@ -168,7 +180,7 @@ if (! function_exists('NumberToWords')) {
 
 if (! function_exists('TamePDF')) {
     /**
-     * PDF Object
+     * PDF Class
      *
      * @return \Tamedevelopers\Support\PDF
      */
@@ -180,7 +192,7 @@ if (! function_exists('TamePDF')) {
 
 if (! function_exists('TameZip')) {
     /**
-     * Zip Object
+     * Zip Class
      *
      * @return \Tamedevelopers\Support\Zip
      */
