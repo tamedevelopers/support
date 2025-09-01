@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Capsule;
 
+use Tamedevelopers\Support\Capsule\File;
+
 class FileCache{    
 
     /**
@@ -11,8 +13,7 @@ class FileCache{
      *
      * @var mixed
      */
-    static public $cachePath;
-    
+    public static $cachePath;
 
     /**
      * Set the cache storage path.
@@ -20,13 +21,11 @@ class FileCache{
      * @param string $path
      * @return void
      */
-    static public function setCachePath(string $path = "cache"): void
+    public static function setCachePath(string $path = "cache"): void
     {
-        // if \storage folder not found
         $path = storage_path($path);
-        if (!is_dir($path)) {
-            @mkdir($path, 0777);
-        }
+
+        File::makeDirectory($path, 0777);
 
         self::$cachePath = rtrim($path, '/\\');
     }
@@ -39,7 +38,7 @@ class FileCache{
      * @param int|null $expirationTime Expiration time in seconds (null for no expiration)
      * @return void
      */
-    static public function put(string $key, $value, ?int $expirationTime = 604800): void
+    public static function put(string $key, $value, ?int $expirationTime = 604800): void
     {
         $cachePath = self::getCachePath($key);
 
@@ -48,7 +47,7 @@ class FileCache{
             'expires_at' => $expirationTime !== null ? time() + $expirationTime : null,
         ];
 
-        file_put_contents($cachePath, json_encode($data));
+        File::put($cachePath, json_encode($data));
     }
 
     /**
@@ -57,12 +56,12 @@ class FileCache{
      * @param string $key
      * @return mixed|null
      */
-    static public function get(string $key)
+    public static function get(string $key)
     {
         $cachePath = self::getCachePath($key);
         
-        if (file_exists($cachePath)) {
-            $data = json_decode(file_get_contents($cachePath), true);
+        if (File::exists($cachePath)) {
+            $data = json_decode(File::get($cachePath), true);
 
             if (self::expired($key)) {
                 self::forget($key);
@@ -81,10 +80,11 @@ class FileCache{
      * @param string $key
      * @return bool
      */
-    static public function exists(string $key)
+    public static function exists(string $key)
     {   
         $key = self::getCachePath($key);
-        return file_exists( $key ) && !is_dir($key);
+
+        return File::exists($key);
     }
 
     /**
@@ -93,12 +93,12 @@ class FileCache{
      * @param string $key
      * @return bool
      */
-    static public function has(string $key): bool
+    public static function has(string $key): bool
     {
         $cachePath = self::getCachePath($key);
 
-        if (file_exists($cachePath)) {
-            $data = json_decode(file_get_contents($cachePath), true);
+        if (File::exists($cachePath)) {
+            $data = json_decode(File::get($cachePath), true);
 
             return !self::expired($key);
         }
@@ -112,12 +112,12 @@ class FileCache{
      * @param string $key
      * @return bool
      */
-    static public function expired(string $key): bool
+    public static function expired(string $key): bool
     {
         $cachePath = self::getCachePath($key);
 
-        if (file_exists($cachePath)) {
-            $data = json_decode(file_get_contents($cachePath), true);
+        if (File::exists($cachePath)) {
+            $data = json_decode(File::get($cachePath), true);
 
             $expiresAt = $data['expires_at'] ?? null;
 
@@ -133,11 +133,11 @@ class FileCache{
      * @param string $key
      * @return void
      */
-    static public function forget(string $key): void
+    public static function forget(string $key): void
     {
         $cachePath = self::getCachePath($key);
 
-        if (file_exists($cachePath)) {
+        if (File::exists($cachePath)) {
             unlink($cachePath);
         }
     }
@@ -147,12 +147,12 @@ class FileCache{
      *
      * @return void
      */
-    static public function clear(): void
+    public static function clear(): void
     {
         $files = glob(self::$cachePath . '/*.cache');
 
         foreach ($files as $file) {
-            if (is_file($file)) {
+            if (File::exists($file)) {
                 unlink($file);
             }
         }

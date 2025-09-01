@@ -26,7 +26,7 @@ trait CountryTrait{
      * Create Country ISO 3
      * @return array
      */
-    static public function countryIso3()
+    public static function countryIso3()
     {
         return [
             "AFG" => "Afghanistan",
@@ -279,7 +279,7 @@ trait CountryTrait{
      * Create Country ISO 2
      * @return array
      */
-    static public function countryIso2()
+    public static function countryIso2()
     {
         return [
             "AF" => "Afghanistan",
@@ -532,7 +532,7 @@ trait CountryTrait{
      * Create Country Flags for ISO 3
      * @return array
      */
-    static public function countryFlagIso3()
+    public static function countryFlagIso3()
     {
         return [
             "AFG" => "af",
@@ -785,7 +785,7 @@ trait CountryTrait{
      * Create Country Flags for ISO 2
      * @return array
      */
-    static public function countryFlagIso2()
+    public static function countryFlagIso2()
     {
         return [
             "AF" => "af",
@@ -1039,7 +1039,7 @@ trait CountryTrait{
      * 
      * @return array
      */
-    static public function months()
+    public static function months()
     {
         return [
             '1' => 'January',
@@ -1061,7 +1061,7 @@ trait CountryTrait{
      * Create Week Days
      * @return array
      */
-    static public function weeks()
+    public static function weeks()
     {
         return [
             '1' => 'Monday',
@@ -1082,7 +1082,7 @@ trait CountryTrait{
      * 
      * timezone_identifiers_list() --- Will return all timezone
      */
-    static public function timeZone()
+    public static function timeZone()
     {
         return [
           0 => "Africa/Abidjan",
@@ -1517,7 +1517,7 @@ trait CountryTrait{
      * Create Captcha Locale
      * @return array
      */
-    static public function captchaLocale()
+    public static function captchaLocale()
     {
         return [
             'Arabic' => "ar",

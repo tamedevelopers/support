@@ -88,7 +88,7 @@ class Cookie{
      * If setcookie successfully runs, it will return true. 
      * This does not indicate whether the user accepted the cookie.
      */
-    static public function set($name, $value = null, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null)
+    public static function set($name, $value = null, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null)
     {
         // minutes
         $minutes = self::minutesToExpire($minutes);
@@ -112,7 +112,7 @@ class Cookie{
      * @param  string|null  $domain
      * @return void
      */
-    static public function forget($name, $path = null, $domain = null)
+    public static function forget($name, $path = null, $domain = null)
     {
         self::set(
             name: $name,
@@ -131,7 +131,7 @@ class Cookie{
      * @param  string  $domain
      * @return void
      */
-    static public function expire($name, $path = null, $domain = null)
+    public static function expire($name, $path = null, $domain = null)
     {
         self::forget($name, $path, $domain);
     }
@@ -141,7 +141,7 @@ class Cookie{
      * 
      * @return void
      */
-    static public function setTime()
+    public static function setTime()
     {
         self::init()
             ->set(self::$timeName, self::$timeFormat);
@@ -152,7 +152,7 @@ class Cookie{
      * 
      * @return void
      */
-    static public function setExpire()
+    public static function setExpire()
     {
         self::init()
             ->set(self::$expireName, self::$expireFormat);
@@ -163,7 +163,7 @@ class Cookie{
      * 
      * @return mixed
      */
-    static public function getTime()
+    public static function getTime()
     {
         return self::init()->get(self::$timeName);
     }
@@ -173,7 +173,7 @@ class Cookie{
      * 
      * @return mixed
      */
-    static public function getExpire()
+    public static function getExpire()
     {
         return self::init()->get(self::$expireName);
     }
@@ -186,7 +186,7 @@ class Cookie{
      * 
      * @return bool
      */
-    static public function has($name = null)
+    public static function has($name = null)
     {
         return isset($_COOKIE[(string) $name]);
     }
@@ -198,7 +198,7 @@ class Cookie{
      * 
      * @return mixed
      */
-    static public function get($name = null)
+    public static function get($name = null)
     {
         return self::has($name)
                 ? $_COOKIE[(string) $name]
@@ -213,7 +213,7 @@ class Cookie{
      * 
      * @return mixed
      */
-    static public function all($name = null)
+    public static function all($name = null)
     {
         return self::get($name) ?? $_COOKIE;
     }

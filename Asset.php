@@ -22,7 +22,7 @@ class Asset{
      * 
      * @return string
      */
-    static public function asset(?string $asset = null, $cache = null, $path_type = null)
+    public static function asset(?string $asset = null, $cache = null, $path_type = null)
     {
         // if coniguration has not been used in the global space
         // then we call to define paths for us
@@ -95,7 +95,7 @@ class Asset{
      * 
      * @return void
      */
-    static public function config(?string $base_path = null, ?bool $cache = false, $path_type = false) 
+    public static function config(?string $base_path = null, ?bool $cache = false, $path_type = false) 
     {
         // if not defined
         if(!defined('ASSET_BASE_DIRECTORY')){

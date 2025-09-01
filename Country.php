@@ -16,7 +16,7 @@ class Country {
      * @param  string|null $mode
      * @return string|null
      */
-    static public function getCountryIso3($mode = null)
+    public static function getCountryIso3($mode = null)
     {
         return self::countryIso3()[self::mode($mode)] ?? null;
     }
@@ -26,7 +26,7 @@ class Country {
      * @param  string|null $mode
      * @return string|null
      */
-    static public function getCountryIso2($mode = null)
+    public static function getCountryIso2($mode = null)
     {
         return self::countryIso2()[self::mode($mode)] ?? null;
     }
@@ -36,7 +36,7 @@ class Country {
      * @param  string|null $mode
      * @return string|null
      */
-    static public function getCountryFlagIso3($mode = null)
+    public static function getCountryFlagIso3($mode = null)
     {
         return self::countryFlagIso3()[self::mode($mode)] ?? null;
     }
@@ -46,7 +46,7 @@ class Country {
      * @param  string|null $mode
      * @return string|null
      */
-    static public function getCountryFlagIso2($mode = null)
+    public static function getCountryFlagIso2($mode = null)
     {
         return self::countryFlagIso2()[self::mode($mode)] ?? null;
     }
@@ -56,7 +56,7 @@ class Country {
      * 
      * @return string|null
      */
-    static public function getMonths($mode = null)
+    public static function getMonths($mode = null)
     {
         return self::months()[$mode] ?? null;
     }
@@ -66,7 +66,7 @@ class Country {
      * @param  string|null $mode
      * @return string|null
      */
-    static public function getWeeks($mode = null)
+    public static function getWeeks($mode = null)
     {
         return self::weeks()[$mode] ?? null;
     }
@@ -79,7 +79,7 @@ class Country {
      * 
      * @return string|null
      */
-    static public function getTimeZone($mode = null, ?string $default = 'UTC')
+    public static function getTimeZone($mode = null, ?string $default = 'UTC')
     {
         $data = self::timeZone();
 
@@ -100,7 +100,7 @@ class Country {
      * 
      * @return string|null
      */
-    static public function getCaptchaLocale($mode = null)
+    public static function getCaptchaLocale($mode = null)
     {
         $data = self::captchaLocale();
 

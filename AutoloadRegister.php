@@ -6,6 +6,7 @@ namespace Tamedevelopers\Support;
 
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\ServerTrait;
 
 class AutoloadRegister{
@@ -40,7 +41,7 @@ class AutoloadRegister{
      * 
      * @return void
      */
-    static public function load(string|array $baseDirectory)
+    public static function load(string|array $baseDirectory)
     {
         if(is_array($baseDirectory)){
             foreach($baseDirectory as $directory){
@@ -167,7 +168,7 @@ class AutoloadRegister{
     static private function getClassName($filePath)
     {
         $namespace  = '';
-        $content    = file_get_contents($filePath);
+        $content    = File::get($filePath);
         $tokens     = token_get_all($content);
         $count      = count($tokens);
 

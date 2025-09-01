@@ -27,13 +27,41 @@ trait TimeTrait{
     }
     
     /**
-     * clone
+     * Clone a new Instance of self
      *
-     * @return void
+     * @return $this
      */
     private function clone()
     {
         return clone $this;
+    }
+    
+    /**
+     * Alias for clone() method.
+     *
+     * @return $this
+     */
+    public function copy()
+    {
+        return $this->clone();
+    }
+
+    /**
+     * Compare the current TameTime instance with another time value.
+     * Returns true if the current time is greater than or equal to the given time.
+     *
+     * @param mixed $time The time to compare with (can be a string, DateTime, or TameTime instance)
+     * @return bool
+     */
+    public function greaterThanOrEqualTo($time): bool
+    {
+        // Ensure the comparison value is a TameTime instance
+        if (!$time instanceof self) {
+            $time = new self($time);
+        }
+
+        // Compare timestamps (Unix time) for accuracy and simplicity
+        return $this->format() >= $time->format();
     }
     
     /**
@@ -118,7 +146,7 @@ trait TimeTrait{
      * 
      * @return array
      */
-    static public function allTimezone()
+    public static function allTimezone()
     {
         return Country::timeZone();
     }

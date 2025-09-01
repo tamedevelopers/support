@@ -69,7 +69,7 @@ class NumberToWords {
      * 
      * @return mixed
      */
-    static public function __callStatic($name, $args) 
+    public static function __callStatic($name, $args) 
     {
         return self::nonExistMethod($name, $args, self::$staticData);
     }

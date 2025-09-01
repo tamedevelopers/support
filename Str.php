@@ -5,16 +5,149 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\Traits\StrTrait;
 
 class Str
 {
+    use StrTrait;
+    
+    /**
+     * Pad the left side of a string.
+     * @return string
+     */
+    public static function padLeft(string $string, int $length, string $pad = ' ')
+    {
+        return str_pad($string, $length, $pad, STR_PAD_LEFT);
+    }
+
+    /**
+     * Pad the right side of a string.
+     *
+     * @param string $string
+     * @param int $length
+     * @param string $pad
+     * @return string
+     */
+    public static function padRight(string $string, int $length, string $pad = ' ')
+    {
+        return str_pad($string, $length, $pad, STR_PAD_RIGHT);
+    }
+
+    /**
+     * Repeat a string multiple times.
+     *
+     * @param string $string
+     * @param int $times
+     * @return string
+     */
+    public static function repeat(string $string, int $times)
+    {
+        return str_repeat($string, $times);
+    }
+
+    /**
+     * Uppercase the first character of a string.
+     *
+     * @param string $string
+     * @return string
+     */
+    public static function ucfirst(string $string)
+    {
+        return ucfirst($string);
+    }
+
+    /**
+     * Lowercase the first character of a string.
+     *
+     * @param string $string
+     * @return string
+     */
+    public static function lcfirst(string $string)
+    {
+        return lcfirst($string);
+    }
+
+    /**
+     * Perform a regex match.
+     *
+     * @param string $pattern
+     * @param string $subject
+     * @return array|null
+     */
+    public static function match(string $pattern, string $subject)
+    {
+        preg_match($pattern, $subject, $matches);
+        return $matches ?: null;
+    }
+
+    /**
+     * Check if a string matches a given pattern (wildcards *).
+     *
+     * @param string $pattern
+     * @param string $value
+     * @return bool
+     */
+    public static function is(string $pattern, string $value)
+    {
+        if ($pattern === $value) {
+            return true;
+        }
+        $pattern = str_replace('*', '.*', preg_quote($pattern, '/'));
+        return (bool) preg_match('/^' . $pattern . '\z/', $value);
+    }
+
+    /**
+     * Convert a string to its ASCII representation.
+     *
+     * @param string $string
+     * @return string
+     */
+    public static function ascii(string $string)
+    {
+        if (function_exists('transliterator_transliterate')) {
+            $string = transliterator_transliterate('Any-Latin; Latin-ASCII; [^A-Za-z0-9_] remove', $string);
+        } else {
+            $string = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $string);
+        }
+        return preg_replace('/[^A-Za-z0-9_]/', '', $string);
+    }
+
+    /**
+     * Limit the number of words in a string.
+     *
+     * @param string $string
+     * @param int $words
+     * @param string $end
+     * @return string
+     */
+    public static function words(string $string, int $words, string $end = '...')
+    {
+        $array = preg_split('/\s+/', trim($string));
+        if (count($array) <= $words) {
+            return $string;
+        }
+        return implode(' ', array_slice($array, 0, $words)) . $end;
+    }
+
+    /**
+     * Swap multiple values in a string using an associative array.
+     *
+     * @param array $map
+     * @param string $string
+     * @return string
+     */
+    public static function swap(array $map, string $string)
+    {
+        return strtr($string, $map);
+    }
+
     /**
      * If the given value is not an array and not null, wrap it in one.
      *
-     * @param  mixed  $value
+     * @param  mixed $value
      * @return array
      */
-    static public function wrap($value)
+    public static function wrap($value)
     {
         if (is_null($value)) {
             return [];
@@ -29,7 +162,7 @@ class Str
      * @param  array|null  $array
      * @return mixed|null
      */
-    static public function head($array = null)
+    public static function head($array = null)
     {
         return reset($array);
     }
@@ -40,7 +173,7 @@ class Str
      * @param array|null $array
      * @return mixed|null
      */
-    static public function last($array = null)
+    public static function last($array = null)
     {
         if (!is_array($array)) {
             return null;
@@ -52,132 +185,95 @@ class Str
     /**
      * For sorting array
      *
-     * @param  array $data
+     * @param  array $array
      * @param  string $type
      * - [rsort|asort|ksort|arsort|krsort|sort]
      * 
      * @return array
      */
-    static public function sortArray(?array &$data = [], ?string $type = 'sort')
+    public static function sortArray(&$array = [], $type = 'sort')
     {
-        return Tame::sortArray($data, $type);
+        return Tame::sortArray($array, $type);
     }
 
     /**
      * For sorting muti-dimentional array
      *
-     * @param  array $data
+     * @param  array $array
      * @param  string|null $key
      * @param  string $type
      * - [asc|desc|snum]
      * 
      * @return array
      */
-    static public function sortMultipleArray(?array &$data = [], $key = null, ?string $type = 'asc')
+    public static function sortMultipleArray(&$array = [], $key = null, $type = 'asc')
     {
-        return Tame::sortMultipleArray($data, $key, $type);
+        return Tame::sortMultipleArray($array, $key, $type);
     }
 
     /**
-     * Change Keys of Array
+     * Alias for changeKeysFromArray() method
      *
-     * @param  array $data
-     * @param  string $fromKey
-     * @param  string $toKey
+     * @param  array $array
+     * @param  array|string $fromKey
+     * @param  string|null $toKey
      * @return array
      */
-    static public function changeKeysFromArray($data, $fromKey, $toKey)
+    public static function renameArrayKeys($array, $fromKey, $toKey = null)
     {
-        // always convert to an array
-        $data = Server::toArray($data);
-
-        // If you don't want to modify the original array and create a new one without 'id' columns:
-        return array_map(function ($data) use ($fromKey, $toKey) {
-            if (isset($data[$fromKey])) {
-                $data[$toKey] = $data[$fromKey];
-                unset($data[$fromKey]);
-            }
-            return $data;
-        }, $data);
+        return self::changeKeysFromArray($array, $fromKey, $toKey);
     }
 
     /**
-     * Remove Keys From Array
+     * Alias for removeKeysFromArray() method.
      *
-     * @param  array $data
-     * @param  mixed $keys
+     * @param  array $array
+     * @param  string|array $keys
      * @return array
      */
-    static public function removeKeysFromArray($data, ...$keys)
+    public static function forgetArrayKeys($array, ...$keys)
     {
-        // always convert to an array
-        $data = (array) $data;
-        
-        // flattern keys
-        $keys = self::flattenValue($keys);
-
-        // Iterate through each data item
-        foreach ($data as &$item) {
-            // Remove specified keys from the item
-            foreach ($keys as $key) {
-                if (is_array($item) && array_key_exists($key, $item)) {
-                    unset($item[$key]);
-                } else{
-                    if(array_key_exists($key, $data)){
-                        unset($data[$key]);
-                    }
-                }
-            }
-        }
-
-        return $data;
+        return self::removeKeysFromArray($array, $keys);
     }
 
     /**
-     * Convert array keys to specified key if available, else return the original array.
+     * Alias for convertArrayKey() method.
      *
-     * @param array $data The input data array.
+     * @param array $array The input data array.
      * @param string $key The key to use for conversion.
      * @param int $case The case sensitivity option for key comparison (upper, lower).
      * 
      * @return array
      * - The converted array with specified key as keys if available, else the original array
      */
-    static public function convertArrayKey(array $data, string $key, $case = null)
+    public static function changeKeyCase(array $array, string $key, $case = null)
     {
-        // Extract the specified key values from the sub-arrays
-        $values = array_column($data, $key);
-
-        // Check if specified key values are available
-        if ($values) {
-            // Apply case transformation based on the specified option
-            $matchValue = match (self::lower($case)) {
-                'upper', 'uppercase', 'upper_case' => array_map('strtoupper', $values),
-                'lower', 'lowercase', 'lower_case' => array_map('strtolower', $values),
-                default => $values,
-            };
-
-            // Combine specified key values as keys with the original sub-arrays as values
-            return array_combine($matchValue, $data);
-        }
-
-        return $data;
+        return self::convertArrayKey($array, $key, $case);
     }
 
     /**
      * Change the case of keys and/or values in a multi-dimensional array.
      *
-     * @param array  $data  The input array
+     * @param array  $array  The input array
      * @param string $key   The case to convert for keys: 'lower', 'upper', or 'unchanged'
      * @param string $value The case to convert for values: 'lower', 'upper', or 'unchanged'
      *
      * @return array The array with converted case
      */
-    public static function convertArrayCase(array $data, string $key = 'lower', string $value = 'unchanged'): array
+    public static function convertArrayCase($array, $key = 'lower', $value = 'unchanged')
     {
         $result = [];
 
-        foreach ($data as $currentKey => $currentValue) {
+        $allowed = ['lower', 'upper', 'lowercase', 'uppercase'];
+
+        // convert to lowercase
+        $key = self::lower($key);
+        $value = self::lower($value);
+
+        $key = in_array($key, $allowed) ? $key : 'unchanged';
+        $value = in_array($value, $allowed) ? $value : 'unchanged';
+
+        foreach ($array as $currentKey => $currentValue) {
             
             // convert the key at first
             $convertedKey = self::convertCase($currentKey, $key);
@@ -196,23 +292,24 @@ class Str
     /**
      * Check if array has duplicate value
      *
-     * @param array $data
+     * @param array $array
+     * @param bool $strict
      * @return bool
      */
-    static public function arrayDuplicate(?array $data = [])
+    public static function arrayDuplicate(?array $array = [], bool $strict = false)
     {
-        return count($data) > count(array_unique($data));
+        return count($array) > count(array_unique($array, $strict ? SORT_STRING : SORT_REGULAR));
     }
 
     /**
      * Check if all values of array is same
      *
-     * @param array $data
+     * @param array $array
      * @return bool
      */
-    static public function arraySame(?array $data = [])
+    public static function arraySame(?array $array = [])
     {
-        return count(array_unique($data)) === 1;
+        return !empty($array) && count(array_unique($array)) === 1;
     }
 
     /**
@@ -221,7 +318,7 @@ class Str
      * @param array $bindings
      * @return array
      */
-    static public function mergeBinding(array $bindings)
+    public static function mergeBinding(array $bindings)
     {
         // Extract the values from the associative array
         $values = array_values($bindings);
@@ -239,26 +336,20 @@ class Str
      * @param array $bindings
      * @return array
      */
-    static public function bindings(array $bindings)
+    public static function bindings(array $bindings)
     {
         return self::mergeBinding($bindings);
     }
 
     /**
-     * Flatten a multidimensional array into a single-dimensional array.
+     * Alias for flattenValue() method.
      *
      * @param array $array The multidimensional array to flatten.
      * @return array The flattened array.
      */
-    static public function flattenValue(array $array)
+    public static function flatten(array $array)
     {
-        $result = [];
-        
-        array_walk_recursive($array, function ($item) use (&$result) {
-            $result[] = $item;
-        });
-
-        return $result;
+        return self::flattenValue($array);
     }
 
     /**
@@ -268,7 +359,7 @@ class Str
      * @param mixed $keys The key(s) to exclude
      * @return array The filtered array
      */
-    static public function exceptArray(array $array, $keys)
+    public static function exceptArray(array $array, $keys)
     {
         // Convert single key to an array
         if (!is_array($keys)) {
@@ -290,7 +381,7 @@ class Str
      * @return string  
      * - The modified string.
      */
-    static public function replaceFirst(string $search, string $replace, $subject = null)
+    public static function replaceFirst(string $search, string $replace, $subject = null)
     {
         $subject = self::replaceSubject($subject);
         $replace = self::replaceSubject($replace);
@@ -316,7 +407,7 @@ class Str
      * @return string  
      * - The modified string.
      */
-    static public function replaceLast(string $search, string $replace, $subject = null)
+    public static function replaceLast(string $search, string $replace, $subject = null)
     {
         $subject = self::replaceSubject($subject);
         $replace = self::replaceSubject($replace);
@@ -341,7 +432,7 @@ class Str
      * @param  string $seperator
      * @return void
      */
-    static public function formatString($string, $number = 4, $seperator = '-')
+    public static function formatString($string, $number = 4, $seperator = '-')
     {
         $string = implode($seperator, str_split(self::trim($string), $number));
         
@@ -356,7 +447,7 @@ class Str
      * @param  string $separator
      * @return string
      */
-    static public function formatOnlyString($string, $number = 4, $separator = '-')
+    public static function formatOnlyString($string, $number = 4, $separator = '-')
     {
         $string = self::trim($string);
         
@@ -376,7 +467,7 @@ class Str
      * 
      * @return string
      */
-    static public function phone($phone = null, ?bool $allow = true)
+    public static function phone($phone = null, ?bool $allow = true)
     {
         return Tame::cleanPhoneNumber($phone, $allow);
     }
@@ -399,7 +490,7 @@ class Str
      * @return string 
      * - The masked string.
      */
-    static public function mask($str = null, ?int $length = 4, ?string $position = 'right', ?string $mask = '*')
+    public static function mask($str = null, $length = 4, $position = 'right', $mask = '*')
     {
         return Tame::mask($str, $length, $position, $mask);
     }
@@ -410,7 +501,7 @@ class Str
      * @param string|null $string
      * @return string
      */
-    static public function html($string = null)
+    public static function html($string = null)
     {
         return Tame::html($string);
     }
@@ -423,7 +514,7 @@ class Str
      * @return string
      * - strip all tags from string content
      */
-    static public function text($string = null)
+    public static function text($string = null)
     {
         return Tame::text($string);
     }
@@ -434,7 +525,7 @@ class Str
      * @param string|null $string
      * @return string
      */
-    static public function encrypt($string = null)
+    public static function encrypt($string = null)
     {
         return Tame::encryptStr($string);
     }
@@ -445,7 +536,7 @@ class Str
      * @param string|null $jsonString
      * @return mixed
      */
-    static public function decrypt($jsonString = null)
+    public static function decrypt($jsonString = null)
     {
         return Tame::decryptStr($jsonString);
     }
@@ -460,9 +551,60 @@ class Str
      * 
      * @return string
      */
-    static public function shorten($string = null, $limit = 50, $replacer = '...')
+    public static function shorten($string = null, $limit = 50, $replacer = '...')
     {
         return Tame::shortenString($string, $limit, $replacer);
+    }
+
+    /**
+     * Get the singular form of a word.
+     *
+     * @param string $value
+     * @return string
+     */
+    public static function singular(string $value)
+    {
+        $rules = [
+            '/(matr|vert|ind)ices$/i' => '$1ix',
+            '/(quiz)zes$/i' => '$1',
+            '/(database)s$/i' => '$1',
+            '/(s)tatuses$/i' => '$1tatus',
+            '/(ox)en$/i' => '$1',
+            '/(alias|status|bus)es$/i' => '$1',
+            '/([m|l])ice$/i' => '$1ouse',
+            '/(x|ch|ss|sh)es$/i' => '$1',
+            '/([^aeiouy]|qu)ies$/i' => '$1y',
+            '/(s)eries$/i' => '$1eries',
+            '/(movie)s$/i' => '$1',
+            '/(hive)s$/i' => '$1',
+            '/(tive)s$/i' => '$1',
+            '/([lr])ves$/i' => '$1f',
+            '/(shea|lea|loa|thie)ves$/i' => '$1f',
+            '/(^analy)ses$/i' => '$1sis',
+            '/([ti])a$/i' => '$1um',
+            '/(tomat|potat|ech|her|vet)oes$/i' => '$1o',
+            '/(bu)ses$/i' => '$1s',
+            '/(octop|vir)i$/i' => '$1us',
+            '/(us)es$/i' => '$1',
+            '/(person)s$/i' => '$1',
+            '/(child)ren$/i' => '$1',
+            '/(man|woman)en$/i' => '$1',
+            '/(tooth)teeth$/i' => '$1',
+            '/(foot)feet$/i' => '$1',
+            '/(goose)geese$/i' => '$1',
+            '/(mouse)mice$/i' => '$1',
+            '/(deer)$/i' => '$1',
+            '/(sheep)$/i' => '$1',
+        ];
+        foreach ($rules as $pattern => $replacement) {
+            if (preg_match($pattern, $value)) {
+                return preg_replace($pattern, $replacement, $value);
+            }
+        }
+        if (substr($value, -1) === 's') {
+            return substr($value, 0, -1);
+        }
+        return $value;
     }
 
     /**
@@ -471,7 +613,7 @@ class Str
      * @param  string|null  $value
      * @return string
      */
-    static public function pluralize($value = null)
+    public static function pluralize($value = null)
     {
         $value = (string) $value;
         if (strlen($value) === 1) {
@@ -528,7 +670,7 @@ class Str
      * @param string $needle
      * @return bool
      */
-    static public function startsWith(string $haystack, string $needle)
+    public static function startsWith(string $haystack, string $needle)
     {
         return strncmp($haystack, $needle, strlen($needle)) === 0;
     }
@@ -540,7 +682,7 @@ class Str
      * @param string $needle
      * @return bool
      */
-    static public function endsWith(string $haystack, string $needle)
+    public static function endsWith(string $haystack, string $needle)
     {
         return substr($haystack, -strlen($needle)) === $needle;
     }
@@ -551,7 +693,7 @@ class Str
      * @param int $length
      * @return string
      */
-    static public function random(int $length = 16)
+    public static function random(int $length = 16)
     {
         // Define the character pool for the random string
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -571,7 +713,7 @@ class Str
      * @param int $wordCount
      * @return string
      */
-    static public function randomWords(int $wordCount)
+    public static function randomWords(int $wordCount)
     {
         return self::generateRandomWords($wordCount);
     }
@@ -603,7 +745,7 @@ class Str
      * @param string $delimiter
      * @return string
      */
-    static public function snake(string $value, string $delimiter = '_')
+    public static function snake(string $value, string $delimiter = '_')
     {
         // Replace spaces with delimiter and capitalize each word
         $value = preg_replace('/\s+/u', $delimiter, ucwords($value));
@@ -617,7 +759,7 @@ class Str
      * @param string $value
      * @return string
      */
-    static public function camel(string $value)
+    public static function camel(string $value)
     {
         // Remove special characters and spaces
         $value = preg_replace('/[^a-z0-9]+/i', ' ', $value);
@@ -637,13 +779,25 @@ class Str
      * @param string $separator
      * @return string
      */
-    static public function slug(string $value, string $separator = '-')
+    public static function slug(string $value, string $separator = '-')
     {
         $value = preg_replace('/[^a-zA-Z0-9]+/', $separator, $value);
         $value = self::trim($value, $separator);
         $value = self::lower($value);
 
         return $value;
+    }
+    
+    /**
+     * Replaces all spaces in the given string with the specified separator.
+     *
+     * @param string $value The input string in which spaces will be replaced.
+     * @param string $separator The string to replace spaces with. Defaults to '_'.
+     * @return string
+     */
+    public static function spaceReplacer(string $value, string $separator = '_')
+    {
+        return self::replace(' ', $separator, $value);
     }
 
     /**
@@ -652,7 +806,7 @@ class Str
      * @param  string  $value
      * @return string
      */
-    static public function studly(string $value)
+    public static function studly(string $value)
     {
         $value = ucwords(preg_replace('/[\s_]+/', ' ', $value));
         $value = str_replace(' ', '', $value);
@@ -666,7 +820,7 @@ class Str
      * @param  string  $value
      * @return string
      */
-    static public function kebab(string $value)
+    public static function kebab(string $value)
     {
         return self::lower(
             preg_replace('/\s+/u', '-', $value)
@@ -679,7 +833,7 @@ class Str
      * @param  string  $value
      * @return string
      */
-    static public function title(string $value)
+    public static function title(string $value)
     {
         return ucwords(self::lower($value));
     }
@@ -691,7 +845,7 @@ class Str
      * @param  string  $separator
      * @return string
      */
-    static public function slugify(string $value, string $separator = '-')
+    public static function slugify(string $value, string $separator = '-')
     {
         // Try to transliterate using intl extension
         if (function_exists('transliterator_transliterate')) {
@@ -720,7 +874,7 @@ class Str
      * 
      * @return string
      */
-    static public function trim($string = null, string $characters = " \n\r\t\v\0")
+    public static function trim($string = null, string $characters = " \n\r\t\v\0")
     {
         return trim((string) $string, $characters);
     }
@@ -733,7 +887,7 @@ class Str
      * 
      * @return string
      */
-    static public function replace($search, $replace, $subject = null)
+    public static function replace($search, $replace, $subject = null)
     {
         $subject = self::replaceSubject($subject);
         $replace = self::replaceSubject($replace);
@@ -747,7 +901,7 @@ class Str
      * 
      * @return string
      */
-    static public function lower($value = null)
+    public static function lower($value = null)
     {
         return strtolower(self::trim($value));
     }
@@ -758,7 +912,7 @@ class Str
      * 
      * @return string
      */
-    static public function upper($value = null)
+    public static function upper($value = null)
     {
         return strtoupper(self::trim($value));
     }
@@ -770,7 +924,7 @@ class Str
      * @param string|array $haystack
      * @return bool
      */
-    static public function contains(string $needle, string|array $haystack)
+    public static function contains(string $needle, string|array $haystack)
     {
         if (is_array($haystack)) {
             // Check if any word in the array contains the substring
@@ -795,7 +949,7 @@ class Str
      * @param string $ellipsis
      * @return string
      */
-    static public function truncate(string $value, int $length, string $ellipsis = '...')
+    public static function truncate(string $value, int $length, string $ellipsis = '...')
     {
         // Check if truncation is necessary
         if (strlen($value) <= $length) {
@@ -814,7 +968,7 @@ class Str
      * @param string $value
      * @return string
      */
-    static public function reverse(string $value)
+    public static function reverse(string $value)
     {
         return strrev($value);
     }
@@ -825,7 +979,7 @@ class Str
      * @param string|array $value
      * @return int
      */
-    static public function count($value)
+    public static function count($value)
     {
         return is_array($value) ? count($value) : self::trim(strlen($value));
     }
@@ -837,7 +991,7 @@ class Str
      * @param string $needle
      * @return int
      */
-    static public function countOccurrences(string $haystack, string $needle)
+    public static function countOccurrences(string $haystack, string $needle)
     {
         return substr_count($haystack, $needle);
     }
@@ -848,7 +1002,7 @@ class Str
      * @param string $value
      * @return string
      */
-    static public function removeWhitespace(string $value)
+    public static function removeWhitespace(string $value)
     {
         return preg_replace('/\s+/', '', $value);
     }
@@ -861,7 +1015,7 @@ class Str
      * @param int $maxLength
      * @return string
      */
-    static public function generateRandomWords(int $wordCount, int $minLength = 3, int $maxLength = 10)
+    public static function generateRandomWords(int $wordCount, int $minLength = 3, int $maxLength = 10)
     {
         $words = [];
         $characters = 'abcdefghijklmnopqrstuvwxyz';
@@ -881,16 +1035,14 @@ class Str
     }
 
     /**
-     * Get the file extension from a filename or path.
+     * Alias for (getFileExtension) method
      *
      * @param string $filename
      * @return string|null
      */
-    static public function getFileExtension(string $filename)
+    public static function extension(string $filename)
     {
-        $extension = pathinfo($filename, PATHINFO_EXTENSION);
-
-        return !empty($extension) ? $extension : null;
+        return self::getFileExtension($filename);
     }
 
     /**
@@ -900,7 +1052,7 @@ class Str
      * @param string $delimiter
      * @return string
      */
-    static public function before(string $value, string $delimiter)
+    public static function before(string $value, string $delimiter)
     {
         $pos = strpos($value, $delimiter);
 
@@ -914,7 +1066,7 @@ class Str
      * @param string $delimiter
      * @return string
      */
-    static public function after(string $value, string $delimiter)
+    public static function after(string $value, string $delimiter)
     {
         $pos = strpos($value, $delimiter);
 
@@ -931,7 +1083,7 @@ class Str
      * @param string $end
      * @return string
      */
-    static public function between(string $value, string $start, string $end)
+    public static function between(string $value, string $start, string $end)
     {
         $startPos = strpos($value, $start);
         $endPos = strpos($value, $end, $startPos + strlen($start));
@@ -939,72 +1091,6 @@ class Str
         return $startPos !== false && $endPos !== false
             ? substr($value, $startPos + strlen($start), $endPos - $startPos - strlen($start))
             : '';
-    }
-
-    /**
-     * Check if a string matches a given pattern.
-     *
-     * @param string $value
-     * @param string $pattern
-     * @return bool
-     */
-    static public function matchesPattern(string $value, string $pattern)
-    {
-        return preg_match($pattern, $value) === 1;
-    }
-
-    /**
-     * Remove all occurrences of a substring from a string.
-     *
-     * @param string $value
-     * @param string $substring
-     * @return string
-     */
-    static public function removeSubstring(string $value, string $substring)
-    {
-        return str_replace($substring, '', $value);
-    }
-
-    /**
-     * Pad a string with a specified character to a certain length.
-     *
-     * @param string $value
-     * @param int $length
-     * @param string $padChar
-     * @param int $padType
-     * @return string
-     */
-    static public function padString(string $value, int $length, string $padChar = ' ', int $padType = STR_PAD_RIGHT)
-    {
-        return str_pad($value, $length, $padChar, $padType);
-    }
-    
-    /**
-     * Replace Subject
-     *
-     * @param  mixed $subject
-     * @return void
-     */
-    static private function replaceSubject($subject = null)
-    {
-        return is_null($subject) ? (string) $subject : $subject;
-    }
-
-    /**
-     * Convert the case of a string based on the specified type.
-     *
-     * @param mixed $string The input string
-     * @param string|int|null $type   The case to convert: 'lower', 'upper', or 'unchanged'
-     *
-     * @return string The string with converted case
-     */
-    private static function convertCase($string = null, $type = null)
-    {
-        return match (self::lower($type)) {
-            'upper', 'uppercase', 'upper_case' => self::upper($string),
-            'lower', 'lowercase', 'lower_case' => self::lower($string),
-            default => $string,
-        };
     }
 
 }

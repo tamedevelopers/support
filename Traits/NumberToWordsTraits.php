@@ -9,6 +9,10 @@ use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\NumberToWords;
 
 
+/**
+ * 
+ * @property mixed $staticData
+*/
 trait NumberToWordsTraits
 {
 
@@ -198,7 +202,7 @@ trait NumberToWordsTraits
       * @param string|null $iso3 Country iso3
       * @return array
       */
-    static public function allCurrency($iso3 = null)
+    public static function allCurrency($iso3 = null)
     {
         $data = [
             'AFG' => ['country' => 'Afghan', 'name' => 'Afghani', 'code' => 'AFN', 'cents' => 'puls (پول)'],
@@ -418,7 +422,7 @@ trait NumberToWordsTraits
      * 
      * @return array|null
      */
-    static public function getCurrencyByIso3($code = null) 
+    public static function getCurrencyByIso3($code = null) 
     {
         // convert code to upper
         $code = Str::upper($code);
@@ -438,7 +442,7 @@ trait NumberToWordsTraits
      *
      * @return array
      */
-    static public function getUnits()
+    public static function getUnits()
     {
         return self::$units;
     }

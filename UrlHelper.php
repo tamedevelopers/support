@@ -14,7 +14,7 @@ class UrlHelper {
      * 
      * @return string
      */
-    static public function url() 
+    public static function url() 
     {
         // create from .env APP_URL or Default path
         $url = env('APP_URL') ?? self::full();
@@ -27,7 +27,7 @@ class UrlHelper {
      *
      * @return string|null
      */
-    static public function server()
+    public static function server()
     {
         return self::getServerPath();
     }
@@ -37,7 +37,7 @@ class UrlHelper {
      *
      * @return string|null
      */
-    static public function request()
+    public static function request()
     {
         $request = $_SERVER['REQUEST_URI'] ?? null;
 
@@ -49,7 +49,7 @@ class UrlHelper {
      *
      * @return string|null
      */
-    static public function referral()
+    public static function referral()
     {
         return $_SERVER['HTTP_REFERER'] ?? null;
     }
@@ -59,7 +59,7 @@ class UrlHelper {
      *
      * @return string|null
      */
-    static public function http()
+    public static function http()
     {
         return isset($_SERVER['HTTPS']) && Str::lower($_SERVER['HTTPS']) !== 'off' ? 'https://' : 'http://';
     }
@@ -69,7 +69,7 @@ class UrlHelper {
      *
      * @return string|null
      */
-    static public function host()
+    public static function host()
     {
         return isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
     }
@@ -79,7 +79,7 @@ class UrlHelper {
      *
      * @return string|null
      */
-    static public function full()
+    public static function full()
     {
         return self::http() . self::host() . self::path();
     }
@@ -90,7 +90,7 @@ class UrlHelper {
      * @param string|null $path
      * @return string|null
      */
-    static public function path($path = null)
+    public static function path($path = null)
     {
         if (!empty($path)) {
             $path = ltrim($path, '/');
@@ -105,7 +105,7 @@ class UrlHelper {
      * 
      * @return bool
      */
-    static public function isIpAccessedVia127Port()
+    public static function isIpAccessedVia127Port()
     {
         return Str::contains(
             $_SERVER['REMOTE_ADDR'] ?? '', 

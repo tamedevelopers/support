@@ -14,6 +14,39 @@ $data = [
     ['id' => 5, 'name' => 'Emily', 'age' => 25],
 ];
 
+$language = [
+    'en' => [
+        'lang_name' => 'English',
+        'flag' => 'us',
+        'locale_iso' => 'en',
+        'locale' => 'en',
+        'locale_allow' => 'true'
+    ],
+    'cn' => [
+        'lang_name' => '中文',
+        'flag' => 'hk',
+        'locale_iso' => 'cn',
+        'locale' => 'zh-Hant',
+        'locale_allow' => 'true'
+    ]
+];
+
+
+dump(
+    tcollect($language)
+        ->filter(fn($value) => $value['locale_allow'] == 'true')
+        ->mapWithKeys(fn ($value) => [
+            $value['locale_iso'] => [
+                'name'   => $value['lang_name'],
+                'flag'   => $value['flag'],
+                'iso'    => $value['locale_iso'],
+                'locale' => $value['locale'],
+            ]
+        ])
+        ->forget(['name', 'isos'])
+        ->toArray(),
+);
+
 
 
 // Create a new collection instance
@@ -77,7 +110,9 @@ $collapsed = $multiDimensional->collapse(); // Flatten nested collections
 $nested = new Collection([
     [1, 2], [3, 4], [5, 6], ['Peterson', 39, ['name' => 'Fredrick']]
 ]);
+
 dump(
+    'flatten',
     $nested->flatten(),
     // [1, 2, 3, 4, 5, 6, 'Peterson', 39, 'Fredrick']
 );
@@ -85,12 +120,14 @@ dump(
 // zip()
 $additionalArray = [10, 20, 30, 40, 50];
 dump(
+    'zip',
     $collection->zip($additionalArray)
     // Combine items with another array
 );
 
 // merge()
 dump(
+    'merge',
     $collection->merge([['id' => 6, 'name' => 'Sarah', 'age' => 30]])
 );
 
@@ -111,17 +148,20 @@ $doesNotContain = $collection->doesntContain('name', 'John'); // false
 
 // pluck()
 dump(
-    $collection->pluck('name', 'age')
+    'pluck',
+    $collection->pluck(['name', 'age'])
     // ['John', 'Jane', 'Doe', 'Smith', 'Emily']
 );
 
 // select()
 dump(
+    'select[name, age] and pluck(age)',
     $collection->select(['name', 'age'])->pluck('age')
 );
 
 // search()
 dump(
+    'search',
     $collection->search('Jane')
      // 1
 );
@@ -134,12 +174,14 @@ $sortedByAge = $collection->sortBy('age'); // Sort by age
 
 // sortByMany() 
 dump(
+    'sortByMany',
     $collection->sortByMany(['age' => SORT_DESC, 'name' => SORT_ASC])
     // Sort by age descending, then name ascending
 );
 
 // unique()
 dump(
+    'unique',
     $collection->unique()
     // Get unique items
 );

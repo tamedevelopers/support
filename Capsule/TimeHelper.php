@@ -38,7 +38,7 @@ class TimeHelper {
      * @param  mixed $format
      * @return void
      */
-    public function __construct($startDate = null, $endDate = null, string $format = null)
+    public function __construct($startDate = null, $endDate = null, $format = null)
     {
         $this->startDate = $startDate;
         $this->endDate   = $endDate;
@@ -79,7 +79,7 @@ class TimeHelper {
      * 
      * @return string
      */
-    static public function configureAndSetTimezone($timezone = null)
+    public static function configureAndSetTimezone($timezone = null)
     {
         $timezone = Str::trim($timezone);
 
@@ -104,7 +104,7 @@ class TimeHelper {
      * 
      * @return int
      */
-    static public function setPassedDate($date = null)
+    public static function setPassedDate($date = null)
     {
         // backdate default time
         $default = 'Jan 01 1970';
@@ -137,7 +137,7 @@ class TimeHelper {
      * @param  mixed $date
      * @return int
      */
-    static public function carbonInstance($date) 
+    public static function carbonInstance($date) 
     {
         return $date?->timestamp ?? $date;
     }

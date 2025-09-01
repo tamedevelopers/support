@@ -26,7 +26,7 @@ class Zip {
      * 
      * @return bool True if the zip operation was successful, false otherwise.
      */
-    static public function zip($sourcePath, $destinationZip)
+    public static function zip($sourcePath, $destinationZip)
     {
         $sourcePath     = self::getBasePath($sourcePath);
         $destinationZip = self::getBasePath($destinationZip);
@@ -62,7 +62,7 @@ class Zip {
      * 
      * @return bool
      */
-    static public function unzip($sourcePath, $destination)
+    public static function unzip($sourcePath, $destination)
     {
         $sourcePath  = self::getBasePath($sourcePath);
         $destination = self::getBasePath($destination);
@@ -87,7 +87,7 @@ class Zip {
      * @param  bool $unlink
      * @return void
      */
-    static public function download($fileName, $unlink = true)
+    public static function download($fileName, $unlink = true)
     {
         $zipfilePath = self::getBasePath($fileName);
 

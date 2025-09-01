@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Traits;
 
+use PHPMailer\PHPMailer\SMTP;
+use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Mail;
+use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\PHPMailer;
-
 
 
 trait MailTrait{
@@ -25,10 +27,10 @@ trait MailTrait{
      * @var array
      */
     private $recipients = [
-        'to'    => [],
-        'cc'    => false,
-        'bcc'   => false,
-        'reply_to'   => false,
+        'to'  => [],
+        'cc'  => false,
+        'bcc' => false,
+        'reply_to' => false,
     ];
 
     /**
@@ -167,7 +169,35 @@ trait MailTrait{
             "count" => count($validEmails)
         ];
 
-        return$data[$mode] ?? $data;
+        return $data[$mode] ?? $data;
+    }
+
+    /**
+     * Add Reply to recipients.
+     *
+     * @param string $emails
+     * @return $this
+     */
+    public function __replyTo(...$emails)
+    {
+        [$address, $name] = [$emails[0], $emails[1] ?? null];
+
+        $this->recipients['reply_to'] = [$address, $name];
+
+        return $this;
+    }
+
+    /**
+     * Set the email altbody.
+     *
+     * @param string $body
+     * @return $this
+     */
+    public function __altBody($body)
+    {
+        $this->altbody = $body;
+
+        return $this;
     }
     
     /**
@@ -246,21 +276,29 @@ trait MailTrait{
             $path       = $attachments;
             $extension  = pathinfo($path, PATHINFO_EXTENSION);
             $name       = pathinfo($path, PATHINFO_FILENAME);
-            $formattedAttachments[$path] = "{$name}.{$extension}";
+            $formattedAttachments[$path] = Str::spaceReplacer($name) . ".{$extension}";
         } elseif (isset($attachments['path'])) {
             // Single array with 'path' and optional 'as'
             $path       = $attachments['path'];
             $extension  = pathinfo($path, PATHINFO_EXTENSION);
-            $name       = $attachments['as'] ?? pathinfo($path, PATHINFO_FILENAME);
-            $formattedAttachments[$path] = "{$name}.{$extension}";
+            $name       = empty($attachments['as']) 
+                            ? pathinfo($path, PATHINFO_FILENAME)
+                            : $attachments['as'];
+            
+            // formated name
+            $formattedAttachments[$path] = Str::spaceReplacer($name) . ".{$extension}";
         } elseif (is_array($attachments)) {
             // Multiple attachments as an array of arrays
             foreach ($attachments as $attachment) {
                 if (is_array($attachment) && isset($attachment['path'])) {
                     $path       = $attachment['path'];
                     $extension  = pathinfo($path, PATHINFO_EXTENSION);
-                    $name       = $attachment['as'] ?? pathinfo($path, PATHINFO_FILENAME);
-                    $formattedAttachments[$path] = "{$name}.{$extension}";
+                    $name       = empty($attachment['as']) 
+                                    ? pathinfo($path, PATHINFO_FILENAME)
+                                    : $attachment['as'];
+                    
+                    // formated name
+                    $formattedAttachments[$path] = Str::spaceReplacer($name) . ".{$extension}";
                 }
             }
         }
@@ -279,7 +317,7 @@ trait MailTrait{
         // mailer isSMTP | IsMail
         $this->mailer->{$options['driver']}();
 
-        //set to 1 or 2 to see the response from mail server
+        // set to 1 or 2 to see the response from mail server
         $this->mailer->SMTPDebug = $options['debug']; 
 
         // prevent the SMTP session from being closed after each message
@@ -332,6 +370,24 @@ trait MailTrait{
     }
     
     /**
+     * Ensures that the environment is started if it has not been initialized yet.
+     *
+     * This method checks the current state of the environment and performs
+     * initialization steps if necessary to guarantee that the environment is ready
+     * for further operations.
+     *
+     * @return void
+     */
+    private function startEnvIFNotStarted()
+    {
+        // if ENV has not been started
+        if(!Env::isEnvStarted()){
+            Env::createOrIgnore();
+            Env::load();
+        }
+    }
+    
+    /**
      * isSMTP
      *
      * @return bool
@@ -342,22 +398,42 @@ trait MailTrait{
     }
 
     /**
-     * Create Default Options for Mailer
+     * Get SMTP Data
+     * @param array $options
+     * 
+     * @return array
+     */
+    public function getSMTPData()
+    {
+        return $this->smtpData;
+    }
+
+    /**
+     * Get Default Options
      * @param array $options
      * 
      * @return array
      */
     private function getDefaultOption(?array $options = [])
     {
-        return [
+        $data = [
             'flush'         => $options['flush']        ?? $this->flushBuffering,
             'driver'        => $options['driver']       ?? $this->driver, 
             'debug'         => $options['debug']        ?? $this->debug, 
             'keep_alive'    => $options['keep_alive']   ?? $this->keepAlive, 
             'timeout'       => $options['timeout']      ?? $this->timeout,
         ];
+
+        /**
+         * Ensures that the 'debug' value in the $data array is valid.
+         * Accepts only 0, 1, or 2 as valid debug levels; 
+         * defaults to 0 if an invalid value is provided.
+         */
+        $data['debug'] = in_array($data['debug'], [0, 1, 2]) ? $data['debug'] : 0;
+        
+        return $data;
     }
-    
+
     /**
      * Configure SMTP Data
      * @param array $options
@@ -419,6 +495,192 @@ trait MailTrait{
         };
 
         return $clone->$method(...$args);
+    }
+
+    /**
+     * Creates a temporary email closure.
+     *
+     * This method allows you to define a callable that can be used to temporarily
+     * modify or handle email-related logic. If no callable is provided, it will
+     * use a default behavior.
+     *
+     * @param callable|null $callable An optional callable to customize the email handling.
+     * @return mixed Returns the result of the callable or the default behavior.
+     */
+    private function createEmailTempClosure($callable = null)
+    {
+        $sendEmails = [];
+
+        /**
+         * Iterates over the list of 'to' recipients and performs actions for each email address.
+         */
+        foreach($this->recipients['to'] as $email){
+            // Closure to hold emails of each recipient
+            // Without executing immediately
+            $sendEmails[] = function() use ($email, $callable) {
+                try {
+                    // Validate the recipient email
+                    $verify = Tame()->emailValidator($email, true, true);
+                    if (!$verify) {
+                        // Custom error code: 509
+                        throw new \Exception("Invalid email address: {$email}", 509); 
+                    }
+
+                    // If message body is empty
+                    if (empty($this->body)) {
+                        throw new \Exception("Email body cannot be empty.", 510);
+                    }
+                    
+                    // email and name of receiver as name is optional
+                    $this->mailer->addAddress($email);
+                    
+                    // add cc
+                    $this->addCC();
+                    
+                    // add bcc
+                    $this->addBCC();
+        
+                    // add reply to
+                    $this->addReplyTo();
+        
+                    // Set email format to HTML
+                    $this->mailer->isHTML(true); 
+        
+                    // subject
+                    $this->mailer->Subject = $this->subject;
+                    $this->mailer->Body    = $this->body;
+                    
+                    // If support alternative message
+                    if(!empty($this->altbody)){
+                        $this->mailer->AltBody = $this->altbody; 
+                    }
+        
+                    // Connect
+                    $this->mailer->SMTPConnect();
+        
+                    // send mail
+                    $this->mailer->send();
+        
+                    // get message id
+                    $mid = $this->mailer->getLastMessageID();
+        
+                    // Clear previous addresses to avoid duplication
+                    $this->mailer->clearAddresses();
+                    
+                    // Close the SMTP session
+                    $this->mailer->SMTPClose();
+                    
+                    // if attachment delete is allowed
+                    $this->deleteAttachment();
+                    
+                    // $this->mail->ErrorInfo
+                    if(is_callable($callable)){
+                        call_user_func($callable, (object) [
+                            'status'    => 200, 
+                            'message'   => 'Sent', 
+                            'mid'       => $mid, 
+                            'to'        => $email
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    if(is_callable($callable)){
+                        call_user_func($callable, (object) [
+                            'status'    => $e->getCode(), 
+                            'message'   => $e->getMessage(), 
+                            'mid'       => null, 
+                            'to'        => $email
+                        ]);
+                    }
+                }
+            };
+        }
+
+        return $sendEmails;
+    }
+
+    /**
+     * Flushes output buffer and sends data to client.
+     *
+     * @param callable|null $callback The function to execute after flushing the buffer.
+     * @param array|null $options The options to use during buffer flushing.
+     *
+     * @return void
+     */
+    private function ob_crons_flush(callable $callable, ?array $options = null)
+    {
+        // Disable output compression
+        if (!headers_sent()) {
+            @ini_set('zlib.output_compression', 'Off');
+        }
+
+        // Turn on implicit flushing
+        ob_implicit_flush(true);
+
+        // ignore user abort
+        ignore_user_abort(true);
+
+        // Disable script timeout
+        set_time_limit(0);
+
+        // turn on fast cgi
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        // Set the HTTP response code ... only available in > PHP 5.4.0
+        http_response_code(200);
+
+        // Start output buffering
+        ob_start();
+
+        // execute code block
+        if(is_callable($callable)){
+            // flush before calling the callable();
+            $this->autoFlush($options);
+
+            // call the method needed
+            $callable();
+        }
+        
+        // Disable implicit flushing
+        ob_implicit_flush(false);
+    }
+
+    /**
+     * Flushes output buffers and sends headers to enable server-side flushing.
+     * Used internally by ob_crons_flush to ensure all buffers are sent and closed.
+     * 
+     * @param array $options Options to configure flush behavior
+     * @return void
+     */
+    private function autoFlush(?array $options = [])
+    {
+        // If flush is enabled and not in debug mode, set headers for streaming
+        if ($options['flush'] && $options['debug'] === 0) {
+            if (!headers_sent()) {
+                @header('Surrogate-Control: BigPipe/1.0');
+                @header('X-Accel-Buffering: no');
+                @header("Content-Encoding: none");  
+                @header("Connection: close");
+                @header("Content-Length: " . ob_get_length());
+            }
+        }
+
+        // Flush and end all output buffers if active
+        if (ob_get_level() > 0) {
+            flush();
+            ob_flush();
+            ob_end_flush();
+        }
+
+        // Clean up any remaining buffers if active
+        if (ob_get_level() > 0) {
+            ob_clean();
+            ob_end_clean();
+        }
+
+        // Enable implicit flush for real-time output
+        ob_implicit_flush(true);
     }
     
 }

@@ -9,6 +9,7 @@ use Dotenv\Dotenv;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Constant;
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Traits\ServerTrait;
 use Tamedevelopers\Support\Traits\ReusableTrait;
@@ -73,7 +74,7 @@ class Env {
      * 
      * @return array
      */
-    static public function load($path = null)
+    public static function load($path = null)
     {
         self::createSymPath($path);
 
@@ -112,7 +113,7 @@ class Env {
      * 
      * @return void
      */
-    static public function loadOrFail($path = null)
+    public static function loadOrFail($path = null)
     {
         $getStatus = self::load($path);
         if($getStatus['status'] !== Constant::STATUS_200){
@@ -142,7 +143,7 @@ class Env {
      * 
      * @return void
      */
-    static public function createOrIgnore()
+    public static function createOrIgnore()
     {
         // file to .env
         $envPath = self::formatWithBaseDirectory('.env');
@@ -161,14 +162,14 @@ class Env {
             if(!Tame::exists($envPath)){
                 
                 // Write the contents to the new file
-                file_put_contents($envPath, self::envTxt());
+                File::put($envPath, self::envTxt());
             }
 
             // if file doesn't exist and not a directory
             if(!Tame::exists($envExamplePath)){
                 
                 // Write the contents to the new file
-                file_put_contents($envExamplePath, self::envTxt());
+                File::put($envExamplePath, self::envTxt());
             }
         }
     }
@@ -180,7 +181,7 @@ class Env {
      * 
      * @return void
      */
-    static public function bootLogger() 
+    public static function bootLogger() 
     {
         // Directory path
         $dir = self::formatWithBaseDirectory('storage/logs/');
@@ -216,12 +217,12 @@ class Env {
             if ($append && file_exists($filename)) {
                 $current_size = filesize($filename);
                 if ($current_size > $max_size) {
-                    file_put_contents($filename, "{$log_message}");
+                    File::put($filename, "{$log_message}");
                 } else {
-                    file_put_contents($filename, "{$log_message}", FILE_APPEND);
+                    File::put($filename, "{$log_message}", FILE_APPEND);
                 }
             } else {
-                file_put_contents($filename, $log_message);
+                File::put($filename, $log_message);
             }
 
             // Let PHP handle the error in the normal way
@@ -245,7 +246,7 @@ class Env {
      * 
      * @return mixed
      */
-    static public function env($key = null, $value = null)
+    public static function env($key = null, $value = null)
     {
         // Convert all keys to lowercase
         $envData = array_change_key_case($_ENV, CASE_UPPER);
@@ -257,6 +258,17 @@ class Env {
     }
 
     /**
+     * Checks if the specified environment variable has been set or started.
+     *
+     * @param string $key The name of the environment variable to check. Defaults to 'APP_NAME'.
+     * @return bool Returns true if the environment variable is set, false otherwise.
+     */
+    public static function isEnvStarted($key = 'APP_NAME')
+    {
+        return isset($_ENV[$key]);
+    }
+
+    /**
      * Update Environment path .env file
      * @param string|null $key \Environment key you want to update
      * @param string|bool|null $value \Value allocated to the key
@@ -265,7 +277,7 @@ class Env {
      * 
      * @return bool
      */
-    static public function updateENV($key = null, $value = null, ?bool $quote = true, ?bool $space = false)
+    public static function updateENV($key = null, $value = null, ?bool $quote = true, ?bool $space = false)
     {
         $path = self::formatWithBaseDirectory('.env');
 
@@ -304,7 +316,7 @@ class Env {
                 }
 
                 // Write the updated contents back to the .env file
-                file_put_contents($path, implode('', $lines));
+                File::put($path, implode('', $lines));
 
                 return true;
             }

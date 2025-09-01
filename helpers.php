@@ -118,6 +118,20 @@ if (! function_exists('TameCollect')) {
     }
 }
 
+if (! function_exists('tcollect')) {
+    /**
+     * Collection of data
+     *
+     * @param array $items 
+     * 
+     * @return \Tamedevelopers\Support\Collections\Collection
+     */
+    function tcollect($items = [])
+    {
+        return new Collection($items);
+    }
+}
+
 if (! function_exists('TameStr')) {
     /**
      * Tame Str
@@ -299,12 +313,12 @@ if (! function_exists('tview')) {
     /**
      * View Tenmplate Engine
      * 
-     * @param string $viewPath The path to the view file.
+     * @param string|null $viewPath The path to the view file.
      * @param array $data The data to be passed to the view.
      * 
      * @return Tamedevelopers\Support\View
      */
-    function tview($viewPath, $data = [])
+    function tview($viewPath = null, $data = [])
     {
         return new View($viewPath, $data);
     }

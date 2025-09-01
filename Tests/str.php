@@ -38,7 +38,7 @@ dd(
     $removeArrayKeys,
     
     Str::convertArrayCase(
-        data: $arrayCollection, 
+        array: $arrayCollection, 
         value: 'lower'
     ),
 

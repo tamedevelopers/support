@@ -2,10 +2,9 @@
 
 namespace Tamedevelopers\Support;
 
-use PHPMailer\PHPMailer\SMTP;
 use Tamedevelopers\Support\Str;
-use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\PHPMailer;
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\MailTrait;
         
 class Mail{
@@ -21,6 +20,8 @@ class Mail{
     public function __construct($emails = null, ?array $options = [])
     {
         $this->mailer = new PHPMailer(true);
+
+        $this->startEnvIFNotStarted();
 
         if(!empty($emails)){
             $this->recipients['to'] = $this->convert($emails, 'email');
@@ -58,7 +59,7 @@ class Mail{
      * 
      * @return $this
      */
-    static public function config(?array $options = [])
+    public static function config(?array $options = [])
     {
         if(!defined(self::$constantName)){
             define(self::$constantName, $options);
@@ -73,7 +74,7 @@ class Mail{
      * @param string|array $emails
      * @return $this
      */
-    static public function to(...$emails)
+    public static function to(...$emails)
     {
         if(func_num_args() === 1){
             if(isset($emails[0]) && is_string($emails[0])){
@@ -114,21 +115,6 @@ class Mail{
     }
 
     /**
-     * Add Reply to recipients.
-     *
-     * @param string $emails
-     * @return $this
-     */
-    public function __replyTo(...$emails)
-    {
-        [$address, $name] = [$emails[0], $emails[1] ?? null];
-
-        $this->recipients['reply_to'] = [$address, $name];
-
-        return $this;
-    }
-
-    /**
      * Set the email subject.
      *
      * @param string $subject
@@ -150,19 +136,6 @@ class Mail{
     public function body($body)
     {
         $this->body = $body;
-
-        return $this;
-    }
-
-    /**
-     * Set the email altbody.
-     *
-     * @param string $body
-     * @return $this
-     */
-    public function __altBody($body)
-    {
-        $this->altbody = $body;
 
         return $this;
     }
@@ -196,8 +169,30 @@ class Mail{
      */
     public function attach(...$attachments)
     {
-        if(func_num_args() >= 1){
-            $attachments = ['path' => $attachments[0], 'as' => $attachments[1] ?? null];
+        $args = func_num_args();
+
+        // Normalize attachments input
+        if($args === 1 || $args === 2){
+            if($args === 1){
+                $path = $attachments[0];
+                $as = pathinfo($attachments[0], PATHINFO_FILENAME);
+            } else{
+                $filePath = File::isFileType($attachments[0]);
+                $filePath2 = File::isFileType($attachments[1]);
+
+                if($filePath){
+                    $path = $attachments[0];
+                    $as = $attachments[1];
+                } elseif($filePath2){
+                    $path = $attachments[1];
+                    $as = $attachments[0];
+                }   else{       
+                    $path = $attachments[0];
+                    $as = $attachments[1];
+                }
+            }
+            
+            $attachments = ['path' => $path, 'as' => basename($as)];
         }
 
         $this->attachments = $this->formatAttachments($attachments);
@@ -253,10 +248,10 @@ class Mail{
     /**
      * Proceed sending email
      * 
-     * @param callable $function
-     * @return mixed
+     * @param callable $callable
+     * @return void
      */
-    public function send(callable $function  = null)
+    public function send($callable = null)
     {
         // configure smtp data
         $this->configureSMTPData($this->options);
@@ -267,79 +262,18 @@ class Mail{
         // setup mailer
         $this->setupMailer($defaultOption);
 
-        foreach($this->recipients['to'] as $email){
-            // sending mail through auto crons flush
-            $this->ob_crons_flush(function() use ($defaultOption, $function, $email) {
-                try {
-                    // Validate the recipient email
-                    $verify = Tame()->emailValidator($email, true, true);
-                    if (!$verify) {
-                        throw new \Exception("Invalid email address: {$email}", 509); // Custom error code: 509
-                    }
+        // create email closures
+        $sendEmails = $this->createEmailTempClosure($callable);
 
-                    // email and name of receiver as name is optional
-                    $this->mailer->addAddress($email);
-                    
-                    // add cc
-                    $this->addCC();
-                    
-                    // add bcc
-                    $this->addBCC();
-
-                    // add reply to
-                    $this->addReplyTo();
-
-                    // Set email format to HTML
-                    $this->mailer->isHTML(true); 
-
-                    // subject
-                    $this->mailer->Subject = $this->subject;
-                    $this->mailer->Body    = $this->body;
-                    
-                    // If support alternative message
-                    if(!empty($this->altbody)){
-                        $this->mailer->AltBody = $this->altbody; 
-                    }
-
-                    // Connect
-                    $this->mailer->SMTPConnect();
-
-                    // send mail
-                    $this->mailer->send();
-
-                    // get message id
-                    $mid = $this->mailer->getLastMessageID();
-
-                    // clear added address
-                    $this->mailer->clearAddresses();
-                    
-                    // Close the SMTP session
-                    $this->mailer->SMTPClose();
-                    
-                    // if attachment delete is allowed
-                    $this->deleteAttachment();
-                    
-                    // $this->mail->ErrorInfo
-                    if(is_callable($function)){
-                        call_user_func($function, (object) [
-                            'status'    => 200, 
-                            'message'   => 'Sent', 
-                            'mid'       => $mid, 
-                            'to'        => $email
-                        ]);
-                    }
-                } catch (\Exception $e) {
-                    if(is_callable($function)){
-                        call_user_func($function, (object) [
-                            'status'    => $e->getCode(), 
-                            'message'   => $e->getMessage(), 
-                            'mid'       => null, 
-                            'to'        => $email
-                        ]);
-                    }
+        TameCollect($sendEmails)
+            ->each(function($fn) use ($defaultOption) {
+                // If flushBuffering is enabled, release response and send in background
+                if ($this->flushBuffering) {
+                    $this->ob_crons_flush($fn, $defaultOption);
+                } else{
+                    $fn();
                 }
-            }, $defaultOption);
-        }
+            });
     }
     
     /**
@@ -356,90 +290,4 @@ class Mail{
         @session_write_close();
     }
 
-    /**
-     * Flushes output buffer and sends data to client.
-     *
-     * @param callable|null $callback The function to execute after flushing the buffer.
-     * @param array|null $options The options to use during buffer flushing.
-     *
-     * @return void
-     */
-    private function ob_crons_flush(callable $function, ?array $options = null)
-    {
-        // Disable output compression
-        if (!headers_sent()) {
-            @ini_set('zlib.output_compression', 'Off');
-        }
-
-        // Turn on implicit flushing
-        ob_implicit_flush(true);
-
-        // ignore user abort
-        ignore_user_abort(true);
-
-        // Disable script timeout
-        set_time_limit(0);
-
-        // turn on fast cgi
-        if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
-        }
-
-        // Set the HTTP response code ... only available in > PHP 5.4.0
-        http_response_code(200);
-
-        // Start output buffering
-        ob_start();
-
-        // execute code block
-        if(is_callable($function)){
-            $function(self::class);
-        }
-        
-        $this->__obFlush($options);
-
-        // Disable implicit flushing
-        ob_implicit_flush(false);
-    }
-
-    /**
-     * Flushes output buffers and sends headers to enable server-side flushing.
-     * 
-     * @param array $options An array of options to configure the flush behavior.
-     * Available options are:
-     * - 'flush' (bool) Whether to flush the email sending queue. Defaults to false.
-     * - 'debug' (int) Whether to enable debug mode. When debug mode is on, the email sending queue is not flushed. Defaults to false.
-     * 
-     * @return void
-     */
-    private function __obFlush(?array $options = [])
-    {
-        // Flush email sending queue
-        if ($options['flush'] && $options['debug'] === 0) {
-            if (!headers_sent()) {
-                @header('Surrogate-Control: BigPipe/1.0');
-                @header('X-Accel-Buffering: no');
-                @header("Content-Encoding: none");  
-                @header("Connection: close");
-                @header("Content-Length: " . ob_get_length());
-            }
-        }
-
-        // Flush output buffers if active
-        if (ob_get_level() > 0) {
-            flush();
-            ob_flush();
-            ob_end_flush();
-        }
-
-        // Clean up output buffers if active
-        if (ob_get_level() > 0) {
-            ob_clean();
-            ob_end_clean();
-        }
-
-        // Set implicit flush to true to enable real-time output
-        ob_implicit_flush(true);
-    }
-    
 }

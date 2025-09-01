@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>@yield('title')</title>
+    <title>{{ $title }}</title>
 </head>
 <body>
-    @include('partials.navbar')
 
+    {{ $appName }}
+    <!-- {{ $header['title'] }} -->
+    
+    @section('title', 'Homepage')
+    
     <main>
         @yield('content')
     </main>
 
-    @include('partials.footer')
+    @include('tests.layout.partials.footer', ['year2' => $header['year']])
+
 </body>
 </html>

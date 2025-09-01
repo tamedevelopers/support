@@ -9,6 +9,7 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Capsule\CustomException;
 
@@ -71,7 +72,7 @@ class PDF{
      * 
      * @return void
      */
-    static public function create(array $options = [])
+    public static function create(array $options = [])
     {
         self::$options = array_merge([
             'content'         => '',
@@ -116,7 +117,7 @@ class PDF{
         // Render PDF output to browser without saving
         if(in_array(self::$options['output'], ['preview', 'view']))
         {
-            @file_put_contents(self::$options['destination'], self::$dompdf->output());
+            File::put(self::$options['destination'], self::$dompdf->output());
 
             // for reading to browser as well, from package
             // self::$dompdf->stream(self::$options['destination'], array("Attachment" => false)); 
@@ -128,7 +129,7 @@ class PDF{
         // Save PDF to server only
         elseif(in_array(self::$options['output'], ['save', 'saves', 'getsave']))
         {
-            @file_put_contents(self::$options['destination'], self::$dompdf->output());
+            File::put(self::$options['destination'], self::$dompdf->output());
         }
 
         // Stream PDF to browser for download
@@ -146,7 +147,7 @@ class PDF{
      * 
      * @return void
      */
-    static public function read(string $path)
+    public static function read(string $path)
     {
         Tame::readPDFToBrowser($path);
     }

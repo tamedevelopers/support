@@ -14,20 +14,20 @@ class Manager{
      * Remove all whitespace characters
      * @var string
      */
-    static public $regex_whitespace = "/\s+/";
+    public static $regex_whitespace = "/\s+/";
 
     /**
      * Remove leading or trailing spaces/tabs from each line
      * @var string
      */
-    static public $regex_lead_and_end = "/^[ \t]+|[ \t]+$/m";
+    public static $regex_lead_and_end = "/^[ \t]+|[ \t]+$/m";
 
     /**
      * Sample copy of env file
      * 
      * @return string
      */
-    static public function envDummy()
+    public static function envDummy()
     {
         return preg_replace("/^[ \t]+|[ \t]+$/m", "", 'APP_NAME="ORM Database"
             APP_ENV=local
@@ -103,7 +103,7 @@ class Manager{
      * 
      * @return void
      */
-    static public function regenerate()
+    public static function regenerate()
     {
         Env::updateENV('APP_KEY', self::generate(), false);
     }
@@ -113,7 +113,7 @@ class Manager{
      * 
      * @return bool
      */
-    static public function AppDebug()
+    public static function AppDebug()
     {
         return self::isEnvBool($_ENV['APP_DEBUG'] ?? true);
     }
@@ -124,7 +124,7 @@ class Manager{
      * 
      * @return mixed
      */
-    static public function isEnvBool($value)
+    public static function isEnvBool($value)
     {
         if(is_string($value)){
             return Str::lower($value) === 'true'
@@ -141,7 +141,7 @@ class Manager{
      * 
      * @return bool
      */
-    static public function isEnvSet($key)
+    public static function isEnvSet($key)
     {
         return isset($_ENV[$key]) ? true : false;
     }
@@ -153,7 +153,7 @@ class Manager{
      * @param  Closure|null $closure
      * @return void
      */
-    static public function setHeaders($status = 404, $closure = null)
+    public static function setHeaders($status = 404, $closure = null)
     {
         // Set HTTP response status code to 404
         @http_response_code($status);
@@ -173,7 +173,7 @@ class Manager{
      * 
      * @return string
      */ 
-    static public function replaceWhiteSpace(?string $string = null)
+    public static function replaceWhiteSpace(?string $string = null)
     {
         return Str::trim(preg_replace(
             self::$regex_whitespace, 
@@ -189,7 +189,7 @@ class Manager{
      * 
      * @return string
      */ 
-    static public function replaceLeadEndSpace(?string $string = null)
+    public static function replaceLeadEndSpace(?string $string = null)
     {   
         return preg_replace(self::$regex_lead_and_end, " ", $string);
     }

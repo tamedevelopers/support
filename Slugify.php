@@ -30,7 +30,7 @@ class Slugify{
      * @param  bool $case
      * @return mixed
      */
-    static public function slug($word, $locale = null, $separator = "-", $case = true)
+    public static function slug($word, $locale = null, $separator = "-", $case = true)
     {
         // get language 
         $locale = self::switchLanguage($locale); 
@@ -59,7 +59,7 @@ class Slugify{
      *
      * @return array
      */
-    static public function locales()
+    public static function locales()
     {
         return [
             'ar' => 'arabic', 

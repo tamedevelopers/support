@@ -25,7 +25,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    static public function setDirectory($path = null)
+    public static function setDirectory($path = null)
     {
         // if base path was presented
         if(!empty($path)){
@@ -42,7 +42,7 @@ trait ServerTrait{
      * 
      * @return mixed
      */
-    static public function getDirectory()
+    public static function getDirectory()
     {
         if(empty(self::$base_dir)){
             // get default project root path
@@ -77,7 +77,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    static public function formatWithBaseDirectory($path = null)
+    public static function formatWithBaseDirectory($path = null)
     {
         $server = rtrim(
             self::getDirectory(),
@@ -97,7 +97,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    static public function formatWithDomainURI($path = null)
+    public static function formatWithDomainURI($path = null)
     {
         $domain = rtrim(
             self::getServers('domain'),
@@ -118,7 +118,7 @@ trait ServerTrait{
      * @return mixed
      * - An associative array containing\ server|domain
      */
-    static public function getServers($mode = null)
+    public static function getServers($mode = null)
     {
         // Only create Base path when `CONSTANT` is not defined
         // - The Constant holds the path setup information
@@ -162,7 +162,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    static public function cleanServerPath($path = null, $replacer = '/')
+    public static function cleanServerPath($path = null, $replacer = '/')
     {
         return rtrim(
             self::pathReplacer($path, $replacer), 
@@ -179,7 +179,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    static public function pathReplacer($path, $replacer = '/')
+    public static function pathReplacer($path, $replacer = '/')
     {
         return str_replace(
             ['\\', '/'], 
@@ -193,7 +193,7 @@ trait ServerTrait{
      * 
      * @return string
      */
-    static public function createAbsolutePath()
+    public static function createAbsolutePath()
     {
         // get direct root path
         $projectRootPath = self::getDirectRootPath();

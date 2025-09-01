@@ -14,7 +14,7 @@ trait TameTrait{
      * @param  Closure|null $closure
      * @return bool
      */
-    static public function isClosure($closure = null)
+    public static function isClosure($closure = null)
     {
         if($closure instanceof Closure){
             return true;
@@ -28,7 +28,7 @@ trait TameTrait{
      * 
      * @return void
      */
-    static public function obStart()
+    public static function obStart()
     {
         @ignore_user_abort(true);
         @set_time_limit(0);
@@ -40,7 +40,7 @@ trait TameTrait{
      * 
      * @return void
      */
-    static public function obFlush()
+    public static function obFlush()
     {
         // Turn on fastcgi (if available)
         if (function_exists('fastcgi_finish_request')) {
@@ -81,7 +81,7 @@ trait TameTrait{
      * @param  Closure|null $closure
      * @return void
      */
-    static public function obCronsflush($closure = null)
+    public static function obCronsflush($closure = null)
     {
         // Prevent the script from timing out due to execution time limits
         set_time_limit(0);

@@ -7,8 +7,6 @@ namespace Tamedevelopers\Support;
 use DateTime;
 use DateTimeZone;
 use Tamedevelopers\Support\Str;
-use Tamedevelopers\Support\Time;
-use Tamedevelopers\Support\Country;
 use Tamedevelopers\Support\Traits\TimeTrait;
 use Tamedevelopers\Support\Capsule\TimeHelper;
 
@@ -89,7 +87,7 @@ class Time {
      * 
      * @return mixed
      */
-    static public function __callStatic($name, $args) 
+    public static function __callStatic($name, $args) 
     {
         return self::nonExistMethod($name, $args, self::$staticData);
     }
@@ -336,7 +334,7 @@ class Time {
      * 
      * @return string
      */
-    static public function timestamp($date, $format = "Y-m-d H:i:s")
+    public static function timestamp($date, $format = "Y-m-d H:i:s")
     {
         $date = TimeHelper::setPassedDate($date);
 
@@ -351,7 +349,7 @@ class Time {
      * 
      * @return string
      */
-    static public function toJsTimer($date)
+    public static function toJsTimer($date)
     {
         return self::timestamp($date, 'M j, Y H:i:s');
     }
@@ -393,7 +391,7 @@ class Time {
      * 
      * @return void
      */
-    static public function config(?array $options = [])
+    public static function config(?array $options = [])
     {
         if(!defined('TAME_TIME_CONFIG')){
             define('TAME_TIME_CONFIG', array_merge([
@@ -501,7 +499,9 @@ class Time {
     {
         $clone = $this->clone();
         $clone->date = TimeHelper::setPassedDate($date);
-        $clone->timestamp = $clone->timestampPrint();
+        if (is_object($clone)) {
+            $clone->timestamp = $clone->timestampPrint();
+        }
 
         $dateTime = new DateTime();
         $dateTime->setTimestamp($clone->date);

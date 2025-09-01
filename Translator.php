@@ -12,7 +12,7 @@ class Translator{
      *
      * @var string
      */
-    static public $locale;
+    public static $locale;
 
     /**
      * Translator constructor.
@@ -30,7 +30,7 @@ class Translator{
      * @param  string $locale
      * @return void
      */
-    static public function setLocale($locale)
+    public static function setLocale($locale)
     {
         self::$locale = $locale;
     }
@@ -39,7 +39,7 @@ class Translator{
      * Get Locale
      * @return string
      */
-    static public function getLocale()
+    public static function getLocale()
     {
         if(empty(self::$locale)){
             new self();
@@ -57,7 +57,7 @@ class Translator{
      * 
      * @return string|array|null
      */
-    static public function trans($key = null, $locale = null, $base_folder = null)
+    public static function trans($key = null, $locale = null, $base_folder = null)
     {
         $base_folder    = empty($base_folder) ? 'lang' : $base_folder;
         $locale         = is_null($locale) ? self::getLocale() : $locale;

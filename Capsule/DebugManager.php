@@ -10,11 +10,11 @@ use Tamedevelopers\Support\Capsule\Manager;
 
 class DebugManager{
     
-    public static $whoops;
+    private static $whoops;
 
     /**
      * Boot the DebugManager.
-     * If the constant 'ORMDebugManager' is not defined, 
+     * If the constant 'TAME_DEBUG_MANAGER' is not defined, 
      * it defines it and starts the debugger automatically.
      * 
      * So that this is only called once in entire application life cycle
@@ -23,6 +23,7 @@ class DebugManager{
     {
         if(!defined('TAME_DEBUG_MANAGER')){
             self::autoStartDebugger();
+            // Define debug manager as true
             define('TAME_DEBUG_MANAGER', 1);
         } 
     }
@@ -30,7 +31,7 @@ class DebugManager{
     /**
      * Autostart debugger for error logger
      * 
-     * @return string
+     * @return void
      */
     private static function autoStartDebugger()
     {
@@ -39,9 +40,11 @@ class DebugManager{
             // header not sent
             if (!headers_sent()) {
                 // register error handler
-                self::$whoops = new Run();
-                self::$whoops->pushHandler(new PrettyPageHandler());
-                self::$whoops->register();
+                if (!isset(self::$whoops)) {
+                    self::$whoops = new Run();
+                    self::$whoops->pushHandler(new PrettyPageHandler());
+                    self::$whoops->register();
+                }
             }
         } 
     }

@@ -6,6 +6,7 @@ namespace Tamedevelopers\Support;
 
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\TameTrait;
 use Tamedevelopers\Support\Traits\NumberToWordsTraits;
 
@@ -57,7 +58,7 @@ class Tame {
      * @param  mixed $message
      * @return mixed
      */
-    static public function echoJson(int $response = 0, $message = null)
+    public static function echoJson(int $response = 0, $message = null)
     {
         echo json_encode(['response' => $response, 'message' => $message]);
     }
@@ -68,7 +69,7 @@ class Tame {
      * @param string $url
      * @return bool
      */
-    static public function urlExists($url)
+    public static function urlExists($url)
     {
         $ch = curl_init($url);
 
@@ -92,7 +93,7 @@ class Tame {
      * 
      * @return bool
      */
-    static public function isInternetAvailable()
+    public static function isInternetAvailable()
     {
         return self::urlExists('https://www.google.com');
     }
@@ -104,7 +105,7 @@ class Tame {
      * @param  Closure|null $closure
      * @return void
      */
-    static public function class_exists($class, $closure = null)
+    public static function class_exists($class, $closure = null)
     {
         if(class_exists($class)){
             if(self::isClosure($closure)){
@@ -117,9 +118,10 @@ class Tame {
      * Check if at least one class exists
      *
      * @param string|array $classNames Array of class names to check
-     * @return bool True if at least one class exists, false otherwise
+     * @return bool 
+     * - True if at least one class exists, false otherwise
      */
-    static public function checkAnyClassExists(...$classNames)
+    public static function checkAnyClassExists(...$classNames)
     {
         $classNames = Str::flattenValue($classNames);
         foreach ($classNames as $name) {
@@ -136,7 +138,7 @@ class Tame {
      * @param string $version
      * @return bool
      */
-    static public function versionCompare($version)
+    public static function versionCompare($version)
     {
         if(version_compare(PHP_VERSION, $version, '>=')){
             return true;
@@ -150,7 +152,7 @@ class Tame {
      * This function checks if headers have been sent and outputs information about where headers were sent.
      * If headers are sent, it outputs the file and location where the headers were sent and terminates the script.
      */
-    static public function HeadersSent()
+    public static function HeadersSent()
     {
         $file = null;
         $location = null;
@@ -169,7 +171,7 @@ class Tame {
      * 
      * @return void
      */
-    static public function include($path)
+    public static function include($path)
     {
         if(self::exists($path)){
             include $path;
@@ -184,7 +186,7 @@ class Tame {
      * 
      * @return void
      */
-    static public function includeOnce($path)
+    public static function includeOnce($path)
     {
         if(self::exists($path)){
             include_once $path;
@@ -199,7 +201,7 @@ class Tame {
      * 
      * @return void
      */
-    static public function require($path)
+    public static function require($path)
     {
         if(self::exists($path)){
             require $path;
@@ -214,7 +216,7 @@ class Tame {
      * 
      * @return void
      */
-    static public function requireOnce($path)
+    public static function requireOnce($path)
     {
         if(self::exists($path)){
             require_once $path;
@@ -232,7 +234,7 @@ class Tame {
      * 
      * @return string
      */
-    static public function byteToUnit($bytes = 0, $format = false, $gb = 'GB', $mb = 'MB', $kb = 'KB')
+    public static function byteToUnit($bytes = 0, $format = false, $gb = 'GB', $mb = 'MB', $kb = 'KB')
     {
         // Define byte thresholds.
         $units = [
@@ -260,7 +262,7 @@ class Tame {
      * @param string|int|float $size
      * @return int
      */
-    static public function sizeToBytes($size = '1mb')
+    public static function sizeToBytes($size = '1mb')
     {
         $size = Str::lower(str_replace(' ', '', (string) $size));
 
@@ -295,7 +297,7 @@ class Tame {
      * @param string|int|float $size
      * @return int
      */
-    static public function unitToByte($size = '1mb')
+    public static function unitToByte($size = '1mb')
     {
         return self::sizeToBytes($size);
     }
@@ -308,7 +310,7 @@ class Tame {
      * 
      * @return int|bool
      */
-    static public function fileTime($path = null) 
+    public static function fileTime($path = null) 
     {
         return self::getFiletime($path);
     }
@@ -321,7 +323,7 @@ class Tame {
      * @return int 
      * - The count of divisible numbers.
      */
-    static public function countDivisibleNumbers($index = 100, $amount = 0)
+    public static function countDivisibleNumbers($index = 100, $amount = 0)
     {
         if ($index <= 0 || $amount < $index) {
             return 0;
@@ -339,7 +341,7 @@ class Tame {
      * @return float|int 
      * - The result of the exponentiation.
      */
-    static public function calculateExponent($base = 0, $exponent = 0)
+    public static function calculateExponent($base = 0, $exponent = 0)
     {
         return pow($base, $exponent);
     }
@@ -365,7 +367,7 @@ class Tame {
      * 
      * @return int
      */
-    static public function calculateVolumeWeight($length = 0, $width = 0, $height = 0, ?bool $format = true, $decimal = 0.5) 
+    public static function calculateVolumeWeight($length = 0, $width = 0, $height = 0, ?bool $format = true, $decimal = 0.5) 
     {
         $value = ((float) $length * (float) $width * (float) $height) / 5000;
         return  $format ? 
@@ -394,7 +396,7 @@ class Tame {
      * 
      * @return int
      */
-    static public function calculateCubicMeterWeight($length = 0, $width = 0, $height = 0, ?bool $format = true, $decimal = 0.1)
+    public static function calculateCubicMeterWeight($length = 0, $width = 0, $height = 0, ?bool $format = true, $decimal = 0.1)
     {
         $value = ((float) $length * (float) $width * (float) $height) / 1000000;
         return  $format ? 
@@ -426,7 +428,7 @@ class Tame {
      * 
      * @return int
      */
-    static public function getBetweenBoxLengthAndWeightInKg($length = 0, $width = 0, $height = 0, $weight = 0, ?bool $format = true, $decimal = 0.5) 
+    public static function getBetweenBoxLengthAndWeightInKg($length = 0, $width = 0, $height = 0, $weight = 0, ?bool $format = true, $decimal = 0.5) 
     {
         $weight = (float) $weight; 
         $dimensional_weight = self::calculateVolumeWeight($length, $width, $height, $format, $decimal);
@@ -461,7 +463,7 @@ class Tame {
      * 
      * @return int
      */
-    static public function getBetweenBoxLengthAndWeightInCMB($length = 0, $width = 0, $height = 0, $weight = 0, ?bool $format = true, $decimal = 0.1) 
+    public static function getBetweenBoxLengthAndWeightInCMB($length = 0, $width = 0, $height = 0, $weight = 0, ?bool $format = true, $decimal = 0.1) 
     {
         $weight = (float) $weight; 
         $dimensional_weight = self::calculateCubicMeterWeight($length, $width, $height, $format, $decimal);
@@ -483,7 +485,7 @@ class Tame {
      * 
      * @return int
      */
-    static public function getBetweenDimensionalWeightAndWeightInKg(mixed $dimensional_weight = 0, mixed $actual_weight = 0) 
+    public static function getBetweenDimensionalWeightAndWeightInKg(mixed $dimensional_weight = 0, mixed $actual_weight = 0) 
     {
         $actual_weight      = (float) $actual_weight;
         $dimensional_weight = (float) $dimensional_weight;
@@ -504,7 +506,7 @@ class Tame {
      * 
      * @return int
      */
-    static public function getBetweenDimensionalWeightAndWeightInCBM(mixed $dimensional_weight = 0, mixed $actual_weight = 0) 
+    public static function getBetweenDimensionalWeightAndWeightInCBM(mixed $dimensional_weight = 0, mixed $actual_weight = 0) 
     {
         return self::getBetweenDimensionalWeightAndWeightInKg($dimensional_weight, $actual_weight);
     } 
@@ -517,7 +519,7 @@ class Tame {
      * 
      * @return int|float
      */
-    static public function roundToDecimal(mixed $value = 0, mixed $decimal = 0.5)
+    public static function roundToDecimal(mixed $value = 0, mixed $decimal = 0.5)
     {
         $value  = (float) $value;
         $decimal = (float) $decimal;
@@ -543,7 +545,7 @@ class Tame {
      * @param  bool $reverse_order
      * @return array
      */
-    static public function setCheckbox($status = null, ?bool $reverse_order = false)
+    public static function setCheckbox($status = null, ?bool $reverse_order = false)
     {
         $order = ['on' => 1, 'off' => 0];
         if($reverse_order){
@@ -567,7 +569,7 @@ class Tame {
      * @param float|int $weight
      * @return int
      */
-    static public function kgToGrams(float|int $weight = 0)
+    public static function kgToGrams(float|int $weight = 0)
     {
         return $weight == 0 ? 0 : round(($weight * 1000) + 1, 2);
     }
@@ -578,7 +580,7 @@ class Tame {
      * @param float|int $weight
      * @return int
      */
-    static public function gramsToKg(float|int $weight = 0)
+    public static function gramsToKg(float|int $weight = 0)
     {
         return $weight == 0 || null ? 0 : round((($weight - 1) / 1000), 2);
     }
@@ -590,7 +592,7 @@ class Tame {
      * @param float|int $newNumber
      * @return int
      */
-    static public function calPercentageBetweenNumbers(float|int $number = 0, float|int $newNumber = 0)
+    public static function calPercentageBetweenNumbers(float|int $number = 0, float|int $newNumber = 0)
     {
         // default 
         $decreaseValue = self::COUNT;
@@ -615,7 +617,7 @@ class Tame {
      * @return bool
      * - true|false
      */
-    static public function isArrayDuplicate(?array $data = [])
+    public static function isArrayDuplicate(?array $data = [])
     {
         return Str::arrayDuplicate($data);
     }
@@ -627,7 +629,7 @@ class Tame {
      * @return bool
      * - true|false
      */
-    static public function isArraySame(?array $data = [])
+    public static function isArraySame(?array $data = [])
     {
         return Str::arraySame($data);
     }
@@ -641,7 +643,7 @@ class Tame {
      * 
      * @return array
      */
-    static public function sortArray(?array &$data = [], ?string $type = 'sort')
+    public static function sortArray(?array &$data = [], ?string $type = 'sort')
     {
         // Validate that $data is an array
         if (!is_array($data)) {
@@ -688,7 +690,7 @@ class Tame {
      * 
      * @return array
      */
-    static public function sortMultipleArray(?array &$data = [], $key = null, ?string $type = 'asc')
+    public static function sortMultipleArray(?array &$data = [], $key = null, ?string $type = 'asc')
     {
         // Check if $data is an array and not empty
         if (!is_array($data) || empty($data)) {
@@ -736,7 +738,7 @@ class Tame {
      * 
      * @return string
      */
-    static public function cleanPhoneNumber($phone = null, ?bool $allow = true)
+    public static function cleanPhoneNumber($phone = null, ?bool $allow = true)
     {
         $phone = Str::trim($phone);
         $phone = str_replace([' ', '-'], '', $phone);
@@ -759,7 +761,7 @@ class Tame {
      * @return string
      * - The cleaned string or null if the input is empty.
      */
-    static public function removeSpecialChars($string = null)
+    public static function removeSpecialChars($string = null)
     {
         return self::cleanTagsForURL($string);
     }
@@ -770,7 +772,7 @@ class Tame {
      * @param string|null $string The input string to clean.
      * @return string The cleaned string.
      */
-    static public function cleanTagsForURL($string = null)
+    public static function cleanTagsForURL($string = null)
     {
         // Remove unwanted characters from the string
         $string = preg_replace('/[^\p{L}\p{N}\s]/u', '', Str::trim($string));
@@ -787,7 +789,7 @@ class Tame {
      * @param  int $interation
      * @return void
      */
-    static public function stringHash($string = null, $length = 100, $type = 'sha256', $interation = 100)
+    public static function stringHash($string = null, $length = 100, $type = 'sha256', $interation = 100)
     {
         return hash_pbkdf2($type, mt_rand() . $string, self::PBKDF2_SALT, $interation, $length);
     }
@@ -803,7 +805,7 @@ class Tame {
      * 
      * @return string
      */
-    static public function shortenString($string = null, $limit = 50, $replacer = '...')
+    public static function shortenString($string = null, $limit = 50, $replacer = '...')
     {
         // clean string before begin
         $string = strip_tags(Str::trim($string));
@@ -823,7 +825,7 @@ class Tame {
      * @param string|null $string
      * @return string
      */
-    static public function html($string = null)
+    public static function html($string = null)
     {
         return html_entity_decode(Str::trim($string), ENT_HTML5, 'UTF-8');
     }
@@ -836,7 +838,7 @@ class Tame {
      * @return string
      * - strip all tags from string content
      */
-    static public function text($string = null)
+    public static function text($string = null)
     {
         return strip_tags(Str::trim($string));
     }
@@ -847,7 +849,7 @@ class Tame {
      * @param string|null $string
      * @return string
     */
-    static public function filter_input($string = null)
+    public static function filter_input($string = null)
     {
         return htmlspecialchars(Str::trim($string), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
@@ -857,7 +859,7 @@ class Tame {
      * @param  float|int $number
      * @return void
      */
-    static public function formatNumberToNearestThousand(float|int $number = 0)
+    public static function formatNumberToNearestThousand(float|int $number = 0)
     {
         if ($number < 1000) {
             return $number; // Return the number as is if it's less than 1000.
@@ -887,9 +889,9 @@ class Tame {
      * 
      * @return bool
      */
-    static public function exists($path = null)
+    public static function exists($path = null)
     {
-        return !is_dir($path) && file_exists($path);
+        return is_file($path);
     }
     
     /**
@@ -903,7 +905,7 @@ class Tame {
      * 
      * @return void
      */
-    static public function unlink(string $file, $restrictedfileName = null)
+    public static function unlink(string $file, $restrictedfileName = null)
     {
         $fullPath = self::stringReplacer($file);
 
@@ -925,10 +927,10 @@ class Tame {
      *
      * @return array|object|null
      */
-    static public function convertJsonData($path, $format = true)
+    public static function convertJsonData($path, $format = true)
     {
         if(self::exists($path)){
-            return json_decode(file_get_contents($path), $format);
+            return json_decode(File::get($path), $format);
         }
     }
     
@@ -944,7 +946,7 @@ class Tame {
      * 
      * @return bool
      */
-    static public function saveDataAsJsonObject(string $destination, mixed $data, ?bool $type = true)
+    public static function saveDataAsJsonObject(string $destination, mixed $data, ?bool $type = true)
     {
         // Choose the JSON encoding format
         $format = $type ? JSON_PRETTY_PRINT : JSON_UNESCAPED_UNICODE;
@@ -978,7 +980,7 @@ class Tame {
      * 
      * @return string|null
      */
-    static public function saveFileFromURL($url, $destination)
+    public static function saveFileFromURL($url, $destination)
     {
         // Check if the destination directory exists, if not, create it
         $directory = dirname($destination);
@@ -987,7 +989,7 @@ class Tame {
         }
 
         // Try to open the file and save its contents
-        $fileContents = @file_get_contents($url);
+        $fileContents = File::get($url);
         if ($fileContents === false) {
             // Handle error, e.g., log it
             error_log("Failed to fetch contents from $url");
@@ -995,7 +997,7 @@ class Tame {
         }
 
         // Try to write the contents to the destination file
-        $writeResult = @file_put_contents($destination, $fileContents);
+        $writeResult = File::put($destination, $fileContents);
         if ($writeResult === false) {
             // Handle error, e.g., log it
             error_log("Failed to write contents to $destination");
@@ -1019,7 +1021,7 @@ class Tame {
      * 
      * @return void
      */
-    static public function readPDFToBrowser($path = null, $delete = false)
+    public static function readPDFToBrowser($path = null, $delete = false)
     {
         $fullPath  = self::stringReplacer($path);
 
@@ -1071,7 +1073,7 @@ class Tame {
      * 
      * @return null|string
      */
-    static public function imageToBase64($path = null, $url = false) 
+    public static function imageToBase64($path = null, $url = false) 
     {
         $fullPath  = self::stringReplacer($path);
 
@@ -1079,11 +1081,11 @@ class Tame {
             // Parse the URL to get the path
             $parse  = parse_url($path, PHP_URL_PATH);
             $type   = pathinfo($parse, PATHINFO_EXTENSION);
-            $data   = @file_get_contents($path);
+            $data   = File::get($path);
         } else{
             if(self::exists($fullPath)){
                 $type   = pathinfo($fullPath, PATHINFO_EXTENSION);
-                $data   = @file_get_contents($fullPath);
+                $data   = File::get($fullPath);
             }
         }
 
@@ -1111,7 +1113,7 @@ class Tame {
      * @return string 
      * - The masked string.
      */
-    static public function mask($str = null, ?int $length = 4, ?string $position = 'right', ?string $mask = '*')
+    public static function mask($str = null, ?int $length = 4, ?string $position = 'right', ?string $mask = '*')
     {
         // Check if the mbstring extension is available
         if (!extension_loaded('mbstring')) {
@@ -1180,7 +1182,7 @@ class Tame {
      * @return bool 
      * - Whether the email address is valid (true) or not (false).
      */
-    static public function emailValidator($email = null, ?bool $use_internet = false, ?bool $server_verify = false) 
+    public static function emailValidator($email = null, ?bool $use_internet = false, ?bool $server_verify = false) 
     {
         $filteredEmail = filter_var($email, FILTER_VALIDATE_EMAIL);
 
@@ -1225,7 +1227,7 @@ class Tame {
      * @param  string|null $jsonString
      * @return mixed
      */
-    static public function decryptStr($jsonString = null)
+    public static function decryptStr($jsonString = null)
     {
         // get encryption
         $openSSL = self::openSSLEncrypt();
@@ -1265,7 +1267,7 @@ class Tame {
      * - Uses the Open SSL Encryption
      * - BF-CBC
      */
-    static public function encryptStr($string = null)
+    public static function encryptStr($string = null)
     {
         // get encryption
         $openSSL = self::openSSLEncrypt();
@@ -1306,7 +1308,7 @@ class Tame {
      * 
      * @return string
      */
-    static public function platformIcon($platform = null, $os_name = null)
+    public static function platformIcon($platform = null, $os_name = null)
     {
         // platform to lower
         $platform = Str::lower(basename($platform));
@@ -1349,7 +1351,7 @@ class Tame {
      * @return mixed
      * - string|null
      */
-    static public function paymentIcon($payment = null)
+    public static function paymentIcon($payment = null)
     {
         // set path
         $path = self::stringReplacer( __DIR__ ) . DIRECTORY_SEPARATOR;
@@ -1388,7 +1390,7 @@ class Tame {
      * 
      * @return string
      */
-    static public function stringReplacer($path = null)
+    public static function stringReplacer($path = null)
     {
         return str_replace(
             ['\\', '/'], 

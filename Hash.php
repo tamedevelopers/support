@@ -21,7 +21,7 @@ final class Hash {
      * @return string 
      * - The encrypted password.
      */
-    static public function make($password)
+    public static function make($password)
     {
         // Check if the password exceeds the maximum length
         self::passwordLengthVerifier($password, 72);
@@ -43,7 +43,7 @@ final class Hash {
      * @return bool 
      * - Returns true if the verification is successful, false otherwise.
      */
-    static public function check($newPassword, $oldHashedPassword)
+    public static function check($newPassword, $oldHashedPassword)
     {
         return password_verify($newPassword, $oldHashedPassword);
     }

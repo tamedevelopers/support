@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\ServerTrait;
 use Tamedevelopers\Support\Traits\ReusableTrait;
 
@@ -28,7 +29,7 @@ class Server{
      * @return mixed
      * The value of the configuration option, or null if it doesn't exist
      */
-    static public function config($key, $default = null, string $base_folder = 'config')
+    public static function config($key, $default = null, string $base_folder = 'config')
     {
         // Convert the key to an array
         $parts = explode('.', $key);
@@ -76,7 +77,7 @@ class Server{
      * 
      * @return void
      */
-    static public function createTemplateFile(?array $data = [], ?string $filename = null)
+    public static function createTemplateFile(?array $data = [], ?string $filename = null)
     {
         // Get the file name
         $filePath = base_path($filename);
@@ -114,7 +115,7 @@ class Server{
         // to avoid warning error
         // we check if path is a directory first before executing the code
         if(is_dir(dirname($filePath))){
-            file_put_contents($filePath, $phpCode);
+            File::put($filePath, $phpCode);
         }
     }
     
@@ -124,7 +125,7 @@ class Server{
      * @param  mixed $value
      * @return array
      */
-    static public function toArray($value)
+    public static function toArray($value)
     {
         // check value is a valid json data
         if (is_string($value)) {
@@ -152,7 +153,7 @@ class Server{
      * @param  mixed $value
      * @return object
      */
-    static public function toObject($value)
+    public static function toObject($value)
     {
         return json_decode(
             json_encode( self::toArray($value) ), 
@@ -166,7 +167,7 @@ class Server{
      * @param  mixed $value
      * @return string
      */
-    static public function toJson($value)
+    public static function toJson($value)
     {
         if (self::isValidJson($value)) {
             return $value;
