@@ -5,6 +5,7 @@ namespace Tamedevelopers\Support;
 use Tamedevelopers\Support\Str;
 use PHPMailer\PHPMailer\PHPMailer;
 use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Traits\MailTrait;
         
 class Mail{
@@ -21,7 +22,7 @@ class Mail{
     {
         $this->mailer = new PHPMailer(true);
 
-        $this->startEnvIFNotStarted();
+        Manager::startEnvIFNotStarted();
 
         if(!empty($emails)){
             $this->recipients['to'] = $this->convert($emails, 'email');

@@ -371,24 +371,6 @@ trait MailTrait{
     }
     
     /**
-     * Ensures that the environment is started if it has not been initialized yet.
-     *
-     * This method checks the current state of the environment and performs
-     * initialization steps if necessary to guarantee that the environment is ready
-     * for further operations.
-     *
-     * @return void
-     */
-    private function startEnvIFNotStarted()
-    {
-        // if ENV has not been started
-        if(!Env::isEnvStarted()){
-            Env::createOrIgnore();
-            Env::load();
-        }
-    }
-    
-    /**
      * isSMTP
      *
      * @return bool

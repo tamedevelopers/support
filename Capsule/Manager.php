@@ -99,6 +99,24 @@ class Manager{
     }
 
     /**
+     * Ensures that the environment is started if it has not been initialized yet.
+     *
+     * This method checks the current state of the environment and performs
+     * initialization steps if necessary to guarantee that the environment is ready
+     * for further operations.
+     *
+     * @return void
+     */
+    public static function startEnvIFNotStarted()
+    {
+        // if ENV has not been started
+        if(!Env::isEnvStarted()){
+            Env::createOrIgnore();
+            Env::load();
+        }
+    }
+
+    /**
      * Re-generate a new app KEY
      * 
      * @return void
