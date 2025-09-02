@@ -1136,7 +1136,7 @@ Asset::asset('css/style.css');
 
 | params        | Description                 |
 |---------------|-----------------------------|
-| base_path     | PAth to file                  |
+| base_path     | Path to file                  |
 | cache         | By Default is `false`. Tell method to include cache for each file  |
 | path_type     | By Default is `false`, which uses absolute path for all files. While `true` will use relative path |
         
@@ -1165,7 +1165,6 @@ Asset::config('storage', false);
 
 - or -- `using helper method`
 ```php
-
 // absolute path
 config_asset('storage/main.js', true);
 // Output: http://domain.com/storage/main.js?v=111111111
@@ -1385,7 +1384,7 @@ use Tamedevelopers\Support\AutoloadRegister;
 AutoloadRegister::load('folder');
 
 or
-autoload_register(['folder', 'folder2]);
+autoload_register(['folder', 'folder2']);
 ```
 
 ## Helpers Functions
