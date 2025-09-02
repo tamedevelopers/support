@@ -902,7 +902,7 @@ class Str
      */
     public static function lower($value = null)
     {
-        return strtolower(self::trim($value));
+        return self::normalize($value);
     }
 
     /**
@@ -913,7 +913,7 @@ class Str
      */
     public static function upper($value = null)
     {
-        return strtoupper(self::trim($value));
+        return self::normalize($value, 'upper');
     }
 
     /**

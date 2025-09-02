@@ -168,6 +168,30 @@ trait StrTrait{
     }
 
     /**
+     * Normalize a string: trim and convert case.
+     *
+     * @param string|null $value
+     * @param string $case 'lower' or 'upper'
+     * @param string $encoding Optional, for multibyte support
+     * @return string
+     */
+    private static function normalize($value = null, string $case = 'lower', string $encoding = 'UTF-8'): string
+    {
+        $value = self::trim($value);
+
+        if ($case === 'upper') {
+            return function_exists('mb_strtoupper') 
+                ? mb_strtoupper(self::trim($value), $encoding) 
+                : strtoupper(self::trim($value));
+        }
+
+        // default: lower
+        return function_exists('mb_strtolower')
+            ? mb_strtolower(self::trim($value), $encoding) 
+            : strtolower(self::trim($value));
+    }
+
+    /**
      * Replace Subject
      *
      * @param  mixed $subject
