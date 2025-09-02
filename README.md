@@ -316,6 +316,7 @@ composer require tamedevelopers/support
 ## Number to Words
 - Has three chainable methods
     - Can translate all the way to `vigintillion`
+    - It's helper class can be called, using -- `NumberToWords()`
 
 ![Sample Units](https://raw.githubusercontent.com/tamedevelopers/support/master/thousand_units.png)
 
@@ -328,7 +329,7 @@ composer require tamedevelopers/support
 ### Iso
 - Takes param as `string` and case-insensitive
 
-```
+```php
 NumberToWords::iso('nga');
 ```
 
@@ -336,7 +337,7 @@ NumberToWords::iso('nga');
 - Takes param as `boolean`. Default is `false`
     - By default, it doesn't format the decimals `.00` Must be set to true, to format if needed.
 
-```
+```php
 NumberToWords::cents(true);
 ```
 
@@ -344,19 +345,20 @@ NumberToWords::cents(true);
 - Takes one param as `int | float | string`
     - If numbers is larger than a trillion `1_000_000_000_000`, then the value must be passed as a string.
 
-```
+```php
 NumberToWords::value(1290);
 ```
 
 ### toText
 - Convert number to readable words
     - Below, we're using the function helper method
-```
+
+```php
 NumberToWords()
-        ->iso('TUR')
-        ->value('120.953')
-        ->cents(true)
-        ->toText();
+    ->iso('TUR')
+    ->value('120.953')
+    ->cents(true)
+    ->toText();
 
 // Output: One hundred and twenty lira, nine hundred and fifty-three kuruş
 ```
@@ -364,9 +366,9 @@ NumberToWords()
 ### toNumber
 - Convert words to number
     - comma `, ` is used to seperate decimals in words
-```
-use Tamedevelopers\Support\NumberToWords;
 
+```php
+use Tamedevelopers\Support\NumberToWords;
 
 NumberToWords::value('twelve million three hundred thousand, six hundred and ninety-eight')
         ->cents(true)
@@ -395,14 +397,14 @@ Tamedevelopers\Support\Tame
 | mb        | Custom label for MB (default: 'MB')           |
 | kb        | Custom label for KB (default: 'KB')           |
 
-```
+```php
 Tame()->byteToUnit(6880);
 
 // Output: 7kb
 ```
 
 ### unitToByte
-```
+```php
 Tame()->unitToByte('24mb');
 
 // Output: 25165824
@@ -410,15 +412,13 @@ Tame()->unitToByte('24mb');
 
 ### fileTime
 - Returns last edited time of the file as an - `int|false`
-
-```
+```php
 Tame()->fileTime(base_path('filepath.php'));
 ```
 
 ### exists
 - Checks if a file exists and is not a directory - `bool`
-
-```
+```php
 Tame()->exists(base_path('filepath.php'));
 // Output: true or false
 ```
@@ -427,7 +427,7 @@ Tame()->exists(base_path('filepath.php'));
 - Deletes a file from the server if it exists and does not match the restricted file name - `void`
     - [optional] second param <filename.extension>
 
-```
+```php
 Tame()->unlink(base_path('path/to/directory/avatar.png'), 'default.png');
 ```
 
@@ -442,7 +442,7 @@ Tame()->unlink(base_path('path/to/directory/avatar.png'), 'default.png');
 | `$mask`       | The character used for masking (default is `*`).                                              |
 
 #### Example:
-```
+```php
 Tame()->mask('example@email.com', 4, 'left');
 // Output: "exam***@email.com"
 
@@ -456,7 +456,7 @@ Tame()->mask('shortstring', 4, 'center');
 ### imageToBase64
 - Converts an image file to its Base64 representation. Supports local files and direct URLs - `null|string`
 
-```
+```php
 Tame()->imageToBase64(base_path('path/to/image.jpg'));
 // Output: "data:image/jpg;base64,..." (Base64 string for the image)
 
@@ -474,7 +474,7 @@ Tame()->imageToBase64('https://example.com/image.png', true);
 | use_internet   | By default is set to `false`. If `true`, checks the domain using DNS (`checkdnsrr()` and `getmxrr()`) for validity. If `false`, skips domain validation (default: `false`). |
 | server_verify  | Verifies the mail server by checking MX records (default: `false`). Only used if `use_internet` is `true`.   |
 
-```
+```php
 Tame()->emailValidator('example@example.com');
 // Output: true (Valid email with domain check using DNS)
 
@@ -522,14 +522,14 @@ include $payment;
 ### calPercentageBetweenNumbers
 - Calculates the percentage relationship between two numbers as an - `int`
 
-```
+```php
 Tame()->calPercentageBetweenNumbers(100, 80);
 ```
 
 ### formatNumberToNearestThousand
 - Formats a number to its nearest thousand, million, billion, or higher as a - `string|float|int`
 
-```
+```php
 Tame()->formatNumberToNearestThousand(1500000);
 // Output: "1.5m"
 ```
@@ -1058,6 +1058,7 @@ Time::getTimeZone();
 use Tamedevelopers\Support\Cookie;
 
 Cookie::set('cookie_name', 'value');
+// TameCookie()->set('user', '__user');
 ```
 
 ### Get
@@ -1085,11 +1086,6 @@ Cookie::forget('cookie_name');
 if(Cookie::has('cookie_name')){
     // execute code
 }
-```
-
-- or -- `Helpers Function`
-```php
-TameCookie()->set('user', '__user');
 ```
 
 ## Hash
@@ -1123,23 +1119,20 @@ password_verify('testPassword', $oldPassword);
 ## Asset
 - Takes a param as `string` path to asset file
     - Default [dir] is set to `public`
+    - It's helper class can be called, using -- `tasset()`
 
-```
+```php
 use Tamedevelopers\Support\Asset;
 
 Asset::asset('css/style.css');
 
-- Returns
-http://domain.com/assets/css/style.css
-```
-
-- or -- `Helpers Function`
-```
-tasset('css/style.css');
+// - Returns
+// http://domain.com/assets/css/style.css
 ```
 
 ## Asset Config
 - Takes three param as `string` 
+    - It's helper class can be called, using -- `config_asset()`
 
 | params        | Description                 |
 |---------------|-----------------------------|
@@ -1148,38 +1141,37 @@ tasset('css/style.css');
 | path_type     | By Default is `false`, which uses absolute path for all files. While `true` will use relative path |
         
 
-```
+```php
 use Tamedevelopers\Support\Asset;
 
 Asset::config('public/storage');
 
-- Returns
-http://domain.com/public/storage/[asset_file]
-```
+// - Returns
+// http://domain.com/public/storage/[asset_file]
 
-- or -- `Helpers Function`
-```
-config_asset('public');
+// config_asset('public');
 ```
 
 ### Asset Cache
 - By Default, `cache` is set to `false`
     - You'll see a link representation as `http://domain.com/[path_to_asset_file]?v=111111111`
 
-```
+```php
 Asset::config('storage', false);
 
-- Returns
-http://domain.com/storage/[asset_file]
+// - Returns
+// http://domain.com/storage/[asset_file]
 ```
 
-- or -- `Helpers Function`
-```
-asset_config('storage/main.js', true);
+- or -- `using helper method`
+```php
+
+// absolute path
+config_asset('storage/main.js', true);
 // Output: http://domain.com/storage/main.js?v=111111111
 
-
-asset_config('storage/style.css', true, true);
+// relative url path
+config_asset('storage/style.css', true, true);
 // Output: /storage/style.css?v=111111111
 ```
 
@@ -1245,7 +1237,7 @@ Samples
 ```
 
 ### View Helper
-- Using the helper function `tview()`
+- It's helper class can be called, using -- `tview()`
 
 ```php
 // set base folder for views
@@ -1268,7 +1260,7 @@ echo View::render('layout.home2', ['title' => 'Homepage']);
 ### Env Create
 - To create an environment `.env` file. Create or ignore if exists
 
-```
+```php
 use Tamedevelopers\Support\Env;
 
 Env::createOrIgnore()
@@ -1278,21 +1270,19 @@ Env::createOrIgnore()
 - To load the environment `.env` file
     - Takes optional param as `string` $path
 
-```
+```php
 use Tamedevelopers\Support\Env;
 
 Env::load('path_to_env_folder')
-```
 
-- or -- `loadOrFail('optional_path')`
-    - Just as the name says. It'll load the `.env` file or fail with status code of 404. An error logger will also be created inside `storage/logs/orm.log`
-
-```
+// or 
+// Just as the name says. It'll load the `.env` file or fail with status code of 404. An error 
 Env::loadOrFail('path_to_env_folder')
 ```
 
 ### Env Update
 - Returns `true|false`. Used to update env variables
+    - It's helper class can be called, using -- `env_update()`
 
 | Params        |  Description      |
 |---------------|-------------------|
@@ -1301,34 +1291,27 @@ Env::loadOrFail('path_to_env_folder')
 | allow_quote   |  `true \| false` - Default is true (Allow quotes within value)            |
 | allow_space   |  `true \| false`  - Default is false (Allow space between key and value)  |
 
-```
+```php
 use Tamedevelopers\Support\Env;
 
 Env::updateENV('DB_PASSWORD', 'newPassword');
-```
-
-- or -- `Helpers Function`
-```
 env_update('DB_CHARSET', 'utf8', false);
 ```
 
 ## Server
 - Return instance of `Server`
+    - It's helper class can be called, using -- `server()`
 
 
 ### Get Servers
 - Returns assoc arrays of Server
     - `server\|domain`
 
-```
+```php
 use Tamedevelopers\Support\Server;
 
 Server::getServers();
-```
-
-- or -- `Helpers Function`
-```
-server()->getServers('domain');
+// server()->getServers('domain');
 ```
 
 ### Create Custom Config
@@ -1341,14 +1324,14 @@ server()->getServers('domain');
 | default       |  Default value if no data is found from the key       |
 | folder        |  Folder to search from and Default folder is `config` |
 
-```
+```php
 use Tamedevelopers\Support\Server;
 
 Server::config('tests.lang.email', [], 'Tests');
 ```
 
 - Create our own config to extends the default
-```
+```php
 /**
  * Custom Language Handler
  *
@@ -1384,8 +1367,8 @@ Base/
 └── ...
 ```
 
-- or -- `Helpers Function`
-```
+- or -- `using helpers`
+```php
 server()->config("en/message.{$key}", "message.{$key}", 'Lang');
 
 server()->config("app.name");
@@ -1396,7 +1379,7 @@ server()->config("app.name");
     - You can use register a folder containing all needed files
     - This automatically register `Files\|Classes` in the folder and sub-folders.
 
-```
+```php
 use Tamedevelopers\Support\AutoloadRegister;
 
 AutoloadRegister::load('folder');
