@@ -21,8 +21,11 @@ foreach (NumberToWords::getUnits() as $index => $unit) {
         $formattedValue = $value;
         $zeros = 0;
     } else {
-        $value = str_repeat("1", 1) . str_repeat("0", $index * 3);
-        $formattedValue = number_format((int)str_repeat("1", 1) . str_repeat("0", $index * 3));
+        $ones = str_repeat("1", 1);
+        $thousands = str_repeat("0", $index * 3);
+        
+        $value = $ones . $thousands;
+        $formattedValue = number_format((int) $ones . $thousands);
         $zeros = $index * 3;
     }
 

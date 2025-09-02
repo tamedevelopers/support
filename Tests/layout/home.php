@@ -14,7 +14,7 @@
         @yield('content')
     </main>
 
-    @include('tests.layout.partials.footer', ['year2' => $header['year']])
+    @include('layout.partials.footer', ['year2' => $header['year']])
 
 </body>
 </html>

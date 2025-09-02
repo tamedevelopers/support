@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Traits;
 
+use Tamedevelopers\Support\Capsule\File;
+
 /** 
  * 
  * @property mixed $lockedShared
+ * @property mixed $baseFolder
  */
 trait ViewTrait{
 
@@ -146,25 +149,38 @@ trait ViewTrait{
      */
     protected function resolveViewFilePath($viewPath = null)
     {
-        $this->viewPath = empty($viewPath) ? $this->viewPath : $viewPath;
+        // Work with a local target view (do not mutate $this->viewPath here)
+        $targetView = empty($viewPath) ? $this->viewPath : $viewPath;
 
-        $normalizedView = str_replace('.', '/', ltrim($this->viewPath, '/'));
+        // Prepend base folder only once if provided and not already prefixed
+        $base = isset(self::$baseFolder) ? trim((string) self::$baseFolder, ". /") : '';
+        if ($base !== '') {
+            $baseDot = $base . '.';
+            $startsWithBase = (strpos($targetView, $baseDot) === 0) || ($targetView === $base);
+            if (!$startsWithBase) {
+                $targetView = $baseDot . ltrim((string) $targetView, '.');
+            }
+        }
+
+        // Normalize slashes and trim leading slash
+        $normalizedView = str_replace('.', '/', ltrim((string) $targetView, '/'));
 
         // Try multiple base candidates to be resilient in different environments
         $candidates = array_unique(array_filter([
-            rtrim((string) $this->basePath, '/'),
-            rtrim((string) __DIR__, '/'),
-            rtrim((string) base_path('support'), '/'),
+            rtrim((string) $this->basePath, '/')
         ]));
 
-        foreach ($candidates as $base) {
-            $filePath = $base . '/' . $normalizedView;
+        foreach ($candidates as $basePath) {
+            $filePath = $basePath . '/' . $normalizedView;
             $files = [
                 $filePath . '.php',
                 $filePath . '.blade.php',
+                $filePath . '.twig',
+                $filePath . '.html.twig',
             ];
+
             foreach ($files as $file) {
-                if (is_file($file)) {
+                if (File::exists($file)) {
                     return $file;
                 }
             }
@@ -183,7 +199,7 @@ trait ViewTrait{
      */
     protected function renderViewFile($viewFilePath)
     {
-        return is_file($viewFilePath) ? (string) file_get_contents($viewFilePath) : '';
+        return File::exists($viewFilePath) ? (string) File::get($viewFilePath) : '';
     }
 
     /**
@@ -343,6 +359,7 @@ trait ViewTrait{
     {
         // Ensure included views inherit current data unless explicitly overridden
         $payload = empty($data) ? $this->data : array_merge($this->data, (array) $data);
+
         return (new self($view, $payload))->render();
     }
 

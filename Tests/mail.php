@@ -32,7 +32,7 @@ $mailer->to('tamedevelopers@gmail.com')
 
             
 // $mailer->to('tamedevelopers@gmail.com')
-//         ->bcc(['fredi.peterson2000@gmail.com'])
+//         ->bcc(['example-email@gmail.com'])
 //         ->replyTo('tamedevelopers@gmail.com', 'Jeffrey Way')
 //         ->attach(base_path("thousand_units.png"), 'New Name')
 //         ->delete(false)

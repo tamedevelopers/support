@@ -15,10 +15,9 @@ dump(
     domain(), 
     domain('admin'),
     tasset('zip.php'),
-    tasset('zip.php', true, false),
+    tasset('zip.php', true, true), // relative link path
 
     urlHelper()->server(),
-
     [
         urlHelper()->server(),
         urlHelper()->url(),

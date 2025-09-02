@@ -3,4 +3,4 @@
 ?>
 
 
-<!-- @include('tests.layout.partials.footer') -->
+<!-- @include('layout.partials.footer') -->

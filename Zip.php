@@ -7,13 +7,12 @@ namespace Tamedevelopers\Support;
 use ZipArchive;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
-use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\TameTrait;
 
 class Zip {
 
     use TameTrait;
-
 
     /**
      * Zip a file or folder.
@@ -32,7 +31,7 @@ class Zip {
         $destinationZip = self::getBasePath($destinationZip);
 
         // If it's a folder, call the zipFolder function
-        if (is_dir($sourcePath)) {
+        if (File::isDirectory($sourcePath)) {
             return self::zipFolder($sourcePath, $destinationZip);
         }
 
@@ -43,12 +42,16 @@ class Zip {
             return false;
         }
 
+        if(!File::isDirectory($sourcePath)){
+            return false;
+        }
+
         // Add the file to the zip
         $zip->addFile($sourcePath, basename($sourcePath));
 
         $zip->close();
 
-        return file_exists($destinationZip);
+        return File::exists($destinationZip);
     }
 
     /**
@@ -73,7 +76,7 @@ class Zip {
         }
         
         // If it's a folder, call the unzipFolder function
-        if (is_dir($sourcePath)) {
+        if (File::isDirectory($sourcePath)) {
             return self::unzipFolder($sourcePath, $destination);
         }
         
@@ -91,7 +94,7 @@ class Zip {
     {
         $zipfilePath = self::getBasePath($fileName);
 
-        if(Tame::exists($zipfilePath)){
+        if(File::exists($zipfilePath)){
             // Set headers to download the ZIP file
             header('Content-Type: application/zip');
             header("Content-Disposition: attachment; filename={$fileName}");
@@ -102,7 +105,7 @@ class Zip {
     
             // Delete the ZIP file after download (optional)
             if($unlink){
-                unlink($zipfilePath);
+                File::delete($zipfilePath);
             }
         }
     }
@@ -167,7 +170,7 @@ class Zip {
 
         $zip->close();
 
-        return file_exists($destinationZip);
+        return File::exists($destinationZip);
     }
 
     /**
@@ -179,10 +182,8 @@ class Zip {
      */
     private static function unzipFolder($sourceFolder, $destination)
     {
-        // Ensure the destination directory exists
-        if (!is_dir($destination)) {
-            mkdir($destination, 0777, true);
-        }
+        // Create the destination directory if it doesn't exist
+        File::makeDirectory($destination, 0777, true);
 
         $files = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($sourceFolder),
@@ -202,12 +203,11 @@ class Zip {
                 // Ensure the destination directory for the file exists
                 $destinationDir = dirname($destinationPath);
 
-                if (!is_dir($destinationDir)) {
-                    mkdir($destinationDir, 0777, true);
-                }
+                // Create the destination directory if it doesn't exist
+                File::makeDirectory($destinationDir, 0777, true);
 
                 // copy the contents of the filepath to destinationPath
-                copy($filePath, $destinationPath);
+                File::copy($filePath, $destinationPath);
             }
         }
 

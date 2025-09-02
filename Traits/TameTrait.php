@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 use Closure;
+use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Server;
 
 trait TameTrait{
 
@@ -164,16 +166,57 @@ trait TameTrait{
             'options'       => OPENSSL_CIPHER_RC2_40
         ];
     }
+
+    /**
+     * Get file modification time
+     *
+     * @param string|null $path
+     * - [full path to file is required]
+     * 
+     * @return int|bool 
+     */
+    private static function getFiletime($path = null) 
+    {
+        $path = self::stringReplacer($path);
+
+        if(self::exists($path)) {
+            return filemtime($path);
+        }
+
+        return false;
+    }
     
     /**
-     * getBasePath
+     * Get Base Path
      *
      * @param  string|null $path
      * @return mixed
      */
     private static function getBasePath($path = null)
     {
+        // removing default base directory path if added by default
+        $path = Str::replace(Server::formatWithBaseDirectory(), '', $path);
+
         return base_path($path);
+    }
+
+    /**
+     * Replace and recreate path to [assing base_path by default]
+     * - (/) slash
+     * 
+     * @param string|null $path
+     * 
+     * @return string
+     */
+    public static function stringReplacer($path = null)
+    {
+        $replacer = str_replace(
+            ['\\', '/'], 
+            '/', 
+            Str::trim($path)
+        );
+
+        return self::getBasePath($replacer);
     }
 
 }

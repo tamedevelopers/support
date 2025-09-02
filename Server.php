@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\ServerTrait;
 use Tamedevelopers\Support\Traits\ReusableTrait;
@@ -79,8 +80,9 @@ class Server{
      */
     public static function createTemplateFile(?array $data = [], ?string $filename = null)
     {
-        // Get the file name
-        $filePath = base_path($filename);
+        // removing default base directory path if added by default
+        $filename = Str::replace(self::formatWithBaseDirectory(), '', $filename);
+        $filePath = Server::formatWithBaseDirectory($filename);
 
         // Generate PHP code
         $exported   = var_export($data, true);
@@ -112,9 +114,13 @@ class Server{
         ];
         PHP;
 
+        // Make directory
+        $dirPath = dirname($filePath);
+        File::makeDirectory($dirPath);
+
         // to avoid warning error
         // we check if path is a directory first before executing the code
-        if(is_dir(dirname($filePath))){
+        if(File::isDirectory($dirPath)){
             File::put($filePath, $phpCode);
         }
     }

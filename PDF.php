@@ -89,12 +89,20 @@ class PDF{
 
         self::init();
 
+        // Get the destination path
+        $destination = Tame()->stringReplacer(self::$options['destination']);
+
+        // Make directory
+        File::makeDirectory(
+            dirname($destination)
+        );
+
         // Get the HTML content
         $content = self::$options['content'];
 
         // if title is empty, then use the file name as title
         if(empty(self::$options['title'])){
-            self::$options['title'] = pathinfo(self::$options['destination'], PATHINFO_FILENAME);
+            self::$options['title'] = pathinfo($destination, PATHINFO_FILENAME);
         }
 
         // Add the title tag if <html> or <head> is not present
@@ -117,19 +125,19 @@ class PDF{
         // Render PDF output to browser without saving
         if(in_array(self::$options['output'], ['preview', 'view']))
         {
-            File::put(self::$options['destination'], self::$dompdf->output());
+            File::put($destination, self::$dompdf->output());
 
             // for reading to browser as well, from package
-            // self::$dompdf->stream(self::$options['destination'], array("Attachment" => false)); 
+            // self::$dompdf->stream($destination, array("Attachment" => false)); 
 
             // render output to browser 
-            Tame::readPDFToBrowser(self::$options['destination'], self::$options['delete']);
+            Tame::readPDFToBrowser($destination, self::$options['delete']);
         }
         
         // Save PDF to server only
         elseif(in_array(self::$options['output'], ['save', 'saves', 'getsave']))
         {
-            File::put(self::$options['destination'], self::$dompdf->output());
+            File::put($destination, self::$dompdf->output());
         }
 
         // Stream PDF to browser for download

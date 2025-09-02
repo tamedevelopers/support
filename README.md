@@ -209,6 +209,7 @@ Support Package For PHP and Laravel
     * [Unzip](#unzip)
     * [Zip Download](#zip-download)
 * [PDF](#pdf)
+    * [Usage](#pdf-usage)
     * [Read PDF](#read-pdf)
 * [Time](#time)
     * [time-usage](#time-usage)
@@ -267,6 +268,10 @@ Support Package For PHP and Laravel
 * [Asset](#Asset)
     * [Asset config](#asset-config)
         * [Asset Cache](#asset-cache)
+* [View](#view)
+    * [Usage](#view-usage)
+    * [Support](#view-support)
+    * [Helper tview](#view-helper)
 * [Env](#env)
     * [Env Create](#env-create)
     * [Env Load](#env-load)
@@ -755,6 +760,16 @@ Mail::to('email@example.com')->send(function($reponse){
 });
 ```
 
+### flush
+- Accepts mandatory `bool` Default value is false
+    - Clear buffers and send email in the background without waiting (But only to be used when using an API/Submitting via Ajax/Fetch or similar method of form submission)
+```
+Mail::to('email@example.com')
+    ->body('<p>Body Text</p>)
+    ->flush(true)
+    ->send();
+```
+
 ## Zip
 - Takes two param as `string`
     - [sourcePath] relative path of zip-file
@@ -798,6 +813,8 @@ TameZip()->download('newData.zip')
 | title `string`            | If the html content of PDF has no title, file name will automatically become the title |
 | delete `bool`             | Default is `true` ---  `false`  If output is `view` you can choose to delete file after preview |
 
+
+### PDF Usage
 
 ```
 Tamedevelopers\Support\PDF
@@ -1164,6 +1181,84 @@ asset_config('storage/main.js', true);
 
 asset_config('storage/style.css', true, true);
 // Output: /storage/style.css?v=111111111
+```
+
+## View
+
+### View Usage
+- Basic usage with layout and sections
+
+```php
+use Tamedevelopers\Support\View;
+
+// Using a child view that extends a layout
+$view = new View('tests.layout.home2', [
+    'title' => 'Homepage',
+]);
+
+echo $view->render();
+```
+
+- Rendering multiple times safely (same instance)
+```php
+$view = new View('tests.layout.home2', [
+    'title' => 'Homepage',
+]);
+
+// First render
+echo $view->render();
+
+// Second render (fresh render, no duplicated sections)
+echo $view->render();
+```
+
+- Render and capture as a string
+```php
+$html = (new View('tests.layout.home2', ['title' => 'Homepage']))->render();
+```
+
+### View Support
+- Supported extensions for views [only resolves filename]
+    - Similar Laravel blade syntax usage
+
+```php
+$extensions = [
+    '.php',        // Generic / CodeIgniter / CakePHP 4+
+    '.blade.php',  // Laravel
+    '.twig',       // Symfony/Twig generic
+    '.html.twig',  // Symfony typical
+];
+```
+
+Samples
+```blade
+
+@extends('layout.partials.app')
+
+
+@section('content')
+    <h1>Welcome to the Homepage!</h1>
+@endsection
+
+@include('layout.partials.footer', ['year' => 2025])
+@yield('content')
+```
+
+### View Helper
+- Using the helper function `tview()`
+
+```php
+// set base folder for views
+// [optional], but when set - this will be the default path to look for view files.
+tview()->base('tests');
+
+// Create a view instance via helper and render
+$view = tview('layout.home2', ['title' => 'Homepage']);
+echo $view->render();
+
+// One-liner (render via static call)
+use Tamedevelopers\Support\View;
+echo View::render('layout.home2', ['title' => 'Homepage']);
 ```
 
 ## Env

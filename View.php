@@ -15,6 +15,12 @@ use Tamedevelopers\Support\Traits\ViewTrait;
 class View{
 
     use ViewTrait;
+
+    /**
+     * View base folder name.
+     * @var string|null
+     */
+    protected static $baseFolder;
     
     /**
      * The path to the view file.
@@ -53,6 +59,17 @@ class View{
      */
     protected $parentView = null;
 
+    /**
+     * Buffer stack for nested sections within a single render pass
+     * @var array
+     */
+    protected $sectionStack = [];
+
+    /**
+     * Track if this instance has rendered before to reset per-instance state
+     * @var bool
+     */
+    protected $hasRendered = false;
 
 
     /**
@@ -91,6 +108,15 @@ class View{
     public function render()
     {
         try {
+            // Reset per-instance state on each render
+            // Do not drop sections on the first render of a fresh instance, but
+            // clear them if this instance has already rendered before.
+            $this->parentView = null;
+            $this->sectionStack = [];
+            if ($this->hasRendered && isset($this->data['sections'])) {
+                unset($this->data['sections']);
+            }
+
             $viewFilePath = $this->resolveViewFilePath();
             $normalizedPath = realpath($viewFilePath) ?: $viewFilePath;
 
@@ -132,6 +158,9 @@ class View{
             }
 
             array_pop(self::$renderStack);
+
+            // Mark instance as rendered to allow safe subsequent renders on same instance
+            $this->hasRendered = true;
             
             return $output;
         } catch (Exception $e) {
@@ -157,6 +186,17 @@ class View{
         return File::exists(
             $self->resolveViewFilePath($view)
         );
+    }
+
+    /**
+     * Base folder path for views
+     * [optional] When set this will be the default path to look for view files.
+     *
+     * @param string $folder
+     */
+    public static function base($folder)
+    {
+        self::$baseFolder = $folder;
     }
 
     /**

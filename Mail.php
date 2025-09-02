@@ -198,7 +198,7 @@ class Mail{
         $this->attachments = $this->formatAttachments($attachments);
 
         foreach ($this->attachments as $path => $name) {
-            if(Tame()->exists($path)){
+            if(File::exists($path)){
                 $this->mailer->addAttachment($path, $name);
             }
         }

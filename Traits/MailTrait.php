@@ -10,6 +10,7 @@ use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Mail;
 use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\PHPMailer;
+use Tamedevelopers\Support\Capsule\File;
 
 
 trait MailTrait{
@@ -255,7 +256,7 @@ trait MailTrait{
         // if attachment delete is allowed
         if($this->deleteAttachment){
             foreach($this->attachments as $path => $name){
-                @unlink($path);
+                File::delete($path);
             }
         }
     }

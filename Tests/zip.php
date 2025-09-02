@@ -13,8 +13,12 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // TameZip()->unzip('newData.zip', '/');
 // TameZip()->download('newData.zip');
 
-dd(
+$folderPath = 'tests/layout';
+$basePath = base_path('hello.php');
 
-    base_path('hello.php'),
+dd(
+    'nothing has been zipped yet',
+    $folderPath,
+    $basePath
 );
 

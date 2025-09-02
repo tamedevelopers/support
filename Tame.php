@@ -173,6 +173,8 @@ class Tame {
      */
     public static function include($path)
     {
+        $path = self::stringReplacer($path);
+        
         if(self::exists($path)){
             include $path;
         }
@@ -188,6 +190,8 @@ class Tame {
      */
     public static function includeOnce($path)
     {
+        $path = self::stringReplacer($path);
+
         if(self::exists($path)){
             include_once $path;
         }
@@ -203,6 +207,8 @@ class Tame {
      */
     public static function require($path)
     {
+        $path = self::stringReplacer($path);
+        
         if(self::exists($path)){
             require $path;
         }
@@ -218,6 +224,8 @@ class Tame {
      */
     public static function requireOnce($path)
     {
+        $path = self::stringReplacer($path);
+
         if(self::exists($path)){
             require_once $path;
         }
@@ -891,6 +899,8 @@ class Tame {
      */
     public static function exists($path = null)
     {
+        $path = self::stringReplacer($path);
+        
         return is_file($path);
     }
     
@@ -929,6 +939,8 @@ class Tame {
      */
     public static function convertJsonData($path, $format = true)
     {
+        $path = self::stringReplacer($path);
+
         if(self::exists($path)){
             return json_decode(File::get($path), $format);
         }
@@ -948,6 +960,8 @@ class Tame {
      */
     public static function saveDataAsJsonObject(string $destination, mixed $data, ?bool $type = true)
     {
+        $destination = self::stringReplacer($destination);
+
         // Choose the JSON encoding format
         $format = $type ? JSON_PRETTY_PRINT : JSON_UNESCAPED_UNICODE;
 
@@ -982,10 +996,13 @@ class Tame {
      */
     public static function saveFileFromURL($url, $destination)
     {
+        $destination = self::stringReplacer($destination);
+
         // Check if the destination directory exists, if not, create it
         $directory = dirname($destination);
-        if (!is_dir($directory)) {
-            mkdir($directory, 0755, true);
+
+        if (!File::isDirectory($directory)) {
+            File::makeDirectory($directory, 0755, true);
         }
 
         // Try to open the file and save its contents
@@ -1023,9 +1040,9 @@ class Tame {
      */
     public static function readPDFToBrowser($path = null, $delete = false)
     {
-        $fullPath  = self::stringReplacer($path);
+        $path = self::stringReplacer($path);
 
-        if(self::exists($fullPath)){
+        if(self::exists($path)){
             // Clear any existing output buffer
             if (ob_get_level()) {
                 ob_end_clean();
@@ -1033,7 +1050,7 @@ class Tame {
             
             // Force browser preview by setting appropriate headers
             @header("Content-Type: application/pdf");
-            @header("Content-Disposition: inline; filename=\"" . basename($fullPath) . "\"");
+            @header("Content-Disposition: inline; filename=\"" . basename($path) . "\"");
             @header("Content-Transfer-Encoding: binary");
             @header("Accept-Ranges: bytes");
             @header("Cache-Control: no-store, no-cache, must-revalidate");
@@ -1041,21 +1058,21 @@ class Tame {
             @header("Expires: 0");
 
             // Get file size
-            $fileSize = filesize($fullPath);
+            $fileSize = filesize($path);
             if ($fileSize) {
                 @header("Content-Length: $fileSize");
             }
             
             // Output the PDF content
-            readfile($fullPath);
+            readfile($path);
 
             if($delete){
                 @flush(); // Ensure everything is sent
                 @ob_flush(); // Flush PHP output buffer
 
                 // Check if file is writable before attempting to delete
-                if (is_writable($fullPath)) {
-                    self::unlink($fullPath);
+                if (is_writable($path)) {
+                    File::delete($path);
                 }
             }
             exit;
@@ -1068,24 +1085,24 @@ class Tame {
      * @param string|null $path
      * - [full path to file is required]
      * 
-     * @param bool $url
+     * @param bool $useUrl
      * - [If path should be treated as direct url]
      * 
      * @return null|string
      */
-    public static function imageToBase64($path = null, $url = false) 
+    public static function imageToBase64($path = null, $useUrl = false) 
     {
-        $fullPath  = self::stringReplacer($path);
-
-        if($url){
+        // If url path is true
+        if($useUrl){
             // Parse the URL to get the path
             $parse  = parse_url($path, PHP_URL_PATH);
             $type   = pathinfo($parse, PATHINFO_EXTENSION);
             $data   = File::get($path);
         } else{
-            if(self::exists($fullPath)){
-                $type   = pathinfo($fullPath, PATHINFO_EXTENSION);
-                $data   = File::get($fullPath);
+            $path = self::stringReplacer($path);
+            if(self::exists($path)){
+                $type   = pathinfo($path, PATHINFO_EXTENSION);
+                $data   = File::get($path);
             }
         }
 
@@ -1317,7 +1334,7 @@ class Tame {
         $os_name = Str::lower($os_name);
 
         // set path
-        $path = self::stringReplacer( __DIR__ ) . DIRECTORY_SEPARATOR;
+        $path = self::stringReplacer( __DIR__  . DIRECTORY_SEPARATOR);
 
         // Create items data set
         $dataSet = [
@@ -1353,8 +1370,11 @@ class Tame {
      */
     public static function paymentIcon($payment = null)
     {
+        // platform to lower
+        $payment = Str::lower(basename($payment));
+
         // set path
-        $path = self::stringReplacer( __DIR__ ) . DIRECTORY_SEPARATOR;
+        $path = self::stringReplacer( __DIR__  . DIRECTORY_SEPARATOR);
 
         // Create items data set
         $dataSet = [
@@ -1380,42 +1400,6 @@ class Tame {
         ];  
 
         return self::stringReplacer($dataSet[$payment] ?? $dataSet['cc']);
-    }
-
-    /**
-     * Replace and recreate path to
-     * - (/) slash
-     * 
-     * @param string|null $path
-     * 
-     * @return string
-     */
-    public static function stringReplacer($path = null)
-    {
-        return str_replace(
-            ['\\', '/'], 
-            DIRECTORY_SEPARATOR, 
-            Str::trim($path)
-        );
-    }
-
-    /**
-     * Get file modification time
-     *
-     * @param string|null $path
-     * - [full path to file is required]
-     * 
-     * @return int|bool 
-     */
-    private static function getFiletime($path = null) 
-    {
-        $fullPath = self::stringReplacer($path);
-
-        if(self::exists($fullPath)) {
-            return filemtime($fullPath);
-        }
-
-        return false;
     }
     
 }

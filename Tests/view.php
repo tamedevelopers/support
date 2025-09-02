@@ -7,10 +7,16 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Tamedevelopers\Support\View;
 
 
-$layout = 'tests.layout.home';
+$layout = 'layout.home';
+
+// set base folder for views
+// optional, but when set - this will be the default path to look for view files.
+(new View)->base('tests');
+
+tview()->exists('header');
 
 // Share global data
-tview()->share('appName', 'Laravel-Like Framework');
+(new View)->share('appName', 'Laravel-Like Framework');
 tview()->share('header', [
     'meta' => '<meta charset="UTF-8">',
     'title' => ':: Home Page Title',
@@ -23,18 +29,19 @@ $view = new View($layout, [
 // echo $view->render();
 
 // Use layout and sections
-$viewYield = new View('tests.layout.home2', []);
-// echo $viewYield->render();
+$viewYield = new View('layout.home2', []);
+echo $viewYield->render();
 
 
-$viewIf = tview('tests.layout.if', [
-    'name' => 'Peterson',
-    'condition' => true,
-]);
+dd(
+    $viewYield,
+    $viewYield->render(),
+    'qwwe'
+);
 
-echo $viewIf->render();
+// $viewIf = tview('layout.if', [
+//     'name' => 'Peterson',
+//     'condition' => true,
+// ]);
 
-// dd(
-//     $viewYield,
-//     'qwwe'
-// );
+// echo $viewIf->render();
