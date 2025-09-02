@@ -381,8 +381,8 @@ NumberToWords::value('twelve million three hundred thousand, six hundred and nin
 - The Core Class of Components
     - It's helper class can be called, using -- `Tame()`
 
-```
-Tamedevelopers\Support\Tame
+```php
+use Tamedevelopers\Support\Tame;
 ``` 
 
 ### byteToUnit
@@ -696,7 +696,7 @@ $even = (new Collection([1,2,3,4]))->filter(fn($v) => $v % 2 === 0)->all(); // [
 - The Core Class/Wrapper For `PHPMailer`
     - It's helper class can be called, using -- `TameMail()`
 
-```
+```php
 Tamedevelopers\Support\Mail
 
 Mail::to('email@example.com')
@@ -708,20 +708,18 @@ Mail::to('email@example.com')
 ### to
 - Accepts multiple emails as `array|string`
 
-```
+```php
 Mail::to('email@example.com')
 
 Mail::to(['email@example.com', 'email2@example.com'])
 
 Mail::to('email@example.com', 'email2@example.com', 'email3@example.com')
-
-Mail::to('email@example.com, email2@example.com')
 ```
 
 ### attach
 - Accepts multiple complex data as attachment as `array|string`
 
-```
+```php
 Mail::attach(public_path("image.png"), 'New File Name')
 
 Mail::attach(['path' => public_path("image.png"), 'as' => 'New name'])
@@ -736,23 +734,22 @@ Mail::attach([
 ### subject
 - Accepts mandatory `string`
 
-```
+```php
 Mail::subject('subject');
 ```
 
 ### body
 - Accepts mandatory `string`
 
-```
+```php
 Mail::subject('body');
 ```
 
 ### send
 - Accepts [optional] closure/function
 
-```
+```php
 Mail::to('email@example.com')->send();
-
 
 Mail::to('email@example.com')->send(function($reponse){
 
@@ -763,37 +760,37 @@ Mail::to('email@example.com')->send(function($reponse){
 ### flush
 - Accepts mandatory `bool` Default value is false
     - Clear buffers and send email in the background without waiting (But only to be used when using an API/Submitting via Ajax/Fetch or similar method of form submission)
-```
+```php
 Mail::to('email@example.com')
-    ->body('<p>Body Text</p>)
+    ->body('<p>Body Text</p>')
     ->flush(true)
     ->send();
 ```
 
 ## Zip
 - Takes two param as `string`
-    - [sourcePath] relative path of zip-file
-    - [destination] relative folder path to save zip file
+    - [sourcePath] path to zip-directory
+    - [destination] path to save zip file
 
-```
+```php
 TameZip()->zip('app/Http', 'app.zip')
 ``` 
 
 ### Unzip
 - Takes two param as `string`
-    - [sourcePath] relative path of zip-file
-    - [destination] relative folder path to unzip-file
+    - [sourcePath] path of zip-file
+    - [destination] path to unzip-directory
 
-```
-TameZip()->unzip('newData.zip', '/public/zip')
+```php
+TameZip()->unzip('newData.zip', base_path('public/zip'))
 ```
 
 ### Zip Download
 - Takes two param as `string | boolean`
-    - [fileName] relative path of zip-file
+    - [fileName] path of zip-file
     - [unlink] Default is `true` unlinks file after download
 
-```
+```php
 TameZip()->download('newData.zip')
 ```
 
@@ -816,7 +813,7 @@ TameZip()->download('newData.zip')
 
 ### PDF Usage
 
-```
+```php
 Tamedevelopers\Support\PDF
 
 $generate = strtotime('now') . '.pdf';
@@ -832,10 +829,10 @@ PDF::create([
 - Takes one param as `string`
     - [path] absolute path to PDF file
 
-```
+```php
 TamePDF()->read('invoice100.pdf')
 
-This will read the PDF to the browser
+// This will read the PDF to the browser
 ```
 
 ## Time
@@ -856,7 +853,7 @@ This will read the PDF to the browser
 | `year() \| getYear()`     | Get years                 |
 | `time() \| getTime()`     | Get time as int           |
 
-```
+```php
 $time = new Time('now', 'Africa/Lagos');
 
 [
@@ -873,13 +870,13 @@ $time = new Time('now', 'Africa/Lagos');
 
 ### now
 - Returns the Time Object with current timestamp of `now`
-```
+```php
 $time->now()->format()
 ```
 
 ### date
 - Accepts one param as (time) `int|string`
-```
+```php
 $time->date("first day of this month")->toDateTimeString()
 ```
 
@@ -889,7 +886,7 @@ $time->date("first day of this month")->toDateTimeString()
 ### yesterday
 - Thesame as `now()` with timestamp of `yesterday`
 
-```
+```php
 $time->today();
 $time->yesterday();
 ```
@@ -898,7 +895,7 @@ $time->yesterday();
 - Accepts two parameter [date, format]
     - only [date] is mandatory and returns the Time(object)
 
-```
+```php
 $time->createFromFormat('24 Jan 2025 14:00:00', 'm/d/Y h:ia');
 // object(Tamedevelopers\Support\Time)
 ```
@@ -907,7 +904,7 @@ $time->createFromFormat('24 Jan 2025 14:00:00', 'm/d/Y h:ia');
 - Accepts two parameter [date, format]
     - only [date] is mandatory and returns formated timestamp
 
-```
+```php
 $time->timestamp('24 Jan 2025 14:00:00');
 // Output: 2025-01-24 14:00:00
 ```
@@ -915,7 +912,7 @@ $time->timestamp('24 Jan 2025 14:00:00');
 ### toJsTimer
 - Accept one parameter as [date]. Returns formated javascript timestamp
 
-```
+```php
 $time->toJsTimer('24 Jan 2025 14:00:00');
 $time->jsTimer('24 Jan 2025 14:00:00');
 // Output: Jan 24, 2025 14:00:00
@@ -929,7 +926,7 @@ $time->jsTimer('24 Jan 2025 14:00:00');
 |-----------------------------------------------------------|
 | `year \| month \| hour \| mins \| sec \| days \| weeks`   |
 
-```
+```php
 $time->date('last year december')->diff('month');
 // Output: 1
 ```
@@ -937,7 +934,7 @@ $time->date('last year december')->diff('month');
 ### diffBetween
 - Takes three paramater as `firstDate \| lastDate \| mode`. Thesame as diff.
 
-```
+```php
 $time->diffBetween('last year december', 1737752400, 'weeks');
 // Output: 4
 ```
@@ -949,11 +946,12 @@ $time->diffBetween('last year december', 1737752400, 'weeks');
 |------------------------------------------------------------------------|
 | `full \| short \| duration \| time \| date \| date_time \| time_stamp` |
 
-```
+```php
 $time->date('today')->ago()
 $time->date('today')->timeAgo()
 
-// Output: [
+// Output: 
+[
     "full" => "4 hours ago"
     "short" => "4h"
     "duration" => 4
@@ -968,7 +966,7 @@ $time->date('today')->timeAgo()
 - Build date range according to value given
     - Accepts (2) params `value and format`
 
-```
+```php
 $time->range('0-10', 'D, M j')
 // Output: returns class of Tamedevelopers\Support\Capsule\TimeHelper
 ```
@@ -977,7 +975,7 @@ $time->range('0-10', 'D, M j')
 - To get the output, we need to call the TimeHelper format method
     - The format() method takes two [optional] param. `start, year` as boolean
 
-```
+```php
 $time->range('0-10')->format(true, true)
 // Output: Thu, Jan 23 - Tue, Mar 4, 2025
 
@@ -988,34 +986,34 @@ $time->range('0-10')->format()
 ### addSeconds
 - Can be called using boht [plural|singular] formats. To add more dates with already existing time.
 
-```
+```php
 $time4->now()->addMonth(3)->addSeconds(2)->addDays(2)->format()
 ```
 
 ### subSeconds
 - Can be called using boht [plural|singular] formats. To subtract dates from already existing time.
 
-```
+```php
 $time4->now()->subMonth(3)->subSecond(2)->subDays(2)->format()
 ```
 
 ### allTimezone
-```
+```php
 Time::allTimezone();
 ```
 
 ### setTimeZone
-```
+```php
 Time::setTimeZone('Pacific/Pago_Pago');
 ```
 
 ### getTimeZone
-```
+```php
 Time::getTimeZone();
 ```
 
 ## UrlHelper
-```
+```php
 [
     urlHelper()->server(),
     urlHelper()->url(),
@@ -1233,6 +1231,13 @@ Samples
 
 @include('layout.partials.footer', ['year' => 2025])
 @yield('content')
+
+@foreach($condition as $value)
+@endforeach
+
+@if($condition)
+    @else
+@endif
 ```
 
 ### View Helper
@@ -1283,12 +1288,12 @@ Env::loadOrFail('path_to_env_folder')
 - Returns `true|false`. Used to update env variables
     - It's helper class can be called, using -- `env_update()`
 
-| Params        |  Description      |
-|---------------|-------------------|
-| key           |  ENV key          |
-| value         |  ENV value        |
-| allow_quote   |  `true \| false` - Default is true (Allow quotes within value)            |
-| allow_space   |  `true \| false`  - Default is false (Allow space between key and value)  |
+| Params  |  Description      |
+|---------|-------------------|
+| key     |  ENV key          |
+| value   |  ENV value        |
+| quote   |  `true \| false` - Default is true (Allow quotes within value)            |
+| space   |  `true \| false`  - Default is false (Allow space between key and value)  |
 
 ```php
 use Tamedevelopers\Support\Env;
