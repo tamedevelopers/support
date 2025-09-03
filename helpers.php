@@ -17,6 +17,7 @@ use Tamedevelopers\Support\UrlHelper;
 use Tamedevelopers\Support\Translator;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\NumberToWords;
+use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\AutoloadRegister;
 use Tamedevelopers\Support\Capsule\FileCache;
 use Tamedevelopers\Support\Collections\Collection;
@@ -141,6 +142,18 @@ if (! function_exists('tcollect')) {
     function tcollect($items = [])
     {
         return new Collection($items);
+    }
+}
+
+if (! function_exists('tmanager')) {
+    /**
+     * Manager Class
+     * 
+     * @return \Tamedevelopers\Support\Capsule\Manager
+     */
+    function tmanager()
+    {
+        return new Manager();
     }
 }
 

@@ -4,119 +4,134 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use FilesystemIterator;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\ServerTrait;
 
-class AutoloadRegister{
-    
+
+/**
+ * Improved autoloader and file loader.
+ *
+ * Differences from AutoloadRegister:
+ * - Skips dot entries during directory scan (better perf, fewer edge cases)
+ * - Supports class, trait, interface, and enum (PHP 8.1+)
+ * - Idempotent autoload registration (won't re-register repeatedly)
+ * - Same public API and usage: AutoloadRegister2::load('dir') or ::load(['dir1','dir2'])
+ */
+class AutoloadRegister
+{
     use ServerTrait;
-    
-    /**
-     * The base directory to scan for classes and files.
-     * @var string
-     */
-    private static $baseDirectory;
 
     /**
-     * The class map that stores the class names and their corresponding file paths.
-     * @var array
+     * Directories to scan
+     * @var array<string>
      */
-    private static $classMap = [];
+    private static array $baseDirectories = [];
 
     /**
-     * The file map that stores the file paths and their corresponding relative paths.
-     * @var array
+     * FQN class => file path
+     * @var array<string,string>
      */
-    private static $fileMap = [];
+    private static array $classMap = [];
 
     /**
-     * Autoload function to load class and files in a given folder
+     * relative php file (no class/trait/interface/enum) => file path
+     * @var array<string,string>
+     */
+    private static array $fileMap = [];
+
+    /**
+     * Ensure we only register spl_autoload once.
+     */
+    private static bool $registered = false;
+
+    /**
+     * Autoload function to load classes and files in the given folder(s).
      *
-     * @param string|array $baseDirectory 
-     * - The directory path to load
-     * - Do not include the root path, as The Application already have a copy of your path
-     * - e.g [classes] or [app/main]
-     * 
-     * @return void
+     * @param string|array $baseDirectory Directory path(s) relative to application base.
+     * - Do not include the root path. e.g. 'classes' or 'app/main'
      */
-    public static function load(string|array $baseDirectory)
+    public static function load(string|array $baseDirectory): void
     {
-        if(is_array($baseDirectory)){
-            foreach($baseDirectory as $directory){
-                self::$baseDirectory = self::formatWithBaseDirectory($directory);
-                // only allow is an existing directory
-                if(is_dir(self::$baseDirectory)){
-                    self::boot();
-                }
+        self::$baseDirectories = [];
+
+        $dirs = is_array($baseDirectory) ? $baseDirectory : [$baseDirectory];
+        foreach ($dirs as $directory) {
+            $path = self::formatWithBaseDirectory($directory);
+            if (File::isDirectory($path)) {
+                self::$baseDirectories[] = $path;
             }
-        } else{
-            self::$baseDirectory = self::formatWithBaseDirectory($baseDirectory);
-            // only allow is an existing directory
-            if(is_dir(self::$baseDirectory)){
-                self::boot();
-            }
+        }
+
+        if (empty(self::$baseDirectories)) {
+            return; // nothing to do
+        }
+
+        self::boot();
+    }
+
+    /**
+     * Boot the autoloader by scanning directories and registering autoload.
+     */
+    private static function boot(): void
+    {
+        // reset maps to avoid duplicates across repeated calls
+        self::$classMap = [];
+        self::$fileMap  = [];
+
+        foreach (self::$baseDirectories as $base) {
+            self::generateClassMapFor($base);
+            self::generateFileMapFor($base);
+        }
+
+        self::loadFiles();
+
+        if (!self::$registered) {
+            spl_autoload_register([__CLASS__, 'loadClass']);
+            self::$registered = true;
         }
     }
 
     /**
-     * Boot the autoloader by setting the base directory, 
-     * - Scanning the directory, and registering the autoload method.
-     * @return void
+     * PSR-like autoload callback using the internally built class map.
      */
-    private static function boot()
+    private static function loadClass(string $className): void
     {
-        self::generateClassMap();
-        self::generateFileMap();
-        self::loadFiles();
-        spl_autoload_register([__CLASS__, 'loadClass']);
-    }
-
-    /**
-     * Autoload function to load the class file based on the class name.
-     *
-     * @param string $className The name of the class to load.
-     * @return void
-     */
-    private static function loadClass($className)
-    {
+        $className = ltrim($className, '\\');
         $filePath = self::$classMap[$className] ?? null;
-        if ($filePath && file_exists($filePath)) {
+        if ($filePath && File::exists($filePath)) {
             require_once $filePath;
         }
     }
 
     /**
-     * Load the files from the file map.
-     *
-     * @return void
+     * Load standalone files (without class/trait/interface/enum) from the file map.
      */
-    private static function loadFiles()
+    private static function loadFiles(): void
     {
-        foreach (self::$fileMap as $fileName => $filePath) {
-            if (file_exists($filePath)) {
+        foreach (self::$fileMap as $filePath) {
+            if (File::exists($filePath)) {
                 require_once $filePath;
             }
         }
     }
 
     /**
-     * Generate the class map by scanning the base directory and its subdirectories.
-     *
-     * @return void
+     * Build class map for a single base directory.
      */
-    private static function generateClassMap()
+    private static function generateClassMapFor(string $base): void
     {
-        $fileIterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator(self::$baseDirectory)
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($base, FilesystemIterator::SKIP_DOTS)
         );
 
-        foreach ($fileIterator as $file) {
+        foreach ($iterator as $file) {
             if ($file->isFile() && $file->getExtension() === 'php') {
-                $filePath   = $file->getPathname();
-                $className  = self::getClassName($filePath);
-                if (!is_null($className)) {
+                $filePath  = $file->getPathname();
+                $className = self::getClassName($filePath);
+                if ($className !== null) {
                     self::$classMap[ltrim($className, '\\')] = self::pathReplacer($filePath);
                 }
             }
@@ -124,23 +139,20 @@ class AutoloadRegister{
     }
 
     /**
-     * Generate the file map by scanning the base directory and its subdirectories.
-     *
-     * @return void
+     * Build file map (php files without class/trait/interface/enum) for a base directory.
      */
-    private static function generateFileMap()
+    private static function generateFileMapFor(string $base): void
     {
-        $fileIterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator(self::$baseDirectory)
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($base, FilesystemIterator::SKIP_DOTS)
         );
 
-        foreach ($fileIterator as $file) {
+        foreach ($iterator as $file) {
             if ($file->isFile() && $file->getExtension() === 'php') {
-                $filePath = $file->getPathname();
+                $filePath  = $file->getPathname();
                 $className = self::getClassName($filePath);
-
                 if ($className === null) {
-                    $relativePath = self::getRelativePath($filePath);
+                    $relativePath = self::getRelativePath($base, $filePath);
                     self::$fileMap[$relativePath] = self::pathReplacer($filePath);
                 }
             }
@@ -148,34 +160,40 @@ class AutoloadRegister{
     }
 
     /**
-     * Get the relative path from the file path.
-     *
-     * @param string $filePath The file path.
-     * @return string The relative path.
+     * Get the relative path for a file with respect to the provided base directory.
      */
-    private static function getRelativePath($filePath)
+    private static function getRelativePath(string $base, string $filePath): string
     {
-        $relativePath = substr($filePath, strlen(self::$baseDirectory));
+        $relativePath = substr($filePath, strlen($base));
         return ltrim($relativePath, '/\\');
     }
 
     /**
-     * Get the class name from the file path.
-     *
-     * @param string $filePath The file path.
-     * @return string|null The class name, or null if not found.
+     * Parse a PHP file and return the fully-qualified class/trait/interface/enum name, or null.
      */
-    private static function getClassName($filePath)
+    private static function getClassName(string $filePath): ?string
     {
-        $namespace  = '';
-        $content    = File::get($filePath);
-        $tokens     = token_get_all($content);
-        $count      = count($tokens);
+        $namespace = '';
+        $content   = File::get($filePath);
+        if ($content === '' || $content === null) {
+            return null;
+        }
+
+        $tokens = token_get_all($content);
+        $count  = count($tokens);
+
+        // Target tokens to detect named declarations
+        $targets = [T_CLASS, T_TRAIT, T_INTERFACE];
+        if (defined('T_ENUM')) {
+            $targets[] = T_ENUM; // PHP 8.1+
+        }
 
         for ($i = 0; $i < $count; $i++) {
-            if ($tokens[$i][0] === T_NAMESPACE) {
+            // Namespace collection
+            if (is_array($tokens[$i]) && $tokens[$i][0] === T_NAMESPACE) {
+                $namespace = '';
                 for ($j = $i + 1; $j < $count; $j++) {
-                    if ($tokens[$j][0] === T_STRING || $tokens[$j][0] === T_NS_SEPARATOR) {
+                    if (is_array($tokens[$j]) && ($tokens[$j][0] === T_STRING || $tokens[$j][0] === T_NS_SEPARATOR)) {
                         $namespace .= $tokens[$j][1];
                     } elseif ($tokens[$j] === '{' || $tokens[$j] === ';') {
                         break;
@@ -183,17 +201,22 @@ class AutoloadRegister{
                 }
             }
 
-            if ($tokens[$i][0] === T_CLASS || $tokens[$i][0] === T_TRAIT) {
+            // Class/Trait/Interface/Enum name collection
+            if (is_array($tokens[$i]) && in_array($tokens[$i][0], $targets, true)) {
+                // Skip anonymous class: "class(" pattern (no T_STRING name)
                 for ($j = $i + 1; $j < $count; $j++) {
-                    if ($tokens[$j] === '{' || $tokens[$j] === 'extends' || $tokens[$j] === 'implements' || $tokens[$j] === 'use') {
+                    if ($tokens[$j] === '{' || $tokens[$j] === '(') {
+                        // '{' for regular bodies, '(' likely anonymous class
                         break;
-                    } elseif ($tokens[$j][0] === T_STRING) {
-                        return $namespace . '\\' . $tokens[$j][1];
+                    } elseif (is_array($tokens[$j]) && $tokens[$j][0] === T_STRING) {
+                        $name = $tokens[$j][1];
+                        return ltrim(($namespace !== '' ? $namespace . '\\' : '') . $name, '\\');
                     }
                 }
             }
         }
-        return;
+
+        return null;
     }
     
 }

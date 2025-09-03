@@ -203,8 +203,9 @@ class Env {
         // If APP_DEBUG = false
         // Turn off error reporting for the application
         if(!self::is_debug()){
-            error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
-            ini_set('display_errors', 0);
+            // PHP 8+: E_STRICT is removed; suppress deprecations instead
+            error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+            ini_set('display_errors', '0');
         }
 
         // Define the error handler function
@@ -261,11 +262,12 @@ class Env {
      * Checks if the specified environment variable has been set or started.
      *
      * @param string $key The name of the environment variable to check. Defaults to 'APP_NAME'.
-     * @return bool Returns true if the environment variable is set, false otherwise.
+     * @return bool 
+     * - Returns true if the environment variable is set, false otherwise.
      */
     public static function isEnvStarted($key = 'APP_NAME')
     {
-        return isset($_ENV[$key]);
+        return Manager::isEnvSet($key);
     }
 
     /**

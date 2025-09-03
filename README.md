@@ -276,6 +276,9 @@ Support Package For PHP and Laravel
     * [Env Create](#env-create)
     * [Env Load](#env-load)
     * [Env Update](#env-update)
+* [Manager](#manager)
+    * [Key Management](#key-management)
+    * [Helper tmanager](#helper-tmanager)
 * [Server](#server)
     * [Get Servers](#get-servers)
     * [Create Custom Config](#create-custom-config)
@@ -1378,17 +1381,51 @@ server()->config("en/message.{$key}", "message.{$key}", 'Lang');
 server()->config("app.name");
 ```
 
+## Manager
+
+### Key Management
+- The package enforces a valid application key in `.env` as `APP_KEY`.
+- If `APP_KEY` is missing, invalid, or manually altered, the application will return HTTP 500 until a new key is generated via the API below.
+
+```php
+use Tamedevelopers\Support\Capsule\Manager;
+
+// Generate and persist a new key to .env and the fingerprint store
+Manager::regenerate();
+
+// Or ensure env is booted then enforce key (called internally)
+Manager::startEnvIFNotStarted();
+```
+
+- Valid key format is Laravel-style: `base64:` followed by base64 of 32 random bytes.
+
+### Helper tmanager
+- You can use the helper for convenience:
+
+```php
+// Generate and persist a new key
+tmanager()->regenerate();
+
+// Optionally start env and enforce key
+tmanager()->startEnvIFNotStarted();
+```
+
 ## Autoload Register
-- Takes an `string\|array` as param
-    - You can use register a folder containing all needed files
-    - This automatically register `Files\|Classes` in the folder and sub-folders.
+- Takes a `string|array` as parameter
+    - Register one or more folders containing your PHP files
+    - Automatically loads `Files|Classes` in the folder and sub-folders
 
 ```php
 use Tamedevelopers\Support\AutoloadRegister;
 
+// Single folder
 AutoloadRegister::load('folder');
 
-or
+// Multiple folders
+AutoloadRegister::load(['folder', 'folder2']);
+
+// Or use the helper
+autoload_register('folder');
 autoload_register(['folder', 'folder2']);
 ```
 

@@ -24,10 +24,10 @@ $mailer->to('tamedevelopers@gmail.com')
         ->attach(
             'New Units File',
             base_path("thousand_units.png"), 
-        )
-        ->send(function($response){
-            // $response
-        });
+        );
+        // ->send(function($response){
+        //     // $response
+        // });
 
 
             
@@ -48,5 +48,6 @@ $mailer->to('tamedevelopers@gmail.com')
 
 
 dd(
+    $mailer,
     'sss'
 );
