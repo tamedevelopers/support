@@ -23,24 +23,16 @@ use Tamedevelopers\Support\Capsule\FileCache;
 use Tamedevelopers\Support\Collections\Collection;
 
 
-if (! function_exists('AppIsNotCorePHP')) {
+if (! function_exists('Tame_isAppFramework')) {
     /**
      * Check if Application is not Core PHP
      * If running on other frameworks
      *
      * @return bool
      */
-    function AppIsNotCorePHP()
+    function Tame_isAppFramework()
     {
-        // using `get_declared_classes()` function will return all classes in your project
-        // Check if any classe exist
-        return Tame::checkAnyClassExists([
-            '\Illuminate\Foundation\Application',
-            // '\CI_Controller',
-            // '\Cake\Controller\Controller',
-            // '\Symfony\Component\HttpKernel\Kernel',
-            // '\Symfony\Component\Routing\Annotation\Route',
-        ]);
+        return (new Tame)->isAppFramework();
     }
 }
 
@@ -215,7 +207,7 @@ if (! function_exists('TameZip')) {
     }
 }
 
-if (! AppIsNotCorePHP() && ! function_exists('bcrypt')) {
+if (! Tame_isAppFramework() && ! function_exists('bcrypt')) {
      /**
      * Password Encrypter.
      * This function encrypts a password using bcrypt with a generated salt.
@@ -273,7 +265,7 @@ if (! function_exists('autoload_register')) {
     }
 }
 
-if (! AppIsNotCorePHP() && ! function_exists('config')) {
+if (! Tame_isAppFramework() && ! function_exists('config')) {
     /**
      * Get the value of a configuration option.
      *
@@ -292,7 +284,7 @@ if (! AppIsNotCorePHP() && ! function_exists('config')) {
     }
 }
 
-if (! AppIsNotCorePHP() && ! function_exists('env')) {
+if (! Tame_isAppFramework() && ! function_exists('env')) {
     /**
      * Get ENV (Enviroment) Data
      * - If .env was not used, 
@@ -407,7 +399,7 @@ if (! function_exists('config_time')) {
     }
 }
 
-if (! AppIsNotCorePHP() && ! function_exists('__')) {
+if (! Tame_isAppFramework() && ! function_exists('__')) {
     /**
      * Translate the given message.
      *
@@ -600,7 +592,7 @@ if (! function_exists('to_json')) {
     }
 }
 
-if (! AppIsNotCorePHP() && ! function_exists('dump')) {
+if (! Tame_isAppFramework() && ! function_exists('dump')) {
     /**
      * Dump Data
      * @param mixed $data
@@ -613,7 +605,7 @@ if (! AppIsNotCorePHP() && ! function_exists('dump')) {
     }
 }
 
-if (! AppIsNotCorePHP() && ! function_exists('dd')) {
+if (! Tame_isAppFramework() && ! function_exists('dd')) {
     /**
      * Dump and Data
      * @param mixed $data

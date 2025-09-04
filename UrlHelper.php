@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Server;
 
@@ -16,8 +17,8 @@ class UrlHelper {
      */
     public static function url() 
     {
-        // create from .env APP_URL or Default path
-        $url = env('APP_URL') ?? self::full();
+        // Prefer APP_URL from environment without instantiating Env to avoid recursion
+        $url = Env::env('APP_URL') ?? self::full();
 
         return Str::trim($url, '\/');
     }

@@ -328,6 +328,24 @@ class Env {
     }
 
     /**
+     * Boot the ENV::BootLogger.
+     * If the constant 'TAME_ENV_BOOTLOGER' is not defined, 
+     * it defines it and starts the debugger automatically 
+     * 
+     * So that this is only called once in entire application life-cycle
+     */
+    public static function boot()
+    {
+        if(!defined('TAME_ENV_BOOTLOGER')){
+            // start logger
+            self::bootLogger();
+
+            // Define boot logger as true
+            define('TAME_ENV_BOOTLOGER', 1);
+        } 
+    }
+
+    /**
      * Create needed directory and files
      *
      *  @param string|null $directory
@@ -412,7 +430,7 @@ class Env {
             E_USER_WARNING      => 'User Warning',
             E_NOTICE            => 'Notice',
             E_USER_NOTICE       => 'User Notice',
-            E_STRICT            => 'Strict Standards',
+            // E_STRICT was removed in PHP 8+
             E_DEPRECATED        => 'Deprecated',
             E_USER_DEPRECATED   => 'User Deprecated',
         );

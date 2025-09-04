@@ -6,60 +6,61 @@ namespace Tamedevelopers\Support\Traits;
 
 use ReflectionClass;
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\UrlHelper;
 
 
 trait ServerTrait{
     
     /**
-     * server base dir
-     * @var mixed
+     * Base directory of the application (normalized with trailing slash).
+     * @var string
      */
-    static protected $base_dir;
+    static protected $base_dir = null;
+
+    /**
+     * Lightweight in-memory cache for server and domain values.
+     * @var array|null
+     */
+    protected static $servers_cache = null;
 
 
     /**
-     * Define custom Server root path
+     * Define custom Server root path.
      * 
      * @param string|null $path
-     * 
-     * @return string
+     * @return void
      */
     public static function setDirectory($path = null)
     {
-        // if base path was presented
-        if(!empty($path)){
-            self::$base_dir = $path;
-        } else{
-            // auto set the base dir property
-            self::$base_dir = self::getDirectory(self::$base_dir);
+        if (!empty($path)) {
+            self::$base_dir = self::cleanServerPath($path);
+            return;
+        }
+
+        if (empty(self::$base_dir)) {
+            self::$base_dir = self::cleanServerPath(self::serverRoot());
         }
     }
     
     /**
-     * get Directory
-     * @param  string base directory path.
+     * Get normalized base directory with trailing slash.
      * 
-     * @return mixed
+     * @return string
      */
     public static function getDirectory()
     {
-        if(empty(self::$base_dir)){
-            // get default project root path
-            self::$base_dir = self::cleanServerPath( 
-                self::serverRoot() 
-            );
-        }else{
-            self::$base_dir = self::cleanServerPath(
-                self::$base_dir
-            );
+        if (empty(self::$base_dir)) {
+            self::$base_dir = self::cleanServerPath(self::serverRoot());
+        } else {
+            self::$base_dir = self::cleanServerPath(self::$base_dir);
         }
         
         return self::$base_dir;
     }
 
     /**
-     * Get Server root
+     * Compute server root path
      * 
      * @return string
      */
@@ -69,7 +70,7 @@ trait ServerTrait{
     }
 
     /**
-     * Format path with Base Directory
+     * Format path with Base Directory.
      * 
      * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
@@ -79,17 +80,14 @@ trait ServerTrait{
      */
     public static function formatWithBaseDirectory($path = null)
     {
-        $server = rtrim(
-            self::getDirectory(),
-            '/'
-        );
-        return self::pathReplacer(
-            "{$server}/{$path}"
-        );
+        $base = rtrim(self::getDirectory(), '/');
+        $suffix = ltrim((string) $path, '/');
+
+        return self::pathReplacer($base . ($suffix !== '' ? "/{$suffix}" : ''));
     }
 
     /**
-     * Format path with Domain Path
+     * Format path with Domain URI.
      * 
      * @param string|null $path
      * - [optional] You can pass a path to include with the domain link
@@ -99,13 +97,10 @@ trait ServerTrait{
      */
     public static function formatWithDomainURI($path = null)
     {
-        $domain = rtrim(
-            self::getServers('domain'),
-            '/'
-        );
-        return self::pathReplacer(
-            "{$domain}/{$path}"
-        );
+        $domain = rtrim((string) self::getServers('domain'), '/');
+        $suffix = ltrim((string) $path, '/');
+
+        return self::pathReplacer($domain . ($suffix !== '' ? "/{$suffix}" : ''));
     }
 
     /**
@@ -116,46 +111,40 @@ trait ServerTrait{
      * - server|domain
      * 
      * @return mixed
-     * - An associative array containing\ server|domain
+     * Returns array ['server' => ..., 'domain' => ...] or a specific key.
      */
     public static function getServers($mode = null)
     {
-        // Only create Base path when `CONSTANT` is not defined
-        // - The Constant holds the path setup information
-        if(!defined('TAME_SERVER_CONNECT')){
-            // create server path
-            $serverPath = self::cleanServerPath(
-                self::createAbsolutePath()
-            );
-            
-            // Data
-            $data = [
-                'server'    => $serverPath,
-                'domain'    => UrlHelper::url(),
-            ];
+        // Use cached value when available
+        if (self::$servers_cache !== null) {
+            $data = self::$servers_cache;
+        } else {
+            if (!defined('TAME_SERVER_CONNECT')) {
+                $serverPath = self::cleanServerPath(self::createAbsolutePath());
 
-            /*
-            |--------------------------------------------------------------------------
-            | Storing data into a Global Constant 
-            |--------------------------------------------------------------------------
-            | We can now use on anywhere on our application 
-            | Mostly to get our defined .env root Path
-            */
-            define('TAME_SERVER_CONNECT', $data);
-        } else{
-            // Data
-            $serverData = TAME_SERVER_CONNECT;
-            $data   = [
-                'server'    => $serverData['server'],
-                'domain'    => $serverData['domain'],
-            ];
+                $data = [
+                    'server' => $serverPath,
+                    'domain' => UrlHelper::url(),
+                ];
+
+                // Backward-compat: expose as constant once
+                define('TAME_SERVER_CONNECT', $data);
+            } else {
+                $serverData = TAME_SERVER_CONNECT;
+                $data = [
+                    'server' => $serverData['server'],
+                    'domain' => $serverData['domain'],
+                ];
+            }
+
+            self::$servers_cache = $data;
         }
 
-        return $data[$mode] ?? $data;
+        return $mode ? ($data[$mode] ?? null) : $data;
     }
 
     /**
-     * cleanServerPath
+     * Normalize server paths and ensure trailing slash.
      *
      * @param  string|null $path
      * @param  string $replacer
@@ -171,15 +160,14 @@ trait ServerTrait{
     }
 
     /**
-     * Replace path with given string
-     * \ or /
+     * Replace path separators with given string.
      * 
      * @param string|null  $path
      * @param string  $replacer
      * 
      * @return string
      */
-    public static function pathReplacer($path, $replacer = '/')
+    public static function pathReplacer($path = null, $replacer = '/')
     {
         return str_replace(
             ['\\', '/'], 
@@ -200,7 +188,7 @@ trait ServerTrait{
 
         // if vendor is not present in the root directory, 
         // - Then we get path using `Vendor Autoload`
-        if(!is_dir("{$projectRootPath}vendor")){
+        if(!is_dir($projectRootPath . '/vendor')){
             $projectRootPath = self::getVendorRootPath();
         }
 
@@ -208,8 +196,8 @@ trait ServerTrait{
     }
 
     /**
-     * Get Root path with vendor helper
-     * 
+     * Get Root path using composer vendor helper.
+     * Supports web SAPI and CLI (falls back to getcwd()).
      * @return string
      */
     private static function getVendorRootPath()
@@ -221,7 +209,7 @@ trait ServerTrait{
     }
 
     /**
-     * Get root path with no helper
+     * Get root path without helpers (fast path).
      * 
      * @return string
      */
@@ -230,9 +218,14 @@ trait ServerTrait{
         $documentRoot   = str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']);
         $currentScript  = str_replace('\\', '/', $_SERVER['SCRIPT_FILENAME']);
 
-        // If application is running on other 
-        // frameworks like <laravel>
-        if(AppIsNotCorePHP()){
+        // CLI/unknown SAPI fallback
+        if ($documentRoot === '' || $currentScript === '') {
+            $cwd = getcwd() ?: '';
+            return $cwd !== '' ? str_replace('\\', '/', $cwd) : '/';
+        }
+
+        // Adjust when running under frameworks (e.g., Laravel public/index.php)
+        if((new Tame)->isAppFramework()){
             $path = 'public/index.php';
 
             if(strpos($currentScript, $path) !== false){
@@ -242,13 +235,12 @@ trait ServerTrait{
 
         // setting default path to doc root
         $projectRootPath = $documentRoot;
+
         if (strpos($currentScript, $documentRoot) === 0) {
-            $projectRootPath = substr($currentScript, strlen($documentRoot));
-            $projectRootPath = Str::trim($projectRootPath, '/');
-            $projectRootPath = substr($projectRootPath, 0, (int) strpos($projectRootPath, '/'));
-            $projectRootPath = $documentRoot . '/' . $projectRootPath;
-            
-            // if not directory then get the directory of the path link
+            $relative = Str::trim(substr($currentScript, strlen($documentRoot)), '/');
+            $firstSegment = $relative !== '' ? substr($relative, 0, (int) strpos($relative . '/', '/')) : '';
+            $projectRootPath = rtrim($documentRoot . '/' . $firstSegment, '/');
+
             if (!is_dir($projectRootPath)) {
                 $projectRootPath = dirname($projectRootPath);
             }

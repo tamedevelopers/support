@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Capsule;
 
+use Illuminate\Support\Carbon as carbonInstance;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Country;
 
@@ -120,7 +121,7 @@ class TimeHelper {
 
         // if instance of Carbon
         // then convert to date time
-        if($date instanceof \Illuminate\Support\Carbon){
+        if($date instanceof carbonInstance){
             $date = $date->toDateTimeString();
         }
         

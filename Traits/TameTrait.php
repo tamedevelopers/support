@@ -11,6 +11,30 @@ use Tamedevelopers\Support\Server;
 trait TameTrait{
 
     /**
+     * Check if the application is running under a popular PHP framework.
+     * Returns true if any supported framework core class is found.
+     *
+     * Supported frameworks:
+     * - Laravel
+     * - CodeIgniter
+     * - CakePHP
+     * - Symfony
+     *
+     * @return bool
+     */
+    public static function isAppFramework()
+    {
+        // using `get_declared_classes()` function will return all classes in your project
+        return self::checkAnyClassExists([
+            '\Illuminate\Foundation\Application', // Laravel
+            '\CI_Controller', // CodeIgniter
+            '\Cake\Controller\Controller', // CakePHP
+            '\Symfony\Component\HttpKernel\Kernel', // Symfony
+            '\Symfony\Component\Routing\Annotation\Route',
+        ]);
+    }
+    
+    /**
      * isClosure
      *
      * @param  Closure|null $closure
