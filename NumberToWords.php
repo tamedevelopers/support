@@ -31,6 +31,7 @@ class NumberToWords
      */
     private static mixed $staticData = null;
 
+    
     public function __construct()
     {
         if (!self::isWordsInstance()) {
@@ -114,6 +115,14 @@ class NumberToWords
         }
 
         return $decimal !== '0' ? ($integer . '.' . $decimal) : $integer;
+    }
+
+    /**
+     * Translate numbers into readable text formats
+     */
+    public function toText(): ?string
+    {
+        return $this->formatToText();
     }
 
     /**
@@ -311,14 +320,6 @@ class NumberToWords
             }
         }
         return $value;
-    }
-
-    /**
-     * Translate numbers into readable text formats
-     */
-    public function toText(): ?string
-    {
-        return $this->formatToText();
     }
 
     /**
