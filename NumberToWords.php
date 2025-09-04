@@ -105,23 +105,24 @@ class NumberToWords
 
         [$integerWords, $centsWords] = $this->extractIntegerAndCents($clean);
 
-        $integer = self::convertWordsToNumber($integerWords);
-        $decimal = 0;
+        // Use string-based big integer conversion
+        $integer = self::convertWordsToNumber($integerWords); // string
+        $decimal = '0';
 
         if ($this->allowCents && $centsWords !== null) {
-            $decimal = self::convertWordsToNumber($centsWords);
+            $decimal = self::convertWordsToNumber($centsWords); // string
         }
 
-        return $decimal > 0 ? sprintf('%d.%d', $integer, $decimal) : (string) $integer;
+        return $decimal !== '0' ? ($integer . '.' . $decimal) : $integer;
     }
 
     /**
-     * Convert Words To Number
+     * Convert Words To Number (arbitrary-precision using strings)
      */
     private static function convertWordsToNumber($words)
     {
         if ($words === null || $words === '') {
-            return 0;
+            return '0';
         }
 
         // Normalize
@@ -134,8 +135,8 @@ class NumberToWords
 
         $parts = preg_split('/\s+|\-/', trim($words));
 
-        $number = 0;
-        $current = 0;
+        $total = '0';       // big integer as string
+        $current = 0;       // safe small accumulator (<1000)
 
         foreach ($parts as $part) {
             if ($part === '') {
@@ -147,23 +148,79 @@ class NumberToWords
                 continue;
             }
 
-            if (isset(self::$scaleMap[$part])) {
-                if ($part === 'hundred') {
-                    if ($current === 0) {
-                        $current = 1;
-                    }
-                    $current *= self::$scaleMap[$part];
-                } else {
-                    if ($current === 0) {
-                        $current = 1;
-                    }
-                    $number += $current * self::$scaleMap[$part];
-                    $current = 0;
+            if ($part === 'hundred') {
+                if ($current === 0) {
+                    $current = 1;
                 }
+                $current *= 100;
+                continue;
+            }
+
+            // Check scale words: thousand, million, ... using units list
+            $scaleIndex = array_search($part, self::$units, true);
+            if ($scaleIndex !== false && $scaleIndex > 0) {
+                if ($current === 0) {
+                    $current = 1;
+                }
+                $shifted = self::bigMulPow10((string) $current, 3 * (int) $scaleIndex);
+                $total = self::bigAdd($total, $shifted);
+                $current = 0;
+                continue;
             }
         }
 
-        return $number + $current;
+        // Add remaining current
+        $total = self::bigAdd($total, (string) $current);
+
+        return self::bigTrimZeros($total);
+    }
+
+    /**
+     * Trim leading zeros from a numeric string.
+     */
+    private static function bigTrimZeros(string $s): string
+    {
+        $s = ltrim($s, '0');
+        return $s === '' ? '0' : $s;
+    }
+
+    /**
+     * Add two non-negative integer strings.
+     */
+    private static function bigAdd(string $a, string $b): string
+    {
+        $a = preg_replace('/\D/', '', $a);
+        $b = preg_replace('/\D/', '', $b);
+        $a = $a === '' ? '0' : $a;
+        $b = $b === '' ? '0' : $b;
+
+        $i = strlen($a) - 1;
+        $j = strlen($b) - 1;
+        $carry = 0;
+        $res = '';
+
+        while ($i >= 0 || $j >= 0 || $carry) {
+            $da = $i >= 0 ? (ord($a[$i]) - 48) : 0;
+            $db = $j >= 0 ? (ord($b[$j]) - 48) : 0;
+            $sum = $da + $db + $carry;
+            $res .= chr(($sum % 10) + 48);
+            $carry = intdiv($sum, 10);
+            $i--; $j--;
+        }
+
+        return self::bigTrimZeros(strrev($res));
+    }
+
+    /**
+     * Multiply an integer string by 10^pow (append zeros).
+     */
+    private static function bigMulPow10(string $a, int $pow): string
+    {
+        $a = self::bigTrimZeros($a);
+        if ($a === '0') {
+            return '0';
+        }
+        return $a . str_repeat('0', max(0, $pow));
     }
 
     /**
