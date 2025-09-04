@@ -250,7 +250,7 @@ Support Package For PHP and Laravel
     * [host](#host)
     * [full](#full)
     * [path](#path)
-    * [server](#server)
+    * [server](#http-server)
     * [request](#request)
     * [referral](#referral)
 * [Cookie](#cookie)

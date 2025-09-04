@@ -9,21 +9,27 @@ use SessionHandlerInterface;
 use Tamedevelopers\Support\Process\Concerns\SessionInterface as BaseSessionInterface;
 use Tamedevelopers\Support\Process\Session\Handlers\DatabaseSessionHandler;
 use Tamedevelopers\Support\Process\Session\Handlers\RedisSessionHandler;
-use Redis;
 
 /**
  * Configurable session manager supporting file, database, and redis drivers.
+ *
+ * Responsibilities:
+ * - Configure PHP sessions based on a chosen driver
+ * - For file driver, ensure the directory exists (defaults to storage_path('session'))
+ * - For database driver, install a PDO-backed handler
+ * - For redis driver, install a phpredis-backed handler with TTL
+ * - Provide a simple, framework-agnostic SessionInterface implementation
  */
 final class SessionManager implements BaseSessionInterface
 {
-    /** @var array<string,mixed> */
+    /** @var array<string,mixed> Resolved session configuration */
     private array $config;
 
     /**
      * @param array<string,mixed> $config
-     *  - driver: file|database|redis|native (default: native)
+     *  - driver: file|files|database|redis|native (default: native)
      *  - lifetime: int seconds (optional, default from ini)
-     *  - path: string for file driver (optional)
+     *  - path: string for file driver (optional; defaults to storage_path('session') when available)
      *  - database: [dsn, username, password, options(array), table(string)]
      *  - redis: [host, port, timeout, auth, database, prefix, ttl]
      */
@@ -47,8 +53,18 @@ final class SessionManager implements BaseSessionInterface
             @ini_set('session.gc_maxlifetime', (string) $lifetime);
         }
 
+        // default path to storage_path('sessions') if not provided for file driver
+        if (in_array($driver, ['file', 'files'], true)) {
+            if (empty($this->config['path']) && function_exists('storage_path')) {
+                $this->config['path'] = storage_path('sessions');
+            }
+        }
+
         switch ($driver) {
             case 'file':
+                $this->configureFileDriver();
+                break;
+            case 'files': // alias
                 $this->configureFileDriver();
                 break;
             case 'database':
@@ -166,8 +182,13 @@ final class SessionManager implements BaseSessionInterface
     }
 
     /** @inheritDoc */
-    public function destroy(): void
+    public function destroy(?string $key = null): void
     {
+        if ($key !== null) {
+            unset($_SESSION[$key]);
+            return;
+        }
+
         if (session_status() === PHP_SESSION_ACTIVE) {
             @session_unset();
             @session_destroy();

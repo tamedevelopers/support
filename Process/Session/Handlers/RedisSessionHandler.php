@@ -4,18 +4,36 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Process\Session\Handlers;
 
-use Redis;
 use SessionHandlerInterface;
 
 /**
  * Redis-backed session handler using phpredis.
+ *
+ * Responsibilities:
+ * - Store session payload in Redis with a key prefix and TTL
+ * - Use SETEX to ensure automatic expiration
+ * - Avoid hard type declarations for Redis to satisfy IDEs when extension is missing
  */
 final class RedisSessionHandler implements SessionHandlerInterface
 {
-    private Redis $redis;
+    /** @var object Underlying phpredis client instance */
+    private $redis;
+
+    /** @var string Key prefix for all session entries */
     private string $prefix;
+
+    /** @var int Time-to-live in seconds for session entries */
     private int $ttl;
 
+    /**
+     * @param string $host Redis host (default: 127.0.0.1)
+     * @param int $port Redis port (default: 6379)
+     * @param float $timeout Connection timeout in seconds (default: 1.5)
+     * @param mixed $auth Password or array for ACL auth (optional)
+     * @param int $database Redis database index (default: 0)
+     * @param string $prefix Key prefix for session entries (default: sess:)
+     * @param int $ttl TTL in seconds for session data (default: 1440)
+     */
     public function __construct(
         string $host = '127.0.0.1',
         int $port = 6379,
@@ -25,7 +43,8 @@ final class RedisSessionHandler implements SessionHandlerInterface
         string $prefix = 'sess:',
         int $ttl = 1440
     ) {
-        $this->redis = new Redis();
+        // Avoid hard typehint to keep IDE analyzers happy when extension is missing
+        $this->redis = new \Redis();
         $this->redis->connect($host, $port, $timeout);
         if ($auth !== null && $auth !== '') {
             $this->redis->auth($auth);

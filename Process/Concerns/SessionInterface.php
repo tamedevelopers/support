@@ -66,7 +66,9 @@ interface SessionInterface
 
     /**
      * Destroy the session and clear stored data.
+     * If a key is provided, only that key is removed.
+     * @param string|null $key
      * @return void
      */
-    public function destroy(): void;
+    public function destroy(?string $key = null): void;
 }
