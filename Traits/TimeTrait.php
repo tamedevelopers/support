@@ -65,19 +65,19 @@ trait TimeTrait{
     }
     
     /**
-     * build Time Modifier
+     * Modify builder for add/sub operations.
      *
-     * @param  string $mode
-     * @param  int $value
-     * @param  bool $sub
-     * @return $clone
+     * @param string $mode second|minute|hour|day|week|month|year
+     * @param int $value Amount to adjust
+     * @param bool $sub If true, subtract instead of add
+     * @return static
      */
     private function buildTimeModifier($mode = 'day', $value = 0, $sub = false)
     {
         $clone = $this->clone();
-        $date = $clone->format();
+        $date = $clone->format("Y-m-d H:i:s");
         $mode = Str::lower($mode);
-        $sign = !$sub ? '+' : '-';
+        $sign = $sub ? '-' : '+';
 
         $text = match ($mode) {
             'second',  => $value <= 1 ? 'second' : 'seconds',
@@ -163,7 +163,7 @@ trait TimeTrait{
     }
 
     /**
-     * create timestamp
+     * timestampPrint(): rebuilds debug-like timestamp string.
      *
      * @return string
      */
@@ -179,7 +179,7 @@ trait TimeTrait{
     }
     
     /**
-     * buildTimePrint
+     * Pretty string including microseconds, tz and UTC offset (compat buildTimePrint())
      *
      * @return string
      */
@@ -190,6 +190,21 @@ trait TimeTrait{
 
         return "{$date}.{$this->microseconds()} {$this->timezone} {$utc}";
     }
+
+    /**
+     * Return a pretty timestamp with microseconds, timezone, and UTC offset.
+     * Example: "2025-05-01 10:20:30.123456 America/New_York (-04:00)"
+     *
+     * @return string
+     */
+    public function debugTimestamp(): string
+    {
+        $date   = $this->format('Y-m-d H:i:s');
+        $micro  = $this->microseconds();
+        $tz     = $this->timezone->getName();
+        $offset = $this->format('(P)');
+        return sprintf('%s.%s %s %s', $date, $micro, $tz, $offset);
+    }
     
     /**
      * create microseconds
@@ -198,10 +213,9 @@ trait TimeTrait{
      */
     private function microseconds()
     {
-        $microtime = explode(' ', microtime());
-        $milliseconds = (int) round($microtime[0] * 1000000); // Get microseconds
-
-        return str_pad(Str::trim($milliseconds), 6, '0', STR_PAD_LEFT);
+        $micro = explode(' ', microtime());
+        $micros = (int) round(((float) ($micro[0] ?? 0)) * 1_000_000);
+        return str_pad((string) $micros, 6, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -287,7 +301,7 @@ trait TimeTrait{
             $clone = new static();
         }
 
-        return $clone->$method(...$args);
+        return $clone->$method(...($args ?? []));
     }
 
 }

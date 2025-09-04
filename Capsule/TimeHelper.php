@@ -47,7 +47,7 @@ class TimeHelper {
     }
 
     /**
-     * format
+     * Format the range.
      *
      * @param  bool $start Whether to return the start date (true) or the end date (false).
      * @param  bool $year Whether to include the year in the result.
@@ -75,10 +75,10 @@ class TimeHelper {
     }
 
     /**
-     * Set the timezone.
-     * @param string|null $timezone
-     * 
-     * @return string
+     * Configure and return a valid timezone string. Falls back to system default or UTC.
+     *
+     * @param string|null $timezone IANA timezone name or null. If invalid, fallback is used.
+     * @return string Valid IANA timezone identifier.
      */
     public static function configureAndSetTimezone($timezone = null)
     {
@@ -87,13 +87,14 @@ class TimeHelper {
         if(!empty($timezone) && in_array($timezone, Country::timeZone())){
             $timezone = $timezone;
         } else{
-            $timezone = date_default_timezone_get() ?? 'UTC';
+            $timezone = date_default_timezone_get() ?: 'UTC';
         }
 
         try {
             date_default_timezone_set($timezone);
         } catch (\Throwable $th) {
-            date_default_timezone_set('UTC');
+            $timezone = 'UTC';
+            date_default_timezone_set($timezone);
         }
 
         return $timezone;
@@ -141,6 +142,18 @@ class TimeHelper {
     public static function carbonInstance($date) 
     {
         return $date?->timestamp ?? $date;
+    }
+
+    /**
+     * Build a microsecond string (6 digits) for pretty prints.
+     *
+     * @return string e.g. "123456"
+     */
+    public static function microseconds(): string
+    {
+        $micro = explode(' ', microtime());
+        $micros = (int) round(((float) ($micro[0] ?? 0)) * 1_000_000);
+        return str_pad((string) $micros, 6, '0', STR_PAD_LEFT);
     }
 
 }
