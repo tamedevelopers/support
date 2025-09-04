@@ -19,22 +19,15 @@
         "ext-ctype": "*",
         "ext-mbstring": "*",
         "symfony/var-dumper": "*",
-        "symfony/console": "^6.2",
+        "symfony/console": "^6.0",
         "cocur/slugify": "^4.2.0",
         "vlucas/phpdotenv": "^5.4.1",
         "phpmailer/phpmailer": "^6.9",
         "filp/whoops": "^2.15",
         "dompdf/dompdf": "^3.0"
     },
-    "require-dev": {
-        "filp/whoops": "^2.15",
-        "symfony/var-dumper": "^6.2 || ^7.0" 
-    },
     "suggest": {
         "dompdf/dompdf": "Required to use the `PDF` class and helper (^3.0)"
-    },
-    "config": {
-        "prefer-stable": true
     },
     "autoload": {
         "files": [
