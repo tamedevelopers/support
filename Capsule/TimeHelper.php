@@ -8,23 +8,30 @@ use Illuminate\Support\Carbon as carbonInstance;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Country;
 
+/**
+ * Class TimeHelper
+ *
+ * Utilities for timezone configuration, date parsing, and formatting helpers
+ * used by Time. This class also carries lightweight range formatting support
+ * via startDate/endDate/format passed from Time::dateRange.
+ */
 class TimeHelper {
     
     /**
-     * startDate
+     * Start of the range date (as Time instance)
      *
      * @var mixed
      */
     protected $startDate;    
     /**
-     * endDate
+     * End of the range date (as Time instance)
      *
      * @var mixed
      */
     protected $endDate;
     
     /**
-     * format
+     * Output format for range formatting.
      *
      * @var string|null
      */

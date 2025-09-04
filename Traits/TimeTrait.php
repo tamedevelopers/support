@@ -11,13 +11,18 @@ use Tamedevelopers\Support\Time;
 use Tamedevelopers\Support\Country;
 use Tamedevelopers\Support\Capsule\TimeHelper;
 
+
 /**
+ * Trait TimeTrait
+ *
+ * Internal helpers used by the Time class for cloning, timezone handling,
+ * and common operations. Public API is provided by Time and dynamic dispatch.
  * @property mixed $staticData
 */
 trait TimeTrait{
 
     /**
-     * isTimeInstance
+     * Determine whether the static context already holds a Time instance.
      *
      * @return bool
      */
@@ -27,9 +32,9 @@ trait TimeTrait{
     }
     
     /**
-     * Clone a new Instance of self
+     * Clone a new instance of the owning class.
      *
-     * @return $this
+     * @return $this A shallow clone of the current instance.
      */
     private function clone()
     {
@@ -39,7 +44,7 @@ trait TimeTrait{
     /**
      * Alias for clone() method.
      *
-     * @return $this
+     * @return $this A shallow clone of the current instance.
      */
     public function copy()
     {
@@ -80,13 +85,13 @@ trait TimeTrait{
         $sign = $sub ? '-' : '+';
 
         $text = match ($mode) {
-            'second',  => $value <= 1 ? 'second' : 'seconds',
-            'minute',  => $value <= 1 ? 'minute' : 'minutes',
-            'hour',  => $value <= 1 ? 'hour' : 'hours',
-            'week',  => $value <= 1 ? 'week' : 'weeks',
-            'month',  => $value <= 1 ? 'month' : 'months',
-            'year',  => $value <= 1 ? 'year' : 'years',
-            default => $value <= 1 ? 'day' : 'days',
+            'second' => $value <= 1 ? 'second' : 'seconds',
+            'minute' => $value <= 1 ? 'minute' : 'minutes',
+            'hour'   => $value <= 1 ? 'hour' : 'hours',
+            'week'   => $value <= 1 ? 'week' : 'weeks',
+            'month'  => $value <= 1 ? 'month' : 'months',
+            'year'   => $value <= 1 ? 'year' : 'years',
+            default  => $value <= 1 ? 'day' : 'days',
         };
 
         // format text

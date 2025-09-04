@@ -10,31 +10,57 @@ use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Traits\TimeTrait;
 use Tamedevelopers\Support\Capsule\TimeHelper;
 
+/**
+ * Class Time
+ *
+ * Time utility with dynamic static/instance method support.
+ * - Supports setters like date(), now(), today(), yesterday()
+ * - Add/subtract helpers: addSeconds/Minutes/Hours/Days/Weeks/Months/Years and sub*
+ * - Formatting: format(), toDateTimeString(), toJsTimer(), timestamp()
+ * - Range helper: dateRange()
+ * - Text features/config: config(), greeting (via __greeting), timeAgo (via __timeAgo)
+ *
+ * All methods are documented at their definitions for clarity.
+ */
 class Time {
 
     use TimeTrait;
 
     /**
-     * For storing the time value
-     * 
-     * @var mixed
-     * - int|string
+     * For storing the time value.
+     *
+     * @var int|string
      */
     protected $date;
 
     /**
-     * For storing the timestamp value
-     * 
+     * For storing a human-friendly timestamp snapshot
+     * (e.g., "2024-01-01 12:00:00.123456 UTC (+00:00)").
+     *
      * @var string
      */
     protected $timestamp;
 
     /**
-     * For storing the timezone value
-     * 
+     * For storing the timezone value.
+     *
      * @var string
      */
     protected $timezone;
+
+    /**
+     * Cached timezone name (alias of $timezone) for quick access.
+     *
+     * @var string|null
+     */
+    protected $timezoneName;
+
+    /**
+     * Cached UTC offset for the current $date (e.g., "+00:00").
+     *
+     * @var string|null
+     */
+    protected $utcOffset;
         
     /**
      * static
@@ -75,6 +101,13 @@ class Time {
      * 
      * @return mixed
      */
+    /**
+     * Magic: instance dynamic calls map to supported methods.
+     *
+     * @param string $name Invoked method name
+     * @param array $args Arguments
+     * @return mixed
+     */
     public function __call($name, $args) 
     {
         return self::nonExistMethod($name, $args, $this);
@@ -87,6 +120,13 @@ class Time {
      * 
      * @return mixed
      */
+    /**
+     * Magic: static dynamic calls map to supported methods using stored static instance.
+     *
+     * @param string $name Invoked static method name
+     * @param array $args Arguments
+     * @return mixed
+     */
     public static function __callStatic($name, $args) 
     {
         return self::nonExistMethod($name, $args, self::$staticData);
@@ -96,6 +136,12 @@ class Time {
      * Add Second to curent date
      * @param int $value
      * @return $this
+     */
+    /**
+     * Add seconds to the current date.
+     *
+     * @param int $value Number of seconds to add
+     * @return $this New cloned instance with updated time
      */
     public function addSeconds($value = 0)
     {
@@ -649,6 +695,12 @@ class Time {
      * 
      * @return mixed
      */
+    /**
+     * Retrieve text configuration entries.
+     *
+     * @param string|null $mode Specific key to fetch or null for all
+     * @return mixed
+     */
     private static function getText($mode  = null)
     {
         if(!defined('TAME_TIME_CONFIG')){
@@ -656,6 +708,33 @@ class Time {
         }
 
         return TAME_TIME_CONFIG[$mode] ?? TAME_TIME_CONFIG;
+    }
+
+    /**
+     * Magic: customize what is displayed during var-dump/dd().
+     * Provides a pretty, safe snapshot of the current time object.
+     *
+     * - timestamp: the unix timestamp (int)
+     * - formatted: default formatted string (Y-m-d H:i:s)
+     * - timezone: current timezone name
+     * - utc_offset: offset at the timestamp time
+     * - greeting: localized greeting based on hour
+     * - time_ago_short: a compact time-ago string
+     *
+     * @return array
+     */
+    public function __debugInfo(): array
+    {
+        $time = (int) $this->date;
+
+        return [
+            'timestamp'      => $time,
+            'formatted'      => date('Y-m-d H:i:s', $time),
+            'timezone'       => (string) $this->timezone,
+            'utc_offset'     => date('(P)', $time),
+            'greeting'       => $this->__greeting($time),
+            'time_ago_short' => $this->__timeAgo('short'),
+        ];
     }
 }
 
