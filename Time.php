@@ -730,8 +730,8 @@ class Time {
         return [
             'timestamp'      => $time,
             'formatted'      => date('Y-m-d H:i:s', $time),
-            'timezone'       => (string) $this->timezone,
-            'utc_offset'     => date('(P)', $time),
+            'timezone'       => (string) ($this->timezoneName ?? $this->timezone),
+            'utc_offset'     => ($this->utcOffset ?? date('(P)', $time)),
             'greeting'       => $this->__greeting($time),
             'time_ago_short' => $this->__timeAgo('short'),
         ];

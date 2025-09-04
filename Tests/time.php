@@ -17,48 +17,38 @@ $time = TameTime(
     time: 'now',
 );
 
-// $test = Time::setDate('2025-01-14 11:11:12');
-// [
-//     $test->time(),
-//     $test->sec(),
-//     $test->min(),
-//     $test->hour(),
-//     $test->day(),
-//     $test->week(),
-// ]
-
 // Time::allTimezone(),
 
 $time2  = (new Time)->setTimezone('America/St_Barthelemy');
 $time3  = (new Time)->setTimezone('Indian/Antananarivo');
 $time4  = TameTime('first day of December 2008', 'Pacific/Pago_Pago');
 
+// [
+//     $time->toJsTimer('24 Jan 2025 14:00:00'),
+//     $time4->time(),
+//     $time4->sec(),
+//     $time4->min(),
+//     $time4->hour(),
+//     $time4->day(),
+//     $time4->week(),
+//     $time4->month(),
+//     $time4->year(),
+// ];
+
 dd(
     [
-        $time->toJsTimer('24 Jan 2025 14:00:00'),
-        $time4->time(),
-        $time4->sec(),
-        $time4->min(),
-        $time4->hour(),
-        $time4->day(),
-        $time4->week(),
-        $time4->month(),
-        $time4->year(),
+        'Time-1: '. $time->getTimeZone(),
+        'Time-2: '. $time2->getTimeZone(),
+        'Time-3: '. $time3->getTimeZone(),
+        'Time-4: '. $time4->getTimeZone(),
     ],
 
-    [
-        $time->getTimeZone(),
-        $time2->getTimeZone(),
-        $time3->getTimeZone(),
-        $time4->getTimeZone(),
-    ],
-
-    [
-        $time3->date('first day of December 2008')->format(),
-        $time3->yesterday()->format(),
-        $time3->today()->format(),
-        $time3->now()->format(),
-    ],
+    // [
+    //     $time3->date('first day of December 2008')->format(),
+    //     $time3->yesterday()->format(),
+    //     $time3->today()->format(),
+    //     $time3->now()->format(),
+    // ],
 
     $time4->date('first day of this month')->subDays(4),
     
@@ -67,24 +57,26 @@ dd(
         $time2->greetings('now'),
         $time3->greetings('24 Jan 2025 14:00:00'),
         TameTime()->toJs('today 9:23pm'),
-        $time->date('last year december')->format(),
-        $time4->addMonth(10)->addWeek(2)->format(),
-        $time4->addDay(2000)->ago('date'),
-        $time4->subDay(10)->ago('date'),
-        $time4->addYear(10)->ago('date'),
-        $time4->date('last week monday')->ago('date_time'),
-        $time4->date('last year december')->diff('weeks'),
+        // $time->date('last year december')->format(),
+        // $time->addMonth(10)->addWeek(2)->format(),
+        // $time4->addDay(20000)->ago('date'),
+        // $time4->subDay(10)->ago('date'),
+        // $time4->addYear(10)->ago('date'),
+        // $time4->date('last week monday')->ago('date_time'),
+        // $time4->date('last year december')->diff('weeks'),
     ],
+
+    $time4->setTimezone('Indian/Antananarivo'),
 
     [
         $time4->yesterday()->toDateTimeString(),
         $time4->format(null, 'first day of December 2008'),
         $time4->date('last year december')->diff('weeks'),
-        $time4->setTimezone('Indian/Antananarivo')->diffBetween('last year', 'today', 'weeks'),
         $time4->date('today')->ago(),
+        // $time4->setTimezone('Indian/Antananarivo')->diffBetween('last year', 'today', 'weeks'),
     ],
     
-
+    
     TameTime()->range('1-14'),
     TameTime()->range('0-40')->format(true, true),
     //

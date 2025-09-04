@@ -129,7 +129,7 @@ class TimeHelper {
 
         // if instance of Carbon
         // then convert to date time
-        if($date instanceof carbonInstance){
+        if($date instanceof carbonInstance || (is_object($date) && method_exists($date, 'toDateTimeString'))){
             $date = $date->toDateTimeString();
         }
         

@@ -174,11 +174,13 @@ trait TimeTrait{
      */
     private function timestampPrint()
     {
-        // get timezone
+        // ensure timezone cached
         $this->timezone = $this->getTimeZone();
+        $this->timezoneName = $this->timezone;
 
-        // set timezone
+        // refresh system timezone and cache UTC offset
         $this->setTimeZoneAndTimeStamp($this->timezone);
+        $this->utcOffset = date('(P)', (int) $this->date);
 
         return $this->buildTimePrint();
     }
@@ -190,8 +192,8 @@ trait TimeTrait{
      */
     private function buildTimePrint()
     {
-        $date = date('Y-m-d H:i:s', $this->date);
-        $utc  = date('(P)', $this->date);
+        $date = date('Y-m-d H:i:s', (int) $this->date);
+        $utc  = $this->utcOffset ?? date('(P)', (int) $this->date);
 
         return "{$date}.{$this->microseconds()} {$this->timezone} {$utc}";
     }
@@ -206,8 +208,8 @@ trait TimeTrait{
     {
         $date   = $this->format('Y-m-d H:i:s');
         $micro  = $this->microseconds();
-        $tz     = $this->timezone->getName();
-        $offset = $this->format('(P)');
+        $tz     = (string) $this->__getTimezone();
+        $offset = date('(P)', (int) $this->date);
         return sprintf('%s.%s %s %s', $date, $micro, $tz, $offset);
     }
     
