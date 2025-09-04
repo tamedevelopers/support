@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 use Exception;
+use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\ViewTrait;
 
@@ -80,7 +81,7 @@ class View{
      */
     public function __construct($viewPath = null, $data = [])
     {
-        $this->basePath = base_path();
+        $this->basePath = Server::formatWithBaseDirectory();
         $this->viewPath = $viewPath;
         $this->data     = array_merge(self::getSharedData(), $data);
     }

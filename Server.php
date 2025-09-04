@@ -36,7 +36,7 @@ class Server{
         $parts = explode('.', $key);
 
         // Get the file name
-        $filePath = base_path("{$base_folder}/{$parts[0]}.php");
+        $filePath = self::formatWithBaseDirectory("{$base_folder}/{$parts[0]}.php");
 
         // Check if the configuration file exists
         if (file_exists($filePath)) {

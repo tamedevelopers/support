@@ -221,7 +221,7 @@ trait TameTrait{
         // removing default base directory path if added by default
         $path = Str::replace(Server::formatWithBaseDirectory(), '', $path);
 
-        return base_path($path);
+        return Server::formatWithBaseDirectory($path);
     }
 
     /**
