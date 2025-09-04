@@ -108,7 +108,7 @@ class Manager{
     /**
      * Re-generate and persist a new APP_KEY in .env (no quotes), then reload env.
      */
-    public static function regenerate(): void
+    public static function regenerate(): string
     {
         // generate new key
         $key = self::generate();
@@ -118,6 +118,8 @@ class Manager{
 
         // Update stored key reference for tamper detection
         // self::storeKeyFingerprint($key);
+
+        return $key;
     }
 
     /**
