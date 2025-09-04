@@ -13,13 +13,14 @@ use Tamedevelopers\Support\Asset;
 use Tamedevelopers\Support\Cookie;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Country;
-use Tamedevelopers\Support\UrlHelper;
 use Tamedevelopers\Support\Translator;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\NumberToWords;
 use Tamedevelopers\Support\Capsule\Manager;
+use Tamedevelopers\Support\Process\Session;
 use Tamedevelopers\Support\AutoloadRegister;
 use Tamedevelopers\Support\Capsule\FileCache;
+use Tamedevelopers\Support\Process\HttpRequest;
 use Tamedevelopers\Support\Collections\Collection;
 
 
@@ -262,6 +263,43 @@ if (! function_exists('autoload_register')) {
     function autoload_register(string|array $directory)
     {
         (new AutoloadRegister)->load($directory);
+    }
+}
+
+if (! function_exists('urlHelper')) {
+    /**
+     * Get URL Helper
+     * 
+     * @return \Tamedevelopers\Support\Process\HttpRequest
+     */
+    function urlHelper()
+    {
+        return new HttpRequest();
+    }
+}
+
+// Lightweight accessors (do not conflict with frameworks)
+if (! function_exists('TameRequest')) {
+    /**
+     * Native HTTP Request accessor
+     * @return \Tamedevelopers\Support\Process\HttpRequest
+     */
+    function TameRequest()
+    {
+        return new HttpRequest();
+    }
+}
+
+if (! function_exists('TameSession')) {
+    /**
+     * Native Session accessor
+     * @return \Tamedevelopers\Support\Process\Session
+     */
+    function TameSession()
+    {
+        $s = new Session();
+        $s->start();
+        return $s;
     }
 }
 
@@ -539,19 +577,6 @@ if (! function_exists('domain')) {
         return server()->formatWithDomainURI($path);
     }
 }
-
-if (! function_exists('urlHelper')) {
-    /**
-     * Get URL Helper
-     * 
-     * @return \Tamedevelopers\Support\UrlHelper
-     */
-    function urlHelper()
-    {
-        return new UrlHelper();
-    }
-}
-
 
 if (! function_exists('to_array')) {
     /**

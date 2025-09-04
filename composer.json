@@ -26,8 +26,15 @@
         "filp/whoops": "^2.15",
         "dompdf/dompdf": "^3.0"
     },
+    "require-dev": {
+        "filp/whoops": "^2.15",
+        "symfony/var-dumper": "^6.2 || ^7.0" 
+    },
     "suggest": {
-        "dompdf/dompdf": "Required to use the `PDF` class and helper (^2.0.2)."
+        "dompdf/dompdf": "Required to use the `PDF` class and helper (^3.0)"
+    },
+    "config": {
+        "prefer-stable": true
     },
     "autoload": {
         "files": [

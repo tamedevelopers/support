@@ -1,6 +1,7 @@
 <?php 
 
-use Tamedevelopers\Support\Translator;
+use Tamedevelopers\Support\Process\Http;
+use Tamedevelopers\Support\Process\HttpRequest;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -10,24 +11,40 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 config_asset('/', true);
 
+$http = new Http();
 
 dump(
-    domain(), 
-    domain('admin'),
-    tasset('zip.php'),
-    tasset('zip.php', true, true), // relative link path
 
-    urlHelper()->server(),
     [
-        urlHelper()->server(),
-        urlHelper()->url(),
-        urlHelper()->full(),
-        urlHelper()->request(),
-        urlHelper()->referral(),
-        urlHelper()->http(),
-        urlHelper()->host(),
-        urlHelper()->path(),
-    ]
+      'Domain: ' . domain(), 
+      'Domain with path: ' . domain('admin'),
+      'Assets no Cache: ' . tasset('zip.php', false),
+      'Assets with Cache & Path Relative: ' . tasset('zip.php', true, true),
+    ], // relative link path
+
+    [
+      'IP: ' . HttpRequest::ip(),
+      'Method: ' . $http->method(),
+      'Server: ' . $http->server(),
+      'Request: ' . $http->request(),
+      'Referral: ' . $http->referral(),
+      'URI: ' . $http->uri(),
+      'URL: ' . $http->url(),
+      'Full URI: ' . $http->full(),
+      'Http: ' . $http->http(),
+      'Host: ' . $http->host(),
+      'Path: ' . $http->path(),
+      'Is AJAX: ' . ($http->isAjax() ? 'yes' : 'no'),
+      'Accessed via 127.0.0.1: ' . ($http->isIpAccessedVia127Port() ? 'yes' : 'no'),
+    ],
+
+    [
+      $http->query('query'),
+      $http->post('query'),
+      $http->input('query'),
+      $http->header('host'),
+      $http->headers(),
+    ],
 
 );
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Time;
 
 class Cookie{
@@ -45,7 +46,7 @@ class Cookie{
      */
     static protected function init()
     {
-        self::$name         = strtolower(str_replace([' '], '', env('APP_NAME', '')));
+        self::$name         = Str::lower(Str::replace([' '], '', env('APP_NAME', '')));
         self::$timeName     = "__time_" . self::$name;
         self::$expireName   = "__expire_" . self::$name;
         self::$timeFormat   = Time::timestamp('next year', 'Y-m-d');
@@ -91,16 +92,34 @@ class Cookie{
     public static function set($name, $value = null, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null)
     {
         // minutes
-        $minutes = self::minutesToExpire($minutes);
+        $expires = self::minutesToExpire($minutes);
 
         // create default values
         [$path, $value, $domain, $secure, $httponly, $force] = self::getDefaultPathAndDomain(
             $path, $value, $domain, $secure, $httponly, $force
         );
 
-        // set cookie
-        if ( !headers_sent() || $force === true) {
-            @setcookie($name, $value, $minutes, $path, $domain, $secure, $httponly);
+        // Prefer new setcookie signature with array options (PHP 7.3+), fallback otherwise
+        if (!headers_sent() || $force === true) {
+            $options = [
+                'expires'  => $expires,
+                'path'     => $path,
+                'domain'   => $domain ?: '',
+                'secure'   => (bool) $secure,
+                'httponly' => (bool) $httponly,
+                'samesite' => 'Lax', // sensible default
+            ];
+
+            // Try modern signature; if it fails (older PHP), fallback to legacy
+            try {
+                if (PHP_VERSION_ID >= 70300) {
+                    @setcookie($name, (string) $value, $options);
+                } else {
+                    @setcookie($name, (string) $value, (int) $expires, (string) $path, (string) $domain, (bool) $secure, (bool) $httponly);
+                }
+            } catch (\Throwable $e) {
+                @setcookie($name, (string) $value, (int) $expires, (string) $path, (string) $domain, (bool) $secure, (bool) $httponly);
+            }
         }
     }
 
@@ -143,8 +162,7 @@ class Cookie{
      */
     public static function setTime()
     {
-        self::init()
-            ->set(self::$timeName, self::$timeFormat);
+        self::init()->set(self::$timeName, self::$timeFormat);
     }
 
     /** 
@@ -154,8 +172,7 @@ class Cookie{
      */
     public static function setExpire()
     {
-        self::init()
-            ->set(self::$expireName, self::$expireFormat);
+        self::init()->set(self::$expireName, self::$expireFormat);
     }
 
     /** 
@@ -200,9 +217,7 @@ class Cookie{
      */
     public static function get($name = null)
     {
-        return self::has($name)
-                ? $_COOKIE[(string) $name]
-                : null;
+        return self::has($name) ? $_COOKIE[(string) $name] : null;
     }
 
     /** 
@@ -226,24 +241,23 @@ class Cookie{
      */
     private static function minutesToExpire($minutes = 0)
     {
-        // options
-        if(empty($minutes)){
-            $minutes = 0;
-        } elseif(is_numeric($minutes)){
-            $minutes = time() + (((int) $minutes) * 60);
-        } else{
-            $minutes = strtotime($minutes);
-            if ($minutes === false || $minutes === -1) {
-                // Invalid timestamp format, default to 0 (end of session)
-                return 0;
-            }
+        if (empty($minutes)) {
+            return 0;
         }
-
-        return (int) $minutes;
+        if (is_numeric($minutes)) {
+            return time() + (((int) $minutes) * 60);
+        }
+        
+        $ts = strtotime((string) $minutes);
+        if ($ts === false || $ts === -1) {
+            // Invalid timestamp format, default to 0 (end of session)
+            return 0;
+        }
+        return (int) $ts;
     }
 
     /**
-     * Get the path and domain, or the default values.
+     * Get default path/domain and flags.
      *
      * @param  string|null  $path
      * @param  string|null  $value

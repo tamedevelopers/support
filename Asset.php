@@ -6,6 +6,7 @@ namespace Tamedevelopers\Support;
 
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Traits\ServerTrait;
+use Tamedevelopers\Support\Process\HttpRequest;
 
 class Asset{
     
@@ -100,7 +101,7 @@ class Asset{
         // if not defined
         if(!defined('ASSET_BASE_DIRECTORY')){
             // url helper class
-            $urlFromhelper = UrlHelper::url();
+            $urlFromhelper = HttpRequest::url();
 
             // if base path is set
             if(!empty($base_path)){
@@ -112,7 +113,7 @@ class Asset{
                 $baseForUrlPath = $base_path;
 
                 // check if accessed from default ip:address
-                if(UrlHelper::isIpAccessedVia127Port()){
+                if(HttpRequest::isIpAccessedVia127Port()){
                     $baseForUrlPath = '';
                 }
 
@@ -128,7 +129,7 @@ class Asset{
                     self::cleanServerPath($urlFromhelper), 
                     '/'
                 ),
-                'removeDomain' => UrlHelper::http() . UrlHelper::host()
+                'removeDomain' => HttpRequest::http() . HttpRequest::host()
             ]);
         }
     }

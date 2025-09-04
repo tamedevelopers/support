@@ -21,13 +21,12 @@ dd(
     public_path(),
     config_path(),
     lang_path(),
-
-
     
     server()->toArray($Json),
-    // to_array($Json),
-
     // server()->toJson($array),
+
+    // to_array($Json),
+    to_object($Json),
     to_json($array)
 );
 

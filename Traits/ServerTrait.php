@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 use ReflectionClass;
+use Tamedevelopers\Support\Process\HttpRequest;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
-use Tamedevelopers\Support\UrlHelper;
 
 
 trait ServerTrait{
@@ -124,7 +124,7 @@ trait ServerTrait{
 
                 $data = [
                     'server' => $serverPath,
-                    'domain' => UrlHelper::url(),
+                    'domain' => HttpRequest::url(),
                 ];
 
                 // Backward-compat: expose as constant once

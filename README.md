@@ -244,7 +244,7 @@ Support Package For PHP and Laravel
     * [allTimezone](#allTimezone)
     * [setTimeZone](#setTimeZone)
     * [getTimeZone](#getTimeZone)
-* [UrlHelper](#UrlHelper)
+* [HttpRequest](#HttpRequest)
     * [url](#url)
     * [http](#http)
     * [host](#host)
@@ -1015,17 +1015,28 @@ Time::setTimeZone('Pacific/Pago_Pago');
 Time::getTimeZone();
 ```
 
-## UrlHelper
+## HttpRequest
+- Http Request Helper
+    - It's helper class can be called, using -- `TameRequest()|urlHelper()`
+    - `urlHelper()` was older method name. We still keep for older project support.
+
+
 ```php
+use Tamedevelopers\Support\Process\HttpRequest;
+use Tamedevelopers\Support\Process\Http; // same as HttpRequest
+
+$http = TameRequest();
+
 [
-    urlHelper()->server(),
-    urlHelper()->url(),
-    urlHelper()->full(),
-    urlHelper()->request(),
-    urlHelper()->referral(),
-    urlHelper()->http(),
-    urlHelper()->host(),
-    urlHelper()->path(),
+    Http::url(),
+    HttpRequest::server(),
+    HttpRequest::method(),
+    $http->full(),
+    $http->request(),
+    $http->referral(),
+    $http->http(),
+    $http->host(),
+    $http->path(),
 ]
 ```
 
