@@ -7,263 +7,157 @@ namespace Tamedevelopers\Support;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Traits\NumberToWordsTraits;
 
-class NumberToWords {
-
+class NumberToWords
+{
     use NumberToWordsTraits;
 
     /**
      * Allow cents text to be added
-     *
-     * @var bool|null
      */
-    private $allowCents;
+    private ?bool $allowCents = null;
 
     /**
      * Currency data
-     *
-     * @var mixed
      */
-    private $currencyData;
+    private mixed $currencyData = null;
 
     /**
-     * Value figures
-     *
-     * @var mixed
+     * Value figures (raw user input)
      */
-    private $value;
+    private mixed $value = null;
 
     /**
-     * static
-     *
-     * @var mixed
+     * Static instance for fluent static calls
      */
-    private static $staticData;
+    private static mixed $staticData = null;
 
-    /**
-     * Words constructor.
-     */
     public function __construct()
     {
-        // clone copy of self
-        if(!self::isWordsInstance()){
+        if (!self::isWordsInstance()) {
             self::$staticData = clone $this;
         }
     }
 
-    /**
-     * Handle the calls to non-existent instance methods.
-     * @param string $name
-     * @param mixed $args
-     * 
-     * @return mixed
-     */
-    public function __call($name, $args) 
+    public function __call($name, $args)
     {
         return self::nonExistMethod($name, $args, $this);
     }
-    
-    /**
-     * Handle the calls to non-existent static methods.
-     * @param string $name
-     * @param mixed $args
-     * 
-     * @return mixed
-     */
-    public static function __callStatic($name, $args) 
+
+    public static function __callStatic($name, $args)
     {
         return self::nonExistMethod($name, $args, self::$staticData);
     }
 
     /**
      * Allow Cents
-     * @param bool|null $cents
-     * - [optional] Default is false
-     * 
-     * @return $this
      */
-    public function __cents($cents = false)
+    public function __cents(?bool $cents = false): self
     {
         $this->allowCents = $cents;
-
         return $this;
     }
 
     /**
-     * Country <iso-3></iso-3> code
-     * 
-     * @param string|null $code
-     * - [optional] Currency code
-     * 
-     * @return $this
+     * Country ISO-3 code
      */
-    public function __iso($code = null)
+    public function __iso(?string $code = null): self
     {
         $this->currencyData = self::getCurrencyByIso3($code);
-
         return $this;
     }
 
     /**
-     * Convert a number to its text representation.
-     * - Can be able to convert numbers upto <quintillion>
-     *
-     * @param string|float|int $number
-     * 
-     * @return $this
+     * Set value
+     * - Accepts string|float|int; large integers should be passed as string
      */
-    public function __value(string|float|int $number)
+    public function __value(string|float|int $number): self
     {
         if (is_numeric($number) && !is_string($number)) {
-            // Check if the number is larger than a trillion
             if ($number > 1_000_000_000_000) {
                 throw new \InvalidArgumentException(
                     'Numbers larger than a trillion must be passed as a string to avoid precision errors.'
                 );
             }
-    
-            // Convert the number to a string for consistency
             $number = strval($number);
         }
 
         if (is_float($number) || is_int($number)) {
-            // Convert to string while preserving decimals and integrity
             $number = strval($number);
         }
 
-        // trim to convert to string
         $this->value = Str::trim($number);
-
         return $this;
     }
 
     /**
-     * Translate text into number formats
-     * 
-     * @return string
+     * Convert a text value to its numeric representation.
+     * Example supported:
+     *  "Thirty-four million ... twenty-three euro, two hundred and thirty-one cents"
      */
-    public function toNumber()
+    public function toNumber(): string
     {
-        // Clean up the string by removing currency and cent names
-        $this->value = $this->removeCurrencyNames($this->value);
+        // Clean currency terms
+        $clean = Str::trim(self::removeCurrencyNames((string) $this->value));
 
-        // Ensure we split correctly even if there's no decimal part
-        [$integerPart, $decimalPart] = explode(',', $this->value ?? '0') + [1 => null];
+        // Normalize spacing and punctuation
+        $clean = preg_replace('/[\r\n]+/', ' ', $clean);
+        $clean = preg_replace('/\s+/', ' ', (string) $clean);
 
-        // Convert integer part
-        $integer = self::convertWordsToNumber($integerPart);
-        
-        // If decimal part exists, convert it
-        $decimal = $this->allowCents ? self::convertWordsToNumber($decimalPart) : 0;
+        [$integerWords, $centsWords] = $this->extractIntegerAndCents($clean);
 
-        return $decimal > 0 ? "{$integer}.{$decimal}" : "{$integer}";
-    }
+        $integer = self::convertWordsToNumber($integerWords);
+        $decimal = 0;
 
-    /**
-     * Translate numbers into readable text formats
-     * 
-     * @return string|null
-     */
-    public function toText()
-    {
-        return $this->formatToText();
-    }
-
-    /**
-     * Format the numbers
-     * 
-     * @return string|null
-     */
-    private function formatToText()
-    {
-        // if cents is allowed
-        if($this->allowCents){
-
-            // get name of currency
-            $currencyText = $this->currencyData['name'] ?? null;
-
-            // allow if not empty
-            $currencyText = !empty($currencyText) ? " {$currencyText}" : null;
-        } else{
-            $currencyText = null;
+        if ($this->allowCents && $centsWords !== null) {
+            $decimal = self::convertWordsToNumber($centsWords);
         }
 
-        // replace thousands with empty string if found
-        if(strpos($this->value, ',') !== false){
-            $this->value = Str::replace(',', '', $this->value);
-        }
-
-        // split numbers into two versions
-        // set decimal to default null if not found
-        [$number, $decimal] = explode('.', $this->value ?? '0') + [1 => null];
-
-        // convert number to text
-        $numberText = self::convertNumberToText($number);
-
-        // remove line break from text
-        $numberText = Str::trim(
-            Str::replace(["\n", "\r"], '', $numberText)
-        );
-
-        // add to text
-        return ucfirst($numberText) . $currencyText . $this->toCents($decimal);
-    }
-
-    /**
-     * Convert to cents
-     *
-     * @param string|null $decimal
-     * @return string
-     */
-    private function toCents($decimal) 
-    {
-        if(!empty($decimal) && $decimal > 0 && $this->allowCents){
-
-            // generate cents text
-            $centsText = Str::trim(
-                self::convertNumberToText($decimal)
-            );
-
-            // cents currency
-            $centsCurrency = $this->currencyData['cents'] ?? null;
-
-            // allow if not empty
-            $centsCurrency = !empty($centsCurrency) ? " {$centsCurrency}" : '';
-
-            $this->resetCents();
-
-            return ", {$centsText}{$centsCurrency}";
-        }
-
-        $this->resetCents();
+        return $decimal > 0 ? sprintf('%d.%d', $integer, $decimal) : (string) $integer;
     }
 
     /**
      * Convert Words To Number
-     *
-     * @param  mixed $words
-     * @return void
      */
     private static function convertWordsToNumber($words)
     {
-        // Lowercase and trim the string
-        $words = Str::lower(Str::trim($words));
-        $words = preg_replace('/\sand\s/', ' ', $words);
-        $parts = preg_split('/\s|-/', $words);
+        if ($words === null || $words === '') {
+            return 0;
+        }
+
+        // Normalize
+        $words = Str::lower(Str::trim((string) $words));
+        $words = preg_replace('/\s+and\s+/', ' ', $words); // remove optional 'and'
+        $words = preg_replace('/\s+/', ' ', $words);
+        // keep only letters, hyphen and spaces
+        $words = preg_replace('/[^a-z\-\s]/', ' ', $words);
+        $words = preg_replace('/\s+/', ' ', $words);
+
+        $parts = preg_split('/\s+|\-/', trim($words));
 
         $number = 0;
         $current = 0;
 
         foreach ($parts as $part) {
+            if ($part === '') {
+                continue;
+            }
+
             if (isset(self::$numberMap[$part])) {
                 $current += self::$numberMap[$part];
-            } elseif (isset(self::$scaleMap[$part])) {
-                if ($current == 0) {
-                    $current = 1;
-                }
-                $current *= self::$scaleMap[$part];
+                continue;
+            }
 
-                if ($part !== 'hundred') {
-                    $number += $current;
+            if (isset(self::$scaleMap[$part])) {
+                if ($part === 'hundred') {
+                    if ($current === 0) {
+                        $current = 1;
+                    }
+                    $current *= self::$scaleMap[$part];
+                } else {
+                    if ($current === 0) {
+                        $current = 1;
+                    }
+                    $number += $current * self::$scaleMap[$part];
                     $current = 0;
                 }
             }
@@ -274,76 +168,62 @@ class NumberToWords {
 
     /**
      * Convert the integer part of a number to its text representation.
-     *
-     * @param string $number
-     * @return string
      */
-    private static function convertNumberToText($number) 
+    private static function convertNumberToText($number)
     {
         $number = (string) $number;
-        
-        if (intval($number) == 0) {
+        if ((int) $number === 0) {
             return 'zero';
         }
-
         return self::convertIntegerToText($number);
     }
 
     /**
      * Convert an integer to its text representation.
-     *
-     * @param string $number
-     * @return string
      */
     private static function convertIntegerToText($number)
     {
         $result = '';
         $i = 0;
 
-        while (intval($number) > 0) {
-            // Extract the last three digits
-            $chunk = intval(substr($number, -3));
-
-            // Remove the last three digits from the number
+        while ((int) $number > 0) {
+            $chunk = (int) substr($number, -3);
             $number = substr($number, 0, -3);
 
-            if (intval($chunk) > 0) {
-                $unit   = self::$units[$i] ?? '';
+            if ($chunk > 0) {
+                $unit = self::$units[$i] ?? '';
                 $result = self::convertChunkToText($chunk) . ($unit ? " $unit" : '') . ' ' . $result;
             }
 
             $i++;
         }
 
-        return $result;
+        return trim($result);
     }
 
     /**
      * Convert a chunk of numbers (up to 999) to its text representation.
-     *
-     * @param string $number
-     * @return string
      */
-    private static function convertChunkToText($number) 
+    private static function convertChunkToText($number)
     {
         $result = '';
+        $n = (int) $number;
 
-        if (intval($number) >= 100) {
-            $hundreds = intval($number / 100);
+        if ($n >= 100) {
+            $hundreds = (int) floor($n / 100);
             $result .= self::$words[$hundreds] . ' hundred';
-            $number %= 100;
-
-            if ($number > 0) {
+            $n = $n % 100;
+            if ($n > 0) {
                 $result .= ' and ';
             }
         }
 
-        if ($number > 0) {
-            if ($number < 20) {
-                $result .= self::$words[$number];
+        if ($n > 0) {
+            if ($n < 20) {
+                $result .= self::$words[$n];
             } else {
-                $tens = intval($number / 10);
-                $units = $number % 10;
+                $tens = (int) floor($n / 10);
+                $units = $n % 10;
                 $result .= self::$tens[$tens];
                 if ($units > 0) {
                     $result .= '-' . self::$words[$units];
@@ -353,37 +233,119 @@ class NumberToWords {
 
         return $result;
     }
-    
+
     /**
-     * Remove Currency Names
-     *
-     * @param  mixed $value
-     * @return void
+     * Remove Currency Names and cents words from a sentence.
      */
     private static function removeCurrencyNames($value)
     {
-        // Get all currency and cent names from the allCurrency() method
+        $value = (string) $value;
         $currencyData = self::allCurrency();
-
-        // Loop through each currency and remove the corresponding names from the value string
         foreach ($currencyData as $currency) {
-            // Remove both currency name and cents from the string (case insensitive)
-            $value = preg_replace('/\b' . preg_quote($currency['name'], '/') . '\b/i', '', $value);
-            $value = preg_replace('/\b' . preg_quote($currency['cents'], '/') . '\b/i', '', $value);
+            if (!empty($currency['name'])) {
+                $value = preg_replace('/\b' . preg_quote((string) $currency['name'], '/') . '\b/i', '', $value);
+            }
+            if (!empty($currency['cents'])) {
+                // do not remove the word 'cents' here entirely because it's used in parsing patterns; remove only specific plural forms like local ones
+                $localCents = (string) $currency['cents'];
+                if (Str::lower($localCents) !== 'cents') {
+                    $value = preg_replace('/\b' . preg_quote($localCents, '/') . '\b/i', '', $value);
+                }
+            }
         }
-
-        // Return the cleaned-up string
         return $value;
     }
 
     /**
-     * Reset Cents
-     *
-     * @return void
+     * Translate numbers into readable text formats
      */
-    private function resetCents()
+    public function toText(): ?string
+    {
+        return $this->formatToText();
+    }
+
+    /**
+     * Format the numbers to text
+     */
+    private function formatToText(): ?string
+    {
+        $currencyText = null;
+        if ($this->allowCents) {
+            $currencyText = $this->currencyData['name'] ?? null;
+            $currencyText = !empty($currencyText) ? " {$currencyText}" : null;
+        }
+
+        if (strpos((string) $this->value, ',') !== false) {
+            $this->value = Str::replace(',', '', (string) $this->value);
+        }
+
+        [$number, $decimal] = explode('.', (string) ($this->value ?? '0')) + [1 => null];
+
+        $numberText = self::convertNumberToText($number);
+        $numberText = Str::trim(Str::replace(["\n", "\r"], '', $numberText));
+
+        return ucfirst($numberText) . $currencyText . $this->toCents($decimal);
+    }
+
+    /**
+     * Convert cents text
+     */
+    private function toCents($decimal): ?string
+    {
+        if (!empty($decimal) && $decimal > 0 && $this->allowCents) {
+            $centsText = Str::trim(self::convertNumberToText($decimal));
+            $centsCurrency = $this->currencyData['cents'] ?? null;
+            $centsCurrency = !empty($centsCurrency) ? " {$centsCurrency}" : '';
+            $this->resetCents();
+            return ", {$centsText}{$centsCurrency}";
+        }
+
+        $this->resetCents();
+        return null;
+    }
+
+    /**
+     * Extract integer and cents words from a possibly complex phrase.
+     * Fallbacks:
+     * - First try pattern with explicit "cents"
+     * - Then fallback to comma-separated parts
+     * - Else treat full text as integer
+     */
+    private function extractIntegerAndCents(string $text): array
+    {
+        $int = $text;
+        $cents = null;
+
+        // Pattern: "<int words> , <cents words> cents"
+        if (preg_match('/^(.*?)\s*,\s*(.*?)\s+cent(s)?\b/i', $text, $m)) {
+            $int = Str::trim($m[1]);
+            $cents = Str::trim($m[2]);
+            return [$int, $cents];
+        }
+
+        // Pattern without comma but with explicit cents
+        if (preg_match('/^(.*?)\s+(.*?)\s+cent(s)?\b/i', $text, $m)) {
+            $int = Str::trim($m[1]);
+            $cents = Str::trim($m[2]);
+            return [$int, $cents];
+        }
+
+        // Fallback: comma separation only
+        if (strpos($text, ',') !== false) {
+            [$a, $b] = explode(',', $text, 2);
+            $int = Str::trim($a);
+            $cents = Str::trim($b);
+            return [$int, $cents];
+        }
+
+        return [$int, $cents];
+    }
+
+    /**
+     * Reset cents config
+     */
+    private function resetCents(): void
     {
         $this->allowCents = null;
     }
-
 }
