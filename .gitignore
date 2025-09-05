@@ -6,4 +6,5 @@
 /.env
 /.env.example
 /.zencoder
+tame
 composer.lock

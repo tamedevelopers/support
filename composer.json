@@ -1,6 +1,6 @@
 {
     "name": "tamedevelopers/support",
-    "type": "library",
+    "type": "composer-plugin",
     "description": "Support Package For Tamedevelopers",
     "homepage": "https://github.com/tamedevelopers/support",
     "license": "MIT",
@@ -24,7 +24,19 @@
         "vlucas/phpdotenv": "^5.4.1",
         "phpmailer/phpmailer": "^6.9",
         "filp/whoops": "^2.15",
-        "dompdf/dompdf": "^3.0"
+        "dompdf/dompdf": "^3.0",
+        "composer-plugin-api": "^2.0"
+    },
+    "extra": {
+        "class": "Tamedevelopers\\Support\\ComposerPlugin"
+    },
+    "scripts": { 
+        "post-install-cmd": [ 
+            "Tamedevelopers\\Support\\Installer::install" 
+        ], 
+        "post-update-cmd": [ 
+            "Tamedevelopers\\Support\\Installer::update" 
+        ] 
     },
     "suggest": {
         "dompdf/dompdf": "Required to use the `PDF` class and helper (^3.0)"

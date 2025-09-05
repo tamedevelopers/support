@@ -65,9 +65,13 @@ class Logger
 
         $styles = [
             // existing (headers use white text on colored background)
-            'success'   => ['white', 'green', []],
-            'error'     => ['red', 'red', ['bold']], 
-            'info'      => ['white', 'cyan', []],
+            'success'         => ['white', 'green', ['bold']],
+            'error'           => ['bright-white', 'red', ['bold']],
+            'info'            => ['bright-white', 'cyan', ['bold']],
+
+            // dedicated header tags (avoid conflicts with built-ins)
+            'success_header'  => ['bright-white', 'green', ['bold']],
+            'info_header'     => ['bright-white', 'cyan', ['bold']],
 
             // extras
             'yellow'    => ['yellow',       null, ['bold']],
@@ -142,13 +146,13 @@ class Logger
      * - Old: helpHeader('blog-store', true) => STDERR with default 'title' style
      * - New: helpHeader('blog-store', 'green', true)
      */
-    public static function helpHeader(string $title, $style = 'title', bool $stderr = false): void
+    public static function helpHeader(string $message, $style = 'title', bool $stderr = false): void
     {
         if (is_bool($style)) {
             $stderr = $style;
             $style = 'title';
         }
-        static::writeln("<{$style}>{$title}</{$style}>", $stderr);
+        static::writeln("<{$style}>{$message}</{$style}>", $stderr);
     }
 
     /**
