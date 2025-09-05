@@ -673,37 +673,27 @@ trait RelatedTrait{
             return new static($this->items);
         }
 
-        $lookup = array_fill_keys($keys, true);
         $selected = [];
 
-        foreach ($this->items as $index => $item) {
-            if (is_array($item)) {
-                // Intersect by keys for arrays
-                $selected[$index] = array_intersect_key($item, $lookup);
-                continue;
-            }
+        foreach ($this->items as $outerKey => $item) {
+            $result = [];
 
-            if ($item instanceof \ArrayAccess) {
-                // Build a filtered array from ArrayAccess
-                $row = [];
-                foreach ($keys as $k) {
-                    if ($item->offsetExists($k)) {
-                        $row[$k] = $item[$k];
+            foreach ($keys as $key) {
+                if (is_array($item)) {
+                    if (array_key_exists($key, $item)) {
+                        $result[$key] = $item[$key];
                     }
+                } elseif ($item instanceof \ArrayAccess) {
+                    $exists = method_exists($item, 'offsetExists') ? $item->offsetExists($key) : isset($item[$key]);
+                    if ($exists) {
+                        $result[$key] = $item[$key];
+                    }
+                } elseif (is_object($item) && isset($item->{$key})) {
+                    $result[$key] = $item->{$key};
                 }
-                $selected[$index] = $row;
-                continue;
             }
 
-            if (is_object($item)) {
-                // Use public properties for plain objects
-                $vars = get_object_vars($item);
-                $selected[$index] = array_intersect_key($vars, $lookup);
-                continue;
-            }
-
-            // Fallback: return item unchanged
-            $selected[$index] = $item;
+            $selected[$outerKey] = $result;
         }
 
         return new static($selected);
@@ -753,20 +743,64 @@ trait RelatedTrait{
     }
 
     /**
-     * Pluck a specific field from each item in the collection.
+     * Get the values of a given key.
      *
-     * @param  string|array $key
+     * @param  string|int|array<array-key, string>  $value
+     * @param  string|null  $key
      * @return static
      */
-    public function pluck(...$key)
+    public function pluck($value, $key = null)
     {
         $results = [];
 
-        $key = Str::flatten($key);
+        // Resolve nested values from arrays/ArrayAccess/objects.
+        // - $path may be a string (supports dot notation), int, or array of segments
+        $resolve = function ($target, $path) {
+            if (is_array($path)) {
+                $segments = $path;
+            } elseif (is_string($path)) {
+                // Support dot notation transparently
+                $segments = explode('.', $path);
+            } else {
+                $segments = [$path];
+            }
+
+            $current = $target;
+
+            foreach ($segments as $segment) {
+                if (is_array($current) || $current instanceof \ArrayAccess) {
+                    // Avoid illegal offset types
+                    if (!is_int($segment) && !is_string($segment)) {
+                        return null;
+                    }
+
+                    if (is_array($current)) {
+                        $current = array_key_exists($segment, $current) ? $current[$segment] : null;
+                    } else { // ArrayAccess
+                        $current = isset($current[$segment]) ? $current[$segment] : null;
+                    }
+                } elseif (is_object($current)) {
+                    $current = $current->$segment ?? null;
+                } else {
+                    return null;
+                }
+
+                if ($current === null) {
+                    break;
+                }
+            }
+
+            return $current;
+        };
 
         foreach ($this->items as $item) {
-            if (is_array($item) || $item instanceof \ArrayAccess) {
-                $results[] = is_array($key) ? array_intersect_key($item, array_flip((array) $key)) : ($item[$key] ?? null);
+            $itemValue = $resolve($item, $value);
+            $itemKey = $key !== null ? $resolve($item, $key) : null;
+
+            if ($key !== null && $itemKey !== null) {
+                $results[$itemKey] = $itemValue;
+            } else {
+                $results[] = $itemValue;
             }
         }
 

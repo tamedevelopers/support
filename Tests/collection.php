@@ -14,26 +14,32 @@ $data = [
     ['id' => 5, 'name' => 'Emily', 'age' => 25],
 ];
 
-$language = [
+$language = tcollect([
     'en' => [
         'lang_name' => 'English',
         'flag' => 'us',
         'locale_iso' => 'en',
         'locale' => 'en',
-        'locale_allow' => 'true'
+        'locale_allow' => 'true',
+        'speakers' => [
+            'first_day' => ['Rosa', 'Judith'],
+        ]
     ],
     'cn' => [
         'lang_name' => '中文',
         'flag' => 'hk',
         'locale_iso' => 'cn',
         'locale' => 'zh-Hant',
-        'locale_allow' => 'true'
+        'locale_allow' => 'true',
+        'speakers' => [
+            'first_day' => ['Abigail', 'Joey'],
+        ],
     ]
-];
+]);
 
 
 dump(
-    tcollect($language)
+    $language
         ->filter(fn($value) => $value['locale_allow'] == 'true')
         ->mapWithKeys(fn ($value) => [
             $value['locale_iso'] => [
@@ -149,14 +155,15 @@ $doesNotContain = $collection->doesntContain('name', 'John'); // false
 // pluck()
 dump(
     'pluck',
-    $collection->pluck(['name', 'age'])
-    // ['John', 'Jane', 'Doe', 'Smith', 'Emily']
+    $language->pluck('lang_name', 'locale')->all(), // ["en" => "English", "zh-Hant" => "中文"]
+    // $language->pluck('speakers.first_day', 'flag')->all(), 
+    // $collection->pluck('name', 'age'),
 );
 
 // select()
 dump(
     'select[name, age] and pluck(age)',
-    $collection->select(['name', 'age'])->pluck('age')
+    $collection->select(['name', 'age'])->all()
 );
 
 // search()
