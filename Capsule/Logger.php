@@ -64,10 +64,10 @@ class Logger
         $f = $output->getFormatter();
 
         $styles = [
-            // existing
-            'success'   => ['bright-green', null, ['bold']],
-            'error'     => ['bright-red',   null, ['bold']],
-            'info'      => ['bright-cyan',  null, ['bold']],
+            // existing (headers use white text on colored background)
+            'success'   => ['white', 'green', []],
+            'error'     => ['red', 'red', ['bold']], 
+            'info'      => ['white', 'cyan', []],
 
             // extras
             'yellow'    => ['yellow',       null, ['bold']],
@@ -85,7 +85,10 @@ class Logger
         ];
 
         foreach ($styles as $name => [$fg, $bg, $opts]) {
-            if (!$f->hasStyle($name)) {
+            // Force override for listed headers use white text on background.
+            // Keep existing built-in styles (e.g., <error>) unless we need to change them.
+            $shouldSet = in_array($name, ['info', 'success', 'error'], true) ? true : !$f->hasStyle($name);
+            if ($shouldSet) {
                 $f->setStyle($name, new OutputFormatterStyle($fg, $bg, $opts));
             }
         }
