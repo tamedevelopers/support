@@ -7,6 +7,7 @@ namespace Tamedevelopers\Support\Capsule;
 use Tamedevelopers\Support\Capsule\Logger;
 use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Capsule\Traits\ArtisanTrait;
+use Tamedevelopers\Support\Capsule\Traits\ArtisanDiscovery;
 
 /**
  * Minimal artisan-like dispatcher for Tamedevelopers Support
@@ -19,7 +20,8 @@ use Tamedevelopers\Support\Capsule\Traits\ArtisanTrait;
  */
 class Artisan
 {
-    use ArtisanTrait;
+    use ArtisanTrait, 
+        ArtisanDiscovery;
 
     /**
      * Command registry
@@ -42,6 +44,7 @@ class Artisan
     {
         // Ensure environment variables are loaded before accessing them
         Manager::startEnvIFNotStarted();
+        
         // Auto-discover external commands from installed packages
         $this->discoverExternal();
     }
@@ -201,167 +204,4 @@ class Artisan
         }
     }
 
-    /**
-     * Discover commands/providers from installed Composer packages.
-     * Convention:
-     * - extra.tamedevelopers.providers: string[] FQCNs implementing CommandProviderInterface
-     * - extra.tamedevelopers.commands: array<string, string|array> e.g. "db:migrate": "Vendor\\Pkg\\MigrateCommand@handle"
-     */
-    private function discoverExternal(): void
-    {
-        if (self::$discovered) {
-            return;
-        }
-        self::$discovered = true;
-
-        $installedPath = $this->resolveInstalledJsonPath();
-        if (!$installedPath || !is_file($installedPath)) {
-            return;
-        }
-
-        $json = @file_get_contents($installedPath);
-        if ($json === false) {
-            return;
-        }
-
-        $data = json_decode($json, true);
-        if (!is_array($data)) {
-            return;
-        }
-
-        $packages = $this->extractPackages($data);
-
-        foreach ($packages as $pkg) {
-            $extra = $pkg['extra']['tamedevelopers'] ?? null;
-            if (!$extra) {
-                continue;
-            }
-
-            // 1) Providers
-            $providers = $extra['providers'] ?? [];
-            foreach ((array) $providers as $fqcn) {
-                if (\is_string($fqcn) && \class_exists($fqcn)) {
-                    try {
-                        $provider = new $fqcn();
-                        if (\method_exists($provider, 'register')) {
-                            $provider->register($this);
-                        }
-                    } catch (\Throwable $e) {
-                        // skip provider instantiation errors silently to avoid breaking CLI
-                    }
-                }
-            }
-
-            // 2) Direct command map
-            $map = $extra['commands'] ?? [];
-            $descriptions = $extra['descriptions'] ?? [];
-            foreach ($map as $name => $target) {
-                $desc = $descriptions[$name] ?? '';
-                $this->registerFromTarget((string) $name, $target, $desc);
-            }
-        }
-    }
-
-    /**
-     * Handle different shapes of installed.json across Composer versions.
-     */
-    private function extractPackages(array $data): array
-    {
-        // Composer 2: {"packages":[...]} or multi-vendor arrays
-        if (isset($data['packages']) && is_array($data['packages'])) {
-            return $data['packages'];
-        }
-        if (isset($data[0]['packages'])) {
-            $merged = [];
-            foreach ($data as $block) {
-                if (isset($block['packages']) && is_array($block['packages'])) {
-                    $merged = array_merge($merged, $block['packages']);
-                }
-            }
-            return $merged;
-        }
-
-        // Some vendors put flat arrays
-        if (isset($data['versions']) && is_array($data['versions'])) {
-            $out = [];
-            foreach ($data['versions'] as $name => $info) {
-                if (is_array($info)) {
-                    $info['name'] = $name;
-                    $out[] = $info;
-                }
-            }
-            return $out;
-        }
-
-        // Fallback: maybe already an array of packages
-        return is_array($data) ? $data : [];
-    }
-
-    /**
-     * Accepts:
-     * - "Vendor\\Pkg\\Cmd@handle"
-     * - "Vendor\\Pkg\\Cmd" (instance with handle|__invoke)
-     * - ["Vendor\\Pkg\\Cmd", "method"]
-     */
-    private function registerFromTarget(string $name, $target, string $description = ''): void
-    {
-        // "Class@method"
-        if (is_string($target) && str_contains($target, '@')) {
-            [$class, $method] = explode('@', $target, 2);
-            if (class_exists($class)) {
-                try {
-                    $instance = new $class();
-                    $this->register($name, [$instance, $method], $description);
-                } catch (\Throwable $e) {
-                    // skip
-                }
-            }
-            return;
-        }
-
-        // FQCN string (assumes instance + handle/__invoke)
-        if (is_string($target) && class_exists($target)) {
-            try {
-                $instance = new $target();
-                $this->register($name, $instance, $description);
-            } catch (\Throwable $e) {
-                // skip
-            }
-            return;
-        }
-
-        // ["Class", "method"]
-        if (is_array($target) && isset($target[0], $target[1]) && is_string($target[0]) && class_exists($target[0])) {
-            try {
-                $instance = new $target[0]();
-                $this->register($name, [$instance, (string) $target[1]], $description);
-            } catch (\Throwable $e) {
-                // skip
-            }
-            return;
-        }
-
-        // Callable (rare via extra, but supported)
-        if (is_callable($target)) {
-            $this->register($name, $target, $description);
-        }
-    }
-
-    /**
-     * Find vendor/composer/installed.json reliably relative to this package.
-     */
-    private function resolveInstalledJsonPath(): ?string
-    {
-        // This file is .../Tamedevelopers/Support/Capsule/Artisan.php inside a project root.
-        // We want the consumer application's vendor/composer/installed.json.
-        $projectRoot = \dirname(__DIR__, 2); // .../Tamedevelopers/Support
-        $vendorPath  = $projectRoot . DIRECTORY_SEPARATOR . 'vendor';
-        if (!is_dir($vendorPath)) {
-            // Fallback for when this file is inside vendor/tamedevelopers/support
-            $supportRoot = \dirname(__DIR__, 1);     // .../support (current package root)
-            $vendorRoot  = \dirname($supportRoot, 2); // .../vendor
-            $vendorPath  = $vendorRoot;
-        }
-        return $vendorPath . DIRECTORY_SEPARATOR . 'composer' . DIRECTORY_SEPARATOR . 'installed.json';
-    }
 }

@@ -21,6 +21,7 @@ namespace Tamedevelopers\Support\Capsule;
  */
 interface CommandProviderInterface
 {
+    
     /**
      * Register package commands into the shared Artisan registry.
      */
