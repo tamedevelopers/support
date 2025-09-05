@@ -28,6 +28,22 @@ class Installer
     }
 
     /**
+     * Backward-compat: called by ComposerPlugin hooks
+     */
+    public static function postInstall(): void
+    {
+        self::install();
+    }
+
+    /**
+     * Backward-compat: called by ComposerPlugin hooks
+     */
+    public static function postUpdate(): void
+    {
+        self::update();
+    }
+
+    /**
      * Dump default files into the user project root
      */
     protected static function publishDefaults()
