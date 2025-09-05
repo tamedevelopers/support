@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Capsule;
 
+use Tamedevelopers\Support\Str;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 
@@ -28,8 +29,7 @@ use Symfony\Component\Console\Formatter\OutputFormatterStyle;
  *
  * Help-like layout:
  *   Logger::helpHeader('blog-store');
- *   Logger::helpItem('blog-store', 'activities', null,
- *       'Update Blog Views and Clicks and Delete the From Blog Data to reserve DB Storage Space');
+ *   Logger::helpItem('blog-store', 'activities', null, 'Description', 30, false, ['green', 'yellow']);
  *
  * @package Tamedevelopers\Database\Capsule
  */
@@ -67,7 +67,7 @@ class Logger
             // existing
             'success'   => ['bright-green', null, ['bold']],
             'error'     => ['bright-red',   null, ['bold']],
-            'info'      => ['bright-cyan',  null, []],
+            'info'      => ['bright-cyan',  null, ['bold']],
 
             // extras
             'yellow'    => ['yellow',       null, ['bold']],
@@ -135,10 +135,17 @@ class Logger
 
     /**
      * Print a group/section header (e.g., a namespace or package name).
+     * Accepts optional style/color while keeping backward compatibility.
+     * - Old: helpHeader('blog-store', true) => STDERR with default 'title' style
+     * - New: helpHeader('blog-store', 'green', true)
      */
-    public static function helpHeader(string $title, bool $stderr = false): void
+    public static function helpHeader(string $title, $style = 'title', bool $stderr = false): void
     {
-        static::writeln("<title>{$title}</title>", $stderr);
+        if (is_bool($style)) {
+            $stderr = $style;
+            $style = 'title';
+        }
+        static::writeln("<{$style}>{$title}</{$style}>", $stderr);
     }
 
     /**
@@ -153,19 +160,22 @@ class Logger
      */
     public static function helpItem(
         string $namespace,
-        string $methodYellow,
+        string $method,
         ?string $keyGreen,
         string $description,
         int $pad = 35,
-        bool $stderr = false
+        bool $stderr = false,
+        array $colorSegments = ['green', 'green']
     ): void {
+        $colorSegments = Str::flatten($colorSegments);
+
         // Build colored label left side
         $label = self::segments([
-            ['text' => $namespace . ':', 'style' => 'green'],
-            ['text' => $methodYellow,    'style' => 'green'],
+            ['text' => $namespace . ':', 'style' => $colorSegments[0] ?: 'green'],
+            ['text' => $method,    'style' => $colorSegments[1] ?: 'green'],
         ]);
 
-        if ($keyGreen !== null && $keyGreen !== '') {
+        if (!empty($keyGreen)) {
             $label .= ' ' . self::segments([
                 ['text' => $keyGreen, 'style' => 'key'],
             ]);
@@ -192,19 +202,18 @@ class Logger
     }
 
     // ---- Simple level helpers (kept for BC) ----
-
     public static function info(string $message): void
     {
-        static::writeln("<info>ℹ {$message}</info>");
+        static::writeln("\n  <info> INFO </info> {$message}");
     }
 
     public static function success(string $message): void
     {
-        static::writeln("<success>✅ {$message}</success>");
+        static::writeln("\n  <success> SUCCESS </success> {$message}");
     }
 
     public static function error(string $message): void
     {
-        static::writeln("<error>❌ {$message}</error>");
+        static::writeln("\n  <error> ERROR </error> {$message}");
     }
 }
