@@ -162,8 +162,10 @@ class Artisan
      */
     private function renderList(): void
     {
-        $this->cli_name = "{$this->cli_name}\n" ?: "Tamedevelopers Support CLI\n";
-
+        $this->cli_name = !empty($this->cli_name)
+                        ? "{$this->cli_name}\n" 
+                        : "Tamedevelopers Support CLI\n";
+        
         Logger::helpHeader($this->cli_name);
         Logger::writeln('<yellow>Usage:</yellow>');
         Logger::writeln('  php tame <command> [:option] [arguments]');
