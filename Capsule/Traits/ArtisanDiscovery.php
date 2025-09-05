@@ -6,116 +6,96 @@ namespace Tamedevelopers\Support\Capsule\Traits;
 
 use Tamedevelopers\Support\Capsule\File;
 
-
 /**
- * @property static $discovered
+ * Discovers and registers external command providers declared by packages.
+ *
+ * Convention in each package's composer.json:
+ * {
+ *   "extra": {
+ *     "tamedevelopers": {
+ *       "providers": [
+ *         "Vendor\\Package\\Console\\MyCommands"
+ *       ]
+ *     }
+ *   }
+ * }
  */
 trait ArtisanDiscovery
 {
-    
     /**
-     * Discover providers from installed Composer packages.
-     * Convention:
-     * - extra.tamedevelopers.providers: string[] FQCNs implementing CommandProviderInterface
+     * Track providers that have been registered to avoid duplicate registration.
+     */
+    private static array $registeredProviders = [];
+
+    /**
+     * Discover providers by scanning vendor composer.json
+     * No reliance on composer/composer installed.json or installed.php.
      */
     private function discoverExternal(): void
     {
-        if (self::$discovered) {
-            return;
-        }
-        self::$discovered = true;
-
-        $installedPath = $this->resolveInstalledJsonPath();
-        if (!$installedPath || !is_file($installedPath)) {
+        $vendorPath = $this->resolveVendorPath();
+        if (!$vendorPath || !is_dir($vendorPath)) {
             return;
         }
 
-        $json = File::get($installedPath);
-        if ($json === false) {
-            return;
-        }
+        // Scan all package composer.json files
+        $pattern = $vendorPath . DIRECTORY_SEPARATOR . 'composer.json';
+        $composerFiles = glob($pattern) ?: [];
 
-        $data = json_decode($json, true);
-        if (!is_array($data)) {
-            return;
-        }
-
-        $packages = $this->extractPackages($data);
-
-        foreach ($packages as $pkg) {
-            $extra = $pkg['extra']['tamedevelopers'] ?? null;
+        foreach ($composerFiles as $composerJson) {
+            $json = @File::get($composerJson);
+            if ($json === false) {
+                continue;
+            }
+            $meta = json_decode($json, true);
+            if (!is_array($meta)) {
+                continue;
+            }
+            $extra = $meta['extra']['tamedevelopers'] ?? null;
             if (!$extra) {
                 continue;
             }
-
-            // 1) Providers
             $providers = $extra['providers'] ?? [];
             foreach ((array) $providers as $fqcn) {
-                if (\is_string($fqcn) && \class_exists($fqcn)) {
-                    try {
-                        $provider = new $fqcn();
-                        if (\method_exists($provider, 'register')) {
-                            $provider->register($this);
-                        }
-                    } catch (\Throwable $e) {
-                        // skip provider instantiation errors silently to avoid breaking CLI
+                if (!is_string($fqcn) || !class_exists($fqcn)) {
+                    continue;
+                }
+                if (isset(self::$registeredProviders[$fqcn])) {
+                    continue; // already registered in this process
+                }
+                try {
+                    $provider = new $fqcn();
+                    if (method_exists($provider, 'register')) {
+                        $provider->register($this);
+                        self::$registeredProviders[$fqcn] = true;
                     }
+                } catch (\Throwable $e) {
+                    // ignore provider instantiation/registration failures
                 }
             }
         }
     }
 
     /**
-     * Handle different shapes of installed.json across Composer versions.
+     * Resolve the vendor directory path for both dev (package root) and consumer app.
      */
-    private function extractPackages(array $data): array
+    private function resolveVendorPath(): ?string
     {
-        // Composer 2: {"packages":[...]} or multi-vendor arrays
-        if (isset($data['packages']) && is_array($data['packages'])) {
-            return $data['packages'];
-        }
-        if (isset($data[0]['packages'])) {
-            $merged = [];
-            foreach ($data as $block) {
-                if (isset($block['packages']) && is_array($block['packages'])) {
-                    $merged = array_merge($merged, $block['packages']);
-                }
-            }
-            return $merged;
+        // Current file: support/Capsule/Traits/ArtisanDiscovery.php
+        $packageRoot = \dirname(__DIR__, 3); // .../support
+
+        // Case 1: developing this package as the root project
+        $vendor = $packageRoot . DIRECTORY_SEPARATOR . 'vendor';
+        if (is_dir($vendor)) {
+            return $vendor;
         }
 
-        // Some vendors put flat arrays
-        if (isset($data['versions']) && is_array($data['versions'])) {
-            $out = [];
-            foreach ($data['versions'] as $name => $info) {
-                if (is_array($info)) {
-                    $info['name'] = $name;
-                    $out[] = $info;
-                }
-            }
-            return $out;
+        // Case 2: this package is installed as a dependency: project/vendor/tamedevelopers/support/...
+        $maybeProjectVendor = \dirname($packageRoot, 2); // .../project/vendor
+        if (is_dir($maybeProjectVendor)) {
+            return $maybeProjectVendor;
         }
 
-        // Fallback: maybe already an array of packages
-        return is_array($data) ? $data : [];
+        return null;
     }
-    
-    /**
-     * Find vendor/composer/installed.json reliably relative to this package.
-     */
-    private function resolveInstalledJsonPath(): ?string
-    {
-        // This file is .../Tamedevelopers/Support/Capsule/Artisan.php inside a project root.
-        // We want the consumer application's vendor/composer/installed.json.
-        $projectRoot = \dirname(__DIR__, 2); // .../Tamedevelopers/Support
-        $vendorPath  = $projectRoot . DIRECTORY_SEPARATOR . 'vendor';
-        if (!is_dir($vendorPath)) {
-            // Fallback for when this file is inside vendor/tamedevelopers/support
-            $supportRoot = \dirname(__DIR__, 1);     // .../support (current package root)
-            $vendorRoot  = \dirname($supportRoot, 2); // .../vendor
-            $vendorPath  = $vendorRoot;
-        }
-        return $vendorPath . DIRECTORY_SEPARATOR . 'composer' . DIRECTORY_SEPARATOR . 'installed.json';
-    }
-
 }

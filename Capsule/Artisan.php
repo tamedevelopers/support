@@ -36,10 +36,8 @@ class Artisan
     protected static array $commands = [];
 
     /**
-     * Guard to ensure discovery runs only once per process.
+     * Constructor
      */
-    private static bool $discovered = false;
-
     public function __construct()
     {
         // Ensure environment variables are loaded before accessing them
