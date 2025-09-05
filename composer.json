@@ -1,14 +1,10 @@
 {
     "name": "tamedevelopers/support",
     "type": "composer-plugin",
-    "description": "Support Package For Tamedevelopers",
+    "description": "Support Package For PHP and PHP Frameworks",
     "homepage": "https://github.com/tamedevelopers/support",
     "license": "MIT",
     "authors": [
-        {
-            "name": "Fredrick Peterson", 
-            "email": "fredi.peterson2000@gmail.com"
-        },
         {
             "name": "Tame Developers", 
             "email": "tamedevelopers@gmail.com"
