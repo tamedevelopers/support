@@ -27,7 +27,7 @@ class Artisan
      * Command registry
      * @var string
      */
-    public $cliname;
+    public $cli_name;
 
     /**
      * Registered commands map
@@ -44,7 +44,7 @@ class Artisan
     {
         // Ensure environment variables are loaded before accessing them
         Manager::startEnvIFNotStarted();
-        
+
         // Auto-discover external commands from installed packages
         $this->discoverExternal();
     }
@@ -162,9 +162,9 @@ class Artisan
      */
     private function renderList(): void
     {
-        $this->cliname = "{$this->cliname}\n" ?: "Tamedevelopers Support CLI\n";
+        $this->cli_name = "{$this->cli_name}\n" ?: "Tamedevelopers Support CLI\n";
 
-        Logger::helpHeader($this->cliname);
+        Logger::helpHeader($this->cli_name);
         Logger::writeln('<yellow>Usage:</yellow>');
         Logger::writeln('  php tame <command> [:option] [arguments]');
         Logger::writeln('');
