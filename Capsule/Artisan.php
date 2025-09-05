@@ -42,7 +42,7 @@ class Artisan
     /**
      * Register a command by name with description
      *
-     * @param string $name
+     * @param string $name 
      * @param callable|object $handler  Either a callable or a command class instance
      * @param string $description       Short description for `list`
      */
