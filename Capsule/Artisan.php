@@ -6,6 +6,7 @@ namespace Tamedevelopers\Support\Capsule;
 
 use Tamedevelopers\Support\Capsule\Logger;
 use Tamedevelopers\Support\Capsule\Manager;
+use Tamedevelopers\Support\Capsule\CommandHelper;
 use Tamedevelopers\Support\Capsule\Traits\ArtisanTrait;
 use Tamedevelopers\Support\Capsule\Traits\ArtisanDiscovery;
 
@@ -18,7 +19,7 @@ use Tamedevelopers\Support\Capsule\Traits\ArtisanDiscovery;
  *   php tame key:generate
  *   php tame migrate:fresh --seed --database=mysql
  */
-class Artisan
+class Artisan extends CommandHelper
 {
     use ArtisanTrait, 
         ArtisanDiscovery;

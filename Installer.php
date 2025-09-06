@@ -62,7 +62,7 @@ class Installer
                 // create for [tame] 
                 self::createTameBash($paths);
 
-                Logger::info("\n<Tame-Artisan> has been created automatically!\n\nUsage: \n   php tame <command> [:option] [arguments]\n\n");
+                Logger::info("\n<b>[Tame-Artisan]</b> has been created automatically!\n\nUsage: \n   php tame <command> [:option] [arguments]\n\n");
             }
         }
     }

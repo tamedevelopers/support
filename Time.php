@@ -347,8 +347,7 @@ class Time {
     {
         if(!empty($date)){
             $clone = $this->__setDate($date);
-
-            $this->date = $this->date;
+            $this->date = $clone->date;
         }
 
         if(empty($format)){

@@ -99,6 +99,22 @@ class CommandHelper
     }
 
     /**
+     * Extract table name from a migration string like "create_users_table".
+     *
+     * @param string|null $migration
+     * @return string|null
+     */
+    protected function extractTableName($migration = null)
+    {
+        // Ensure it matches the "create_*_table" pattern
+        if (preg_match('/^create_(.+)_table$/', Str::lower($migration), $matches)) {
+            return $matches[1]; // middle part (e.g., "users")
+        }
+
+        return null; // not a valid pattern
+    }
+
+    /**
      * Prompt the user for confirmation (y/n).
      */
     protected function confirm(string $question, bool $default = false): bool
@@ -118,7 +134,12 @@ class CommandHelper
      */
     protected function ask(string $question, string $default = ''): string
     {
-        $answer = readline("{$question} ");
+        // Print the question and force a new line
+        echo $question . PHP_EOL . "> ";
+
+        // Now capture user input
+        $answer = trim(readline());
+
         return $answer !== '' ? $answer : $default;
     }
 

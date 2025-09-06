@@ -73,6 +73,11 @@ class Logger
             'success_header'  => ['bright-white', 'green', ['bold']],
             'info_header'     => ['bright-white', 'cyan', ['bold']],
 
+            // generic formatting helpers
+            'bold'       => [null,           null, ['bold']],
+            'underline'  => [null,           null, ['underscore']],
+            'dim'        => ['gray',         null, []],
+
             // extras
             'yellow'    => ['yellow',       null, ['bold']],
             'green'     => ['green',        null, ['bold']],
@@ -109,9 +114,13 @@ class Logger
 
     /**
      * Generic write with optional STDERR target.
+     * Supports common aliases like <bold>, <b>, <strong>, <i>, <em>, <u>, <underline>, <dim>.
      */
     public static function writeln(string $message, bool $stderr = false): void
     {
+        // Normalize popular formatting tags to Symfony Console-supported tags
+        $message = static::normalizeFormatting($message);
+
         $out = static::getOutput();
         $target = $stderr ? $out->getErrorOutput() : $out;
         $target->writeln($message);
@@ -138,6 +147,37 @@ class Logger
             $parts[] = $style ? "<{$style}>{$text}</{$style}>" : $text;
         }
         return implode($separator, $parts);
+    }
+
+    /**
+     * Normalize common/alias formatting tags to supported console styles.
+     * - Maps: <b>, <strong>, <bold> => <bold>
+     *         <u>, <underline>      => <underline>
+     *         <dim>                 => <dim>
+     * - Strips unsupported emphasis tags like <i>, <em> (keeps content).
+     */
+    protected static function normalizeFormatting(string $message): string
+    {
+        $map = [
+            'b'          => 'bold',
+            'strong'     => 'bold',
+            'bold'       => 'bold',
+            'u'          => 'underline',
+            'underline'  => 'underline',
+            'dim'        => 'dim',
+        ];
+
+        foreach ($map as $from => $to) {
+            // Opening tags
+            $message = preg_replace('/<\s*' . $from . '\s*>/i', '<' . $to . '>', $message);
+            // Closing tags
+            $message = preg_replace('/<\s*\/\s*' . $from . '\s*>/i', '</' . $to . '>', $message);
+        }
+
+        // Remove unsupported tags but keep their content
+        $message = preg_replace('/<\s*\/?\s*(i|em)\s*>/i', '', $message);
+
+        return $message;
     }
 
     /**

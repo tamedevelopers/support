@@ -187,6 +187,16 @@ class HttpRequest implements RequestInterface
     }
 
     /**
+     * Determine if the script is running in CLI mode.
+     *
+     * @return bool
+     */
+    public static function runningInConsole()
+    {
+        return (php_sapi_name() === 'cli' || PHP_SAPI === 'cli');
+    }
+
+    /**
      * Is IP accessed via 127.0.0.1 port in browser
      * 
      * @return bool
