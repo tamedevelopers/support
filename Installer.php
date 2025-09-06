@@ -28,42 +28,19 @@ class Installer
     }
 
     /**
-     * Backward-compat: called by ComposerPlugin hooks
-     */
-    public static function postInstall(): void
-    {
-        self::install();
-    }
-
-    /**
-     * Backward-compat: called by ComposerPlugin hooks
-     */
-    public static function postUpdate(): void
-    {
-        self::update();
-    }
-
-    /**
      * Dump default files into the user project root
      */
     protected static function publishDefaults()
     {
-        // if app is running inside of a framework
-        $frameworkChecker = (new Tame)->isAppFramework();
+        // dummy paths to be created 
+        $paths = self::getPathsData(realpath(__DIR__));
 
-        // if application is not a framework, 
-        // then we can start dupping default needed files
-        if(! $frameworkChecker){
-            // dummy paths to be created 
-            $paths = self::getPathsData(realpath(__DIR__));
+        // only create when files are not present
+        if(self::isDummyNotPresent($paths)){
+            // create for [tame] 
+            self::createTameBash($paths);
 
-            // only create when files are not present
-            if(self::isDummyNotPresent($paths)){
-                // create for [tame] 
-                self::createTameBash($paths);
-
-                Logger::info("\n<b>[Tame-Artisan]</b> has been created automatically!\n\nUsage: \n   php tame <command> [:option] [arguments]\n\n");
-            }
+            Logger::info("\n<b>[Tame-Artisan]</b> has been created automatically!\n\nUsage: \n   php tame <command> [:option] [arguments]\n\n");
         }
     }
 

@@ -30,4 +30,12 @@ include_once __DIR__ . "/vendor/autoload.php";
 
 $artisan = new Tamedevelopers\Support\Capsule\Artisan();
 
+/**
+ * Register the default Support Command Name
+ */
+$artisan->register(
+    'make', new Tamedevelopers\Support\Commands\MakeCommand, 'Make Artisans'
+);
+
+
 exit($artisan->run($argv));

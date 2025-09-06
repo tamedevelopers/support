@@ -24,15 +24,15 @@ final class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         ];
     }
 
+    // Run package post-install logic
     public function onPostInstall(): void
     {
-        // Run package post-install logic
         Installer::install();
     }
 
+    // Run package post-update logic
     public function onPostUpdate(): void
     {
-        // Run package post-update logic
         Installer::update();
     }
 }

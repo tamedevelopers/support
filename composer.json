@@ -32,7 +32,7 @@
         ], 
         "post-update-cmd": [ 
             "Tamedevelopers\\Support\\Installer::update" 
-        ] 
+        ]
     },
     "suggest": {
         "dompdf/dompdf": "Required to use the `PDF` class and helper (^3.0)"
