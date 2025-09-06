@@ -99,19 +99,30 @@ class CommandHelper
     }
 
     /**
-     * Extract table name from a migration string like "create_users_table".
+     * Extract table name from a migration string.
+     * Supports common patterns like:
+     *  - create_users_table          => users
+     *  - users_table                 => users
+     * Fallback: returns a normalized name if no strict pattern matched.
      *
      * @param string|null $migration
-     * @return string|null
+     * @return string
      */
     protected function extractTableName($migration = null)
     {
-        // Ensure it matches the "create_*_table" pattern
-        if (preg_match('/^create_(.+)_table$/', Str::lower($migration), $matches)) {
-            return $matches[1]; // middle part (e.g., "users")
+        $name = Str::lower($migration);
+
+        // 1) create_{table}_table
+        if (preg_match('/^create_(.+)_table$/', $name, $matches)) {
+            return $matches[1];
         }
 
-        return null; // not a valid pattern
+        // 2) anything ending with _table
+        if (preg_match('/^(.+)_table$/', $name, $matches)) {
+            return $matches[1];
+        }
+
+        return $migration;
     }
 
     /**
