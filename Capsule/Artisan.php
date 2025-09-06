@@ -31,8 +31,8 @@ class Artisan extends CommandHelper
     public $cli_name;
 
     /**
-     * Registered commands map
-     * @var array<string, array{instance?: object, handler?: callable, description: string}>
+     * Registered commands map (supports multiple providers per base command)
+     * @var array<string, array<int, array{instance?: object, handler?: callable, description: string}>>
      */
     protected static array $commands = [];
 
@@ -57,16 +57,22 @@ class Artisan extends CommandHelper
      */
     public function register(string $name, $handler, string $description = ''): void
     {
+        // Ensure bucket exists for this base name
+        if (!isset(self::$commands[$name]) || !is_array(self::$commands[$name])) {
+            self::$commands[$name] = [];
+        }
+
+        // Object instance (class-based command)
         if (\is_object($handler) && !\is_callable($handler)) {
-            self::$commands[$name] = [
+            self::$commands[$name][] = [
                 'instance' => $handler,
                 'description' => $description,
             ];
             return;
         }
 
-        // Fallback to callable handler registration
-        self::$commands[$name] = [
+        // Callable handler registration
+        self::$commands[$name][] = [
             'handler' => $handler,
             'description' => $description,
         ];
@@ -97,63 +103,82 @@ class Artisan extends CommandHelper
             return 1;
         }
 
-        $entry = self::$commands[$base];
+        // Normalize entries to array of providers for this base command
+        $entries = self::$commands[$base];
+        // Normalize: if entries look like a single assoc, wrap into list
+        if (!is_array($entries) || (is_array($entries) && !isset($entries[0]))) {
+            $entries = [$entries];
+        }
 
         // Parse flags/options once and pass where applicable
         [$positionals, $options] = $this->parseArgs($rawArgs);
 
-        // If registered with a class instance, we support subcommands and flag-to-method routing
-        if (isset($entry['instance']) && \is_object($entry['instance'])) {
-            $instance = $entry['instance'];
+        $exitCode = 0;
+        $handled = false;
 
-            // Resolve primary method to call
-            $primaryMethod = $sub ?: 'handle';
-            if (!method_exists($instance, $primaryMethod)) {
-                // command instance name
-                $instanceName = get_class($instance);
-                Logger::error("Missing method \"{$primaryMethod}()\" in {$instanceName}.");
+        // Resolve primary once and track unresolved flags across providers
+        $primaryMethod = $sub ?: 'handle';
+        $unresolvedFlags = array_keys($options);
 
-                // Show small hint for available methods on the instance (public only)
-                $hints = $this->introspectPublicMethods($instance);
+        foreach ($entries as $entry) {
+            // If registered with a class instance, support subcommands and flag-to-method routing
+            if (isset($entry['instance']) && \is_object($entry['instance'])) {
+                $instance = $entry['instance'];
 
-                if ( !empty($hints)) {
-                    Logger::info("Available methods: {$hints}\n");
-                } 
-                return 1;
-            }
-
-            $exitCode = (int) ($this->invokeCommandMethod($instance, $primaryMethod, $positionals, $options) ?? 0);
-
-            // Route flags as methods on the same instance
-            $invalidFlags = [];
-            foreach ($options as $flag => $value) {
-                $method = $this->optionToMethodName($flag);
-                // Skip if this flag matches the already-run primary method
-                if ($method === $primaryMethod) {
+                // Skip instances that don't implement the requested primary method
+                if (!method_exists($instance, $primaryMethod)) {
                     continue;
                 }
-                if (method_exists($instance, $method)) {
-                    $this->invokeCommandMethod($instance, $method, $positionals, $options, $flag);
-                } else {
-                    $invalidFlags[] = $flag;
+
+                $result = (int) ($this->invokeCommandMethod($instance, $primaryMethod, $positionals, $options) ?? 0);
+                $exitCode = max($exitCode, $result);
+                $handled = true;
+
+                // Route flags as methods on the same instance and mark them as resolved
+                foreach ($unresolvedFlags as $i => $flag) {
+                    $method = $this->optionToMethodName($flag);
+                    if ($method === $primaryMethod) {
+                        unset($unresolvedFlags[$i]);
+                        continue;
+                    }
+                    if (method_exists($instance, $method)) {
+                        $this->invokeCommandMethod($instance, $method, $positionals, $options, $flag);
+                        unset($unresolvedFlags[$i]);
+                    }
                 }
+
+                continue;
             }
 
-            if (!empty($invalidFlags)) {
-                Logger::error("Invalid option/method: --" . implode(', --', $invalidFlags) . "\n");
+            // Fallback: callable handler (no subcommands/flags routing)
+            if (isset($entry['handler']) && \is_callable($entry['handler'])) {
+                $handler = $entry['handler'];
+                $result = (int) ($handler($rawArgs) ?? 0);
+                $exitCode = max($exitCode, $result);
+                $handled = true;
+                continue;
             }
 
-            return $exitCode;
+            // Unknown provider shape; ignore but keep iterating
         }
 
-        // Fallback: callable handler (no subcommands/flags routing)
-        if (isset($entry['handler']) && \is_callable($entry['handler'])) {
-            $handler = $entry['handler'];
-            return (int) ($handler($rawArgs) ?? 0);
+        if (!$handled) {
+            if ($sub !== null) {
+                Logger::error("Command \"{$commandInput}\" is not defined.\n\n");
+            } else {
+                Logger::error("No valid providers handled command: {$commandInput}\n");
+            }
+            return max($exitCode, 1);
         }
 
-        Logger::error("Command not properly registered: {$commandInput}\n");
-        return 1;
+        // Any flags not resolved by any provider are invalid
+        $unresolvedFlags = array_values($unresolvedFlags);
+        if (!empty($unresolvedFlags)) {
+            Logger::error("Invalid option/method: --" . implode(', --', $unresolvedFlags) . "\n");
+            $exitCode = max($exitCode, 1);
+        }
+
+        return $exitCode;
     }
 
     /**

@@ -14,7 +14,7 @@ trait ArtisanTrait
      * Build a grouped list keyed by the base command name.
      * Root commands without a colon are under key '__root'.
      *
-     * @param array<string, array{instance?: object, handler?: callable, description: string}> $registry
+     * @param array<string, array<int, array{instance?: object, handler?: callable, description: string}>> $registry
      * @return array<string, array<string,string>>
      */
     protected function buildGroupedCommandList(array $registry): array
@@ -24,7 +24,9 @@ trait ArtisanTrait
         foreach ($flat as $cmd => $desc) {
             $pos = strpos($cmd, ':');
             if ($pos === false) {
-                $grouped['__root'][$cmd] = $desc;
+                // Merge root entries with same name; prefer non-empty description
+                $existing = $grouped['__root'][$cmd] ?? '';
+                $grouped['__root'][$cmd] = $existing !== '' ? $existing : $desc;
             } else {
                 $group = substr($cmd, 0, $pos);
                 $grouped[$group][$cmd] = $desc;
@@ -42,24 +44,46 @@ trait ArtisanTrait
      * Build a flat associative list of commands => description.
      * Includes base commands and public subcommand methods (e.g., foo:bar).
      *
-     * @param array<string, array{instance?: object, handler?: callable, description: string}> $registry
+     * @param array<string, array<int, array{instance?: object, handler?: callable, description: string}>> $registry
      * @return array<string,string>
      */
     private function buildCommandList(array $registry): array
     {
         $list = [];
 
-        foreach ($registry as $name => $entry) {
-            $desc = (string)($entry['description'] ?? '');
-            $list[$name] = $desc;
+        foreach ($registry as $name => $entries) {
+            // Normalize entries to array of providers (list if index 0 exists)
+            $providers = is_array($entries) && isset($entries[0]) ? $entries : [$entries];
 
-            if (isset($entry['instance']) && is_object($entry['instance'])) {
-                $instance = $entry['instance'];
-                foreach ($this->introspectPublicMethodsArray($instance) as $method => $summary) {
-                    if ($method === 'handle') {
-                        continue;
+            $rootDesc = '';
+            foreach ($providers as $entry) {
+                $desc = (string)($entry['description'] ?? '');
+                if ($rootDesc === '' && $desc !== '') {
+                    $rootDesc = $desc; // prefer first non-empty description
+                }
+
+                if (isset($entry['instance']) && is_object($entry['instance'])) {
+                    $instance = $entry['instance'];
+                    foreach ($this->introspectPublicMethodsArray($instance) as $method => $summary) {
+                        if ($method === 'handle') {
+                            continue;
+                        }
+                        // If subcommand already exists, prefer a non-empty summary
+                        $key = $name . ':' . $method;
+                        if (!isset($list[$key]) || $list[$key] === '') {
+                            $list[$key] = $summary;
+                        }
                     }
-                    $list[$name . ':' . $method] = $summary;
+                }
+            }
+
+            // Root command entry
+            if (!isset($list[$name])) {
+                $list[$name] = $rootDesc;
+            } else {
+                // Prefer non-empty description if existing was empty
+                if ($list[$name] === '' && $rootDesc !== '') {
+                    $list[$name] = $rootDesc;
                 }
             }
         }
