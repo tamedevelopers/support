@@ -71,7 +71,7 @@ class CommandHelper
     }
 
     /**
-     * Determine if the current environment is production.
+     * Determine if the current environment is production. 
      */
     protected function isProduction(): bool
     {
