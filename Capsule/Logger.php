@@ -259,6 +259,11 @@ class Logger
         static::writeln("\n  <success> SUCCESS </success> {$message}");
     }
 
+    public static function warning(string $message): void
+    {
+        static::writeln("\n  <warning> WARNING </warning> {$message}");
+    }
+
     public static function error(string $message): void
     {
         static::writeln("\n  <error> ERROR </error> {$message}");

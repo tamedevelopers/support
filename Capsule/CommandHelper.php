@@ -72,6 +72,28 @@ class CommandHelper
             }
         }
     }
+
+    /**
+     * Get force flag
+     */
+    protected function force(): bool
+    {
+        // backtrace
+        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
+
+        // get backtrace information about the caller's context
+        $args = $this->debugTraceArgumentHandler($trace);
+
+        if(isset($args['force'])){
+            return $args['force'];
+        }
+
+        if(isset($args['f'])){
+            return $args['f'];
+        }
+
+        return false;
+    }
     
     /**
      * Extracts all arguments available from command
@@ -143,11 +165,27 @@ class CommandHelper
     }
 
     /**
+     * Extracts all options available from command
+     * 
+     * @return array
+     */
+    protected function options()
+    {
+        // backtrace
+        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
+
+        // get backtrace information about the caller's context
+        $args = $this->debugTraceArgumentHandler($trace);
+
+        return $args;
+    }
+
+    /**
      * Get a specific option value from options array.
      * Example: option('force', false)
      * 
      * @param string $key 
-     * @param string|array|bool|null $default
+     * @param mixed $default
      * 
      * @return mixed
      */
