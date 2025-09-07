@@ -85,7 +85,7 @@ class CommandHelper
      * Get a specific option value from options array.
      * Example: option('force', false)
      * 
-     * @param string $key
+     * @param string $key 
      * @param string|array|bool|null $default
      * 
      * @return mixed
