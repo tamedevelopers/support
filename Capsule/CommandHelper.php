@@ -40,35 +40,6 @@ class CommandHelper
             exit();
         }
     }
-    
-    /**
-     * Check if the command should be forced when running in production.
-     */
-    protected function forceChecker($options = []): void
-    {
-        $force = isset($options['force']) || isset($options['f']);
-
-        if ($this->isProduction()) {
-            if (!$force) {
-                $this->error("You are in production! Use [--force|-f] flag, to run this command.");
-                exit(1);
-            }
-        }
-    }
-    
-    /**
-     * Extracts the flag types from option keys like "drop-types" or "drop-views".
-     */
-    protected function flag($options = []): array
-    {
-        $types = [];
-        foreach ($options as $key => $value) {
-            if (strpos($key, 'drop-') === 0 && $value) {
-                $types[] = substr($key, strlen('drop-')); // get the part after "drop-"
-            }
-        }
-        return $types;
-    }
 
     /**
      * Determine if the current environment is production. 
@@ -79,6 +50,96 @@ class CommandHelper
         $productionAliases = ['prod', 'production', 'live'];
 
         return in_array(Str::lower($env), $productionAliases, true);
+    }
+    
+    /**
+     * Check if the command should be forced when running in production.
+     */
+    protected function forceChecker(): void
+    {
+        // backtrace
+        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
+
+        // get backtrace information about the caller's context
+        $args = $this->debugTraceArgumentHandler($trace);
+
+        $force = (isset($args['force']) || isset($args['f']));
+
+        if ($this->isProduction()) {
+            if (!$force) {
+                $this->error("You are in production! Use [--force|-f] flag, to run this command.");
+                exit(1);
+            }
+        }
+    }
+    
+    /**
+     * Extracts all arguments available from command
+     * 
+     * @param int|null $position
+     * @return array
+     */
+    protected function arguments($position = null)
+    {
+        // backtrace
+        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
+
+        // get backtrace information about the caller's context
+        $args = $this->debugTraceArgumentHandler($trace, 'arguments');
+
+        return $args[$position] ?? $args;
+    }
+    
+    /**
+     * Extracts all flags available from command
+     * 
+     * @param string $key 
+     * @return array
+     */
+    protected function flags()
+    {
+        // backtrace
+        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
+
+        // get backtrace information about the caller's context
+        $args = $this->debugTraceArgumentHandler($trace);
+
+        return $args;
+    }
+    
+    /**
+     * Get a specific flag value from options array.
+     * Example: option('path')
+     * 
+     * @param string $key 
+     * @return mixed
+     */
+    protected function flag(string $key)
+    {
+        // backtrace
+        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
+
+        // get backtrace information about the caller's context
+        $args = $this->debugTraceArgumentHandler($trace);
+
+        return $args[$key] ?? null;
+    }
+    
+    /**
+     * Check if (flag) exists and is truthy.
+     * 
+     * @param string $key 
+     * @return bool
+     */
+    protected function hasFlag($key)
+    {
+        // backtrace
+        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
+
+        // get backtrace information about the caller's context
+        $args = $this->debugTraceArgumentHandler($trace);
+
+        return in_array($key, array_keys($args));
     }
 
     /**
@@ -93,26 +154,47 @@ class CommandHelper
     protected function option(string $key, $default = null)
     {
         // backtrace
-        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 2);
+        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
 
         // get backtrace information about the caller's context
-        $args = $trace[1]['args'][1] ?? [];
+        $args = $this->debugTraceArgumentHandler($trace);
 
         return $args[$key] ?? $default;
     }
 
     /**
-     * Check if an option/flag exists and is truthy.
+     * Check if (option) exists and is truthy.
      */
     protected function hasOption(string $key): bool
     {
         // backtrace
-        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 2);
+        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
 
         // get backtrace information about the caller's context
-        $args = $trace[1]['args'][1] ?? [];
+        $args = $this->debugTraceArgumentHandler($trace);
 
         return !empty($args[$key]);
+    }
+
+    /**
+     * Get backtrace information about the caller's context
+     *
+     * @param mixed $trace
+     * @param string $key 
+     * @return array
+     */
+    protected function debugTraceArgumentHandler($trace, $key = 'options')
+    {
+        $trace = $trace[3];
+        $data = ['arguments' => [], 'options' => []];
+
+        if(isset($trace['function']) && $trace['function'] == 'invokeCommandMethod'){
+            $args = $trace['args'];
+
+            $data = ['arguments' => $args[2], 'options' => $args[3]];
+        }
+
+        return $data[$key] ?? $data;
     }
 
     /**

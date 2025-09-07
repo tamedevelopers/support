@@ -231,7 +231,7 @@ trait ArtisanTrait
             return $ref->invoke($instance);
         } catch (\Throwable $e) {
             $flagInfo = $invokedByFlag ? " (from --{$invokedByFlag})" : '';
-            fwrite(STDERR, "Error running {$method}{$flagInfo}: {$e->getMessage()}\n");
+            $this->error("Error running {$method}{$flagInfo}: {$e->getMessage()}");
             return 1;
         }
     }

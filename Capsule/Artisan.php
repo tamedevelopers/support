@@ -72,6 +72,7 @@ class Artisan extends CommandHelper
         $argv    = array_merge(['tame'], [$command], $args);
 
         $artisan = new self();
+
         return $artisan->run($argv);
     }
 
@@ -146,7 +147,7 @@ class Artisan extends CommandHelper
         // Resolve primary once and track unresolved flags across providers
         $primaryMethod = $sub ?: 'handle';
         $unresolvedFlags = array_keys($options);
-
+        
         foreach ($entries as $entry) {
             // If registered with a class instance, support subcommands and flag-to-method routing
             if (isset($entry['instance']) && \is_object($entry['instance'])) {
@@ -196,13 +197,6 @@ class Artisan extends CommandHelper
                 Logger::error("No valid providers handled command: {$commandInput}\n");
             }
             return max($exitCode, 1);
-        }
-
-        // Any flags not resolved by any provider are invalid
-        $unresolvedFlags = array_values($unresolvedFlags);
-        if (!empty($unresolvedFlags)) {
-            Logger::error("Invalid option/method: --" . implode(', --', $unresolvedFlags) . "\n");
-            $exitCode = max($exitCode, 1);
         }
 
         return $exitCode;
