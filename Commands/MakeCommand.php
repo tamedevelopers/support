@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Commands;
 
-
+use Tamedevelopers\Support\Capsule\Artisan;
 use Tamedevelopers\Support\Capsule\Logger;
 use Tamedevelopers\Support\Capsule\CommandHelper;
 
@@ -18,6 +18,13 @@ class MakeCommand extends CommandHelper
      */
     public function handle()
     {
+
+        dd(
+            'ss',
+            Artisan::call('make:command')
+        );
+
+        exit();
         Logger::helpHeader('<yellow>Usage:</yellow>');
         Logger::writeln('  php tame make:command [name] --path=users');
         Logger::writeln('');

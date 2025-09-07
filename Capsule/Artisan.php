@@ -49,6 +49,33 @@ class Artisan extends CommandHelper
     }
 
     /**
+     * Programmatically execute a CLI command string.
+     *
+     * Example:
+     *   Artisan::call("make:command UserCommand --path=users");
+     *
+     * Notes:
+     * - Quoted args are respected: "--path=\"my path\""
+     * - Placeholder tokens like [name] are ignored if passed literally.
+     */
+    public static function call(string $input): int
+    {
+        // Tokenize input and drop placeholder tokens like [name]
+        $tokens = self::tokenize($input);
+        $tokens = array_values(array_filter($tokens, static function ($t) {
+            return !preg_match('/^\[[^\]]+\]$/', (string)$t);
+        }));
+
+        // Build argv in the same format as PHP CLI provides
+        $command = $tokens[0] ?? 'list';
+        $args    = array_slice($tokens, 1);
+        $argv    = array_merge(['tame'], [$command], $args);
+
+        $artisan = new self();
+        return $artisan->run($argv);
+    }
+
+    /**
      * Register a command by name with description
      *
      * @param string $name 
