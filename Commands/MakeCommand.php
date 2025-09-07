@@ -18,13 +18,6 @@ class MakeCommand extends CommandHelper
      */
     public function handle()
     {
-
-        dd(
-            'ss',
-            Artisan::call('make:command')
-        );
-
-        exit();
         Logger::helpHeader('<yellow>Usage:</yellow>');
         Logger::writeln('  php tame make:command [name] --path=users');
         Logger::writeln('');

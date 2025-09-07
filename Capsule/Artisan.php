@@ -76,34 +76,6 @@ class Artisan extends CommandHelper
     }
 
     /**
-     * Split a command string into tokens while respecting quotes.
-     */
-    private static function tokenizeCommand(string $input): array
-    {
-        $input = trim($input);
-        if ($input === '') {
-            return [];
-        }
-
-        $tokens  = [];
-        // Match: "double-quoted" | 'single-quoted' | unquoted\-chunks
-        $pattern = '/"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"|\'([^\'\\\\]*(?:\\\\.[^\'\\\\]*)*)\'|(\\S+)/';
-        if (preg_match_all($pattern, $input, $matches, PREG_SET_ORDER)) {
-            foreach ($matches as $m) {
-                if (($m[1] ?? '') !== '') {
-                    $tokens[] = stripcslashes($m[1]);
-                } elseif (($m[2] ?? '') !== '') {
-                    $tokens[] = stripcslashes($m[2]);
-                } else {
-                    $tokens[] = $m[3];
-                }
-            }
-        }
-
-        return $tokens;
-    }
-
-    /**
      * Register a command by name with description
      *
      * @param string $name 
