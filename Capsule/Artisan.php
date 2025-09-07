@@ -61,7 +61,7 @@ class Artisan extends CommandHelper
     public static function call(string $input): int
     {
         // Tokenize input and drop placeholder tokens like [name]
-        $tokens = self::tokenize($input);
+        $tokens = self::tokenizeCommand($input);
         $tokens = array_values(array_filter($tokens, static function ($t) {
             return !preg_match('/^\[[^\]]+\]$/', (string)$t);
         }));
@@ -73,6 +73,34 @@ class Artisan extends CommandHelper
 
         $artisan = new self();
         return $artisan->run($argv);
+    }
+
+    /**
+     * Split a command string into tokens while respecting quotes.
+     */
+    private static function tokenizeCommand(string $input): array
+    {
+        $input = trim($input);
+        if ($input === '') {
+            return [];
+        }
+
+        $tokens  = [];
+        // Match: "double-quoted" | 'single-quoted' | unquoted\-chunks
+        $pattern = '/"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"|\'([^\'\\\\]*(?:\\\\.[^\'\\\\]*)*)\'|(\\S+)/';
+        if (preg_match_all($pattern, $input, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                if (($m[1] ?? '') !== '') {
+                    $tokens[] = stripcslashes($m[1]);
+                } elseif (($m[2] ?? '') !== '') {
+                    $tokens[] = stripcslashes($m[2]);
+                } else {
+                    $tokens[] = $m[3];
+                }
+            }
+        }
+
+        return $tokens;
     }
 
     /**
