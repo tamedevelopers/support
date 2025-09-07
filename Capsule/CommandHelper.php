@@ -48,7 +48,7 @@ class CommandHelper
     {
         $force = isset($options['force']) || isset($options['f']);
 
-        if ($this->isProductionEnv()) {
+        if ($this->isProduction()) {
             if (!$force) {
                 $this->error("You are in production! Use [--force|-f] flag, to run this command.");
                 exit(1);
@@ -59,7 +59,7 @@ class CommandHelper
     /**
      * Extracts the flag types from option keys like "drop-types" or "drop-views".
      */
-    protected function getFlagTypes($options = []): array
+    protected function flag($options = []): array
     {
         $types = [];
         foreach ($options as $key => $value) {
@@ -73,7 +73,7 @@ class CommandHelper
     /**
      * Determine if the current environment is production.
      */
-    protected function isProductionEnv(): bool
+    protected function isProduction(): bool
     {
         $env = Env::env('APP_ENV');
         $productionAliases = ['prod', 'production', 'live'];
@@ -83,19 +83,36 @@ class CommandHelper
 
     /**
      * Get a specific option value from options array.
-     * Example: getOption($options, 'force', false)
+     * Example: option('force', false)
+     * 
+     * @param string $key
+     * @param string|array|bool|null $default
+     * 
+     * @return mixed
      */
-    protected function getOption(array $options, string $key, $default = null)
+    protected function option(string $key, $default = null)
     {
-        return $options[$key] ?? $default;
+        // backtrace
+        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 2);
+
+        // get backtrace information about the caller's context
+        $args = $trace[1]['args'][1] ?? [];
+
+        return $args[$key] ?? $default;
     }
 
     /**
      * Check if an option/flag exists and is truthy.
      */
-    protected function hasOption(array $options, string $key): bool
+    protected function hasOption(string $key): bool
     {
-        return !empty($options[$key]);
+        // backtrace
+        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 2);
+
+        // get backtrace information about the caller's context
+        $args = $trace[1]['args'][1] ?? [];
+
+        return !empty($args[$key]);
     }
 
     /**

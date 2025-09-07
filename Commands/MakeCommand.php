@@ -12,14 +12,15 @@ use Tamedevelopers\Support\Capsule\CommandHelper;
 class MakeCommand extends CommandHelper
 {   
     /**
-     * Default entry when running command
+     * Default entry when running commands.
+     *
+     * @return void
      */
-    public function handle(array $args = [], array $options = []): int
+    public function handle()
     {
-        echo "Usage examples:\n";
-        echo "  php tame make\n";
-        echo "  php tame make:command [name] --path=users\n\n";
-        return 0;
+        Logger::helpHeader('<yellow>Usage:</yellow>');
+        Logger::writeln('  php tame make:command [name] --path=users');
+        Logger::writeln('');
     }
 
     /**
@@ -28,7 +29,7 @@ class MakeCommand extends CommandHelper
     public function command(array $args = [], array $options = []): int
     {
         $name  = $args[0] ?? null;
-        $path = $this->getOption($options, 'path');
+        $path = $this->hasOption('path');
 
         // if not provided, prompt for file name
         if(empty($name)){
