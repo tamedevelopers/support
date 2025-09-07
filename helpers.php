@@ -40,7 +40,7 @@ if (! function_exists('Tame_isAppFramework')) {
 /**
  * Helps without calling the method multiple times
  */
-$Support_Tame_isAppFramework = Tame_isAppFramework();
+$Tame_isAppFramework = function_exists('Tame_isAppFramework') ? Tame_isAppFramework() : false;
 
 
 if (! function_exists('Tame')) {
@@ -214,7 +214,7 @@ if (! function_exists('TameZip')) {
     }
 }
 
-if (! $Support_Tame_isAppFramework && ! function_exists('bcrypt')) {
+if (! $Tame_isAppFramework && ! function_exists('bcrypt')) {
      /**
      * Password Encrypter.
      * This function encrypts a password using bcrypt with a generated salt.
@@ -309,7 +309,7 @@ if (! function_exists('TameSession')) {
     }
 }
 
-if (! $Support_Tame_isAppFramework && ! function_exists('config')) {
+if (! $Tame_isAppFramework && ! function_exists('config')) {
     /**
      * Get the value of a configuration option.
      *
@@ -328,7 +328,7 @@ if (! $Support_Tame_isAppFramework && ! function_exists('config')) {
     }
 }
 
-if (! $Support_Tame_isAppFramework && ! function_exists('env')) {
+if (! $Tame_isAppFramework && ! function_exists('env')) {
     /**
      * Get ENV (Enviroment) Data
      * - If .env was not used, 
@@ -443,7 +443,7 @@ if (! function_exists('config_time')) {
     }
 }
 
-if (! $Support_Tame_isAppFramework && ! function_exists('__')) {
+if (! $Tame_isAppFramework && ! function_exists('__')) {
     /**
      * Translate the given message.
      *
@@ -623,7 +623,7 @@ if (! function_exists('to_json')) {
     }
 }
 
-if (! $Support_Tame_isAppFramework && ! function_exists('dump')) {
+if (! $Tame_isAppFramework && ! function_exists('dump')) {
     /**
      * Dump Data
      * @param mixed $data
@@ -636,7 +636,7 @@ if (! $Support_Tame_isAppFramework && ! function_exists('dump')) {
     }
 }
 
-if (! $Support_Tame_isAppFramework && ! function_exists('dd')) {
+if (! $Tame_isAppFramework && ! function_exists('dd')) {
     /**
      * Dump and Data
      * @param mixed $data
