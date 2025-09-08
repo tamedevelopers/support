@@ -24,6 +24,10 @@ class CommandHelper
      */
     public function __construct($conn = null)
     {
+        if(class_exists('Tamedevelopers\Database\DB') && is_null($conn)){
+            $conn = \Tamedevelopers\Database\DB::connection();
+        }
+        
         $this->conn = $conn;
     }
     
@@ -99,7 +103,7 @@ class CommandHelper
      * Extracts all arguments available from command
      * 
      * @param int|null $position
-     * @return mixed
+     * @return array
      */
     protected function arguments($position = null)
     {
