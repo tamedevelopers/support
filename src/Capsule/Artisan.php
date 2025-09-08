@@ -128,7 +128,7 @@ class Artisan extends CommandHelper
 
         if (!isset(self::$commands[$base])) {
             Logger::error("Command \"{$commandInput}\" is not defined.\n\n");
-            return 1;
+            return 0;
         }
 
         // Normalize entries to array of providers for this base command

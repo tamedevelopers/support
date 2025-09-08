@@ -875,6 +875,7 @@ class Str
      */
     public static function trim($string = null, string $characters = " \n\r\t\v\0")
     {
+        $string = is_array($string) ? $string[0] ?? null : $string;
         return trim((string) $string, $characters);
     }
 

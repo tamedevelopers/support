@@ -8,6 +8,7 @@ use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Constant;
 use Tamedevelopers\Support\Capsule\Logger;
+use Tamedevelopers\Support\Process\HttpRequest;
 
 
 class CommandHelper
@@ -19,16 +20,33 @@ class CommandHelper
     protected $conn;
 
     /**
+     * The database connector instance. 
+     * @var bool|null
+     */
+    protected $isConsole;
+
+    /**
      * Constructor  
      * @param \Tamedevelopers\Database\Connectors\Connector|null $conn
      */
     public function __construct($conn = null)
     {
-        if(class_exists('Tamedevelopers\Database\DB') && is_null($conn)){
-            $conn = \Tamedevelopers\Database\DB::connection();
+        $instance = "Tamedevelopers\Database\DB";
+        if(class_exists($instance) && is_null($conn)){
+            $conn = $instance::connection();
         }
         
         $this->conn = $conn;
+        $this->isConsole = $this->isConsole();
+    }
+    
+    /**
+     * Checking for incoming CLI type
+     * @param bool
+     */
+    protected function isConsole(): bool
+    {
+        return HttpRequest::runningInConsole();
     }
     
     /**
@@ -40,8 +58,11 @@ class CommandHelper
         $checkConnection = $conn->dbConnection();
 
         if($checkConnection['status'] != Constant::STATUS_200){
-            $this->error($checkConnection['message']);
-            exit();
+            if($this->isConsole()){
+                $this->error($checkConnection['message']);
+                exit(1);
+            }
+            return;
         }
     }
 
@@ -72,7 +93,10 @@ class CommandHelper
         if ($this->isProduction()) {
             if (!$force) {
                 $this->error("You are in production! Use [--force|-f] flag, to run this command.");
-                exit(1);
+                if($this->isConsole()){
+                    exit(1);
+                }
+                return;
             }
         }
     }
@@ -271,8 +295,8 @@ class CommandHelper
      */
     protected function confirm(string $question, bool $default = false): bool
     {
-        $yesNo  = $default ? 'Y/n' : 'y/N';
-        $answer = readline("{$question} [{$yesNo}]: ");
+        $yesNo  = $default ? 'y/n' : 'Y/N';
+        $answer = readline("{$question} ({$yesNo}): ");
 
         if (empty($answer)) {
             return $default;

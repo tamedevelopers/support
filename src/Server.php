@@ -19,7 +19,7 @@ class Server{
     /**
      * Get the value of a configuration option.
      *
-     * @param mixed $key 
+     * @param mixed $key
      * The configuration key in dot notation (e.g., 'database.connections.mysql')
      * 
      * @param mixed $default 
@@ -92,7 +92,7 @@ class Server{
         }
 
         // try merging data if an array
-        if(!empty($config) && is_array($default)){
+        if(!empty($config) && is_array($config) && is_array($default)){
             return array_merge($config, $default);
         }
 
