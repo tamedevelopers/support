@@ -113,7 +113,7 @@ class Artisan extends CommandHelper
     {
         // In PHP CLI, $argv[0] is the script name (tame), so command starts at index 1
         $commandInput = $argv[1] ?? 'list';
-        $rawArgs = array_slice($argv, 2);
+        $rawArgs = array_slice($argv, 2); 
 
         // Ensure external commands are discovered even if constructed elsewhere
         $this->discoverExternal();
