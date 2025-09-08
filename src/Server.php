@@ -43,12 +43,14 @@ class Server{
                 if ($tame->isAppFramework()) {
                     $basePath = self::pathReplacer(self::formatWithBaseDirectory(), '\\');
 
+                    // Laravel: register Application if not already set on the container
                     if($tame->isLaravel()){
-                        // Laravel: register Application if not already set on the container
-                        $laravel = "\Illuminate\Foundation\Application";
-                        new $laravel(
-                            $_ENV['APP_BASE_PATH'] ?? $basePath
-                        );
+                        try {
+                            $bootstrap = "{$basePath}/bootstrap/app.php";
+                            require_once $bootstrap;
+                        } catch (\Throwable $th) {
+                            // Ignore continous error
+                        }
                     } 
                 }
             }
@@ -57,13 +59,14 @@ class Server{
         }
 
         // Convert the key to an array
-        $parts = explode('.', $key);
+        $parts  = explode('.', $key);
+        $config = [];
 
         // Get the file name
         $filePath = self::formatWithBaseDirectory("{$base_folder}/{$parts[0]}.php");
 
         // Check if the configuration file exists
-        if (file_exists($filePath)) {
+        if (File::exists($filePath)) {
             // Load the configuration array from the file
             $config = require($filePath);
         }
@@ -80,13 +83,8 @@ class Server{
             }
         }
 
-        // if config not set
-        if(!isset($config)){
-            $config = null;
-        }
-
         // try merging data if an array
-        if(is_array($config) && is_array($default)){
+        if(!empty($config) && is_array($default)){
             return array_merge($config, $default);
         }
 
