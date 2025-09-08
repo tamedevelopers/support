@@ -6,7 +6,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 
 
-$data = [
+$data = [ 
     ['id' => 1, 'name' => 'John', 'age' => 28],
     ['id' => 2, 'name' => 'Jane', 'age' => 22],
     ['id' => 3, 'name' => 'Doe', 'age' => 31],
