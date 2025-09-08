@@ -99,7 +99,7 @@ class CommandHelper
      * Extracts all arguments available from command
      * 
      * @param int|null $position
-     * @return array
+     * @return mixed
      */
     protected function arguments($position = null)
     {

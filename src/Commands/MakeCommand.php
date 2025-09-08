@@ -26,9 +26,9 @@ class MakeCommand extends CommandHelper
     /**
      * Create a new [Tame-Artisan] command
      */
-    public function command(array $args = [], array $options = []): int
+    public function command()
     {
-        $name  = $args[0] ?? null;
+        $name  = $this->arguments(0);
         $path = $this->hasOption('path');
 
         // if not provided, prompt for file name
@@ -36,8 +36,7 @@ class MakeCommand extends CommandHelper
             $name = $this->ask("\nWhat should the command be named?");
         }
 
-        Logger::info("Default Artisan command <b>[{$name}]</b>: coming soon!\n");
-        exit(1);
+        Logger::info("Artisan command creation, coming soon: <b>[{$name}]</b>\n");
     }
 
 }
