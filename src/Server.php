@@ -45,13 +45,21 @@ class Server{
 
                     // Laravel: register Application if not already set on the container
                     if($tame->isLaravel()){
-                        try {
-                            $bootstrap = "{$basePath}/bootstrap/app.php";
-                            require_once $bootstrap;
-                        } catch (\Throwable $th) {
-                            // Ignore continous error
-                        }
+                        self::requireFrameWorkBootstrap("{$basePath}/bootstrap/app.php");
                     } 
+                    // CodeIgniter (assuming CI 3/4)
+                    else if ($tame->isCodeIgniter()) {
+                        self::requireFrameWorkBootstrap("{$basePath}/app/Config/Paths.php");
+                    }
+                    // CakePHP
+                    elseif ($tame->isCakePhp()) {
+                        self::requireFrameWorkBootstrap("{$basePath}/config/bootstrap.php");
+                    }
+                    // Symfony
+                    elseif ($tame->isCakePhp()) {
+                        self::requireFrameWorkBootstrap("{$basePath}/config/bootstrap.php");
+                        self::requireFrameWorkBootstrap("{$basePath}/src/Kernel.php");
+                    }
                 }
             }
         } catch (\Throwable $e) {
@@ -243,6 +251,23 @@ class Server{
         }
 
         return false;
+    }
+
+    /**
+     * Require framework bootstrap file
+     *
+     * @param string $bootstrap
+     * @return void
+     */
+    private static function requireFrameWorkBootstrap($bootstrap)
+    {
+        try {
+            if (file_exists($bootstrap)) {
+                require_once $bootstrap;
+            }
+        } catch (\Throwable $th) {
+            // Ignore continuous error
+        }
     }
     
 }
