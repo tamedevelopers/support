@@ -14,7 +14,7 @@ trait ReusableTrait{
      *  
      * @return mixed
      */
-    public function dump(...$data)
+    public static function dump(...$data)
     {
         $dataArray = $data[0] ?? $data;
         if(is_array($dataArray)){

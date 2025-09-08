@@ -8,7 +8,9 @@ namespace Tamedevelopers\Support;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\ServerTrait;
+use Tamedevelopers\Support\Process\HttpRequest;
 use Tamedevelopers\Support\Traits\ReusableTrait;
+use Tamedevelopers\Support\Tame;
 
 class Server{
     
@@ -32,6 +34,28 @@ class Server{
      */
     public static function config($key, $default = null, string $base_folder = 'config')
     {
+        // When running our custom CLI inside a framework (e.g., Laravel), ensure
+        // the framework Application is registered to satisfy helpers like database_path().
+        try {
+            if (HttpRequest::runningInConsole()) {
+                $tame = new Tame();
+
+                if ($tame->isAppFramework()) {
+                    $basePath = self::pathReplacer(self::formatWithBaseDirectory(), '\\');
+
+                    if($tame->isLaravel()){
+                        // Laravel: register Application if not already set on the container
+                        $laravel = "\Illuminate\Foundation\Application";
+                        new $laravel(
+                            $_ENV['APP_BASE_PATH'] ?? $basePath
+                        );
+                    } 
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore and fall back to normal file-based config loading
+        }
+
         // Convert the key to an array
         $parts = explode('.', $key);
 
@@ -46,12 +70,6 @@ class Server{
 
         // Remove the file name from the parts array
         unset($parts[0]);
-
-        dd(
-            $parts,
-            $filePath,
-            $config
-        );
 
         // Compile the configuration value
         foreach ($parts as $part) {

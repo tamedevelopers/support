@@ -57,7 +57,8 @@ class PDF{
         ]);
 
         // instantiate and use the \Dompdf\Dompdf() class
-        self::$dompdf = new Dompdf($options);
+        $dompdf = '\Dompdf\Dompdf';
+        self::$dompdf = new $dompdf($options);
     }
 
     /**
@@ -170,7 +171,8 @@ class PDF{
         try {
             if (class_exists('Dompdf\Options')) {
                 // instantiate and use the \Dompdf\Options() class
-                return new Options();
+                $option = '\Dompdf\Options';
+                return new $option();
             } else {
                 throw new CustomException(
                     "Class Dompdf\Options not found: \nRequire the package by running: `composer require dompdf/dompdf`\n" . 

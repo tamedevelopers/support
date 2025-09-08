@@ -324,7 +324,7 @@ if (! $Tame_isAppFramework && ! function_exists('config')) {
      */
     function config($key, $default = null)
     {
-        return server()->config($key, $default);
+        return Server::config($key, $default);
     }
 }
 
@@ -474,7 +474,7 @@ if (! function_exists('base_path')) {
      */
     function base_path($path = null)
     {
-        return server()->formatWithBaseDirectory($path);
+        return Server::formatWithBaseDirectory($path);
     }
 }
 
@@ -580,7 +580,7 @@ if (! function_exists('domain')) {
      */
     function domain($path = null)
     {
-        return server()->formatWithDomainURI($path);
+        return Server::formatWithDomainURI($path);
     }
 }
 
@@ -593,7 +593,7 @@ if (! function_exists('to_array')) {
      */ 
     function to_array($value)
     {
-        return server()->toArray($value);
+        return Server::toArray($value);
     }
 }
 
@@ -606,7 +606,7 @@ if (! function_exists('to_object')) {
      */ 
     function to_object($value)
     {
-        return server()->toObject($value);
+        return Server::toObject($value);
     }
 }
 
@@ -619,7 +619,7 @@ if (! function_exists('to_json')) {
      */ 
     function to_json($value)
     {
-        return server()->toJson($value);
+        return Server::toJson($value);
     }
 }
 
@@ -632,7 +632,7 @@ if (! $Tame_isAppFramework && ! function_exists('dump')) {
      */ 
     function dump(...$data)
     {
-        server()->dump($data);
+        Server::dump($data);
     }
 }
 

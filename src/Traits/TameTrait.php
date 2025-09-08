@@ -27,6 +27,7 @@ trait TameTrait{
         // using `get_declared_classes()` function will return all classes in your project
         return self::checkAnyClassExists([
             '\Illuminate\Foundation\Application', // Laravel
+            '\Illuminate\\Container\\Container', // Laravel
             '\CI_Controller', // CodeIgniter
             '\Cake\Controller\Controller', // CakePHP
             '\Symfony\Component\HttpKernel\Kernel', // Symfony
@@ -41,7 +42,10 @@ trait TameTrait{
      */
     public static function isLaravel()
     {
-        return self::checkClassExists('\Illuminate\Foundation\Application');
+        return self::checkAnyClassExists([
+            '\Illuminate\Foundation\Application',
+            '\Illuminate\\Container\\Container',
+        ]);
     }
 
     /**
@@ -51,7 +55,7 @@ trait TameTrait{
      */
     public static function isCodeIgniter()
     {
-        return self::checkClassExists('\CI_Controller');
+        return self::checkAnyClassExists('\CI_Controller');
     }
 
     /**
@@ -61,7 +65,7 @@ trait TameTrait{
      */
     public static function isCakePhp()
     {
-        return self::checkClassExists('\Cake\Controller\Controller');
+        return self::checkAnyClassExists('\Cake\Controller\Controller');
     }
 
     /**
@@ -71,7 +75,7 @@ trait TameTrait{
      */
     public static function isSymfony()
     {
-        return self::checkClassExists([
+        return self::checkAnyClassExists([
             '\Symfony\Component\HttpKernel\Kernel',
             '\Symfony\Component\Routing\Annotation\Route'
         ]);
