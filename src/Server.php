@@ -47,6 +47,12 @@ class Server{
         // Remove the file name from the parts array
         unset($parts[0]);
 
+        dd(
+            $parts,
+            $filePath,
+            $config
+        );
+
         // Compile the configuration value
         foreach ($parts as $part) {
             if (isset($config[$part])) {
