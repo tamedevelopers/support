@@ -57,8 +57,9 @@ trait ArtisanDiscovery
     }
 
     /**
-     * Discover providers by scanning vendor composer.json
-     * No reliance on composer/composer installed.json or installed.php.
+     * Discover providers by scanning project and vendor package composer.json files.
+     * This works both when developing this package standalone and when it's used
+     * inside a consumer project that requires other packages.
      */
     private function discoverExternal(): void
     {
@@ -67,12 +68,27 @@ trait ArtisanDiscovery
             return;
         }
 
-        // Scan all package composer.json files
-        $pattern = $vendorPath . DIRECTORY_SEPARATOR . 'composer.json';
-        $composerFiles = glob($pattern) ?: [];
+        $composerFiles = [];
+
+        // 1) Include root project's composer.json (may declare providers)
+        $projectRoot = \dirname($vendorPath);
+        $rootComposer = $projectRoot . DIRECTORY_SEPARATOR . 'composer.json';
+        if (is_file($rootComposer)) {
+            $composerFiles[] = $rootComposer;
+        }
+
+        // 2) Include all vendor package composer.json files: vendor/*/*/composer.json
+        $packagesPattern = $vendorPath . DIRECTORY_SEPARATOR . '*' . DIRECTORY_SEPARATOR . '*' . DIRECTORY_SEPARATOR . 'composer.json';
+        $found = glob($packagesPattern) ?: [];
+        if (!empty($found)) {
+            $composerFiles = array_merge($composerFiles, $found);
+        }
+
+        // De-duplicate paths just in case
+        $composerFiles = array_values(array_unique($composerFiles));
 
         foreach ($composerFiles as $composerJson) {
-            $json = @File::get($composerJson);
+            $json = File::get($composerJson);
             if ($json === false) {
                 continue;
             }
@@ -80,18 +96,27 @@ trait ArtisanDiscovery
             if (!is_array($meta)) {
                 continue;
             }
+
             $extra = $meta['extra']['tamedevelopers'] ?? null;
             if (!$extra) {
                 continue;
             }
+
             $providers = $extra['providers'] ?? [];
             foreach ((array) $providers as $fqcn) {
-                if (!is_string($fqcn) || !class_exists($fqcn)) {
+                if (!is_string($fqcn)) {
                     continue;
                 }
+
+                // Rely on Composer autoload being present (vendor/autoload.php loaded by entry script)
+                if (!class_exists($fqcn)) {
+                    continue;
+                }
+
                 if (isset(self::$registeredProviders[$fqcn])) {
                     continue; // already registered in this process
                 }
+
                 try {
                     $provider = new $fqcn();
                     if (method_exists($provider, 'register')) {
@@ -99,7 +124,7 @@ trait ArtisanDiscovery
                         self::$registeredProviders[$fqcn] = true;
                     }
                 } catch (\Throwable $e) {
-                    // ignore provider instantiation/registration failures
+                    // ignore provider instantiation/registration failures, but do not abort discovery
                 }
             }
         }
