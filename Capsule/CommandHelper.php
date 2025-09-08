@@ -360,7 +360,7 @@ class CommandHelper
      */
     protected function warning(string $message): void
     {
-        Logger::writeln("<warning>{$message}</warning>");
+        Logger::warning($message . "\n");
     }
 
     /**
