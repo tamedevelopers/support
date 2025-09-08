@@ -33,6 +33,49 @@ trait TameTrait{
             '\Symfony\Component\Routing\Annotation\Route',
         ]);
     }
+
+    /**
+     * Check if the application is running under Laravel.
+     *
+     * @return bool
+     */
+    public static function isLaravel()
+    {
+        return self::checkClassExists('\Illuminate\Foundation\Application');
+    }
+
+    /**
+     * Check if the application is running under CodeIgniter.
+     *
+     * @return bool
+     */
+    public static function isCodeIgniter()
+    {
+        return self::checkClassExists('\CI_Controller');
+    }
+
+    /**
+     * Check if the application is running under CakePhp.
+     *
+     * @return bool
+     */
+    public static function isCakePhp()
+    {
+        return self::checkClassExists('\Cake\Controller\Controller');
+    }
+
+    /**
+     * Check if the application is running under Symfony.
+     *
+     * @return bool
+     */
+    public static function isSymfony()
+    {
+        return self::checkClassExists([
+            '\Symfony\Component\HttpKernel\Kernel',
+            '\Symfony\Component\Routing\Annotation\Route'
+        ]);
+    }
     
     /**
      * isClosure
