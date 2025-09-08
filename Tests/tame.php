@@ -30,7 +30,7 @@ dd(
 
     Tame()->sizeToBytes('24mb'),
 
-    Tame()->fileTime('Tests/tame.php'),
+    Tame()->fileTime('tests/tame.php'),
 
     'br',
 

@@ -1345,7 +1345,7 @@ Server::getServers();
 ```php
 use Tamedevelopers\Support\Server;
 
-Server::config('tests.lang.email', [], 'Tests');
+Server::config('tests.lang.email', [], 'tests');
 ```
 
 - Create our own config to extends the default
