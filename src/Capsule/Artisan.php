@@ -118,10 +118,6 @@ class Artisan extends CommandHelper
         // Ensure external commands are discovered even if constructed elsewhere
         $this->discoverExternal();
 
-        dd(
-            $this->resolveVendorPath()
-        );
-
         if ($commandInput === 'list') {
             $this->renderList();
             return 0;
