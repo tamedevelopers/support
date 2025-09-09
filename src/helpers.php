@@ -14,7 +14,6 @@ use Tamedevelopers\Support\Cookie;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Country;
 use Tamedevelopers\Support\Translator;
-use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\NumberToWords;
 use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Process\Session;
@@ -76,17 +75,6 @@ if (! function_exists('TameEnv')) {
     function TameEnv($path = null)
     {
         return new Env($path);
-    }
-}
-
-if (! function_exists('TameFile')) {
-    /**
-     * File Class
-     * @return \Tamedevelopers\Support\Capsule\File
-     */
-    function TameFile()
-    {
-        return new File();
     }
 }
 

@@ -631,7 +631,6 @@ Country::getCaptchaLocale('en');
 ## File
 - The Core File utilities (read, write, copy, move, info).
     - Class: `Tamedevelopers\Support\Capsule\File`
-    - It's helper class can be called, using -- `TameFile()`
 
 ### File Usage
 
