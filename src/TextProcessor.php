@@ -147,8 +147,8 @@ class TextProcessor{
     public static function sanitize(
         string $text,
         array $rules = [
-            'phoneInt' => '[phoneInt]',
-            'phoneWords' => '[phoneWords]',
+            'phoneInt' => '[phone]',
+            'phoneWords' => '[phone]',
             'url' => '[url]',
             'email' => '[email]',
             'mention' => '[mention]',
