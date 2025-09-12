@@ -24,4 +24,5 @@ dd(
     $procewssor->phoneWords($text3),
     $procewssor->url($text),
     $procewssor->sanitize($text),
+    $procewssor->findPhoneWords($text),
 );
