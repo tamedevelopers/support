@@ -152,7 +152,7 @@ class NameToImage
                 imagedestroy($img);
                 return 'data:image/png;base64,' . base64_encode($bin ?: '');
 
-            case 'save':
+            case 'save': 
             default:
                 $dest = (string)($opts['destination'] ?? '');
                 if ($dest === '') {
