@@ -1,14 +1,10 @@
 <?php 
 
-use Tamedevelopers\Support\PDF;
 use Tamedevelopers\Support\TextProcessor;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-
-
-$procewssor = new TextProcessor();
-
+$proccessor = new TextProcessor();
 
 $text = "My number is 08123456789 and another is zero eight one two three four five six seven.
 Visit https://example.com google.com or mail me at test@mail.com. +23409109209
@@ -20,10 +16,10 @@ $text2 = "I'm a beautiful zero nine zero and sweet in seven
 $text3 = "Reach me on zero eight one double two 555 nine or 0812225559";
 
 dd(
-    $procewssor->phoneInt($text),
-    $procewssor->phoneWords($text2),
-    $procewssor->phoneWords($text3),
-    $procewssor->url($text),
-    $procewssor->sanitize($text),
-    $procewssor->findPhoneWords($text),
+    $proccessor->phoneInt($text),
+    $proccessor->phoneWords($text2),
+    $proccessor->phoneWords($text3),
+    $proccessor->url($text),
+    $proccessor->sanitize($text),
+    $proccessor->findPhoneWords($text),
 );
