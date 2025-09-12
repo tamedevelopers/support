@@ -16,13 +16,6 @@ $path = NameToImage::create([
     // 'regenerate' => true, 
 ]);
 
-// 2) Provide base path without .png; slug is appended
-$path = NameToImage::create([
-    'name' => 'Alice',
-    'type' => 'circle',
-    'destination' => base_path('storage/avatars/custom'),
-]);
-
 // 3) Auto-fit font size (no touching edges)
 $path = NameToImage::create([
     'name' => 'Jane Smith',
@@ -36,7 +29,17 @@ $path = NameToImage::create([
 dd(
     $ntoimage->create([
         'name' => 'Tamedevelopers Peterson Moore',
+        'font_weight' => 'bold',
         'type' => 'radius',
-        'output' => 'view'
-    ])
+        'output' => 'save'
+    ]),
+
+    $ntoimage->create([
+        'name' => 'Oluchi Grace',
+        'font_weight' => 'bold',
+        'bg_color' => '#063903ff',
+        'type' => 'circle',
+        'output' => 'save'
+    ]),
+    'sss'
 );

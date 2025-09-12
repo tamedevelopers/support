@@ -31,6 +31,7 @@ class NameToImage
      * - text_color: string|array default '#FFFFFF'
      * - font_path: string|null (path to a TTF font). If null/unreadable, falls back to GD built-in font.
      * - font_size: int|null (auto-calculated when using TTF)
+     * - font_weight: string ('normal'|'bold') default 'bold' (applies when auto-resolving system font)
      * - output: string ('save'|'view'|'download'|'data') default 'save'
      * - destination: string (required only when output='save')
      *
@@ -53,6 +54,7 @@ class NameToImage
             'text_color'  => '#FFFFFF',
             'font_path'   => null,
             'font_size'   => null,     // auto-fit by default
+            'font_weight' => 'bold',   // 'normal' | 'bold' (used when auto-selecting system font)
             'output'      => 'save',   // 'save' | 'view' | 'download' | 'data'
             'destination' => null,     // file path or directory; if directory, slug.png will be appended
             'regenerate'  => false,    // when true, append a unique suffix to filename
@@ -111,7 +113,7 @@ class NameToImage
         $initials = self::computeInitials($name);
 
         // Render text (TTF preferred)
-        $fontPath = self::resolveFontPath($opts['font_path']);
+        $fontPath = self::resolveFontPath($opts['font_path'], (string)($opts['font_weight'] ?? 'bold'));
         $useTtf = $fontPath !== null && function_exists('imagettftext');
 
         if ($useTtf) {
@@ -325,27 +327,43 @@ class NameToImage
      * Try to resolve a readable TTF font path. Use provided path if valid; otherwise try common system fonts.
      * Returns null if none found.
      */
-    private static function resolveFontPath(?string $path): ?string
+    private static function resolveFontPath(?string $path, string $weight = 'bold'): ?string
     {
-        $candidates = [];
+        // If user provided a readable path, use it as-is regardless of weight
         if (is_string($path) && $path !== '' && is_readable($path)) {
-            $candidates[] = $path;
+            return $path;
         }
-        // Common Windows fonts
-        $winFonts = [
+
+        $weight = strtolower($weight);
+        if (!in_array($weight, ['normal', 'bold'], true)) {
+            $weight = 'bold';
+        }
+
+        // Common Windows fonts (bold and regular)
+        $winFontsBold = [
             'C:\\Windows\\Fonts\\arialbd.ttf',
-            'C:\\Windows\\Fonts\\arial.ttf',
             'C:\\Windows\\Fonts\\segoeuib.ttf',
+        ];
+        $winFontsRegular = [
+            'C:\\Windows\\Fonts\\arial.ttf',
             'C:\\Windows\\Fonts\\segoeui.ttf',
         ];
-        $unixFonts = [
+
+        // Common *nix/mac fonts (bold and regular)
+        $unixFontsBold = [
             '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
             '/Library/Fonts/Arial Bold.ttf',
+        ];
+        $unixFontsRegular = [
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
             '/Library/Fonts/Arial.ttf',
         ];
-        $candidates = array_merge($candidates, $winFonts, $unixFonts);
-        foreach ($candidates as $cand) {
+
+        $ordered = $weight === 'normal'
+            ? array_merge($winFontsRegular, $unixFontsRegular, $winFontsBold, $unixFontsBold)
+            : array_merge($winFontsBold, $unixFontsBold, $winFontsRegular, $unixFontsRegular);
+
+        foreach ($ordered as $cand) {
             if (is_readable($cand)) {
                 return $cand;
             }
