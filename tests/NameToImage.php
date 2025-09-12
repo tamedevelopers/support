@@ -37,6 +37,6 @@ dd(
     $ntoimage->create([
         'name' => 'Tamedevelopers Peterson Moore',
         'type' => 'radius',
-        // 'output' => 'view'
+        'output' => 'view'
     ])
 );
