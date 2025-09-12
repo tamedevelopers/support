@@ -215,7 +215,7 @@ trait StrTrait{
         return match (self::lower($type)) {
             'upper', 'uppercase', 'upper_case' => self::upper($string),
             'lower', 'lowercase', 'lower_case' => self::lower($string),
-            default => $string,
+            default => (string) $string,
         };
     }
 

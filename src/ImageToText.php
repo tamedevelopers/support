@@ -38,16 +38,18 @@ use Tamedevelopers\Support\Capsule\CustomException;
 class ImageToText
 {
     /**
-     * Extract text from an image using Tesseract OCR.
+     * Extract text from an image using OCR.
      *
      * Options keys:
      * - upload: array|null  A single $_FILES[...] array for an uploaded image
      * - source: string|null Absolute path to an existing image (used if 'upload' not provided)
-     * - language: string    Tesseract language code (default 'eng')
-     * - psm: int|null       Tesseract page segmentation mode (--psm)
-     * - oem: int|null       Tesseract OCR engine mode (--oem)
-     * - whitelist: string|null  Characters whitelist (tessedit_char_whitelist)
-     * - tesseract_path: string|null  Path to tesseract executable; auto-detect if null
+     * - language: string    Language code (default 'eng')
+     * - engine: string      'ocrspace' (default, zero-setup via web API) | 'tesseract' | 'auto'
+     * - ocrspace_api_key: string|null  API key for OCR.space; defaults to env OCR_SPACE_API_KEY or 'helloworld'
+     * - psm: int|null       Tesseract page segmentation mode (--psm) [tesseract engine only]
+     * - oem: int|null       Tesseract OCR engine mode (--oem) [tesseract engine only]
+     * - whitelist: string|null  Characters whitelist (tessedit_char_whitelist) [tesseract engine only]
+     * - tesseract_path: string|null  Path to tesseract executable; auto-detect if null [tesseract engine only]
      * - preprocess: bool|array  If true, apply default preprocessing; or pass options array
      *     - grayscale: bool (default true)
      *     - brightness: int (default 0, -255..255)
@@ -62,10 +64,12 @@ class ImageToText
      */
     public static function extract(array $options = []): string
     {
-        [$upload, $source, $language, $psm, $oem, $whitelist, $tesseractPath, $preprocess, $tmpDir, $cleanup] = [
+        [$upload, $source, $language, $engine, $apiKey, $psm, $oem, $whitelist, $tesseractPath, $preprocess, $tmpDir, $cleanup] = [
             $options['upload'] ?? null,
             $options['source'] ?? null,
             (string)($options['language'] ?? 'eng'),
+            strtolower((string)($options['engine'] ?? 'ocrspace')),
+            (string)($options['ocrspace_api_key'] ?? (getenv('OCR_SPACE_API_KEY') ?: 'helloworld')),
             $options['psm'] ?? null,
             $options['oem'] ?? null,
             $options['whitelist'] ?? null,
@@ -117,13 +121,38 @@ class ImageToText
             }
         }
 
-        // Resolve tesseract executable
-        $exe = self::resolveTesseractPath($tesseractPath);
-        if ($exe === null) {
-            throw new CustomException('Tesseract executable not found. Install Tesseract OCR and/or provide "tesseract_path".');
+        // Decide engine
+        $engine = in_array($engine, ['ocrspace', 'tesseract', 'auto'], true) ? $engine : 'ocrspace';
+
+        if ($engine === 'ocrspace' || $engine === 'auto') {
+            try {
+                $text = self::ocrspace($inputPath, $language, $apiKey);
+                if ($cleanup) {
+                    foreach ($tempFiles as $tf) { @unlink($tf); }
+                }
+                return $text;
+            } catch (\Throwable $e) {
+                if ($engine === 'ocrspace') {
+                    if ($cleanup) { foreach ($tempFiles as $tf) { @unlink($tf); } }
+                    throw $e; // do not fallback when explicitly requested
+                }
+                // else: fall through to try tesseract as a fallback for 'auto'
+            }
         }
 
-        // Build command
+        // Tesseract engine
+        $exe = self::resolveTesseractPath($tesseractPath);
+        if ($exe === null) {
+            if ($engine === 'tesseract') {
+                if ($cleanup) { foreach ($tempFiles as $tf) { @unlink($tf); } }
+                throw new CustomException('Tesseract executable not found. For zero-setup, use engine="ocrspace".');
+            }
+            // If 'auto' and tesseract missing, already tried ocrspace; report a friendly message
+            if ($cleanup) { foreach ($tempFiles as $tf) { @unlink($tf); } }
+            throw new CustomException('No OCR engine available. Tried online (ocrspace) and local (tesseract).');
+        }
+
+        // Build Tesseract command
         $cmd = [];
         $cmd[] = self::escapeArg($exe);
         $cmd[] = self::escapeArg($inputPath);
@@ -259,6 +288,84 @@ class ImageToText
         fclose($pipes[2]);
         $exit = proc_close($proc);
         return [(int)$exit, (string)$stdout, (string)$stderr];
+    }
+
+    /**
+     * Zero-setup online OCR using OCR.space API.
+     * - Uses multipart/form-data POST with the image file.
+     * - API key defaults to 'helloworld' (rate-limited/testing). Provide a real key via env OCR_SPACE_API_KEY or option.
+     *
+     * @throws CustomException
+     */
+    private static function ocrspace(string $imagePath, string $language, string $apiKey): string
+    {
+        if (!is_readable($imagePath)) {
+            throw new CustomException('OCR input not readable.');
+        }
+        $endpoint = 'https://api.ocr.space/parse/image';
+
+        // Build multipart body manually for portability
+        $boundary = '----OCRSPACE-' . bin2hex(random_bytes(8));
+        $eol = "\r\n";
+        $body = '';
+
+        $fields = [
+            'language'       => $language,
+            'isOverlayRequired' => 'false',
+            'scale'          => 'true',
+            'OCREngine'      => '2',
+        ];
+
+        foreach ($fields as $name => $value) {
+            $body .= "--{$boundary}{$eol}";
+            $body .= 'Content-Disposition: form-data; name="' . $name . '"' . $eol . $eol;
+            $body .= $value . $eol;
+        }
+
+        $filename = basename($imagePath);
+        $mime = mime_content_type($imagePath) ?: 'application/octet-stream';
+        $fileContent = file_get_contents($imagePath);
+        if ($fileContent === false) {
+            throw new CustomException('Failed to read OCR input.');
+        }
+
+        $body .= "--{$boundary}{$eol}";
+        $body .= 'Content-Disposition: form-data; name="file"; filename="' . $filename . '"' . $eol;
+        $body .= 'Content-Type: ' . $mime . $eol . $eol;
+        $body .= $fileContent . $eol;
+        $body .= "--{$boundary}--{$eol}";
+
+        $headers = [
+            'Content-Type: multipart/form-data; boundary=' . $boundary,
+            'apikey: ' . $apiKey,
+        ];
+
+        $opts = [
+            'http' => [
+                'method'  => 'POST',
+                'header'  => implode("\r\n", $headers),
+                'content' => $body,
+                'timeout' => 60,
+            ],
+        ];
+        $context = stream_context_create($opts);
+        $response = @file_get_contents($endpoint, false, $context);
+        if ($response === false) {
+            $err = isset($http_response_header) ? implode('; ', (array)$http_response_header) : 'Unknown HTTP error';
+            throw new CustomException('OCR request failed: ' . $err);
+        }
+
+        $data = json_decode($response, true);
+        if (!is_array($data)) {
+            throw new CustomException('Invalid OCR response.');
+        }
+        if (!empty($data['IsErroredOnProcessing'])) {
+            $msg = (string)($data['ErrorMessage'][0] ?? 'OCR error');
+            throw new CustomException(is_array($msg) ? implode(', ', $msg) : $msg);
+        }
+
+        $parsed = $data['ParsedResults'][0]['ParsedText'] ?? '';
+        return (string)$parsed;
     }
 
     /**
