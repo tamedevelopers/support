@@ -12,7 +12,7 @@ use Tamedevelopers\Support\Process\HttpRequest;
 
 
 class CommandHelper
-{   
+{
     /**
      * The database connector instance. 
      * @var \Tamedevelopers\Database\Connectors\Connector|null

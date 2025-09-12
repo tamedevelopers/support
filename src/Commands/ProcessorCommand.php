@@ -9,8 +9,23 @@ use Tamedevelopers\Support\Capsule\Logger;
 use Tamedevelopers\Support\Capsule\CommandHelper;
 
 
-class TextCommand extends CommandHelper
+class ProcessorCommand extends CommandHelper
 {   
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'processor';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Processor Artisans';
+
+
     /**
      * Default entry when running commands.
      *

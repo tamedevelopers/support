@@ -11,6 +11,21 @@ use Tamedevelopers\Support\Capsule\CommandHelper;
 
 class MakeCommand extends CommandHelper
 {   
+
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'make';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Make Artisans';
+
     /**
      * Default entry when running commands.
      *
