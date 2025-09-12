@@ -121,12 +121,12 @@ class Artisan extends CommandHelper
         // Otherwise, treat as a list of command definitions
         foreach ($commands as $command) {
             // $commandClass = 
-            
+
             dd(
                 $command
             );
 
-            $this->register($name, $handler, $description);
+            // $this->register();
         }
     }
 
