@@ -107,6 +107,31 @@ class Artisan extends CommandHelper
     }
 
     /**
+     * Register multiple commands
+     *
+     * @param array $commands
+     */
+    public function registerAll(array $commands): void
+    {
+
+        dd(
+            $commands
+        );
+
+        foreach($commands as $command){
+            [$name, $handler, $description] = [
+                $command[0] ?? '', $command[1] ?? '', $command[2] ?? ''
+            ];
+
+            dd(
+                $command
+            );
+            
+            $this->register($name, $handler, $description);
+        }
+    }
+
+    /**
      * Handle argv input and dispatch
      */
     public function run(array $argv): int
