@@ -49,12 +49,13 @@ class NameToImage
             'size'        => 256,
             'type'        => 'circle', // 'circle' | 'radius'
             'radius'      => null,     // default computed: size/6
-            'bg_color'    => '#04068dff',
+            'bg_color'    => [147, 51, 234],
             'text_color'  => '#FFFFFF',
             'font_path'   => null,
-            'font_size'   => '20px',
+            'font_size'   => null,     // auto-fit by default
             'output'      => 'save',   // 'save' | 'view' | 'download' | 'data'
-            'destination' => null,     // required when output = 'save'
+            'destination' => null,     // file path or directory; if directory, slug.png will be appended
+            'regenerate'  => false,    // when true, append a unique suffix to filename
         ], $options);
 
         $name = trim((string)$opts['name']);
@@ -74,6 +75,17 @@ class NameToImage
             null, // GD color allocate later
             self::normalizeColor($opts['text_color'])
         ];
+
+        // Parse possible 'px' in font_size and normalize to int when provided
+        if ($opts['font_size'] !== null && is_string($opts['font_size'])) {
+            if (preg_match('/^(\d+)\s*px$/i', trim($opts['font_size']), $m)) {
+                $opts['font_size'] = (int)$m[1];
+            } elseif (is_numeric($opts['font_size'])) {
+                $opts['font_size'] = (int)$opts['font_size'];
+            } else {
+                $opts['font_size'] = null; // fallback to auto-fit
+            }
+        }
 
         // Prepare canvas with transparency
         $img = imagecreatetruecolor($size, $size);
@@ -103,9 +115,31 @@ class NameToImage
         $useTtf = is_string($fontPath) && $fontPath !== '' && is_readable($fontPath) && function_exists('imagettftext');
 
         if ($useTtf) {
-            // Estimate font size proportional to canvas and initials length
+            // Auto-fit font size if not provided to fill with padding
             $len = max(1, mb_strlen($initials, 'UTF-8'));
-            $fontSize = $opts['font_size'] ?: (int)round(($size * ( $len === 1 ? 0.55 : 0.46 )));
+            $fontSize = is_int($opts['font_size']) ? $opts['font_size'] : null;
+            if ($fontSize === null) {
+                // target box with padding (8% each side)
+                $padding = (int)round($size * 0.08);
+                $targetW = $size - 2 * $padding;
+                $targetH = $size - 2 * $padding;
+                // Binary search a font size that fits both width and height
+                $low = 8; $high = (int)round($size * ($len === 1 ? 0.9 : 0.75));
+                $best = $low;
+                while ($low <= $high) {
+                    $mid = (int)floor(($low + $high) / 2);
+                    $bb = imagettfbbox($mid, 0, $fontPath, $initials);
+                    $w = abs($bb[4] - $bb[0]);
+                    $h = abs($bb[5] - $bb[1]);
+                    if ($w <= $targetW && $h <= $targetH) {
+                        $best = $mid;
+                        $low = $mid + 1; // try larger
+                    } else {
+                        $high = $mid - 1; // try smaller
+                    }
+                }
+                $fontSize = max(8, $best);
+            }
 
             // Calculate bounding box to center text
             $bbox = imagettfbbox($fontSize, 0, $fontPath, $initials);
@@ -152,13 +186,21 @@ class NameToImage
                 imagedestroy($img);
                 return 'data:image/png;base64,' . base64_encode($bin ?: '');
 
-            case 'save': 
+            case 'save':
             default:
                 $dest = (string)($opts['destination'] ?? '');
-                if ($dest === '') {
-                    // default destination inside storage/avatars
-                    $slug = self::sanitizeFilename($name);
-                    $dest = __DIR__ . '/../storage/avatars/' . $slug . '.png';
+                $slug = self::sanitizeFilename($name);
+                // If destination is empty, or a directory, or ends without .png, build the final path
+                if ($dest === '' || is_dir($dest) || !preg_match('/\.png$/i', $dest)) {
+                    $baseDir = $dest !== '' ? rtrim($dest, "\\/") : (__DIR__ . '/../storage/avatars');
+                    // Append slug with optional regenerate suffix
+                    $suffix = !empty($opts['regenerate']) ? ('-' . substr(sha1(uniqid((string)mt_rand(), true)), 0, 8)) : '';
+                    $dest = $baseDir . '/' . $slug . $suffix . '.png';
+                } else {
+                    // If regenerate requested for a full file path, inject suffix before extension
+                    if (!empty($opts['regenerate'])) {
+                        $dest = preg_replace('/\.png$/i', '-' . substr(sha1(uniqid((string)mt_rand(), true)), 0, 8) . '.png', $dest);
+                    }
                 }
 
                 // Ensure directory exists
@@ -193,13 +235,14 @@ class NameToImage
     }
 
     /**
-     * Convert color input to [r,g,b]. Accepts '#RRGGBB', '#RGB', 'rgb(r,g,b)', or [r,g,b].
+     * Convert color input to [r,g,b]. Accepts '#RRGGBB', '#RRGGBBAA', '#RGB', 'rgb(r,g,b)', 'rgba(r,g,b,a)', or [r,g,b].
+     * Alpha is ignored (GD fill uses full opacity for shapes).
      * @param string|array $color
      * @return array{0:int,1:int,2:int}
      */
     private static function normalizeColor($color): array
     {
-        if (is_array($color) && count($color) === 3) {
+        if (is_array($color) && count($color) >= 3) {
             return [
                 max(0, min(255, (int)$color[0])),
                 max(0, min(255, (int)$color[1])),
@@ -209,7 +252,7 @@ class NameToImage
 
         if (is_string($color)) {
             $c = trim($color);
-            // #RRGGBB or #RGB
+            // #RGB
             if (preg_match('/^#([0-9a-f]{3})$/i', $c, $m)) {
                 $hex = $m[1];
                 $r = hexdec(str_repeat($hex[0], 2));
@@ -217,12 +260,26 @@ class NameToImage
                 $b = hexdec(str_repeat($hex[2], 2));
                 return [$r, $g, $b];
             }
+            // #RRGGBB
             if (preg_match('/^#([0-9a-f]{6})$/i', $c, $m)) {
+                $hex = $m[1];
+                return [hexdec(substr($hex, 0, 2)), hexdec(substr($hex, 2, 2)), hexdec(substr($hex, 4, 2))];
+            }
+            // #RRGGBBAA (ignore AA)
+            if (preg_match('/^#([0-9a-f]{8})$/i', $c, $m)) {
                 $hex = $m[1];
                 return [hexdec(substr($hex, 0, 2)), hexdec(substr($hex, 2, 2)), hexdec(substr($hex, 4, 2))];
             }
             // rgb(r,g,b)
             if (preg_match('/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i', $c, $m)) {
+                return [
+                    max(0, min(255, (int)$m[1])),
+                    max(0, min(255, (int)$m[2])),
+                    max(0, min(255, (int)$m[3])),
+                ];
+            }
+            // rgba(r,g,b,a) -> ignore a
+            if (preg_match('/^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(?:\d*\.?\d+)\s*\)$/i', $c, $m)) {
                 return [
                     max(0, min(255, (int)$m[1])),
                     max(0, min(255, (int)$m[2])),
