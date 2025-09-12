@@ -144,6 +144,8 @@ class TextProcessor{
 
     /**
      * Replace URLs.
+     * Handles bare domains (example.com), www.*, and http/https links.
+     * Avoids matching email domains (e.g., user@example.com).
      *
      * @param string $text
      * @param string $replacer Default replacer: "[url]"
@@ -151,8 +153,26 @@ class TextProcessor{
      */
     public static function url(string $text, string $replacer = "[url]")
     {
-        $pattern = '/\b(?:https?:\/\/|www\.)[^\s]+/i';
-        return preg_replace($pattern, $replacer, $text);
+        // Match:
+        // - Optional scheme or www
+        // - Domain with TLD (letters only, len >= 2)
+        // - Optional :port and path/query/fragment
+        // - Exclude email domains by asserting no '@' immediately before
+        $pattern = '~(?<!@)\b(?:https?://|www\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}(?::\d{2,5})?(?:/[^\s]*)?~i';
+
+        return preg_replace_callback($pattern, function ($m) use ($replacer) {
+            $match = $m[0];
+            // Preserve common trailing punctuation outside the URL
+            if (preg_match('/([\.,!\?;:\)\]\}]+)$/', $match, $pm)) {
+                $trail = $pm[1];
+                $core  = substr($match, 0, -strlen($trail));
+                if ($core === '') {
+                    return $match; // safety
+                }
+                return $replacer . $trail;
+            }
+            return $replacer;
+        }, $text);
     }
 
     /**
