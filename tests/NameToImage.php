@@ -13,7 +13,7 @@ $path = NameToImage::create([
     'bg_color' => '#04068dff',     // 8-digit hex supported
     'text_color' => 'rgba(255,255,255,1)',
     'destination' => base_path('storage/avatars'),
-    'regenerate' => true, 
+    // 'regenerate' => true, 
 ]);
 
 // 2) Provide base path without .png; slug is appended
@@ -36,7 +36,7 @@ $path = NameToImage::create([
 dd(
     $ntoimage->create([
         'name' => 'Tamedevelopers Peterson Moore',
-        'type' => 'circle',
-        'output' => 'view'
+        'type' => 'radius',
+        // 'output' => 'view'
     ])
 );

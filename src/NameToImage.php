@@ -111,26 +111,24 @@ class NameToImage
         $initials = self::computeInitials($name);
 
         // Render text (TTF preferred)
-        $fontPath = $opts['font_path'];
-        $useTtf = is_string($fontPath) && $fontPath !== '' && is_readable($fontPath) && function_exists('imagettftext');
+        $fontPath = self::resolveFontPath($opts['font_path']);
+        $useTtf = $fontPath !== null && function_exists('imagettftext');
 
         if ($useTtf) {
             // Auto-fit font size if not provided to fill with padding
             $len = max(1, mb_strlen($initials, 'UTF-8'));
             $fontSize = is_int($opts['font_size']) ? $opts['font_size'] : null;
             if ($fontSize === null) {
-                // target box with padding (8% each side)
-                $padding = (int)round($size * 0.08);
+                // Target area with padding (10% each side) for a fuller fit
+                $padding = (int)round($size * 0.10);
                 $targetW = $size - 2 * $padding;
                 $targetH = $size - 2 * $padding;
                 // Binary search a font size that fits both width and height
-                $low = 8; $high = (int)round($size * ($len === 1 ? 0.9 : 0.75));
+                $low = 8; $high = (int)round($size * ($len === 1 ? 1.2 : 1.0));
                 $best = $low;
                 while ($low <= $high) {
                     $mid = (int)floor(($low + $high) / 2);
-                    $bb = imagettfbbox($mid, 0, $fontPath, $initials);
-                    $w = abs($bb[4] - $bb[0]);
-                    $h = abs($bb[5] - $bb[1]);
+                    [$w, $h] = self::measureText($initials, $mid, $fontPath);
                     if ($w <= $targetW && $h <= $targetH) {
                         $best = $mid;
                         $low = $mid + 1; // try larger
@@ -141,13 +139,13 @@ class NameToImage
                 $fontSize = max(8, $best);
             }
 
-            // Calculate bounding box to center text
+            // Calculate bounding box to center text precisely (including negative offsets)
             $bbox = imagettfbbox($fontSize, 0, $fontPath, $initials);
-            $textWidth = abs($bbox[4] - $bbox[0]);
-            $textHeight = abs($bbox[5] - $bbox[1]);
-            $x = (int)(($size - $textWidth) / 2);
-            // For vertical centering, baseline adjustment using bbox
-            $y = (int)(($size + $textHeight) / 2);
+            $textWidth  = abs($bbox[2] - $bbox[0]);
+            $textHeight = abs($bbox[7] - $bbox[1]);
+            // Centering with bbox offsets
+            $x = (int)round(($size - $textWidth) / 2 - min($bbox[0], $bbox[2]));
+            $y = (int)round(($size - $textHeight) / 2 + $textHeight - max($bbox[1], $bbox[7]));
 
             imagettftext($img, $fontSize, 0, $x, $y, $txCol, $fontPath, $initials);
         } else {
@@ -321,5 +319,49 @@ class NameToImage
         $n = preg_replace('/-+/', '-', (string)$n);
         $n = trim((string)$n, '-');
         return $n !== '' ? $n : 'avatar';
+    }
+
+    /**
+     * Try to resolve a readable TTF font path. Use provided path if valid; otherwise try common system fonts.
+     * Returns null if none found.
+     */
+    private static function resolveFontPath(?string $path): ?string
+    {
+        $candidates = [];
+        if (is_string($path) && $path !== '' && is_readable($path)) {
+            $candidates[] = $path;
+        }
+        // Common Windows fonts
+        $winFonts = [
+            'C:\\Windows\\Fonts\\arialbd.ttf',
+            'C:\\Windows\\Fonts\\arial.ttf',
+            'C:\\Windows\\Fonts\\segoeuib.ttf',
+            'C:\\Windows\\Fonts\\segoeui.ttf',
+        ];
+        $unixFonts = [
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+            '/Library/Fonts/Arial Bold.ttf',
+            '/Library/Fonts/Arial.ttf',
+        ];
+        $candidates = array_merge($candidates, $winFonts, $unixFonts);
+        foreach ($candidates as $cand) {
+            if (is_readable($cand)) {
+                return $cand;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Measure TTF text size (width, height) using imagettfbbox, handling negative coordinates.
+     * @return array{0:int,1:int}
+     */
+    private static function measureText(string $text, int $fontSize, string $fontPath): array
+    {
+        $bbox = imagettfbbox($fontSize, 0, $fontPath, $text);
+        $width  = (int)abs($bbox[2] - $bbox[0]);
+        $height = (int)abs($bbox[7] - $bbox[1]);
+        return [$width, $height];
     }
 }
