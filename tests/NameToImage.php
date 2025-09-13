@@ -8,16 +8,16 @@ $ntoimage = new NameToImage();
 
 
 // 1) Provide a directory as destination; slug is appended automatically
-$path = NameToImage::create([
+$path = NameToImage::run([
     'name' => 'John Doe',
     'bg_color' => '#04068dff',     // 8-digit hex supported
     'text_color' => 'rgba(255,255,255,1)',
     'destination' => base_path('storage/avatars'),
-    // 'regenerate' => true, 
+    // 'generate' => true, 
 ]);
 
 // 3) Auto-fit font size (no touching edges)
-$path = NameToImage::create([
+$path = NameToImage::run([
     'name' => 'Jane Smith',
     'bg_color' => [147, 51, 234],
     'text_color' => '#ffffff',
@@ -27,14 +27,14 @@ $path = NameToImage::create([
 
 
 dd(
-    $ntoimage->create([
+    $ntoimage->run([
         'name' => 'Tamedevelopers Peterson Moore',
         'font_weight' => 'bold',
         'type' => 'radius',
         'output' => 'save'
     ]),
 
-    $ntoimage->create([
+    $ntoimage->run([
         'name' => 'Oluchi Grace',
         'font_weight' => 'bold',
         'bg_color' => '#063903ff',

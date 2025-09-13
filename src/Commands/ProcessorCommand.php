@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Commands;
 
-use Tamedevelopers\Support\Capsule\Artisan;
+use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\ImageToText;
+use Tamedevelopers\Support\NameToImage;
 use Tamedevelopers\Support\Capsule\Logger;
 use Tamedevelopers\Support\Capsule\CommandHelper;
 
@@ -34,24 +36,79 @@ class ProcessorCommand extends CommandHelper
     public function handle()
     {
         Logger::helpHeader('<yellow>Usage:</yellow>');
-        Logger::writeln('  php tame make:command [name] --path=users');
+        Logger::writeln('  php tame make:processor [name]');
+        Logger::writeln('  php tame make:processor [name]');
         Logger::writeln('');
     }
 
     /**
-     * Create a new [Tame-Artisan] command
+     * Convert Name-String to Image File.
      */
-    public function command()
+    public function toImage(): string
     {
-        $name  = $this->arguments(0);
-        $path = $this->hasOption('path');
+        $args  = $this->arguments();
+        [$name, $bgColor, $textColor, $path, $generate, $output, $fontWeight] = [
+            $this->flag('name'), 
+            $this->flag('bgColor'), 
+            $this->flag('textColor'), 
+            $this->flag('path'),
+            $this->flag('output'),
+            (bool) $this->flag('generate') ?: false,
+            $this->flag('fontWeight'), 
+        ];
 
-        // if not provided, prompt for file name
-        if(empty($name)){
-            $name = $this->ask("\nWhat should the command be named?");
+        if(!in_array($output, ['save', 'data'])){
+            $output = 'save';
         }
 
-        Logger::info("Artisan command creation, coming soon: <b>[{$name}]</b>\n");
+        $path = Server::pathReplacer(NameToImage::run([
+            'name' => $name,
+            'bg_color' => $bgColor,
+            'font_weight' => $fontWeight,
+            'text_color' => $textColor,
+            'destination' => $path,
+            'output' => $output, 
+            'generate' => $generate, 
+        ]));
+
+        Logger::info("$path\n");
+
+        return $path;
+    }
+
+    /**
+     * Convert and Extract Image to Text
+     */
+    public function toText(): string
+    {
+        $args  = $this->arguments();
+        [$name, $bgColor, $textColor, $path, $generate, $output, $fontWeight] = [
+            $this->flag('name'), 
+            $this->flag('bgColor'), 
+            $this->flag('textColor'), 
+            $this->flag('path'),
+            $this->flag('output'),
+            (bool) $this->flag('generate') ?: false,
+            $this->flag('fontWeight'), 
+        ];
+
+        if(!in_array($output, ['save', 'data'])){
+            $output = 'save';
+        }
+
+        $path = Server::pathReplacer(ImageToText::run([
+            'name' => $name,
+            'bg_color' => $bgColor,
+            'font_weight' => $fontWeight,
+            'text_color' => $textColor,
+            'destination' => $path,
+            'output' => $output, 
+            'generate' => $generate, 
+        ]));
+
+        Logger::info("$path\n");
+
+        return $path;
     }
 
 }

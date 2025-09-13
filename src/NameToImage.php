@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 use Exception;
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\CustomException;
 
@@ -39,7 +40,7 @@ class NameToImage
      * @return string|null  Returns destination path for 'save', data URI for 'data', null when streaming
      * @throws Exception
      */
-    public static function create(array $options = [])
+    public static function run(array $options = [])
     {
         if (!function_exists('imagecreatetruecolor')) {
             throw new CustomException('GD library is required (imagecreatetruecolor missing).');
@@ -48,19 +49,40 @@ class NameToImage
         $opts = array_merge([
             'name'        => '',
             'size'        => 256,
-            'type'        => 'circle', // 'circle' | 'radius'
+            'type'        => '', // 'circle' | 'radius'
             'radius'      => null,     // default computed: size/6
-            'bg_color'    => [147, 51, 234],
-            'text_color'  => '#FFFFFF',
+            'bg_color'    => '',
+            'text_color'  => '',
             'font_path'   => null,
             'font_size'   => null,     // auto-fit by default
             'font_weight' => 'bold',   // 'normal' | 'bold' (used when auto-selecting system font)
             'output'      => 'save',   // 'save' | 'view' | 'download' | 'data'
             'destination' => null,     // file path or directory; if directory, slug.png will be appended
-            'regenerate'  => false,    // when true, append a unique suffix to filename
+            'generate'  => false,    // when true, append a unique suffix to filename
         ], $options);
 
-        $name = trim((string)$opts['name']);
+
+        // set default data
+        if(empty($opts['size'])){
+            $opts['size'] = 256;
+        }
+        if(empty($opts['type'])){
+            $opts['type'] = 'circle';
+        }
+        if(empty($opts['font_weight'])){
+            $opts['font_weight'] = 'bold';
+        }
+        if(empty($opts['bg_color'])){
+            $opts['bg_color'] = [147, 51, 234];
+        }
+        if(empty($opts['text_color'])){
+            $opts['text_color'] = '#FFFFFF';
+        }
+        if(empty($opts['output'])){
+            $opts['output'] = 'save';
+        }
+
+        $name = Str::trim($opts['name']);
         if ($name === '') {
             throw new CustomException('Option "name" is required.');
         }
@@ -193,12 +215,12 @@ class NameToImage
                 // If destination is empty, or a directory, or ends without .png, build the final path
                 if ($dest === '' || is_dir($dest) || !preg_match('/\.png$/i', $dest)) {
                     $baseDir = $dest !== '' ? rtrim($dest, "\\/") : (__DIR__ . '/../storage/avatars');
-                    // Append slug with optional regenerate suffix
-                    $suffix = !empty($opts['regenerate']) ? ('-' . substr(sha1(uniqid((string)mt_rand(), true)), 0, 8)) : '';
+                    // Append slug with optional generate suffix
+                    $suffix = !empty($opts['generate']) ? ('-' . substr(sha1(uniqid((string)mt_rand(), true)), 0, 8)) : '';
                     $dest = $baseDir . '/' . $slug . $suffix . '.png';
                 } else {
-                    // If regenerate requested for a full file path, inject suffix before extension
-                    if (!empty($opts['regenerate'])) {
+                    // If generate requested for a full file path, inject suffix before extension
+                    if (!empty($opts['generate'])) {
                         $dest = preg_replace('/\.png$/i', '-' . substr(sha1(uniqid((string)mt_rand(), true)), 0, 8) . '.png', $dest);
                     }
                 }

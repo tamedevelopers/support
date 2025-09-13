@@ -11,6 +11,10 @@ use Tamedevelopers\Support\Capsule\Logger;
 use Tamedevelopers\Support\Process\HttpRequest;
 
 
+/**
+ * @property string $signature
+ * @property string $description
+ */
 class CommandHelper
 {
     /**
@@ -261,6 +265,45 @@ class CommandHelper
         }
 
         return $data[$key] ?? $data;
+    }
+
+    /**
+     * Get Command Signature
+     */
+    protected function signature(): string
+    {
+        return isset($this->signature) ? $this->signature : '';
+    }
+
+    /**
+     * Get Command Description
+     */
+    protected function description(): string
+    {
+        return isset($this->description) ? $this->description : '';
+    }
+
+    /**
+     * Get the signature name (the first token before any whitespace).
+     * Examples:
+     *  - 'make:service {name : ...}' => 'make:service'
+     *  - 'name' => 'name'
+     *  - 'name:value {opt}' => 'name:value'
+     *  - 'name-first {arg}' => 'name-first'
+     */
+    protected function getSignatureName(): string
+    {
+        $sig = Str::trim($this->signature());
+        if ($sig === '') {
+            return '';
+        }
+
+        // Split on whitespace and take the first token
+        $parts = preg_split('/\s+/', $sig, 2);
+        $first = $parts[0] ?? '';
+
+        // Trim surrounding quotes if any
+        return trim($first, "\"'");
     }
 
     /**

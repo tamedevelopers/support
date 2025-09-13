@@ -283,7 +283,7 @@ class Time {
      *
      * @param  int|string $datetime
      * @param  string $format
-     * @return void
+     * @return $this
      */
     public function createFromFormat($datetime, $format = 'm/d/Y h:i:sa')
     {

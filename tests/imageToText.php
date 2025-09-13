@@ -25,7 +25,7 @@ if ($isCli) {
     }
 
     try {
-        $text = ImageToText::extract([
+        $text = ImageToText::run([
             'source'     => $path,
             'language'   => $lang,
             'psm'        => $psm,
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
 
     try {
-        $text = ImageToText::extract([
+        $text = ImageToText::run([
             'upload'     => $_FILES['image'] ?? null,
             'language'   => $lang,
             'psm'        => $psm,

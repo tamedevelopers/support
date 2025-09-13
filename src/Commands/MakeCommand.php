@@ -11,7 +11,6 @@ use Tamedevelopers\Support\Capsule\CommandHelper;
 
 class MakeCommand extends CommandHelper
 {   
-
     /**
      * The name and signature of the console command.
      *
@@ -34,12 +33,12 @@ class MakeCommand extends CommandHelper
     public function handle()
     {
         Logger::helpHeader('<yellow>Usage:</yellow>');
-        Logger::writeln('  php tame make:command [name] --path=users');
+        Logger::writeln('  php tame make:command [name]');
         Logger::writeln('');
     }
 
     /**
-     * Create a new [Tame-Artisan] command
+     * Create a new [Tame] command
      */
     public function command()
     {

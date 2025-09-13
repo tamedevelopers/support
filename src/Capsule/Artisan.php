@@ -108,25 +108,30 @@ class Artisan extends CommandHelper
 
     /**
      * Register multiple commands
-     *
-     * Accepts either:
-     * - A single flat triple: ['make', new MakeCommand, 'Description']
-     * - An array of triples: [ ['make', new MakeCommand, 'Description'], ... ]
-     * - Or associative form per item: ['name' => 'make', 'handler' => new MakeCommand, 'description' => '...']
-     *
+     * 
      * @param array $commands
+     * - Accepts 
+     * Command Class
      */
     public function registerAll(array $commands): void
     {
         // Otherwise, treat as a list of command definitions
         foreach ($commands as $command) {
-            // $commandClass = 
+            [$signature, $description] = [
+                $command->getSignatureName(), $command->description(),
+            ];
 
-            dd(
-                $command
-            );
+            // if class doesn't exists then ignore and continue
+            if(!class_exists($command::class)){
+                continue;
+            }
 
-            // $this->register();
+            // if class doesn't have signature then ignore and continue
+            if(empty($signature)){
+                continue;
+            }
+
+            $this->register($signature, $command, $description);
         }
     }
 

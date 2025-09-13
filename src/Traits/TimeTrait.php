@@ -10,6 +10,7 @@ use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Time;
 use Tamedevelopers\Support\Country;
 use Tamedevelopers\Support\Capsule\TimeHelper;
+use Tamedevelopers\Support\Capsule\CustomException;
 
 
 /**
@@ -298,7 +299,7 @@ trait TimeTrait{
             'submonth' => 'subMonths',
             'addyear' => 'addYears',
             'subyear' => 'subYears',
-            default => 'format'
+            default => null //format
         };
 
         // this will happen if __construct has not been called 
@@ -306,6 +307,13 @@ trait TimeTrait{
         // mostly when using [setglobaltimezone|getglobaltimezone] methods
         if(empty($clone)){
             $clone = new static();
+        }
+
+        // if method name doesn't exists
+        if(!method_exists($clone, (string) $method)){
+            throw new CustomException(
+                "Method name [{$name}] doesn't exists."
+            );
         }
 
         return $clone->$method(...($args ?? []));

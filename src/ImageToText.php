@@ -62,7 +62,7 @@ class ImageToText
      * @return string Extracted text
      * @throws Exception
      */
-    public static function extract(array $options = []): string
+    public static function run(array $options = []): string
     {
         [$upload, $source, $language, $engine, $apiKey, $psm, $oem, $whitelist, $tesseractPath, $preprocess, $tmpDir, $cleanup] = [
             $options['upload'] ?? null,
@@ -177,7 +177,7 @@ class ImageToText
         $cmd[] = '-c';
         $cmd[] = self::escapeArg('preserve_interword_spaces=1');
 
-        [$exitCode, $stdout, $stderr] = self::run($cmd);
+        [$exitCode, $stdout, $stderr] = self::capture($cmd);
 
         if ($cleanup) {
             foreach ($tempFiles as $tf) {
@@ -269,7 +269,7 @@ class ImageToText
      * @param array $args
      * @return array{0:int,1:string,2:string}
      */
-    private static function run(array $args): array
+    private static function capture(array $args): array
     {
         $cmd = implode(' ', $args);
         $desc = [
