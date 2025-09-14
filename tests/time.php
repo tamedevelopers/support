@@ -21,7 +21,7 @@ $time = TameTime(
 
 $time2  = (new Time)->setTimezone('America/St_Barthelemy');
 $time3  = (new Time)->setTimezone('Indian/Antananarivo');
-// $time4  = TameTime('first day of December 2008', 'Pacific/Pago_Pago');
+$time4  = TameTime('first day of December 2008', 'Pacific/Pago_Pago');
 
 // [
 //     $time->toJsTimer('24 Jan 2025 14:00:00'),
@@ -37,7 +37,8 @@ $time3  = (new Time)->setTimezone('Indian/Antananarivo');
 
 dd(
     $time2,
-    $time3::greetings('24 Jan 2025 14:00:00'),
+    $time3::startofYears(),
+    $time4,
 );
 
 dd(

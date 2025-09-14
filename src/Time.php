@@ -90,9 +90,9 @@ class Time {
         }
 
         // clone copy of self
-        // if(!self::isTimeInstance()){
-        //     self::$staticData = $this->copy();
-        // }
+        if(!self::isTimeInstance()){
+            self::$staticData = $this->copy();
+        }
     }
 
     /**
@@ -123,11 +123,7 @@ class Time {
      */
     public static function __callStatic($name, $args) 
     {
-        $instance = (self::$staticData instanceof self)
-                    ? self::$staticData->copy()
-                    : new self();
-
-        return self::nonExistMethod($name, $args, $instance);
+        return self::nonExistMethod($name, $args, static::$staticData);
     }
 
     /**

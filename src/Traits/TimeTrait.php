@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Traits;
 
+use Closure;
 use DateTime;
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Time;
 use Tamedevelopers\Support\Country;
 use Tamedevelopers\Support\Capsule\TimeHelper;
 use Tamedevelopers\Support\Capsule\CustomException;
@@ -16,8 +18,19 @@ use Tamedevelopers\Support\Capsule\CustomException;
  *
  * Internal helpers used by the Time class for cloning, timezone handling,
  * and common operations. Public API is provided by Time and dynamic dispatch.
+ * @property mixed $staticData
 */
 trait TimeTrait{
+
+    /**
+     * Determine whether the static context already holds a Time instance.
+     *
+     * @return bool
+     */
+    static protected function isTimeInstance()
+    {
+        return static::$staticData instanceof self;
+    }
     
     /**
      * Clone a new instance of the owning class.
@@ -294,7 +307,7 @@ trait TimeTrait{
             'endofweek' => 'endOfWeek',
             'startofmonth' => 'startOfMonth',
             'endofmonth' => 'endOfMonth',
-            'startofyear' => 'startOfYear',
+            'startofyear', 'startofyears' => 'startOfYear',
             'endofyear' => 'endOfYear',
             'issameday' => 'isSameDay',
             'issamemonth' => 'isSameMonth',
