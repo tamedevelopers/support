@@ -19,7 +19,7 @@ use Tamedevelopers\Support\Capsule\TimeHelper;
  * - Add/subtract helpers: addSeconds/Minutes/Hours/Days/Weeks/Months/Years and sub*
  * - Formatting: format(), toDateTimeString(), toJsTimer(), timestamp()
  * - Range helper: dateRange()
- * - Text features/config: config(), greeting (via greeting), timeAgo (via timeAgo)
+ * - Text features/config: config(), greeting (via __greeting), timeAgo (via __timeAgo)
  *
  * All methods are documented at their definitions for clarity.
  */
@@ -91,7 +91,7 @@ class Time {
 
         // clone copy of self
         if(!self::isTimeInstance()){
-            self::$staticData = $this->copy();
+            self::$staticData = clone $this;
         }
     }
 
@@ -467,7 +467,7 @@ class Time {
      * Get the stored date time
      * @return int
      */
-    public function getDate()
+    public function __getDate()
     {
         return (int) $this->date;
     }
@@ -476,63 +476,63 @@ class Time {
      * Get the number of seconds between the stored time and the current time.
      * @return mixed
      */
-    public function getSecond()
+    public function __getSecond()
     {
-        return $this->timeDifference('sec');
+        return $this->__timeDifference('sec');
     }
 
     /**
      * Get the number of minutes between the stored time and the current time.
      * @return mixed
      */
-    public function getMin() 
+    public function __getMin() 
     {
-        return $this->timeDifference('mins');
+        return $this->__timeDifference('mins');
     }
 
     /**
      * Get the number of hours between the stored time and the current time.
      * @return mixed
      */
-    public function getHour() 
+    public function __getHour() 
     {
-        return $this->timeDifference('hour');
+        return $this->__timeDifference('hour');
     }
     
     /**
      * Get the number of days between the stored time and the current time.
      * @return mixed
      */
-    public function getDay() 
+    public function __getDay() 
     {
-        return $this->timeDifference('days');
+        return $this->__timeDifference('days');
     }
 
     /**
      * Get the number of weeks between the stored time and the current time.
      * @return mixed
      */
-    public function getWeek() 
+    public function __getWeek() 
     {
-        return $this->timeDifference('weeks');
+        return $this->__timeDifference('weeks');
     }
     
     /**
      * Get the number of months between the stored time and the current time.
      * @return mixed
      */
-    public function getMonth() 
+    public function __getMonth() 
     {
-        return $this->timeDifference('month');
+        return $this->__timeDifference('month');
     }
     
     /**
      * Get the number of years between the stored time and the current time.
      * @return mixed
      */
-    public function getYear() 
+    public function __getYear() 
     {
-        return $this->timeDifference('year');
+        return $this->__timeDifference('year');
     }
 
     /**
@@ -541,7 +541,7 @@ class Time {
      * 
      * @return string
      */
-    public function greeting($date = 'now') 
+    public function __greeting($date = 'now') 
     {
         $clone = $this->clone();
         $clone->date = TimeHelper::setPassedDate($date);
@@ -576,7 +576,7 @@ class Time {
      * 
      * @return mixed
      */
-    public function timeDifferenceBetween($firstDate, $lastDate, $mode = null)
+    public function __timeDifferenceBetween($firstDate, $lastDate, $mode = null)
     {
         $clone = $this->clone();
 
@@ -597,7 +597,7 @@ class Time {
      * 
      * @return mixed
      */
-    public function timeDifference($mode  = null)
+    public function __timeDifference($mode  = null)
     {
         $clone = $this->clone();
 
@@ -621,9 +621,9 @@ class Time {
      * 
      * @return string
      */
-    public function timeAgo($mode = null)
+    public function __timeAgo($mode = null)
     {
-        $diff = $this->timeDifference();
+        $diff = $this->__timeDifference();
 
         $minutes    = $diff['mins'];
         $seconds    = $diff['sec'];
@@ -631,7 +631,7 @@ class Time {
         $days       = $diff['days'];
         $weeks      = $diff['weeks'];
         $years      = $diff['year'];
-        $date       = $this->getDate();
+        $date       = $this->__getDate();
         $text       = self::getText();
 
         if ($days === 0 && $hours === 0 && $minutes < 1) {
@@ -732,8 +732,8 @@ class Time {
             'formatted'      => date('Y-m-d H:i:s', $time),
             'timezone'       => (string) ($this->timezoneName ?? $this->timezone),
             'utc_offset'     => ($this->utcOffset ?? date('(P)', $time)),
-            'greeting'       => $this->greeting($time),
-            'time_ago_short' => $this->timeAgo('short'),
+            'greeting'       => $this->__greeting($time),
+            'time_ago_short' => $this->__timeAgo('short'),
         ];
     }
 }
