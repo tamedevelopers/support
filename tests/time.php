@@ -43,6 +43,17 @@ dd(
         'Time-4: '. $time4->getTimeZone(),
     ],
 
+    [
+        $time->startOfYear()->format(),
+        $time->startOfDay()->format(),
+        $time->startOfWeek()->format(),
+        $time->startOfMonth()->format(),
+        $time->isSameDay(TameTime('now')->format()),
+        $time->isSameMonth('today'),
+        $time->gt('today'),
+        $time->lt('today'),
+    ],
+
     // [
     //     $time3->date('first day of December 2008')->format(),
     //     $time3->yesterday()->format(),
