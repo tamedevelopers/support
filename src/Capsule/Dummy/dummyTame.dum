@@ -34,7 +34,8 @@ $artisan = new Tamedevelopers\Support\Capsule\Artisan();
  * Register the default Support Command Name
  */
 $artisan->registerAll([
-    'make', new Tamedevelopers\Support\Commands\MakeCommand, 'Make Artisans'
+    new Tamedevelopers\Support\Commands\MakeCommand,
+    new Tamedevelopers\Support\Commands\ProcessorCommand,
 ]);
 
 
