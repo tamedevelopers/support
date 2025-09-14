@@ -15,17 +15,11 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 $isCli = (php_sapi_name() === 'cli');
 
-dd(
-  Artisan::call('processor:toText --path=thousand_units.png'),
-);
-
 // :toText --path=thousand_units.png
 if ($isCli) {
-  $text = Artisan::call('processor');
+  $text = Artisan::call('processor:toText --path=thousand_units.png');
 
   dd(
-    // $args,
-    Artisan::call("list"),
     $text
   );
 }

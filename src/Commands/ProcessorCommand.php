@@ -46,7 +46,7 @@ class ProcessorCommand extends CommandHelper
     /**
      * Convert Name-String to Image File.
      */
-    public function toImage(): string
+    public function toImage(): string|int
     {
         [$name, $bgColor, $textColor, $path, $generate, $output, $fontWeight, $type] = [
             $this->flag('name'), 
@@ -76,7 +76,10 @@ class ProcessorCommand extends CommandHelper
 
         $path = Tame::getBasePath($path);
 
-        Logger::info("$path\n");
+        if ($this->isConsole()) {
+            Logger::info("$path\n");
+            return 1;
+        }
 
         return $path;
     }
@@ -84,7 +87,7 @@ class ProcessorCommand extends CommandHelper
     /**
      * Extract an Image to Text
      */
-    public function toText(): string
+    public function toText(): string|int
     {
         [$path, $grayscale, $contrast] = [
             $this->flag('path'), 
@@ -100,7 +103,10 @@ class ProcessorCommand extends CommandHelper
             ],
         ]);
 
-        // Logger::info("$text\n");
+        if ($this->isConsole()) {
+            Logger::info("$text\n");
+            return 1;
+        }
 
         return $text;
     }

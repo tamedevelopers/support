@@ -58,7 +58,7 @@ class Artisan extends CommandHelper
      * - Quoted args are respected: "--path=\"my path\""
      * - Placeholder tokens like [name] are ignored if passed literally.
      */
-    public static function call(string $input): int
+    public static function call(string $input)
     {
         // Tokenize input and drop placeholder tokens like [name]
         $tokens = self::tokenizeCommand($input);
@@ -164,8 +164,11 @@ class Artisan extends CommandHelper
 
     /**
      * Handle argv input and dispatch
+     *
+     * When running in console, returns an int exit code.
+     * When running from web (non-console), returns the command's result if available; otherwise, the exit code.
      */
-    public function run(array $argv): int
+    public function run(array $argv)
     {
         // In PHP CLI, $argv[0] is the script name (tame), so command starts at index 1
         $commandInput = $argv[1] ?? 'list';
@@ -176,6 +179,7 @@ class Artisan extends CommandHelper
 
         if ($commandInput === 'list') {
             $this->renderList();
+            // For web context, nothing to return; keep consistent exit code 0
             return 0;
         }
 
@@ -199,6 +203,7 @@ class Artisan extends CommandHelper
 
         $exitCode = 0;
         $handled = false;
+        $firstResult = null; // capture first non-null non-int result
 
         // Resolve primary once and track unresolved flags across providers
         $primaryMethod = $sub ?: 'handle';
@@ -214,8 +219,11 @@ class Artisan extends CommandHelper
                     continue;
                 }
 
-                $result = (int) ($this->invokeCommandMethod($instance, $primaryMethod, $positionals, $options) ?? 0);
-                $exitCode = max($exitCode, $result);
+                $raw = $this->invokeCommandMethod($instance, $primaryMethod, $positionals, $options);
+                $exitCode = max($exitCode, is_numeric($raw) ? (int)$raw : 0);
+                if ($firstResult === null && $raw !== null && !is_int($raw)) {
+                    $firstResult = $raw;
+                }
                 $handled = true;
 
                 // Route flags as methods on the same instance and mark them as resolved
@@ -237,8 +245,11 @@ class Artisan extends CommandHelper
             // Fallback: callable handler (no subcommands/flags routing)
             if (isset($entry['handler']) && \is_callable($entry['handler'])) {
                 $handler = $entry['handler'];
-                $result = (int) ($handler($rawArgs) ?? 0);
-                $exitCode = max($exitCode, $result);
+                $raw = $handler($rawArgs);
+                $exitCode = max($exitCode, is_numeric($raw) ? (int)$raw : 0);
+                if ($firstResult === null && $raw !== null && !is_int($raw)) {
+                    $firstResult = $raw;
+                }
                 $handled = true;
                 continue;
             }
@@ -254,8 +265,9 @@ class Artisan extends CommandHelper
             }
             return max($exitCode, 1);
         }
-
-        return $exitCode;
+        
+        // prefer returning the first meaningful result or exit code
+        return $firstResult !== null ? $firstResult : $exitCode;
     }
 
     /**
