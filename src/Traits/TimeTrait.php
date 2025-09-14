@@ -99,6 +99,9 @@ trait TimeTrait{
         $clone->date = strtotime("{$date} {$sign} {$value}{$text}");
         $clone->timestamp = $clone->buildTimePrint();
 
+        // keep static binding in sync with latest produced clone
+        static::$staticData = $clone->copy();
+
         return $clone;
     }
 

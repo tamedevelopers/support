@@ -36,9 +36,10 @@ $time4  = TameTime('first day of December 2008', 'Pacific/Pago_Pago');
 // ];
 
 dd(
-    $time2,
-    $time3::startofYears(),
-    $time4,
+    $time->getTimezone(),
+    $time2->getTimezone(),
+    $time3->now(),
+    $time4->getTimezone(),
 );
 
 dd(

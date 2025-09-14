@@ -89,10 +89,9 @@ class Time {
             $this->timezone     = $clone->timezone;
         }
 
-        // clone copy of self
-        if(!self::isTimeInstance()){
-            self::$staticData = $this->copy();
-        }
+        // Always refresh the static instance binding to the latest constructed instance
+        // so subsequent static calls use the most recent timezone/date context
+        self::$staticData = $this->copy();
     }
 
     /**
@@ -123,7 +122,12 @@ class Time {
      */
     public static function __callStatic($name, $args) 
     {
-        return self::nonExistMethod($name, $args, static::$staticData);
+        // Use a cloned bound instance if available; otherwise seed a fresh one
+        $instance = static::$staticData instanceof static
+            ? static::$staticData->copy()
+            : new static();
+
+        return self::nonExistMethod($name, $args, $instance);
     }
 
     /**
