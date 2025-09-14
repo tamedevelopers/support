@@ -100,7 +100,7 @@ class ProcessorCommand extends CommandHelper
             ],
         ]);
 
-        Logger::info("$text\n");
+        // Logger::info("$text\n");
 
         return $text;
     }

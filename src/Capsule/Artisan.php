@@ -71,9 +71,34 @@ class Artisan extends CommandHelper
         $args    = array_slice($tokens, 1);
         $argv    = array_merge(['tame'], [$command], $args);
 
-        require_once base_path('tame');
-
+        // Instantiate dispatcher and ensure default/internal commands are registered
         $artisan = new self();
+
+        $makeCmd = '\Tamedevelopers\Support\Commands\MakeCommand';
+        $processorCmd = '\Tamedevelopers\Support\Commands\ProcessorCommand';
+
+        // Register built-in commands that are normally wired in the CLI entrypoint (idempotent)
+        if (class_exists($makeCmd)) {
+            if (!isset(self::$commands['make'])) {
+                $makeCmd = new $makeCmd();
+                [$signature, $description] = [
+                    $makeCmd->getSignatureName(), $makeCmd->description(),
+                ];
+                $artisan->register($signature, $makeCmd, $description);
+            }
+        }
+        if (class_exists($processorCmd)) {
+            if (!isset(self::$commands['processor'])) {
+                $processorCmd = new $processorCmd();
+                [$signature, $description] = [
+                    $processorCmd->getSignatureName(), $processorCmd->description(),
+                ];
+                $artisan->register($signature, $processorCmd, $description);
+            }
+        }
+
+        // register and discover other commands from other packages
+        $artisan->discoverExternal();
 
         return $artisan->run($argv);
     }
