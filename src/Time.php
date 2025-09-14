@@ -77,19 +77,16 @@ class Time {
      */
     public function __construct($date = null, $timezone = null)
     {
-        if(empty($this->timezone)){
+        if (empty($this->timezone)) {
             $this->timezone = TimeHelper::configureAndSetTimezone($timezone);
         }
 
-        if (empty($this->date)) {
-            $date   = $date ?: 'now';
-            $clone  = self::date($date);
+        // Avoid recursive static initialization by computing directly
+        $resolvedDate    = TimeHelper::setPassedDate($date ?: 'now');
+        $this->date      = $resolvedDate;
+        $this->timestamp = $this->timestampPrint();
 
-            $this->date         = $clone->date;
-            $this->timestamp    = $clone->timestamp;
-            $this->timezone     = $clone->timezone;
-        }
-        
+        // Bind the freshly constructed instance for static context reuse
         $this->keepStaticBinding($this->clone());
     }
 
@@ -117,18 +114,11 @@ class Time {
         return self::nonExistMethod($name, $args, self::$staticData);
     }
 
-   
-
-    /**
-     * Add Second to curent date
-     * @param int $value
-     * @return $this
-     */
     /**
      * Add seconds to the current date.
      *
-     * @param int $value Number of seconds to add
-     * @return $this New cloned instance with updated time
+     * @param int $value
+     * @return $this 
      */
     public function addSeconds($value = 0)
     {
@@ -311,6 +301,36 @@ class Time {
     }
 
     /**
+     * Format a date range.
+     *
+     * @param string $value The range in the format "1-7" (days from today).
+     * @param string $format The desired date format, default is 'D, M j'.
+     * 
+     * @return Tamedevelopers\Support\Capsule\TimeHelper 
+     * - The formatted date, e.g., "Mon, May 27".
+     */
+    public static function dateRange($value, $format = 'D, M j')
+    {
+        // Check if the range has a hyphen
+        if (strpos($value, '-') !== false) {
+            // Split the range into start and end days
+            [$start, $end] = explode('-', $value);
+        } else {
+            [$start, $end] = [0, $value];
+        }
+        
+        // Ensure the end value is the maximum number of days
+        $daysToStart = (int) Str::trim($start);
+        $daysToAdd = (int) Str::trim($end);
+
+        // Create a DateTime object for the current date
+        $startDate = self::today()->addDays($daysToStart);
+        $endDate = self::today()->addDays($daysToAdd);
+
+        return new TimeHelper($startDate, $endDate, $format); 
+    }
+
+    /**
      * Set time to `now`
      * 
      * @return $this
@@ -386,36 +406,6 @@ class Time {
     public static function toJsTimer($date)
     {
         return self::timestamp($date, 'M j, Y H:i:s');
-    }
-
-    /**
-     * Format a date range.
-     *
-     * @param string $value The range in the format "1-7" (days from today).
-     * @param string $format The desired date format, default is 'D, M j'.
-     * 
-     * @return Tamedevelopers\Support\Capsule\TimeHelper 
-     * - The formatted date, e.g., "Mon, May 27".
-     */
-    public function dateRange($value, $format = 'D, M j')
-    {
-        // Check if the range has a hyphen
-        if (strpos($value, '-') !== false) {
-            // Split the range into start and end days
-            [$start, $end] = explode('-', $value);
-        } else {
-            [$start, $end] = [0, $value];
-        }
-        
-        // Ensure the end value is the maximum number of days
-        $daysToStart = (int) Str::trim($start);
-        $daysToAdd = (int) Str::trim($end);
-
-        // Create a DateTime object for the current date
-        $startDate = $this->today()->addDays($daysToStart);
-        $endDate = $this->today()->addDays($daysToAdd);
-
-        return new TimeHelper($startDate, $endDate, $format); 
     }
 
     /**
