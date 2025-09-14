@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Commands;
 
+use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\ImageToText;
 use Tamedevelopers\Support\NameToImage;
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\Logger;
 use Tamedevelopers\Support\Capsule\CommandHelper;
 
@@ -36,8 +38,8 @@ class ProcessorCommand extends CommandHelper
     public function handle()
     {
         Logger::helpHeader('<yellow>Usage:</yellow>');
-        Logger::writeln('  php tame make:processor [name]');
-        Logger::writeln('  php tame make:processor [name]');
+        Logger::writeln("  php tame processor:toImage --name --path --bgColor --textColor --fontWeight=[bold|normal] --type=[circle|radius]  --generate=[bool] \n");
+        Logger::writeln('  php tame processor:toText --path= --grayscale=[bool] --contrast=[int]');
         Logger::writeln('');
     }
 
@@ -46,15 +48,15 @@ class ProcessorCommand extends CommandHelper
      */
     public function toImage(): string
     {
-        $args  = $this->arguments();
-        [$name, $bgColor, $textColor, $path, $generate, $output, $fontWeight] = [
+        [$name, $bgColor, $textColor, $path, $generate, $output, $fontWeight, $type] = [
             $this->flag('name'), 
             $this->flag('bgColor'), 
             $this->flag('textColor'), 
             $this->flag('path'),
-            $this->flag('output'),
             (bool) $this->flag('generate') ?: false,
+            $this->flag('output'),
             $this->flag('fontWeight'), 
+            $this->flag('type'), 
         ];
 
         if(!in_array($output, ['save', 'data'])){
@@ -69,7 +71,10 @@ class ProcessorCommand extends CommandHelper
             'destination' => $path,
             'output' => $output, 
             'generate' => $generate, 
+            'type' => $type, 
         ]));
+
+        $path = Tame::getBasePath($path);
 
         Logger::info("$path\n");
 
@@ -77,38 +82,27 @@ class ProcessorCommand extends CommandHelper
     }
 
     /**
-     * Convert and Extract Image to Text
+     * Extract an Image to Text
      */
     public function toText(): string
     {
-        $args  = $this->arguments();
-        [$name, $bgColor, $textColor, $path, $generate, $output, $fontWeight] = [
-            $this->flag('name'), 
-            $this->flag('bgColor'), 
-            $this->flag('textColor'), 
-            $this->flag('path'),
-            $this->flag('output'),
-            (bool) $this->flag('generate') ?: false,
-            $this->flag('fontWeight'), 
+        [$path, $grayscale, $contrast] = [
+            $this->flag('path'), 
+            (bool) $this->flag('grayscale') ?: true, 
+            $this->flag('contrast') ?: 20, 
         ];
+        
+        $text = ImageToText::run([
+            'source' => Tame::getBasePath($path),
+            'preprocess' => [
+                'grayscale' => $grayscale,
+                'contrast'  => $contrast,
+            ],
+        ]);
 
-        if(!in_array($output, ['save', 'data'])){
-            $output = 'save';
-        }
+        Logger::info("$text\n");
 
-        $path = Server::pathReplacer(ImageToText::run([
-            'name' => $name,
-            'bg_color' => $bgColor,
-            'font_weight' => $fontWeight,
-            'text_color' => $textColor,
-            'destination' => $path,
-            'output' => $output, 
-            'generate' => $generate, 
-        ]));
-
-        Logger::info("$path\n");
-
-        return $path;
+        return $text;
     }
 
 }

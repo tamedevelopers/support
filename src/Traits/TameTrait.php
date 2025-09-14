@@ -263,7 +263,7 @@ trait TameTrait{
      * @param  string|null $path
      * @return mixed
      */
-    private static function getBasePath($path = null)
+    public static function getBasePath($path = null)
     {
         // removing default base directory path if added by default
         $path = Str::replace(Server::formatWithBaseDirectory(), '', $path);

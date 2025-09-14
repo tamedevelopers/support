@@ -1,6 +1,7 @@
 <?php
 
 use Tamedevelopers\Support\ImageToText;
+use Tamedevelopers\Support\Capsule\Artisan;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -14,33 +15,19 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 $isCli = (php_sapi_name() === 'cli');
 
+dd(
+  Artisan::call('processor:toText --path=thousand_units.png'),
+);
+
+// :toText --path=thousand_units.png
 if ($isCli) {
-    $path = $argv[1] ?? '';
-    $lang = $argv[2] ?? 'eng';
-    $psm  = isset($argv[3]) ? (int)$argv[3] : null;
+  $text = Artisan::call('processor');
 
-    if ($path === '' || !is_readable($path)) {
-        fwrite(STDERR, "Usage: php tests/imagetotext.php <image_path> [lang=eng] [psm]\n");
-        exit(1);
-    }
-
-    try {
-        $text = ImageToText::run([
-            'source'     => $path,
-            'language'   => $lang,
-            'psm'        => $psm,
-            'preprocess' => [
-                'grayscale' => true,
-                'contrast'  => 20,
-                // 'threshold' => 170, // optionally enable thresholding
-            ],
-        ]);
-        echo $text, "\n";
-    } catch (\Throwable $e) {
-        fwrite(STDERR, 'OCR error: ' . $e->getMessage() . "\n");
-        exit(2);
-    }
-    exit(0);
+  dd(
+    // $args,
+    Artisan::call("list"),
+    $text
+  );
 }
 
 // Web mode

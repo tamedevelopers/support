@@ -71,6 +71,8 @@ class Artisan extends CommandHelper
         $args    = array_slice($tokens, 1);
         $argv    = array_merge(['tame'], [$command], $args);
 
+        require_once base_path('tame');
+
         $artisan = new self();
 
         return $artisan->run($argv);
