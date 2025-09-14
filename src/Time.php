@@ -8,6 +8,7 @@ use DateTime;
 use DateTimeZone;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Traits\TimeTrait;
+use Tamedevelopers\Support\Traits\TimeExtraTrait;
 use Tamedevelopers\Support\Capsule\TimeHelper;
 
 /**
@@ -24,7 +25,7 @@ use Tamedevelopers\Support\Capsule\TimeHelper;
  */
 class Time {
 
-    use TimeTrait;
+    use TimeTrait, TimeExtraTrait;
 
     /**
      * For storing the time value.

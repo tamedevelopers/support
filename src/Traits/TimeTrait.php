@@ -299,6 +299,31 @@ trait TimeTrait{
             'submonth' => 'subMonths',
             'addyear' => 'addYears',
             'subyear' => 'subYears',
+
+            // New: direct support for extra time helpers via dynamic dispatch
+            'startofday' => 'startOfDay',
+            'endofday' => 'endOfDay',
+            'startofweek' => 'startOfWeek',
+            'endofweek' => 'endOfWeek',
+            'startofmonth' => 'startOfMonth',
+            'endofmonth' => 'endOfMonth',
+            'startofyear' => 'startOfYear',
+            'endofyear' => 'endOfYear',
+            'issameday' => 'isSameDay',
+            'issamemonth' => 'isSameMonth',
+            'issameyear' => 'isSameYear',
+            'equalto' => 'equalTo',
+            'gt' => 'gt',
+            'lt' => 'lt',
+            'between' => 'between',
+            'diffindays' => 'diffInDays',
+            'diffinhours' => 'diffInHours',
+            'diffinminutes' => 'diffInMinutes',
+            'diffinseconds' => 'diffInSeconds',
+            'istoday' => 'isToday',
+            'istomorrow' => 'isTomorrow',
+            'isyesterday' => 'isYesterday',
+
             default => null //format
         };
 
