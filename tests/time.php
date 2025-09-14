@@ -36,6 +36,11 @@ $time4  = TameTime('first day of December 2008', 'Pacific/Pago_Pago');
 // ];
 
 dd(
+    $time2,
+    $time3::greetings('24 Jan 2025 14:00:00'),
+);
+
+dd(
     [
         'Time-1: '. $time->getTimeZone(),
         'Time-2: '. $time2->getTimeZone(),

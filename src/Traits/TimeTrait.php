@@ -107,10 +107,10 @@ trait TimeTrait{
      * 
      * @return string
      */
-    public function __getTimezone()
+    public function getTimezone()
     {
-        if(empty($this->timezone)){
-            $this->__setTimezone();
+        if (empty($this->timezone)) {
+            $this->setTimezone();
         }
 
         return $this->timezone;
@@ -122,7 +122,7 @@ trait TimeTrait{
      * 
      * @return $this
      */
-    public function __setTimezone($timezone = null)
+    public function setTimezone($timezone = null)
     {
         $clone = $this->clone();
 
@@ -138,7 +138,7 @@ trait TimeTrait{
      * 
      * @return $this
      */
-    public function __setDate($date = null)
+    public function setDate($date = null)
     {
         $clone = $this->clone();
         $clone->date = TimeHelper::setPassedDate($date);
@@ -176,7 +176,7 @@ trait TimeTrait{
     private function timestampPrint()
     {
         // ensure timezone cached
-        $this->timezone = $this->getTimeZone();
+        $this->timezone = $this->getTimezone();
         $this->timezoneName = $this->timezone;
 
         // refresh system timezone and cache UTC offset
@@ -209,7 +209,7 @@ trait TimeTrait{
     {
         $date   = $this->format('Y-m-d H:i:s');
         $micro  = $this->microseconds();
-        $tz     = (string) $this->__getTimezone();
+        $tz     = (string) $this->getTimezone();
         $offset = date('(P)', (int) $this->date);
         return sprintf('%s.%s %s %s', $date, $micro, $tz, $offset);
     }
@@ -268,23 +268,23 @@ trait TimeTrait{
 
         // create correct method name
         $method = match ($name) {
-            'greetings', 'greeting' => '__greeting',
+            'greetings', 'greeting' => 'greeting',
             'tojs', 'jstimer' => 'toJsTimer',
-            's', 'sec', 'secs', 'getseconds', 'getsec' => '__getSecond',
-            'min', 'mins', 'getminute', 'getminutes', 'getmin', 'getmins' => '__getMin',
-            'hr', 'hrs', 'hour', 'hours', 'gethr', 'gethours', 'gethour' => '__getHour',
-            'getday', 'getdays', 'getd', 'day', 'days' => '__getDay',
-            'getweek', 'getweeks', 'week', 'weeks', 'getw' => '__getWeek',
-            'getmonths', 'getmonth', 'getm', 'month', 'months' => '__getMonth',
-            'getyr', 'getyears', 'getyear', 'year', 'years', 'yr', 'yrs', 'y' => '__getYear',
-            'time', 'gettimes', 'gettime', 'getdate' => '__getDate',
-            'setdate' => '__setDate',
-            'gettimezone' => '__getTimezone',
-            'settimezone' => '__setTimezone',
-            'diffbetween', 'timediffbetween' => '__timeDifferenceBetween',
-            'diff', 'timediff' => '__timeDifference',
+            's', 'sec', 'secs', 'getseconds', 'getsec' => 'getSecond',
+            'min', 'mins', 'getminute', 'getminutes', 'getmin', 'getmins' => 'getMin',
+            'hr', 'hrs', 'hour', 'hours', 'gethr', 'gethours', 'gethour' => 'getHour',
+            'getday', 'getdays', 'getd', 'day', 'days' => 'getDay',
+            'getweek', 'getweeks', 'week', 'weeks', 'getw' => 'getWeek',
+            'getmonths', 'getmonth', 'getm', 'month', 'months' => 'getMonth',
+            'getyr', 'getyears', 'getyear', 'year', 'years', 'yr', 'yrs', 'y' => 'getYear',
+            'time', 'gettimes', 'gettime', 'getdate' => 'getDate',
+            'setdate' => 'setDate',
+            'gettimezone' => 'getTimezone',
+            'settimezone' => 'setTimezone',
+            'diffbetween', 'timediffbetween' => 'timeDifferenceBetween',
+            'diff', 'timediff' => 'timeDifference',
             'daterange', 'range' => 'dateRange',
-            'ago', 'timeago' => '__timeAgo',
+            'ago', 'timeago' => 'timeAgo',
             'addsecond' => 'addSeconds',
             'subsecond' => 'subSeconds',
             'addminute' => 'addMinutes',

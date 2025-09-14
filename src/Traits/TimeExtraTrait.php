@@ -25,7 +25,7 @@ trait TimeExtraTrait
     private function dtInTz(int $timestamp): DateTime
     {
         $dt = new DateTime('@' . $timestamp); // start from UTC-based ts
-        $dt->setTimezone(new DateTimeZone((string) $this->__getTimezone()));
+        $dt->setTimezone(new DateTimeZone((string) $this->getTimezone()));
         return $dt;
     }
 
@@ -343,7 +343,7 @@ trait TimeExtraTrait
      */
     public function isToday(): bool
     {
-        $now = new DateTime('now', new DateTimeZone((string) $this->__getTimezone()));
+        $now = new DateTime('now', new DateTimeZone((string) $this->getTimezone()));
         $today = $now->format('Y-m-d');
         $cur = $this->dtInTz((int) $this->date)->format('Y-m-d');
         return $today === $cur;
@@ -356,7 +356,7 @@ trait TimeExtraTrait
      */
     public function isTomorrow(): bool
     {
-        $tz = new DateTimeZone((string) $this->__getTimezone());
+        $tz = new DateTimeZone((string) $this->getTimezone());
         $tomorrow = new DateTime('tomorrow', $tz);
         $cur = $this->dtInTz((int) $this->date)->format('Y-m-d');
         return $tomorrow->format('Y-m-d') === $cur;
@@ -369,7 +369,7 @@ trait TimeExtraTrait
      */
     public function isYesterday(): bool
     {
-        $tz = new DateTimeZone((string) $this->__getTimezone());
+        $tz = new DateTimeZone((string) $this->getTimezone());
         $yesterday = new DateTime('yesterday', $tz);
         $cur = $this->dtInTz((int) $this->date)->format('Y-m-d');
         return $yesterday->format('Y-m-d') === $cur;
