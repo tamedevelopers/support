@@ -90,9 +90,9 @@ class Time {
         }
 
         // clone copy of self
-        if(!self::isTimeInstance()){
-            self::$staticData = clone $this;
-        }
+        // if(!self::isTimeInstance()){
+        //     self::$staticData = $this->copy();
+        // }
     }
 
     /**
@@ -115,13 +115,6 @@ class Time {
     }
     
     /**
-     * Handle the calls to non-existent static methods.
-     * @param string $name
-     * @param mixed $args
-     * 
-     * @return mixed
-     */
-    /**
      * Magic: static dynamic calls map to supported methods using stored static instance.
      *
      * @param string $name Invoked static method name
@@ -130,7 +123,11 @@ class Time {
      */
     public static function __callStatic($name, $args) 
     {
-        return self::nonExistMethod($name, $args, self::$staticData);
+        $instance = (self::$staticData instanceof self)
+                    ? self::$staticData->copy()
+                    : new self();
+
+        return self::nonExistMethod($name, $args, $instance);
     }
 
     /**
