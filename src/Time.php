@@ -19,7 +19,7 @@ use Tamedevelopers\Support\Capsule\TimeHelper;
  * - Add/subtract helpers: addSeconds/Minutes/Hours/Days/Weeks/Months/Years and sub*
  * - Formatting: format(), toDateTimeString(), toJsTimer(), timestamp()
  * - Range helper: dateRange()
- * - Text features/config: config(), greeting (via __greeting), timeAgo (via __timeAgo)
+ * - Text features/config: config(), greeting(), timeAgo()
  *
  * All methods are documented at their definitions for clarity.
  */
@@ -82,25 +82,17 @@ class Time {
         }
 
         if (empty($this->date)) {
-            $clone = $this->setDate($date);
+            $date   = $date ?: 'now';
+            $clone  = self::date($date);
 
             $this->date         = $clone->date;
             $this->timestamp    = $clone->timestamp;
             $this->timezone     = $clone->timezone;
         }
-
-        // Always refresh the static instance binding to the latest constructed instance
-        // so subsequent static calls use the most recent timezone/date context
-        self::$staticData = $this->copy();
+        
+        $this->keepStaticBinding($this->clone());
     }
 
-    /**
-     * Handle the calls to non-existent instance methods.
-     * @param string $name
-     * @param mixed $args
-     * 
-     * @return mixed
-     */
     /**
      * Magic: instance dynamic calls map to supported methods.
      *
@@ -122,13 +114,10 @@ class Time {
      */
     public static function __callStatic($name, $args) 
     {
-        // Use a cloned bound instance if available; otherwise seed a fresh one
-        $instance = static::$staticData instanceof static
-            ? static::$staticData->copy()
-            : new static();
-
-        return self::nonExistMethod($name, $args, $instance);
+        return self::nonExistMethod($name, $args, self::$staticData);
     }
+
+   
 
     /**
      * Add Second to curent date
@@ -275,95 +264,6 @@ class Time {
     {
         return $this->buildTimeModifier('year', $value, true);
     }
-    
-    /**
-     * Create date from Format
-     *
-     * @param  int|string $datetime
-     * @param  string $format
-     * @return $this
-     */
-    public function createFromFormat($datetime, $format = 'm/d/Y h:i:sa')
-    {
-        return $this->setDate(
-            self::timestamp($datetime, $format)
-        );
-    }
-
-    /**
-     * Set custom time
-     * @param int|string $date
-     * @return $this
-     */
-    public function date($date)
-    {
-        return $this->setDate($date);
-    }
-
-    /**
-     * Set time to `now`
-     * 
-     * @return $this
-     */
-    public function now()
-    {
-        return $this->date('now');
-    }
-
-    /**
-     * Set time to `today`
-     * 
-     * @return $this
-     */
-    public function today()
-    {
-        return $this->setDate('today');
-    }
-
-    /**
-     * Set time to `yesterday`
-     * 
-     * @return $this
-     */
-    public function yesterday()
-    {
-        return $this->setDate('yesterday');
-    }
-
-    /**
-     * Format time input
-     * 
-     * @param string|null $format
-     * - Your defined format type i.e: Y-m-d H:i:s a
-     * 
-     * @param int|string $date
-     * - string|int|float
-     * 
-     * @return string
-     */
-    public function format($format = null, $date = null)
-    {
-        if (!empty($date)) {
-            $clone = $this->setDate($date);
-            $this->date = $clone->date;
-        }
-
-        if(empty($format)){
-            $format = "Y-m-d H:i:s";
-        }
-
-        return date($format, $this->date);
-    }
-
-    /**
-     * toDateTimeString
-     *
-     * @return string
-     */
-    public function toDateTimeString()
-    {
-        return $this->format();
-    }
 
     /**
      * Create timestamp
@@ -382,6 +282,97 @@ class Time {
         $date = TimeHelper::setPassedDate($date);
 
         return date($format, $date);
+    }
+    
+    /**
+     * Set custom time
+     * @param int|string $date
+     * @return $this
+     */
+    public static function date($date)
+    {
+        $base = self::baseInstance();
+
+        return $base->setDate($date);
+    }
+
+    /**
+     * Create date from Format
+     *
+     * @param  int|string $datetime
+     * @param  string $format
+     * @return $this
+     */
+    public static function createFromFormat($datetime, $format = 'm/d/Y h:i:sa')
+    {
+        return self::date(
+            self::timestamp($datetime, $format)
+        );
+    }
+
+    /**
+     * Set time to `now`
+     * 
+     * @return $this
+     */
+    public static function now()
+    {
+        return self::date('now');
+    }
+
+    /**
+     * Set time to `today`
+     * 
+     * @return $this
+     */
+    public static function today()
+    {
+        return self::date('today');
+    }
+
+    /**
+     * Set time to `yesterday`
+     * 
+     * @return $this
+     */
+    public static function yesterday()
+    {
+        return self::date('yesterday');
+    }
+
+    /**
+     * Format time input
+     * 
+     * @param string|null $format
+     * - Your defined format type i.e: Y-m-d H:i:s a
+     * 
+     * @param int|string $date
+     * - string|int|float
+     * 
+     * @return string
+     */
+    public function format($format = null, $date = null)
+    {
+        if (!empty($date)) {
+            $clone = self::date($date);
+            $this->date = $clone->date;
+        }
+
+        if(empty($format)){
+            $format = "Y-m-d H:i:s";
+        }
+
+        return date($format, $this->date);
+    }
+
+    /**
+     * toDateTimeString
+     *
+     * @return string
+     */
+    public function toDateTimeString()
+    {
+        return $this->format();
     }
 
     /**

@@ -118,7 +118,6 @@ class TimeHelper {
         $default = 'Jan 01 1970';
 
         if(empty($date)){
-            // $date = date('M d Y', strtotime('this year January'));
             $date = $default;
         }
 

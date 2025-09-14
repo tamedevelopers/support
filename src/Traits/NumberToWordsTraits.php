@@ -190,7 +190,7 @@ trait NumberToWordsTraits
      *
      * @return bool
      */
-    static protected function isWordsInstance()
+    protected static function isWordsInstance()
     {
         return self::$staticData instanceof NumberToWords;
     }

@@ -13,38 +13,38 @@ class Cookie{
      * Site name 
      * @var string
      */
-    static protected $name;
+    protected static $name;
     
     /** 
      * Expire Cookie name
      * @var string
      */
-    static protected $expireName;
+    protected static $expireName;
 
     /** 
      * Time Cookie name
      * @var string
      */
-    static protected $timeName;
+    protected static $timeName;
 
     /** 
      * Time format
      * @var string
      */
-    static protected $timeFormat;
+    protected static $timeFormat;
 
     /** 
      * Expire time format
      * @var mixed
      */
-    static protected $expireFormat;
+    protected static $expireFormat;
     
     /** 
      * Create Sitename From .env
      * 
      * @return $this
      */
-    static protected function init()
+    protected static function init()
     {
         self::$name         = Str::lower(Str::replace([' '], '', env('APP_NAME', '')));
         self::$timeName     = "__time_" . self::$name;

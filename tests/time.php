@@ -36,9 +36,11 @@ $time4  = TameTime('first day of December 2008', 'Pacific/Pago_Pago');
 // ];
 
 dd(
+    Time::now(),
     $time->getTimezone(),
-    $time2->getTimezone(),
-    $time3->now(),
+    $time2,
+    $time3->date('last month')->getWeek(),
+    $time3->getTimezone(),
     $time4->getTimezone(),
 );
 

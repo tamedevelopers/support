@@ -164,7 +164,7 @@ class FileCache{
      * @param string $key
      * @return string
      */
-    static protected function getCachePath(string $key): string
+    protected static function getCachePath(string $key): string
     {
         return self::$cachePath . '/' . md5($key) . '.cache';
     }

@@ -27,9 +27,40 @@ trait TimeTrait{
      *
      * @return bool
      */
-    static protected function isTimeInstance()
+    protected static function isTimeInstance()
     {
-        return static::$staticData instanceof self;
+        return self::$staticData instanceof Time;
+    }
+
+    /**
+     * Added a base resolver to reuse the latest instance context
+     * @return $this
+     */
+    private static function baseInstance()
+    {
+        if(!self::isTimeInstance()){
+            $instance = self::keepStaticBinding(new static());
+        } else{
+            $instance = static::$staticData;
+        }
+
+        return $instance;
+    }
+
+    /**
+     * Keep static binding in sync with latest produced clone
+     * - Only if no static data available, bind it to the passed clone object
+     *
+     * @param \Time $clone
+     * @return $this
+     */
+    private static function keepStaticBinding($clone)
+    {
+        if(!self::isTimeInstance()){
+            static::$staticData = $clone;
+        }
+
+        return static::$staticData;
     }
     
     /**
@@ -99,9 +130,6 @@ trait TimeTrait{
         $clone->date = strtotime("{$date} {$sign} {$value}{$text}");
         $clone->timestamp = $clone->buildTimePrint();
 
-        // keep static binding in sync with latest produced clone
-        static::$staticData = $clone->copy();
-
         return $clone;
     }
 
@@ -131,6 +159,8 @@ trait TimeTrait{
 
         $clone->setTimeZoneAndTimeStamp($timezone);
         $clone->timestamp = $clone->timestampPrint();
+
+        self::keepStaticBinding($clone);
         
         return $clone;
     }
@@ -145,7 +175,7 @@ trait TimeTrait{
     {
         $clone = $this->clone();
         $clone->date = TimeHelper::setPassedDate($date);
-        $clone->timestamp    = $clone->timestampPrint();
+        $clone->timestamp = $clone->timestampPrint();
 
         return $clone;
     }
@@ -310,7 +340,7 @@ trait TimeTrait{
             'endofweek' => 'endOfWeek',
             'startofmonth' => 'startOfMonth',
             'endofmonth' => 'endOfMonth',
-            'startofyear', 'startofyears' => 'startOfYear',
+            'startofyear' => 'startOfYear',
             'endofyear' => 'endOfYear',
             'issameday' => 'isSameDay',
             'issamemonth' => 'isSameMonth',
@@ -330,9 +360,7 @@ trait TimeTrait{
             default => null //format
         };
 
-        // this will happen if __construct has not been called 
-        // before calling an existing method
-        // mostly when using [setglobaltimezone|getglobaltimezone] methods
+        // this will happen if trying to none existing method
         if(empty($clone)){
             $clone = new static();
         }

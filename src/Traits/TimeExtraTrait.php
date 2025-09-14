@@ -356,7 +356,7 @@ trait TimeExtraTrait
      */
     public function isTomorrow(): bool
     {
-        $tz = new DateTimeZone((string) $this->__getTimezone());
+        $tz = new DateTimeZone((string) $this->getTimezone());
         $tomorrow = new DateTime('tomorrow', $tz);
         $cur = $this->dtInTz((int) $this->date)->format('Y-m-d');
         return $tomorrow->format('Y-m-d') === $cur;

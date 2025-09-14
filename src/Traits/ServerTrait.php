@@ -16,7 +16,7 @@ trait ServerTrait{
      * Base directory of the application (normalized with trailing slash).
      * @var string
      */
-    static protected $base_dir = null;
+    protected static $base_dir = null;
 
     /**
      * Lightweight in-memory cache for server and domain values.
