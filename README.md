@@ -218,6 +218,7 @@ Support Package For PHP and Laravel
     * [today](#today)
     * [yesterday](#yesterday)
     * [createFromFormat](#createFromFormat)
+    * [createFromDateString](#createFromDateString)
     * [timestamp](#timestamp)
     * [toJsTimer](#toJsTimer)
     * [diff](#diff)
@@ -894,12 +895,20 @@ $time->yesterday();
 ```
 
 ### createFromFormat
-- Accepts two parameter [date, format]
-    - only [date] is mandatory and returns the Time(object)
+- Accepts two parameter [format, date]
+    - only [format] is mandatory and returns the `string stamped formatted date`
 
 ```php
-$time->createFromFormat('24 Jan 2025 14:00:00', 'm/d/Y h:ia');
-// object(Tamedevelopers\Support\Time)
+$time->createFromFormat('m/d/Y h:ia', '24 Jan 2025 14:00:00');
+// 01/25/2025 02:00am
+```
+
+### createFromDateString
+- Accepts one parameter [date]
+
+```php
+$time->createFromFormat('24 Jan 2025 14:00:00');
+// 2025-01-24 14:00:00.000000
 ```
 
 ### timestamp
@@ -949,10 +958,11 @@ $time->diffBetween('last year december', 1737752400, 'weeks');
 | `full \| short \| duration \| time \| date \| date_time \| time_stamp` |
 
 ```php
-$time->date('today')->ago()
-$time->date('today')->timeAgo()
+$time->date('today')->timeAgo('full')
+// 17 hours ago
 
 // Output: 
+$time->date('today')->ago()
 [
     "full" => "4 hours ago"
     "short" => "4h"

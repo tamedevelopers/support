@@ -254,25 +254,6 @@ class Time {
     {
         return $this->buildTimeModifier('year', $value, true);
     }
-
-    /**
-     * Create timestamp
-     * 
-     * @param int|string $date
-     * - string|int|float
-     * 
-     * @param string $format
-     * - Your defined format type i.e: Y-m-d H:i:s a
-     * - Converted TimeStamp
-     * 
-     * @return string
-     */
-    public static function timestamp($date, $format = "Y-m-d H:i:s")
-    {
-        $date = TimeHelper::setPassedDate($date);
-
-        return date($format, $date);
-    }
     
     /**
      * Set custom time
@@ -284,20 +265,6 @@ class Time {
         $base = self::baseInstance();
 
         return $base->setDate($date);
-    }
-
-    /**
-     * Create date from Format
-     *
-     * @param  int|string $datetime
-     * @param  string $format
-     * @return $this
-     */
-    public static function createFromFormat($datetime, $format = 'm/d/Y h:i:sa')
-    {
-        return self::date(
-            self::timestamp($datetime, $format)
-        );
     }
 
     /**
@@ -361,6 +328,52 @@ class Time {
     }
 
     /**
+     * Create timestamp
+     * 
+     * @param int|string $date
+     * - string|int
+     * 
+     * @param string $format
+     * - Your defined format type i.e: Y-m-d H:i:s a
+     * - Converted TimeStamp
+     * 
+     * @return string
+     */
+    public static function timestamp($date, $format = "Y-m-d H:i:s")
+    {
+        $date = TimeHelper::setPassedDate($date);
+
+        return date($format, $date);
+    }
+
+    /**
+     * Create date from Format
+     *
+     * @param  string $format
+     * @param  int|string|null $datetime
+     * @return string
+     */
+    public static function createFromFormat($format = 'Y-m-d H:i:s.u', $datetime = null)
+    {
+        return self::date(
+            self::timestamp($datetime ?: 'now')
+        )->format($format);
+    }
+
+    /**
+     * Create date from date string
+     *
+     * @param  int|string $datetime
+     * @return string
+     */
+    public static function createFromDateString($datetime)
+    {
+        return self::date(
+            self::timestamp($datetime)
+        )->format('Y-m-d H:i:s.u');
+    }
+
+    /**
      * Format time input
      * 
      * @param string|null $format
@@ -374,8 +387,7 @@ class Time {
     public function format($format = null, $date = null)
     {
         if (!empty($date)) {
-            $clone = self::date($date);
-            $this->date = $clone->date;
+            $this->date = TimeHelper::setPassedDate($date);
         }
 
         if(empty($format)){
@@ -393,6 +405,26 @@ class Time {
     public function toDateTimeString()
     {
         return $this->format();
+    }
+
+    /**
+     * toDateString
+     *
+     * @return string
+     */
+    public function toDateString()
+    {
+        return $this->format('Y-m-d');
+    }
+
+    /**
+     * toTimeString
+     *
+     * @return string
+     */
+    public function toTimeString()
+    {
+        return $this->format('H:i:s');
     }
 
     /**
@@ -445,70 +477,70 @@ class Time {
      * Get the stored date time
      * @return int
      */
-    public function __getDate()
+    public function __date()
     {
         return (int) $this->date;
     }
 
     /**
      * Get the number of seconds between the stored time and the current time.
-     * @return mixed
+     * @return int
      */
-    public function __getSecond()
+    public function __second()
     {
         return $this->__timeDifference('sec');
     }
 
     /**
      * Get the number of minutes between the stored time and the current time.
-     * @return mixed
+     * @return int
      */
-    public function __getMin() 
+    public function __min() 
     {
         return $this->__timeDifference('mins');
     }
 
     /**
      * Get the number of hours between the stored time and the current time.
-     * @return mixed
+     * @return int
      */
-    public function __getHour() 
+    public function __hour() 
     {
         return $this->__timeDifference('hour');
     }
     
     /**
      * Get the number of days between the stored time and the current time.
-     * @return mixed
+     * @return int
      */
-    public function __getDay() 
+    public function __day() 
     {
         return $this->__timeDifference('days');
     }
 
     /**
      * Get the number of weeks between the stored time and the current time.
-     * @return mixed
+     * @return int
      */
-    public function __getWeek() 
+    public function __week() 
     {
         return $this->__timeDifference('weeks');
     }
     
     /**
      * Get the number of months between the stored time and the current time.
-     * @return mixed
+     * @return int
      */
-    public function __getMonth() 
+    public function __month()
     {
         return $this->__timeDifference('month');
     }
     
     /**
      * Get the number of years between the stored time and the current time.
-     * @return mixed
+     * @return int
      */
-    public function __getYear() 
+    public function __year() 
     {
         return $this->__timeDifference('year');
     }
@@ -609,7 +641,7 @@ class Time {
         $days       = $diff['days'];
         $weeks      = $diff['weeks'];
         $years      = $diff['year'];
-        $date       = $this->__getDate();
+        $date       = $this->__date();
         $text       = self::getText();
 
         if ($days === 0 && $hours === 0 && $minutes < 1) {
@@ -668,12 +700,6 @@ class Time {
     }
 
     /**
-     * Get the text representation options.
-     * @param string|null $mode
-     * 
-     * @return mixed
-     */
-    /**
      * Retrieve text configuration entries.
      *
      * @param string|null $mode Specific key to fetch or null for all
@@ -706,12 +732,15 @@ class Time {
         $time = (int) $this->date;
 
         return [
-            'timestamp'      => $time,
+            'date'          => $time,
+            'timestamp'      => $this->timestamp,
             'formatted'      => date('Y-m-d H:i:s', $time),
             'timezone'       => (string) ($this->timezoneName ?? $this->timezone),
             'utc_offset'     => ($this->utcOffset ?? date('(P)', $time)),
             'greeting'       => $this->__greeting($time),
             'time_ago_short' => $this->__timeAgo('short'),
+            'time_ago'       => $this->__timeAgo(),
+            'time_diff'      => $this->__timeDifference(),
         ];
     }
 }
