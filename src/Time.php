@@ -351,7 +351,7 @@ class Time {
      *
      * @param  string $format
      * @param  int|string|null $datetime
-     * @return string
+     * @return string 
      */
     public static function createFromFormat($format = 'Y-m-d H:i:s.u', $datetime = null)
     {
@@ -364,7 +364,7 @@ class Time {
      * Create date from date string
      *
      * @param  int|string $datetime
-     * @return string
+     * @return string 
      */
     public static function createFromDateString($datetime)
     {
@@ -379,7 +379,7 @@ class Time {
      * @param string|null $format
      * - Your defined format type i.e: Y-m-d H:i:s a
      * 
-     * @param int|string $date
+     * @param int|string|null $date
      * - string|int|float
      * 
      * @return string

@@ -44,6 +44,7 @@ dd(
     ],
 
     [
+        $time4->now()->toTimeString(),
         $time->date('today')->timeAgo('full'),
         $time->createFromFormat('m/d/Y h:ia', '24 Jan 2025 14:00:00'),
         $time->createFromDateString('24 Jan 2025 14:00:00'),

@@ -221,12 +221,14 @@ Support Package For PHP and Laravel
     * [createFromDateString](#createFromDateString)
     * [timestamp](#timestamp)
     * [toJsTimer](#toJsTimer)
+    * [format](#format)
+    * [toDateTimeString](#toDateTimeString)
+    * [toDateString](#toDateString)
+    * [toTimeString](#toTimeString)
     * [diff](#diff)
     * [diffBetween](#diffBetween)
     * [ago](#ago)
     * [range](#range)
-    * [format](#format)
-    * [toDateTimeString](#toDateTimeString)
     * [addSeconds](#addSeconds)
     * [subSeconds](#subSeconds)
     * [addMinutes](#addMinutes)
@@ -907,7 +909,7 @@ $time->createFromFormat('m/d/Y h:ia', '24 Jan 2025 14:00:00');
 - Accepts one parameter [date]
 
 ```php
-$time->createFromFormat('24 Jan 2025 14:00:00');
+$time->createFromDateString('24 Jan 2025 14:00:00');
 // 2025-01-24 14:00:00.000000
 ```
 
@@ -927,6 +929,35 @@ $time->timestamp('24 Jan 2025 14:00:00');
 $time->toJsTimer('24 Jan 2025 14:00:00');
 $time->jsTimer('24 Jan 2025 14:00:00');
 // Output: Jan 24, 2025 14:00:00
+```
+
+### format
+- Accepts two parameter [format, date] (none is required by default)
+
+```php
+$time4->now()->format()
+// 2025-09-15 05:07:07
+```
+
+### toDateTimeString
+
+```php
+$time4->now()->toDateTimeString()
+// 2025-09-13 22:00:00
+```
+
+### toDateString
+
+```php
+$time4->now()->toDateString()
+// 2025-09-15
+```
+
+### toTimeString
+
+```php
+$time4->now()->toTimeString()
+// 05:09:01
 ```
 
 ### diff
