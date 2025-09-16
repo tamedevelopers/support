@@ -342,11 +342,23 @@ class Tame {
     }
 
     /**
+     * Alias for `calculateExponent` method
+     *
+     * @param float|int $base The base number.
+     * @param float|int $exponent The exponent to raise the base to.
+     * @return float|int
+     */
+    public static function exponent($base = 0, $exponent = 0)
+    {
+        return self::calculateExponent($base, $exponent);
+    }
+
+    /**
      * Calculate the result of raising a base to an exponent.
      *
      * @param float|int $base The base number.
      * @param float|int $exponent The exponent to raise the base to.
-     * @return float|int 
+     * @return float|int
      * - The result of the exponentiation.
      */
     public static function calculateExponent($base = 0, $exponent = 0)
@@ -864,8 +876,9 @@ class Tame {
 
     /**
      * Format number to nearest thousand
+     * 
      * @param  float|int $number
-     * @return void
+     * @return string
      */
     public static function formatNumberToNearestThousand(float|int $number = 0)
     {

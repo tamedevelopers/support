@@ -519,6 +519,43 @@ class Str
     }
 
     /**
+     * Shorten String to Given Limit
+     * 
+     * @param  mixed $string
+     * @param  mixed $limit
+     * @param  mixed $replacer
+     * [optional]
+     * 
+     * @return string
+     */
+    public static function shorten($string = null, $limit = 50, $replacer = '...')
+    {
+        return Tame::shortenString($string, $limit, $replacer);
+    }
+
+    /**
+     * Filter sanitize string|text
+     * 
+     * @param string|null $string
+     * @return string
+     */
+    public static function sanitize($string = null)
+    {
+        return Tame::filter_input($string);
+    }
+
+    /**
+     * Format number to nearest thousand
+     * 
+     * @param  float|int $number
+     * @return string
+     */
+    public static function toThousand($number = 0)
+    {
+        return Tame::formatNumberToNearestThousand($number);
+    }
+    
+    /**
      * Encrypt string
      *
      * @param string|null $string
@@ -538,21 +575,6 @@ class Str
     public static function decrypt($jsonString = null)
     {
         return Tame::decryptStr($jsonString);
-    }
-
-    /**
-     * Shorten String to Given Limit
-     * 
-     * @param  mixed $string
-     * @param  mixed $limit
-     * @param  mixed $replacer
-     * [optional]
-     * 
-     * @return string
-     */
-    public static function shorten($string = null, $limit = 50, $replacer = '...')
-    {
-        return Tame::shortenString($string, $limit, $replacer);
     }
 
     /**
