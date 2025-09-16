@@ -26,12 +26,17 @@ and the United Nations’ Sustainable Development Goals.";
 $util = Utility::text($text);
 $email = "maxwell+freeman@xd.org";
 $email2 = "maxwell.freeman@gmail.com";
+$email3 = "freeman+maxwell@icloud.com";
 
 // echo($util)  . PHP_EOL;
 
 dump(
     Utility::maskEmail($email),
-    Utility::normalizeEmail($email),
+    [
+        Utility::normalizeEmail($email),
+        Utility::normalizeEmail($email2),
+        Utility::normalizeEmail($email3),
+    ],
     Utility::equalsEmail($email, $email, true),
     // Utility::validateEmail($email, true, true),
     
