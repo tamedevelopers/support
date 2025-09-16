@@ -13,7 +13,7 @@ return [
     |
     */
     
-    // Gmail ignores dots and supports plus
+    // Gmail ignores dots and supports plus|but we can't confirm this with confidence
     "gmail.com"         => ["strip_plus" => true, "strip_dots" => false],
     "googlemail.com"    => ["strip_plus" => true, "strip_dots" => false],
 
