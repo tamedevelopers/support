@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 
-trait TextProcessorTrait{
+trait TextSanitizerTrait{
 
     /**
      * Detect spans (byte ranges) in the text that represent disguised phone numbers

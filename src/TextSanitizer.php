@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
-use Tamedevelopers\Support\Traits\TextProcessorTrait;
+use Tamedevelopers\Support\Traits\TextSanitizerTrait;
 
-class TextProcessor{
+class TextSanitizer{
     
-    use TextProcessorTrait;
+    use TextSanitizerTrait;
 
     /**
      * Extract phone numbers written in words or mixed with digits.
