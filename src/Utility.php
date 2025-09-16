@@ -29,7 +29,7 @@ use Tamedevelopers\Support\Traits\TextUtilityTrait;
 class Utility
 {
     use TextUtilityTrait,
-        EmailUtilityTrait;
+        EmailUtilityTrait; 
     
     /**
      * Providers rules cache loaded from stubs/emailProviders.php

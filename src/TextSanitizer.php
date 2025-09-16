@@ -6,7 +6,7 @@ namespace Tamedevelopers\Support;
 
 use Tamedevelopers\Support\Traits\TextSanitizerTrait;
 
-class TextSanitizer{
+class TextSanitizer{ 
     
     use TextSanitizerTrait;
 
