@@ -197,7 +197,9 @@ class TextSanitizer{
      */
     public static function mention(string $text, string $replacer = "[username]")
     {
-        $pattern = '/@\w{3,}/';
+        // Negative lookbehind ensures @ is not part of an email (no word or dot before it)
+        $pattern = '/(?<![\w.])@([A-Za-z0-9_.]{3,})\b/';
+
         return preg_replace($pattern, $replacer, $text);
     }
 

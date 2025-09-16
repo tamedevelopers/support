@@ -93,4 +93,28 @@ class Utility
     {
         return $this->getText();
     }
+
+    /**
+     * Magic: customize what is displayed during var-dump/dd().
+     * Provides a pretty, safe snapshot of the current class.
+     *
+     * - text: the text input
+     * - readingTime: reading time using 200 words per minute
+     * - wordCount: Count words in text.
+     * - charCount: Count words in text.
+     * - sentenceCount: Count text sentences (approximate) by splitting on punctuation.
+     *
+     * @return array
+     */
+    public function __debugInfo(): array
+    {
+        return [
+            'text'          => $this->getText(),
+            'readingTime'   => $this->readingTime(),
+            'wordCount'     => $this->wordCount(),
+            'charCount'     => $this->charCount(),
+            'sentenceCount' => $this->sentenceCount(),
+        ];
+    }
+
 }

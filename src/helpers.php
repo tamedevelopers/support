@@ -13,8 +13,10 @@ use Tamedevelopers\Support\Asset;
 use Tamedevelopers\Support\Cookie;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Country;
+use Tamedevelopers\Support\Utility;
 use Tamedevelopers\Support\Translator;
 use Tamedevelopers\Support\NumberToWords;
+use Tamedevelopers\Support\TextSanitizer;
 use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Process\Session;
 use Tamedevelopers\Support\AutoloadRegister;
@@ -153,6 +155,31 @@ if (! function_exists('TameStr')) {
     function TameStr()
     {
         return new Str();
+    }
+}
+
+if (! function_exists('TameSanitizer')) {
+    /**
+     * Tame Sanitizer
+     * 
+     * @return \Tamedevelopers\Support\TextSanitizer
+     */
+    function TameSanitizer()
+    {
+        return new TextSanitizer();
+    }
+}
+
+if (! function_exists('TameUtility')) {
+    /**
+     * Tame Utility
+     * 
+     * @param string|null $text
+     * @return \Tamedevelopers\Support\Utility
+     */
+    function TameUtility($text = null)
+    {
+        return new Utility($text);
     }
 }
 

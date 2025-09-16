@@ -81,7 +81,24 @@ Support Package For PHP and Laravel
     * [last](#last)
 * [TextSanitizer](#TextSanitizer)
     * [Usage](#sanitizer-usage)
-    * [phone](#phone)
+    * [phoneInt](#phoneInt)
+    * [phoneWords](#phoneWords)
+    * [url](#sanitize-url)
+    * [email](#sanitize-email)
+    * [mention](#sanitize-mention)
+    * [hastag](#sanitize-hastag)
+    * [sanitize](#sanitize)
+    * [findPhoneWords](#findPhoneWords)
+* [Utility](#Utility)
+    * [Usage](#utility-usage)
+    * [phoneInt](#phoneInt)
+    * [phoneWords](#phoneWords)
+    * [url](#sanitize-url)
+    * [email](#sanitize-email)
+    * [mention](#sanitize-mention)
+    * [hastag](#sanitize-hastag)
+    * [sanitize](#sanitize)
+    * [findPhoneWords](#findPhoneWords)
 * [Country](#country)
     * [Usage](#country-usage)
     * [iso3](#country-iso3)
@@ -607,6 +624,91 @@ Str::text('<b>Hi</b>');                            // 'Hi'
 Str::shorten('Long sentence here', 10);            // 'Long sente...'
 Str::encrypt('secret');                            // encrypted
 Str::decrypt('...');                               // original
+```
+
+## TextSanitizer
+- The Core Class For String Sanitizer
+    - It's helper class can be called, using -- `TameSanitizer()`
+
+### Sanitizer Usage
+```php
+use Tamedevelopers\Support\TextSanitizer;
+
+$text = "My number is 0812300089 and another is zero eight one two three four five six seven.
+Visit https://x.com google.com or mail me at test@mail.com +23400000209
+I love #coding with @friends. I also have two cats. 11092092-3";
+
+$text2 = "I'm a beautiful zero nine zero and sweet in seven five seven eight available from ";
+$text3 = "Reach me on zero eight one double two 555 nine or 0812220000";
+$text4 = "Visit https://x.com google.com or mail me at test@mail.com @username.com. +23400";
+
+
+$sanitizer->phoneInt($text);        // 
+$sanitizer->phoneWords($text2);     // I'm a beautiful [phone] available from 
+$sanitizer->phoneWords($text3);     // Reach me on [phone]
+$sanitizer->url($text4);            // Visit [url] [url] or mail me at test@mail.com @username.com. +23400
+$sanitizer->email($text4);          // Visit https://x.com google.com or mail me at [email] @username.com. +23400
+$sanitizer->mention($text4);        // Visit https://x.com google.com or mail me at test@mail.com [username]. +23400
+$sanitizer->findPhoneWords($text);  // Collect all numbers both in words as return as int in array
+// array [
+//   0 => "0812300089"
+//   1 => "081234567"
+//   2 => "23400000209"
+//   3 => "2110920923"
+// ]
+
+$sanitizer->sanitize($text);        // sanitize all in a go!
+// My number is [phone] and another is [phone].
+// Visit [url] [url] or mail me at [email]. +[phone]
+// I love [hastag] with [mention]. I also have two cats. [phone]-3
+
+// sanitize(
+//     string $text,
+//     array $rules = [
+//         'phoneInt' => '[phone]',
+//         'phoneWords' => '[phone]',
+//         'url' => '[url]',
+//         'email' => '[email]',
+//         'mention' => '[mention]',
+//         'hastag' => '[hastag]',
+//     ]
+// );
+```
+
+## Utility
+- The Core Class For Email and String manipulations analysiss
+    - It's helper class can be called, using -- `TameUtility()`
+
+### Utility Usage
+```php
+use Tamedevelopers\Support\Utility;
+
+$text = "
+The Christ the Redeemer Sanctuary, located in the heart of Rio de Janeiro, is the world’s 
+first open-air sanctuary, offering a sacred space welcoming people of all cultures, 
+beliefs, and backgrounds.";
+
+$email = "maxwell+example@xd.org";
+$email2 = "maxwell.example@gmail.com";
+$email3 = "example+maxwell@icloud.com";
+
+$util = Utility::text($text);
+
+$util->readingTime();                   // 10 seconds
+$util->wordCount();                     // 32
+$util->charCount();                     // 207
+$util->sentenceCount();                 // 1
+$util->reverse();                       // used to reverse the text words
+Utility::text('This is a new text')->readingTime(); // 2 seconds
+Utility::text("A man, a plan, a canal: Panama")->isPalindrome(); //true
+
+
+$util->maskEmail($email);               // *********xample@xd.org
+Utility::normalizeEmail($email);        // maxwell+example@xd.org
+Utility::normalizeEmail($email2);       // maxwell.example@gmail.com
+Utility::normalizeEmail($email3);       // example@icloud.com
+Utility::isGmail($email2);              // true
+Utility::validateEmail($email);         // true
 ```
 
 ## Country

@@ -8,10 +8,13 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // --------------------------
 // Example usage
 // --------------------------
+
 $text = "
-The Christ the Redeemer Sanctuary, located in the heart of Rio de Janeiro, is the world’s first open-air sanctuary, 
-offering a sacred space welcoming people of all cultures, beliefs, and backgrounds. 
-More than just a monument, it is a symbol of faith, hope, and hospitality, inviting millions of visitors each year 
+The Christ the Redeemer Sanctuary, located in the heart of Rio de Janeiro, is the world’s 
+first open-air sanctuary, offering a sacred space welcoming people of all cultures, 
+beliefs, and backgrounds.";
+
+$text2 = $text . "More than just a monument, it is a symbol of faith, hope, and hospitality, inviting millions of visitors each year 
 for moments of reflection, spirituality, and connection with nature.
 
 Built atop Corcovado Mountain at 710 meters above sea level, Christ the Redeemer is one of the Seven Wonders of the Modern World. 
@@ -24,29 +27,32 @@ and the United Nations’ Sustainable Development Goals.";
 
 
 $util = Utility::text($text);
-$email = "maxwell+freeman@xd.org";
-$email2 = "maxwell.freeman@gmail.com";
-$email3 = "freeman+maxwell@icloud.com";
+$email = "maxwell+example@xd.org";
+$email2 = "maxwell.example@gmail.com";
+$email3 = "example+maxwell@icloud.com";
 
 // echo($util)  . PHP_EOL;
 
 dump(
-    Utility::maskEmail($email),
+    $util->maskEmail($email),
     [
         Utility::normalizeEmail($email),
         Utility::normalizeEmail($email2),
         Utility::normalizeEmail($email3),
         "isGmail: " . (Utility::isGmail($email2) ? 'yes' : 'no'),
+        Utility::equalsEmail($email, $email),
     ],
-    Utility::equalsEmail($email, $email, true),
-    // Utility::validateEmail($email, true, true),
     
+    [
+        Utility::text('This is a new text')->readingTime(),
+        $util->readingTime(),
+        $util->wordCount(),
+        $util->charCount(),
+        $util->sentenceCount(),
+        Utility::text("A man, a plan, a canal: Panama")->isPalindrome()
+    ],
+    $util,
+    // Utility::validateEmail($email, true, true),
     // $util->getText(),
-    Utility::text('This is a new text')->readingTime(),
-    $util->readingTime(),
-    $util->wordCount(),
-    $util->charCount(),
-    $util->sentenceCount(),
-    Utility::text("A man, a plan, a canal: Panama")->isPalindrome(),
     // $util->reverse(),
 );
