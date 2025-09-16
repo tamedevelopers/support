@@ -72,6 +72,10 @@ trait EmailUtilityTrait{
     /**
      * Normalize an email address using rules from `emailProviders` file.
      * 
+     * @param string $email
+     * @param bool $lowercaseLocal
+     * - If true, local part will be converted to lowercase. Default is false.
+     * 
      * @return string|null
      */
     public static function normalizeEmail(string $email, bool $lowercaseLocal = false)
@@ -119,6 +123,7 @@ trait EmailUtilityTrait{
      *
      * @param bool $lowercaseLocal
      * - If true, local part will be converted to lowercase. Default is false.
+     * 
      * @return bool
      */
     public static function equalsEmail(string $email, string $second_email, bool $lowercaseLocal = false)

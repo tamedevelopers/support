@@ -8,8 +8,6 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // --------------------------
 // Example usage
 // --------------------------
-$email = "maxwell+freeman@gmail.com";
-
 $text = "
 The Christ the Redeemer Sanctuary, located in the heart of Rio de Janeiro, is the world’s first open-air sanctuary, 
 offering a sacred space welcoming people of all cultures, beliefs, and backgrounds. 
@@ -26,6 +24,8 @@ and the United Nations’ Sustainable Development Goals.";
 
 
 $util = Utility::text($text);
+$email = "maxwell+freeman@xd.org";
+$email2 = "maxwell.freeman@gmail.com";
 
 // echo($util)  . PHP_EOL;
 
