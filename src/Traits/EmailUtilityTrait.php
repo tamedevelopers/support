@@ -183,7 +183,7 @@ trait EmailUtilityTrait{
         return self::isDomainIn($email, array_keys(self::$providers['gmx']));
     }
 
-    public static function isMailCom(string $email): bool
+    public static function isMailDotCom(string $email): bool
     {
         self::loadProviders();
         return self::isDomainIn($email, array_keys(self::$providers['gmx']));
