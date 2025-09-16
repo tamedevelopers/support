@@ -215,7 +215,7 @@ trait TameTrait{
     private static function verifyDomain_AndMxRecord($domain = null, ?int $mxCount = 0)
     {
         // Method 2: Use DNS check on domain A record
-        $domainRecords = dns_get_record($domain, DNS_A);
+        $domainRecords = @dns_get_record($domain, DNS_A);
         if (count($domainRecords) > 0 && $mxCount > 0) {
             return true; // Consider it valid based on having domain A record
         }
