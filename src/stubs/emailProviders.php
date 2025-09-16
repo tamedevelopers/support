@@ -13,8 +13,8 @@ return [
     |
     */
 
-    "gmail.com"         => ["strip_plus" => true, "strip_dots" => true],
-    "googlemail.com"    => ["strip_plus" => true, "strip_dots" => true],
+    "gmail.com"         => ["strip_plus" => true, "strip_dots" => false],
+    "googlemail.com"    => ["strip_plus" => true, "strip_dots" => false],
     "outlook.com"       => ["strip_plus" => true, "strip_dots" => false],
     "hotmail.com"       => ["strip_plus" => true, "strip_dots" => false],
     "live.com"          => ["strip_plus" => true, "strip_dots" => false],
