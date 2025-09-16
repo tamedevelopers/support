@@ -36,6 +36,7 @@ dump(
         Utility::normalizeEmail($email),
         Utility::normalizeEmail($email2),
         Utility::normalizeEmail($email3),
+        "isGmail: " . (Utility::isGmail($email2) ? 'yes' : 'no'),
     ],
     Utility::equalsEmail($email, $email, true),
     // Utility::validateEmail($email, true, true),

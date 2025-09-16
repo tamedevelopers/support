@@ -7,10 +7,12 @@ namespace Tamedevelopers\Support\Traits;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\Collections\Collection;
 
 
 /**
  * @property array $providers
+ * @property array $providersChildren
  */
 trait EmailUtilityTrait{
     
@@ -88,10 +90,11 @@ trait EmailUtilityTrait{
         [$local, $domain] = explode('@', $email, 2);
         $domain = mb_strtolower($domain);
 
-        self::loadProviders();
+        // load children data
+        self::loadProvidersChildren();
 
-        if (isset(self::$providers[$domain])) {
-            $rules = self::$providers[$domain];
+        if (isset(self::$providersChildren[$domain])) {
+            $rules = self::$providersChildren[$domain];
 
             if (!empty($rules['strip_plus'])) {
                 $plusPos = strpos($local, '+');
@@ -131,6 +134,107 @@ trait EmailUtilityTrait{
         return self::normalizeEmail($email, $lowercaseLocal) === self::normalizeEmail($second_email, $lowercaseLocal);
     }
 
+    // --- Specific provider families ---
+    public static function isGmail(string $email): bool
+    {
+        self::loadProviders();
+        return self::isDomainIn($email, array_keys(self::$providers['gmail']));
+    }
+
+    public static function isOutlook(string $email): bool
+    {
+        self::loadProviders();
+        return self::isDomainIn($email, array_keys(self::$providers['outlook']));
+    }
+
+    public static function isIcloud(string $email): bool
+    {
+        self::loadProviders();
+        return self::isDomainIn($email, array_keys(self::$providers['icloud']));
+    }
+
+    public static function isFastmail(string $email): bool
+    {
+        self::loadProviders();
+        return self::isDomainIn($email, array_keys(self::$providers['fastmail']));
+    }
+
+    public static function isProtonmail(string $email): bool
+    {
+        self::loadProviders();
+        return self::isDomainIn($email, array_keys(self::$providers['protonmail']));
+    }
+
+    public static function isZoho(string $email): bool
+    {
+        self::loadProviders();
+        return self::isDomainIn($email, array_keys(self::$providers['zohomail']));
+    }
+
+    public static function isYandex(string $email): bool
+    {
+        self::loadProviders();
+        return self::isDomainIn($email, array_keys(self::$providers['yandex']));
+    }
+
+    public static function isGmx(string $email): bool
+    {
+        self::loadProviders();
+        return self::isDomainIn($email, array_keys(self::$providers['gmx']));
+    }
+
+    public static function isMailCom(string $email): bool
+    {
+        self::loadProviders();
+        return self::isDomainIn($email, array_keys(self::$providers['gmx']));
+    }
+
+    public static function isMailboxOrg(string $email): bool
+    {
+        self::loadProviders();
+        return self::isDomainIn($email, array_keys(self::$providers['focused']));
+    }
+
+    public static function isPosteo(string $email): bool
+    {
+        self::loadProviders();
+        return self::isDomainIn($email, array_keys(self::$providers['focused']));
+    }
+
+    public static function isRunbox(string $email): bool
+    {
+        self::loadProviders();
+        return self::isDomainIn($email, array_keys(self::$providers['focused']));
+    }
+
+    public static function isStartmail(string $email): bool
+    {
+        self::loadProviders();
+        return self::isDomainIn($email, array_keys(self::$providers['focused']));
+    }
+
+    /**
+     * Load providers data child elements
+     * @return void
+     */
+    protected static function loadProvidersChildren()
+    {
+        self::loadProviders();
+
+        if (!empty(self::$providersChildren)) {
+            return; // already loaded
+        }
+
+        $collection = new Collection(self::$providers);
+
+        $data = [];
+        $collection->each(function($item) use (&$data) {
+            $data = array_merge($data, $item);
+        });
+
+        self::$providersChildren = $data;
+    }
+
     /**
      * Load providers config from `emailProviders` file.
      * @return void
@@ -146,5 +250,42 @@ trait EmailUtilityTrait{
             self::$providers = require $file; // this directly returns the array
         }
     }
-    
+
+    /**
+     * Extract and normalize the domain part of an email.
+     */
+    protected static function extractDomain(?string $email): ?string
+    {
+        if (!is_string($email)) {
+            return null;
+        }
+        $email = trim($email);
+        $at = strrpos($email, '@');
+        if ($at === false) {
+            return null;
+        }
+        $domain = substr($email, $at + 1);
+        if ($domain === '') {
+            return null;
+        }
+
+        return mb_strtolower($domain);
+    }
+
+    /**
+     * Check if email belongs to any of the given domains.
+     *
+     * @param string $email
+     * @param string[] $domains
+     */
+    protected static function isDomainIn(string $email, array $domains): bool
+    {
+        $domain = self::extractDomain($email);
+        if ($domain === null) {
+            return false;
+        }
+
+        return in_array($domain, $domains, true);
+    }
+
 }

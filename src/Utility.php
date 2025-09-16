@@ -30,12 +30,18 @@ class Utility
 {
     use TextUtilityTrait,
         EmailUtilityTrait;
-
+    
     /**
-     * Email Providers
+     * Providers rules cache loaded from stubs/emailProviders.php
+     * @var array<string, array{strip_plus: bool, strip_dots: bool}>
+     */
+    protected static $providers = [];
+    
+    /**
+     * Providers rules children data loaded from <$providers>
      * @var array
      */
-    protected static array $providers = [];
+    protected static $providersChildren = [];
 
     /**
      * Text to analyze/manipulate.
