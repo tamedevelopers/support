@@ -39,7 +39,7 @@ trait TimeTrait{
     private static function baseInstance()
     {
         if(!self::isTimeInstance()){
-            $instance = self::keepStaticBinding(new static());
+            $instance = self::keepStaticBinding(new self());
         } else{
             $instance = static::$staticData;
         }
@@ -107,7 +107,7 @@ trait TimeTrait{
      * @param string $mode second|minute|hour|day|week|month|year
      * @param int $value Amount to adjust
      * @param bool $sub If true, subtract instead of add
-     * @return static
+     * @return self
      */
     private function buildTimeModifier($mode = 'day', $value = 0, $sub = false)
     {
@@ -362,7 +362,7 @@ trait TimeTrait{
 
         // this will happen if trying to none existing method
         if(empty($clone)){
-            $clone = new static();
+            $clone = new static;
         }
 
         // if method name doesn't exists

@@ -153,7 +153,7 @@ class Env {
 
         // when system path is empty
         if(empty(self::$sym_path)){
-            new static();
+            new self();
         }
         
         // only attempt to create file if direcotry if valid
@@ -358,7 +358,7 @@ class Env {
         // if system path is null
         // calling the `new self()` will initalize the class and set the default path for us
         if(empty(self::$sym_path)){
-            new static();
+            new self();
         }
 
         // if \storage folder not found

@@ -198,11 +198,11 @@ trait RelatedTrait{
     /**
      * Reverse the collection order.
      *
-     * @return static
+     * @return self
      */
     public function reverse()
     {
-        return new static(array_reverse($this->items, true));
+        return new self(array_reverse($this->items, true));
     }
 
     /**
@@ -210,18 +210,18 @@ trait RelatedTrait{
      *
      * @param  int $size
      * @param  mixed $value
-     * @return static
+     * @return self
      */
     public function pad(int $size, $value)
     {
-        return new static(array_pad($this->items, $size, $value));
+        return new self(array_pad($this->items, $size, $value));
     }
 
     /**
      * Combine the collection's values with the provided keys.
      *
      * @param  array $keys
-     * @return static
+     * @return self
      */
     public function combine(array $keys)
     {
@@ -235,13 +235,13 @@ trait RelatedTrait{
             $keys = array_pad($keys, count($this->items), null);
         }
 
-        return new static(array_combine($keys, $this->items));
+        return new self(array_combine($keys, $this->items));
     }
 
     /**
      * Collapse a multi-dimensional collection into a single level.
      *
-     * @return static
+     * @return self
      */
     public function collapse()
     {
@@ -253,24 +253,24 @@ trait RelatedTrait{
             }
         }
 
-        return new static($results);
+        return new self($results);
     }
 
     /**
      * Flatten a multi-dimensional collection into a single level.
      *
-     * @return static
+     * @return self
      */
     public function flatten()
     {
-        return new static(Str::flatten($this->items));
+        return new self(Str::flatten($this->items));
     }
 
     /**
      * Zip the collection together with one or more arrays.
      *
      * @param  array ...$arrays
-     * @return static
+     * @return self
      */
     public function zip(array ...$arrays)
     {
@@ -284,25 +284,25 @@ trait RelatedTrait{
             $zipped[] = $row;
         }
 
-        return new static($zipped);
+        return new self($zipped);
     }
 
     /**
      * Merge the collection with the given items.
      *
      * @param  array $items
-     * @return static
+     * @return self
      */
     public function merge($items)
     {
-        return new static(array_merge($this->items, $items));
+        return new self(array_merge($this->items, $items));
     }
 
     /**
      * Needed key from items
      * @param array|string|null  $keys of input
      * 
-     * @return static
+     * @return self
      */
     public function only(...$keys)
     {
@@ -316,14 +316,14 @@ trait RelatedTrait{
             }
         }
 
-        return new static($array);
+        return new self($array);
     }
 
     /**
      * Remove key from items
      * @param array|string|null  $keys of input
      * 
-     * @return static
+     * @return self
      */
     public function except(...$keys)
     {
@@ -335,14 +335,14 @@ trait RelatedTrait{
             }
         }
 
-        return new static($this->items);
+        return new self($this->items);
     }
 
     /**
      * Chunk the collection into arrays with a specified size.
      *
      * @param  int $size
-     * @return static
+     * @return self
      */
     public function chunk(int $size)
     {
@@ -350,45 +350,45 @@ trait RelatedTrait{
             $size = 10;
         }
 
-        return new static(array_chunk($this->items, $size));
+        return new self(array_chunk($this->items, $size));
     }
 
     /**
      * Get the keys of the collection items.
      *
-     * @return static
+     * @return self
      */
     public function keys()
     {
-        return new static(array_keys($this->items));
+        return new self(array_keys($this->items));
     }
 
     /**
      * Get the values of the collection items.
      *
-     * @return static
+     * @return self
      */
     public function values()
     {
-        return new static(array_values($this->items));
+        return new self(array_values($this->items));
     }
 
     /**
      * Filter the collection using a callback.
      *
      * @param  callable $callback
-     * @return static
+     * @return self
      */
     public function filter(callable $callback)
     {
-        return new static(array_filter($this->items, $callback, ARRAY_FILTER_USE_BOTH));
+        return new self(array_filter($this->items, $callback, ARRAY_FILTER_USE_BOTH));
     }
 
     /**
      * Remove items from the collection that pass a given truth test.
      *
      * @param  callable|null  $callback
-     * @return static
+     * @return self
      */
     public function reject($callback = null)
     {
@@ -402,7 +402,7 @@ trait RelatedTrait{
             return ! $callback($item, $key);
         }, ARRAY_FILTER_USE_BOTH);
 
-        return new static($results);
+        return new self($results);
     }
 
     /**
@@ -411,7 +411,7 @@ trait RelatedTrait{
      * @param  string|callable $key
      * @param  string|null $operator
      * @param  mixed $value
-     * @return static
+     * @return self
      */
     public function where($key, $operator = null, $value = null)
     {
@@ -425,7 +425,7 @@ trait RelatedTrait{
             return $this->evaluateWhere($item, $key, $operator, $value);
         });
 
-        return new static($results);
+        return new self($results);
     }
 
     /**
@@ -433,7 +433,7 @@ trait RelatedTrait{
      *
      * @param  string $key
      * @param  array $values
-     * @return static
+     * @return self
      */
     public function whereIn(string $key, array $values)
     {
@@ -447,7 +447,7 @@ trait RelatedTrait{
      *
      * @param  string $key
      * @param  array $values
-     * @return static
+     * @return self
      */
     public function whereNotIn(string $key, array $values)
     {
@@ -460,7 +460,7 @@ trait RelatedTrait{
      * Filter items where the given key is null.
      *
      * @param  string $key
-     * @return static
+     * @return self
      */
     public function whereNull(string $key)
     {
@@ -473,7 +473,7 @@ trait RelatedTrait{
      * Filter items where the given key is not null.
      *
      * @param  string $key
-     * @return static
+     * @return self
      */
     public function whereNotNull(string $key)
     {
@@ -662,7 +662,7 @@ trait RelatedTrait{
      * - If no keys are provided, returns the collection unchanged.
      *
      * @param  string|array $keys
-     * @return static
+     * @return self
      */
     public function select(...$keys)
     {
@@ -670,7 +670,7 @@ trait RelatedTrait{
 
         // If no keys provided, return as-is
         if (empty($keys)) {
-            return new static($this->items);
+            return new self($this->items);
         }
 
         $selected = [];
@@ -696,18 +696,18 @@ trait RelatedTrait{
             $selected[$outerKey] = $result;
         }
 
-        return new static($selected);
+        return new self($selected);
     }
 
     /**
      * Map the collection items using a callback.
      *
      * @param  callable $callback
-     * @return static
+     * @return self
      */
     public function map(callable $callback)
     {
-        return new static(array_map($callback, $this->items));
+        return new self(array_map($callback, $this->items));
     }
 
     /**
@@ -717,7 +717,7 @@ trait RelatedTrait{
      * key-value pair: [key => value].
      *
      * @param  callable  $callback  function(mixed $item, mixed $key): array
-     * @return static
+     * @return self
      *
      * @throws InvalidArgumentException if callback does not return an array
      */
@@ -739,7 +739,7 @@ trait RelatedTrait{
             }
         }
 
-        return new static($results);
+        return new self($results);
     }
 
     /**
@@ -747,7 +747,7 @@ trait RelatedTrait{
      *
      * @param  string|int|array<array-key, string>  $value
      * @param  string|null  $key
-     * @return static
+     * @return self
      */
     public function pluck($value, $key = null)
     {
@@ -804,14 +804,14 @@ trait RelatedTrait{
             }
         }
 
-        return new static($results);
+        return new self($results);
     }
 
     /**
      * Pluck values from the collection with support for dot notation.
      *
      * @param  string $key
-     * @return static
+     * @return self
      */
     public function pluckDot(string $key)
     {
@@ -832,14 +832,14 @@ trait RelatedTrait{
             $results[] = $value;
         }
 
-        return new static($results);
+        return new self($results);
     }
 
     /**
      * Group items in the collection by a given key or callback.
      *
      * @param  string|callable $key
-     * @return static
+     * @return self
      */
     public function groupBy($key)
     {
@@ -853,7 +853,7 @@ trait RelatedTrait{
             $results[$groupKey][] = $item;
         }
 
-        return new static($results);
+        return new self($results);
     }
 
     /**
@@ -890,7 +890,7 @@ trait RelatedTrait{
      * Sort the collection items.
      *
      * @param  callable|null|int $callback
-     * @return static
+     * @return self
      */
     public function sort($callback = null)
     {
@@ -900,7 +900,7 @@ trait RelatedTrait{
             ? uasort($items, $callback)
             : asort($items, $callback ?? SORT_REGULAR);
 
-        return new static($items);
+        return new self($items);
     }
 
     /**
@@ -908,7 +908,7 @@ trait RelatedTrait{
      *
      * @param  callable|string $callable
      * @param  int $direction
-     * @return static
+     * @return self
      */
     public function sortBy(callable|string $callable, int $direction = SORT_ASC)
     {
@@ -922,14 +922,14 @@ trait RelatedTrait{
                     : $valueB <=> $valueA;
         });
 
-        return new static($sorted);
+        return new self($sorted);
     }
 
     /**
      * Sort the collection by multiple keys.
      *
      * @param  array $keys
-     * @return static
+     * @return self
      */
     public function sortByMany(array $keys)
     {
@@ -947,14 +947,14 @@ trait RelatedTrait{
             return 0;
         });
 
-        return new static($sorted);
+        return new self($sorted);
     }
 
     /**
      * Sort the collection in descending order using a callback or key.
      *
      * @param callable|string|null $callback
-     * @return static
+     * @return self
      */
     public function sortByDesc($callback = null)
     {
@@ -967,14 +967,14 @@ trait RelatedTrait{
             uasort($items, fn($a, $b) => $this->valueForSort($b, $callback) <=> $this->valueForSort($a, $callback));
         }
 
-        return new static($items);
+        return new self($items);
     }
 
     /**
      * Sort the collection by keys ascending.
      *
      * @param string $sort
-     * @return static
+     * @return self
      */
     public function sortKeys($sort = 'asc')
     {
@@ -986,13 +986,13 @@ trait RelatedTrait{
             krsort($items);
         }
 
-        return new static($items);
+        return new self($items);
     }
 
     /**
      * Sort the collection by keys descending.
      *
-     * @return static
+     * @return self
      */
     public function sortKeysDesc()
     {
@@ -1003,7 +1003,7 @@ trait RelatedTrait{
      * Key the collection by a given key or callback.
      *
      * @param callable|string $key
-     * @return static
+     * @return self
      */
     public function keyBy($key)
     {
@@ -1012,7 +1012,7 @@ trait RelatedTrait{
             $resolvedKey = is_callable($key) ? $key($item) : $this->dataGet($item, $key);
             $results[$resolvedKey] = $item;
         }
-        return new static($results);
+        return new self($results);
     }
 
     /**
@@ -1020,18 +1020,18 @@ trait RelatedTrait{
      *
      * @param int $offset
      * @param int|null $length
-     * @return static
+     * @return self
      */
     public function slice(int $offset, ?int $length = null)
     {
-        return new static(array_slice($this->items, $offset, $length, true));
+        return new self(array_slice($this->items, $offset, $length, true));
     }
 
     /**
      * Take the first n items.
      *
      * @param int $limit
-     * @return static
+     * @return self
      */
     public function take(int $limit)
     {
@@ -1042,7 +1042,7 @@ trait RelatedTrait{
      * Take items until the callback returns true.
      *
      * @param callable $callback
-     * @return static
+     * @return self
      */
     public function takeUntil(callable $callback)
     {
@@ -1051,14 +1051,14 @@ trait RelatedTrait{
             if ($callback($item, $key)) break;
             $results[$key] = $item;
         }
-        return new static($results);
+        return new self($results);
     }
 
     /**
      * Skip the first n items.
      *
      * @param int $count
-     * @return static
+     * @return self
      */
     public function skip(int $count)
     {
@@ -1069,32 +1069,32 @@ trait RelatedTrait{
      * Concatenate another array or collection.
      *
      * @param iterable $items
-     * @return static
+     * @return self
      */
     public function concat($items)
     {
-        return new static(array_merge($this->items, $this->getArrayableItems($items)));
+        return new self(array_merge($this->items, $this->getArrayableItems($items)));
     }
 
     /**
      * Union with another array or collection, preserving keys.
      *
      * @param iterable $items
-     * @return static
+     * @return self
      */
     public function union($items)
     {
-        return new static($this->items + $this->getArrayableItems($items));
+        return new self($this->items + $this->getArrayableItems($items));
     }
 
     /**
      * Get underlying items as a plain collection (same class here, but can differ).
      *
-     * @return static
+     * @return self
      */
     public function toBase()
     {
-        return new static($this->items);
+        return new self($this->items);
     }
 
     /**
@@ -1112,7 +1112,7 @@ trait RelatedTrait{
      * Cross join the collection with other arrays or collections.
      *
      * @param array ...$arrays
-     * @return static
+     * @return self
      */
     public function crossJoin(...$arrays)
     {
@@ -1128,7 +1128,7 @@ trait RelatedTrait{
             $results = $tmp;
         }
 
-        return new static($results);
+        return new self($results);
     }
 
     /**
@@ -1145,14 +1145,14 @@ trait RelatedTrait{
     /**
      * Get unique items from the collection.
      *
-     * @return static
+     * @return self
      */
     public function unique()
     {
         // Ensure uniqueness based on the entire array (if needed)
         $uniqueItems = array_map("unserialize", array_unique(array_map("serialize", $this->items)));
 
-        return new static($uniqueItems);
+        return new self($uniqueItems);
     }
 
     /**
@@ -1172,11 +1172,11 @@ trait RelatedTrait{
      * Remove data from the items collection
      *
      * @param mixed $keys
-     * @return static
+     * @return self
      */
     public function forget(...$keys)
     {
-        return new static(Str::forgetArrayKeys($this->items, $keys));
+        return new self(Str::forgetArrayKeys($this->items, $keys));
     }
 
     /**
@@ -1184,11 +1184,11 @@ trait RelatedTrait{
      *
      * @param string $key The key to use for conversion.
      * @param int $case The case sensitivity option for key comparison (upper, lower).
-     * @return static
+     * @return self
      */
     public function changeKeyCase(string $key, $case = null)
     {
-        return new static(Str::changeKeyCase($this->items, $key, $case));
+        return new self(Str::changeKeyCase($this->items, $key, $case));
     }
 
     /**
@@ -1206,14 +1206,14 @@ trait RelatedTrait{
     /**
      * Shuffle the items in the collection.
      *
-     * @return static
+     * @return self
      */
     public function shuffle()
     {
         $items = $this->items;
         shuffle($items);
         
-        return new static($items);
+        return new self($items);
     }
 
     /**
@@ -1234,14 +1234,14 @@ trait RelatedTrait{
             }
         }
 
-        return [new static($matches), new static($nonMatches)];
+        return [new self($matches), new self($nonMatches)];
     }
 
     /**
      * Tap into the collection and perform actions, then return the collection.
      *
      * @param callable $callback
-     * @return static
+     * @return self
      */
     public function tap(callable $callback)
     {
@@ -1254,7 +1254,7 @@ trait RelatedTrait{
      * Chunk the collection while a condition is true.
      *
      * @param callable $callback
-     * @return static
+     * @return self
      */
     public function chunkWhile(callable $callback)
     {
@@ -1274,7 +1274,7 @@ trait RelatedTrait{
         if ($chunk) {
             $chunks[] = $chunk;
         }
-        return new static($chunks);
+        return new self($chunks);
     }
 
     /**
@@ -1282,7 +1282,7 @@ trait RelatedTrait{
      *
      * @param int $step
      * @param int $offset
-     * @return static
+     * @return self
      */
     public function nth(int $step, int $offset = 0)
     {
@@ -1295,7 +1295,7 @@ trait RelatedTrait{
             $position++;
         }
 
-        return new static($results);
+        return new self($results);
     }
 
     /**
@@ -1303,14 +1303,14 @@ trait RelatedTrait{
      *
      * @param int $perPage
      * @param int $page
-     * @return static
+     * @return self
      */
     public function paginate(int $perPage, int $page = 1)
     {
         $offset = ($page - 1) * $perPage;
         $items = array_slice($this->items, $offset, $perPage, true);
 
-        return new static($items);
+        return new self($items);
     }
 
     /**
@@ -1318,7 +1318,7 @@ trait RelatedTrait{
      *
      * @param array $array
      * @param callable $callback
-     * @return static
+     * @return self
      */
     public function zipWith(array $array, callable $callback)
     {
@@ -1328,14 +1328,14 @@ trait RelatedTrait{
         for ($i = 0; $i < $count; $i++) {
             $results[$keys[$i]] = $callback($this->items[$keys[$i]], $array[$i]);
         }
-        return new static($results);
+        return new self($results);
     }
 
     /**
      * Count items grouped by a given key or callback.
      *
      * @param callable|string $groupBy
-     * @return static
+     * @return self
      */
     public function countBy($groupBy)
     {
@@ -1347,13 +1347,13 @@ trait RelatedTrait{
             }
             $results[$group]++;
         }
-        return new static($results);
+        return new self($results);
     }
 
     /**
      * Get all duplicate items in the collection.
      *
-     * @return static
+     * @return self
      */
     public function duplicates()
     {
@@ -1368,13 +1368,13 @@ trait RelatedTrait{
             }
         }
 
-        return new static($duplicates);
+        return new self($duplicates);
     }
 
     /**
      * Shuffle the keys of the collection.
      *
-     * @return static
+     * @return self
      */
     public function shuffleKeys()
     {
@@ -1385,7 +1385,7 @@ trait RelatedTrait{
             $shuffled[$key] = $this->items[$key];
         }
 
-        return new static($shuffled);
+        return new self($shuffled);
     }
 
     /**

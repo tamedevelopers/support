@@ -79,11 +79,11 @@ class Utility
      * Create instance from text.
      *
      * @param string $text
-     * @return static
+     * @return self
      */
     public static function text($text)
     {
-        return new static($text);
+        return new self($text);
     }
     
     /**

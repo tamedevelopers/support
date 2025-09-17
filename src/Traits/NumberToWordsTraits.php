@@ -469,7 +469,7 @@ trait NumberToWordsTraits
         // this will happen if __construct has not been called 
         // before calling an existing method
         if(empty($clone)){
-            $clone = new static();
+            $clone = new self();
         }
 
         return $clone->$method(...$args);

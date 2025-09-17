@@ -55,7 +55,7 @@ trait TimeExtraTrait
      * Helper to return a cloned instance with a new timestamp set.
      *
      * @param int $timestamp Unix timestamp to set on the clone
-     * @return static Cloned instance with timestamp applied
+     * @return self Cloned instance with timestamp applied
      */
     private function cloneWithTimestamp(int $timestamp): static
     {
@@ -72,7 +72,7 @@ trait TimeExtraTrait
     /**
      * Set time to 00:00:00 of the current day.
      *
-     * @return static
+     * @return self
      */
     public function startOfDay(): static
     {
@@ -84,7 +84,7 @@ trait TimeExtraTrait
     /**
      * Set time to 23:59:59 of the current day.
      *
-     * @return static
+     * @return self
      */
     public function endOfDay(): static
     {
@@ -96,7 +96,7 @@ trait TimeExtraTrait
     /**
      * Beginning of the week (Monday 00:00:00).
      *
-     * @return static
+     * @return self
      */
     public function startOfWeek(): static
     {
@@ -113,7 +113,7 @@ trait TimeExtraTrait
     /**
      * End of the week (Sunday 23:59:59).
      *
-     * @return static
+     * @return self
      */
     public function endOfWeek(): static
     {
@@ -127,7 +127,7 @@ trait TimeExtraTrait
     /**
      * First day of current month at 00:00:00.
      *
-     * @return static
+     * @return self
      */
     public function startOfMonth(): static
     {
@@ -140,7 +140,7 @@ trait TimeExtraTrait
     /**
      * Last day of current month at 23:59:59.
      *
-     * @return static
+     * @return self
      */
     public function endOfMonth(): static
     {
@@ -154,7 +154,7 @@ trait TimeExtraTrait
     /**
      * January 1st, 00:00:00.
      *
-     * @return static
+     * @return self
      */
     public function startOfYear(): static
     {
@@ -167,7 +167,7 @@ trait TimeExtraTrait
     /**
      * December 31st, 23:59:59.
      *
-     * @return static
+     * @return self
      */
     public function endOfYear(): static
     {

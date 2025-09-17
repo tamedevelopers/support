@@ -66,7 +66,7 @@ class Mail{
             define(self::$constantName, $options);
         }
 
-        return new static([], []);
+        return new self([], []);
     }
 
     /**
@@ -83,7 +83,7 @@ class Mail{
             }
         }
 
-        return new static(
+        return new self(
             $emails,
             self::getConfig()
         );
