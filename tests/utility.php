@@ -34,6 +34,11 @@ $email3 = "example+maxwell@icloud.com";
 // echo($util)  . PHP_EOL;
 
 dump(
+
+    $util->cacheInfo(),
+    $util->isDisposableEmail($email3),
+    $util->isDisposableDomain($email3),
+
     $util->maskEmail($email),
     [
         Utility::normalizeEmail($email),

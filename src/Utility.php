@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
-use Tamedevelopers\Support\Traits\EmailUtilityTrait;
 use Tamedevelopers\Support\Traits\TextUtilityTrait;
+use Tamedevelopers\Support\Traits\EmailUtilityTrait;
+use Tamedevelopers\Support\Traits\DisposableEmailUtilityTrait;
 
 
 /**
@@ -29,7 +30,8 @@ use Tamedevelopers\Support\Traits\TextUtilityTrait;
 class Utility
 {
     use TextUtilityTrait,
-        EmailUtilityTrait; 
+        EmailUtilityTrait,
+        DisposableEmailUtilityTrait; 
     
     /**
      * Providers rules cache loaded from stubs/emailProviders.php
