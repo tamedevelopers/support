@@ -633,119 +633,119 @@ class Tame {
     /**
      * Check if array has duplicate value
      *
-     * @param array $data
+     * @param array $array
      * @return bool
      * - true|false
      */
-    public static function isArrayDuplicate(?array $data = [])
+    public static function isArrayDuplicate(?array $array = [])
     {
-        return Str::arrayDuplicate($data);
+        return Str::arrayDuplicate($array);
     }
 
     /**
      * Check if all values of array is same
      *
-     * @param array $data
+     * @param array $array
      * @return bool
      * - true|false
      */
-    public static function isArraySame(?array $data = [])
+    public static function isArraySame(?array $array = [])
     {
-        return Str::arraySame($data);
+        return Str::arraySame($array);
     }
 
     /**
      * For sorting array
      *
-     * @param  array $data
+     * @param  array $array
      * @param  string $type
      * - [rsort|asort|ksort|arsort|krsort|sort]
      * 
      * @return array
      */
-    public static function sortArray(&$data = [], $type = 'sort')
+    public static function sortArray(&$array = [], $type = 'sort')
     {
-        // Validate that $data is an array
-        if (!is_array($data)) {
+        // Validate that $array is an array
+        if (!is_array($array)) {
             return [];
         }
 
         // Perform sorting based on the specified type
         switch ($type) {
             case 'rsort':
-                rsort($data); // Sort arrays in descending order
+                rsort($array); // Sort arrays in descending order
                 break;
 
             case 'asort':
-                asort($data); // Sort associative arrays in ascending order, according to the value
+                asort($array); // Sort associative arrays in ascending order, according to the value
                 break;
 
             case 'ksort':
-                ksort($data); // Sort associative arrays in ascending order, according to the key
+                ksort($array); // Sort associative arrays in ascending order, according to the key
                 break;
 
             case 'arsort':
-                arsort($data); // Sort associative arrays in descending order, according to the value
+                arsort($array); // Sort associative arrays in descending order, according to the value
                 break;
 
             case 'krsort':
-                krsort($data); // Sort associative arrays in descending order, according to the value
+                krsort($array); // Sort associative arrays in descending order, according to the value
                 break;
 
             default:
-                sort($data); // Sort arrays in ascending order
+                sort($array); // Sort arrays in ascending order
                 break;
         }
 
-        return $data;
+        return $array;
     }
     
     /**
      * For sorting muti-dimentional array
      *
-     * @param  array $data
+     * @param  array $array
      * @param  string|null $key
      * @param  string $type
      * - [asc|desc|snum]
      * 
      * @return array
      */
-    public static function sortMultipleArray(?array &$data = [], $key = null, ?string $type = 'asc')
+    public static function sortMultipleArray(&$array = [], $key = null, $type = 'asc')
     {
-        // Check if $data is an array and not empty
-        if (!is_array($data) || empty($data)) {
+        // Check if $array is an array and not empty
+        if (!is_array($array) || empty($array)) {
             return [];
         }
 
         // Check if $key is provided
         // If $key is not provided, return without sorting
         if (is_null($key)) {
-            return $data;
+            return $array;
         }
 
         // Extract values of the specified key from each sub-array
-        $id = array_column($data, $key);
+        $id = array_column($array, $key);
 
-        // Ensure $id and $data have the same size before sorting
-        if (count($id) !== count($data)) {
+        // Ensure $id and $array have the same size before sorting
+        if (count($id) !== count($array)) {
             return;
         }
 
         switch ($type) { 
             case 'desc':
-                array_multisort($id, SORT_DESC, $data); //sort associative arrays in descending order
+                array_multisort($id, SORT_DESC, $array); //sort associative arrays in descending order
                 break;
             
             case 'snum': 
-                array_multisort($id, SORT_NUMERIC, $data); //sort associative arrays in numeric order 
+                array_multisort($id, SORT_NUMERIC, $array); //sort associative arrays in numeric order 
                 break;
 
             default:
-                array_multisort($id, SORT_ASC, $data); //sort arrays in ascending order
+                array_multisort($id, SORT_ASC, $array); //sort arrays in ascending order
                 break;
         }
 
-        return $data;
+        return $array;
     }
 
     /**
@@ -1263,21 +1263,21 @@ class Tame {
         $openSSL = self::openSSLEncrypt();
 
         // Decode the JSON string
-        $data = Server::toArray($jsonString);
+        $array = Server::toArray($jsonString);
 
-        if (empty($data)) {
+        if (empty($array)) {
             return;
         }
 
         // Decode base64-encoded IV and encrypted string
-        $iv = base64_decode($data['e']);
-        $encryptedString = base64_decode($data['s']);
+        $iv = base64_decode($array['e']);
+        $encryptedString = base64_decode($array['s']);
 
         // Get encryption settings
         $openSSL = self::openSSLEncrypt();
 
         // Store the encryption key
-        $key = $data['k'];
+        $key = $array['k'];
 
         // Decryption
         return openssl_decrypt(

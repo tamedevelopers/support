@@ -165,12 +165,12 @@ trait MailTrait{
         });
 
         // Return the array of valid email addresses and their count
-        $data = [
+        $array = [
             "email" => array_values($validEmails), // Reset array keys
             "count" => count($validEmails)
         ];
 
-        return $data[$mode] ?? $data;
+        return $array[$mode] ?? $array;
     }
 
     /**
@@ -399,7 +399,7 @@ trait MailTrait{
      */
     private function getDefaultOption(?array $options = [])
     {
-        $data = [
+        $array = [
             'flush'         => $options['flush']        ?? $this->flushBuffering,
             'driver'        => $options['driver']       ?? $this->driver, 
             'debug'         => $options['debug']        ?? $this->debug, 
@@ -408,13 +408,13 @@ trait MailTrait{
         ];
 
         /**
-         * Ensures that the 'debug' value in the $data array is valid.
+         * Ensures that the 'debug' value in the $array array is valid.
          * Accepts only 0, 1, or 2 as valid debug levels; 
          * defaults to 0 if an invalid value is provided.
          */
-        $data['debug'] = in_array($data['debug'], [0, 1, 2]) ? $data['debug'] : 0;
+        $array['debug'] = in_array($array['debug'], [0, 1, 2]) ? $array['debug'] : 0;
         
-        return $data;
+        return $array;
     }
 
     /**

@@ -80,17 +80,17 @@ trait CountryTrait{
      */
     public static function getTimeZone($mode = null, ?string $default = 'UTC')
     {
-        $data = self::timeZone();
+        $array = self::timeZone();
 
         // check if mode is numeric
         if(is_numeric($mode)){
-            return $data[(int) $mode] ?? $default;
+            return $array[(int) $mode] ?? $default;
         }
 
         // flip array to get position num
-        $flip = array_flip($data);
+        $flip = array_flip($array);
 
-        return $data[$flip[$mode] ?? null] ?? $default;
+        return $array[$flip[$mode] ?? null] ?? $default;
     }
 
     /**
@@ -101,10 +101,10 @@ trait CountryTrait{
      */
     public static function getCaptchaLocale($mode = null)
     {
-        $data = self::captchaLocale();
+        $array = self::captchaLocale();
 
-        return $data[$mode] 
-                ?? array_flip($data)[$mode]
+        return $array[$mode] 
+                ?? array_flip($array)[$mode]
                 ?? null;
     }
     

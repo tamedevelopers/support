@@ -102,20 +102,20 @@ class Server{
     /**
      * Create Template File
      *
-     * @param  array $data
+     * @param  array $array
      * @param  string|null $filename
      * - [base path will be automatically added]
      * 
      * @return void
      */
-    public static function createTemplateFile(?array $data = [], ?string $filename = null)
+    public static function createTemplateFile(?array $array = [], ?string $filename = null)
     {
         // removing default base directory path if added by default
         $filename = Str::replace(self::formatWithBaseDirectory(), '', $filename);
         $filePath = Server::formatWithBaseDirectory($filename);
 
         // Generate PHP code
-        $exported   = var_export($data, true);
+        $exported   = var_export($array, true);
         $string     = explode("\n", $exported);
         $string     = array_map('trim', $string);
         $string     = implode("\n    ", $string);
@@ -215,24 +215,24 @@ class Server{
     /**
      * Check if data is not a valid array
      *
-     * @param mixed $data
+     * @param mixed $array
      * @return bool
      */
-    private static function isNotValidArray(mixed $data = null)
+    private static function isNotValidArray(mixed $array = null)
     {
-        // Return true if $data is not an array
-        if (!is_array($data)) {
+        // Return true if $array is not an array
+        if (!is_array($array)) {
             return true;
         }
 
-        // Check if $data contains any non-array values
-        foreach ($data as $value) {
+        // Check if $array contains any non-array values
+        foreach ($array as $value) {
             if (!is_array($value)) {
                 return true; // Return true if a non-array value is found
             }
         }
 
-        // Return false if $data is a valid array
+        // Return false if $array is a valid array
         return false;
     }
 

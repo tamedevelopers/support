@@ -352,13 +352,13 @@ trait ViewTrait{
     /**
      * Render an include at runtime. This is small, testable and readable.
      * @param mixed $view The view identifier (string/expression)
-     * @param array $data Optional data array
+     * @param array $array Optional data array
      * @return string
      */
-    protected function renderInclude($view, $data = [])
+    protected function renderInclude($view, $array = [])
     {
         // Ensure included views inherit current data unless explicitly overridden
-        $payload = empty($data) ? $this->data : array_merge($this->data, (array) $data);
+        $payload = empty($array) ? $this->data : array_merge($this->data, (array) $array);
 
         return (new self($view, $payload))->render();
     }

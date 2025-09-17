@@ -355,16 +355,16 @@ class ImageToText
             throw new CustomException('OCR request failed: ' . $err);
         }
 
-        $data = json_decode($response, true);
-        if (!is_array($data)) {
+        $array = json_decode($response, true);
+        if (!is_array($array)) {
             throw new CustomException('Invalid OCR response.');
         }
-        if (!empty($data['IsErroredOnProcessing'])) {
-            $msg = (string)($data['ErrorMessage'][0] ?? 'OCR error');
+        if (!empty($array['IsErroredOnProcessing'])) {
+            $msg = (string)($array['ErrorMessage'][0] ?? 'OCR error');
             throw new CustomException(is_array($msg) ? implode(', ', $msg) : $msg);
         }
 
-        $parsed = $data['ParsedResults'][0]['ParsedText'] ?? '';
+        $parsed = $array['ParsedResults'][0]['ParsedText'] ?? '';
         return (string)$parsed;
     }
 

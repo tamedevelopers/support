@@ -308,15 +308,15 @@ trait RelatedTrait{
     {
         $keys = Str::flatten($keys);
 
-        $data = [];
+        $array = [];
 
         foreach($keys as $key){
             if(in_array($key, array_keys($this->items))){
-                $data[$key] = $this->items[$key];
+                $array[$key] = $this->items[$key];
             }
         }
 
-        return new static($data);
+        return new static($array);
     }
 
     /**
@@ -1537,19 +1537,19 @@ trait RelatedTrait{
     /**
      * Check if data is not a valid array
      *
-     * @param mixed $data
+     * @param mixed $array
      * @return bool
      */
-    private function isNotValidArray(mixed $data = null)
+    private function isNotValidArray(mixed $array = null)
     {
-        if (!is_array($data)) {
+        if (!is_array($array)) {
             return true;
         }
 
         // array filter
-        $filteredArray = array_filter($data, 'is_array');
+        $filteredArray = array_filter($array, 'is_array');
     
-        return count($filteredArray) === count($data);
+        return count($filteredArray) === count($array);
     }
 
     /**

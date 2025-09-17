@@ -9,6 +9,7 @@ use SessionHandlerInterface;
 use Tamedevelopers\Support\Process\Concerns\SessionInterface as BaseSessionInterface;
 use Tamedevelopers\Support\Process\Session\Handlers\DatabaseSessionHandler;
 use Tamedevelopers\Support\Process\Session\Handlers\RedisSessionHandler;
+use Redis;
 
 /**
  * Configurable session manager supporting file, database, and redis drivers.
@@ -115,7 +116,7 @@ final class SessionManager implements BaseSessionInterface
 
     private function configureRedisDriver(?int $lifetime = null): void
     {
-        if (!class_exists(\Redis::class)) {
+        if (!class_exists('\Redis')) {
             throw new \RuntimeException('Redis extension (phpredis) is required for redis session driver.');
         }
         $cfg = (array) ($this->config['redis'] ?? []);

@@ -227,12 +227,12 @@ trait EmailUtilityTrait{
 
         $collection = new Collection(self::$providers);
 
-        $data = [];
-        $collection->each(function($item) use (&$data) {
-            $data = array_merge($data, $item);
+        $array = [];
+        $collection->each(function($item) use (&$array) {
+            $array = array_merge($array, $item);
         });
 
-        self::$providersChildren = $data;
+        self::$providersChildren = $array;
     }
 
     /**

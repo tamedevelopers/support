@@ -204,7 +204,7 @@ trait NumberToWordsTraits
       */
     public static function allCurrency($iso3 = null)
     {
-        $data = [
+        $array = [
             'AFG' => ['country' => 'Afghan', 'name' => 'Afghani', 'code' => 'AFN', 'cents' => 'puls (پول)'],
             'ALB' => ['country' => 'Albanian', 'name' => 'Lek', 'code' => 'ALL', 'cents' => 'qindarkë'],
             'DZA' => ['country' => 'Algerian', 'name' => 'Dinar', 'code' => 'DZD', 'cents' => 'centimes'],
@@ -411,7 +411,7 @@ trait NumberToWordsTraits
             'ZWE' => ['country' => 'Zimbabwean', 'name' => 'Dollar', 'code' => 'ZWD', 'cents' => 'cent'],
         ];
 
-        return $data[$iso3] ?? $data;
+        return $array[$iso3] ?? $array;
     }
 
     /**
@@ -428,13 +428,13 @@ trait NumberToWordsTraits
         $code = Str::upper($code);
 
         // get data
-        $data = self::allCurrency()[$code] ?? null;
+        $array = self::allCurrency()[$code] ?? null;
 
-        if(is_null($data)){
+        if(is_null($array)){
             return;
         }
 
-        return $data;
+        return $array;
     }
     
     /**
