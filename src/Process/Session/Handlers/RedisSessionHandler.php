@@ -44,7 +44,8 @@ final class RedisSessionHandler implements SessionHandlerInterface
         int $ttl = 1440
     ) {
         // Avoid hard typehint to keep IDE analyzers happy when extension is missing
-        $this->redis = new \Redis();
+        $className = '\Redis';
+        $this->redis = new $className();
         $this->redis->connect($host, $port, $timeout);
         if ($auth !== null && $auth !== '') {
             $this->redis->auth($auth);

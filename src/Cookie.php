@@ -7,7 +7,7 @@ namespace Tamedevelopers\Support;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Time;
 
-class Cookie{
+final class Cookie{
     
     /** 
      * Site name 
@@ -57,10 +57,10 @@ class Cookie{
 
     /** 
      * Create Cookie
-     * @param string $name
+     * @param mixed $name
      * - Cookie Name
      * 
-     * @param string|null $value
+     * @param mixed $value
      * - Cookie Value
      * 
      * @param int|string $minutes
@@ -99,6 +99,9 @@ class Cookie{
             $path, $value, $domain, $secure, $httponly, $force
         );
 
+        $name = self::getItemValue($name);
+        $value = self::getItemValue($value);
+
         // Prefer new setcookie signature with array options (PHP 7.3+), fallback otherwise
         if (!headers_sent() || $force === true) {
             $options = [
@@ -113,12 +116,12 @@ class Cookie{
             // Try modern signature; if it fails (older PHP), fallback to legacy
             try {
                 if (PHP_VERSION_ID >= 70300) {
-                    @setcookie($name, (string) $value, $options);
+                    @setcookie($name, $value, $options);
                 } else {
-                    @setcookie($name, (string) $value, (int) $expires, (string) $path, (string) $domain, (bool) $secure, (bool) $httponly);
+                    @setcookie($name, $value, (int) $expires, (string) $path, (string) $domain, (bool) $secure, (bool) $httponly);
                 }
             } catch (\Throwable $e) {
-                @setcookie($name, (string) $value, (int) $expires, (string) $path, (string) $domain, (bool) $secure, (bool) $httponly);
+                @setcookie($name, $value, (int) $expires, (string) $path, (string) $domain, (bool) $secure, (bool) $httponly);
             }
         }
     }
@@ -126,7 +129,7 @@ class Cookie{
     /**
      * Expire the given cookie.
      *
-     * @param  string  $name
+     * @param  mixed  $name
      * @param  string|null  $path
      * @param  string|null  $domain
      * @return void
@@ -134,7 +137,7 @@ class Cookie{
     public static function forget($name, $path = null, $domain = null)
     {
         self::set(
-            name: $name,
+            name: self::getItemValue($name),
             minutes: 'last year', 
             path: $path, 
             domain: $domain,
@@ -145,7 +148,7 @@ class Cookie{
     /**
      * Expire the given cookie.
      *
-     * @param  string  $name
+     * @param  mixed  $name
      * @param  string|null  $path
      * @param  string  $domain
      * @return void
@@ -198,26 +201,28 @@ class Cookie{
     /** 
      * Cookie has name that exists
      * 
-     * @param string $name
+     * @param mixed $name
      * - Cookie name
      * 
      * @return bool
      */
     public static function has($name = null)
     {
-        return isset($_COOKIE[(string) $name]);
+        return isset($_COOKIE[self::getItemValue($name)]);
     }
 
     /** 
      * Get cookie 
-     * @param string $name
+     * @param mixed $name
      * - Cookie name
      * 
      * @return mixed
      */
     public static function get($name = null)
     {
-        return self::has($name) ? $_COOKIE[(string) $name] : null;
+        $name = self::getItemValue($name);
+
+        return self::has($name) ? $_COOKIE[$name] : null;
     }
 
     /** 
@@ -231,6 +236,21 @@ class Cookie{
     public static function all($name = null)
     {
         return self::get($name) ?? $_COOKIE;
+    }
+    
+    /**
+     * Item Value
+     *
+     * @param  mixed $value
+     * @return string
+     */
+    private static function getItemValue($value = null)
+    {
+        if(is_array($value)){
+            $value = Str::head($value);
+        }
+
+        return (string) $value;
     }
 
     /** 

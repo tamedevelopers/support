@@ -663,7 +663,7 @@ class Tame {
      * 
      * @return array
      */
-    public static function sortArray(?array &$data = [], ?string $type = 'sort')
+    public static function sortArray(&$data = [], $type = 'sort')
     {
         // Validate that $data is an array
         if (!is_array($data)) {

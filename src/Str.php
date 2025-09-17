@@ -240,7 +240,7 @@ class Str
      *
      * @param array $array The input data array.
      * @param string $key The key to use for conversion.
-     * @param int $case The case sensitivity option for key comparison (upper, lower).
+     * @param string $case The case sensitivity option for key comparison (upper, lower).
      * 
      * @return array
      * - The converted array with specified key as keys if available, else the original array

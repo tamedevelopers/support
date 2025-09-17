@@ -23,7 +23,7 @@ use Tamedevelopers\Support\Capsule\TimeHelper;
  *
  * All methods are documented at their definitions for clarity.
  */
-class Time {
+final class Time {
 
     use TimeTrait, TimeExtraTrait;
 

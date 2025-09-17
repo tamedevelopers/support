@@ -34,7 +34,7 @@ trait TimeTrait{
 
     /**
      * Added a base resolver to reuse the latest instance context
-     * @return $this
+     * @return \Time
      */
     private static function baseInstance()
     {
@@ -52,7 +52,7 @@ trait TimeTrait{
      * - Only if no static data available, bind it to the passed clone object
      *
      * @param \Time $clone
-     * @return $this
+     * @return \Time
      */
     private static function keepStaticBinding($clone)
     {
@@ -66,7 +66,7 @@ trait TimeTrait{
     /**
      * Clone a new instance of the owning class.
      *
-     * @return $this A shallow clone of the current instance.
+     * @return \Time A shallow clone of the current instance.
      */
     private function clone()
     {
@@ -315,7 +315,7 @@ trait TimeTrait{
             'gettimezone' => '__getTimezone',
             'settimezone' => '__setTimezone',
             'diffbetween', 'timediffbetween' => '__timeDifferenceBetween',
-            'diff', 'timediff' => '__timeDifference',
+            'diff', 'timediff', 'timedifference' => '__timeDifference',
             'daterange', 'range' => 'dateRange',
             'ago', 'timeago' => '__timeAgo',
             'addsecond' => 'addSeconds',

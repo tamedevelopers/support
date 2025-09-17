@@ -41,7 +41,7 @@ trait StrTrait{
      *
      * @param array $array The input data array.
      * @param string $key The key to use for conversion.
-     * @param int $case The case sensitivity option for key comparison (upper, lower).
+     * @param string $case The case sensitivity option for key comparison (upper, lower).
      * 
      * @return array
      * - The converted array with specified key as keys if available, else the original array
@@ -206,7 +206,7 @@ trait StrTrait{
      * Convert the case of a string based on the specified type.
      *
      * @param mixed $string The input string
-     * @param string|int|null $type   The case to convert: 'lower', 'upper', or 'unchanged'
+     * @param string|null $type   The case to convert: 'lower', 'upper', or 'unchanged'
      *
      * @return string The string with converted case
      */
