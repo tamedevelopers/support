@@ -21,7 +21,28 @@ use Tamedevelopers\Support\Capsule\TimeHelper;
  * - Range helper: dateRange()
  * - Text features/config: config(), greeting(), timeAgo()
  *
- * All methods are documented at their definitions for clarity.
+ * Magic methods routed via __call/__callStatic (documented for static analysis):
+ * @method int second() Number of seconds since the stored time
+ * @method int min() Number of minutes since the stored time
+ * @method int hour() Number of hours since the stored time
+ * @method int day() Number of days since the stored time
+ * @method int week() Number of weeks since the stored time
+ * @method int month() Number of months since the stored time
+ * @method int year() Number of years since the stored time
+ * @method array|int diff(string|null $unit = null) Time difference; array when unit is null, integer when unit provided (sec|mins|hour|days|weeks|month|year)
+ * @method array|string timeAgo(string|null $mode = null) Humanized time-ago; array for default, string for specific modes like "short"
+ * @method string greeting(int|string $date = 'now') Greeting based on hour of $date in current timezone
+ *
+ * @method static int second()
+ * @method static int min()
+ * @method static int hour()
+ * @method static int day()
+ * @method static int week()
+ * @method static int month()
+ * @method static int year()
+ * @method static array|int diff(string|null $unit = null)
+ * @method static array|string timeAgo(string|null $mode = null)
+ * @method static string greeting(int|string $date = 'now')
  */
 final class Time {
 
