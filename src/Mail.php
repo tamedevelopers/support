@@ -8,6 +8,15 @@ use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Traits\MailTrait;
         
+/**
+ * Mailer with dynamic fluent methods via __call.
+ *
+ * Magic methods documented for static analysis:
+ * @method $this altBody(string $body)
+ * @method $this altMessage(string $body)
+ * @method $this reply(string $address, string|null $name = null)
+ * @method $this replyTo(string $address, string|null $name = null)
+ */
 class Mail{
 
     use MailTrait;

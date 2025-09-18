@@ -12,6 +12,9 @@ use Tamedevelopers\Support\Traits\ViewTrait;
 
 /**
  * View Wrapper
+ *
+ * Magic methods documented for static analysis:
+ * @method static string render(string|null $viewPath = null, array $data = []) Render a view via static call
  */ 
 class View{
 

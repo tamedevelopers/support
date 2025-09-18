@@ -7,6 +7,19 @@ namespace Tamedevelopers\Support;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Traits\NumberToWordsTraits;
 
+/**
+ * Number-to-words converter with dynamic fluent API via __call/__callStatic.
+ *
+ * Builder-style magic methods (documented for static analysis):
+ * @method self iso(?string $code = null) Set currency by ISO-3 code
+ * @method self cents(?bool $allow = false) Toggle cents handling
+ * @method self value(string|float|int $number) Set the value to convert
+ *
+ * Static builder equivalents:
+ * @method static self iso(?string $code = null)
+ * @method static self cents(?bool $allow = false)
+ * @method static self value(string|float|int $number)
+ */
 class NumberToWords
 {
     use NumberToWordsTraits;

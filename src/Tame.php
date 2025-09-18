@@ -8,6 +8,7 @@ use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\TameTrait;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Tamedevelopers\Support\Traits\NumberToWordsTraits;
 
 /**
@@ -52,6 +53,18 @@ class Tame {
     
     
     /**
+     * Alias for `echoJson` method
+     *
+     * @param  int $response
+     * @param  mixed $message
+     * @return mixed
+     */
+    public static function jsonEcho(int $response = 0, $message = null)
+    {
+        self::echoJson($response, $message);
+    }
+    
+    /**
      * Echo `json_encode` with response and message
      *
      * @param  int $response
@@ -60,7 +73,27 @@ class Tame {
      */
     public static function echoJson(int $response = 0, $message = null)
     {
-        echo json_encode(['response' => $response, 'message' => $message]);
+        header('Content-Type: application/json');
+        echo json_encode([
+            'response' => $response,
+            'message'  => $message,
+        ]);
+    }
+
+    /**
+     * Return a JSON response with status code and message
+     *
+     * @param  int   $response
+     * @param  mixed $message
+     * @param  int   $statusCode
+     * @return \Symfony\Component\HttpFoundation\JsonResponse
+     */
+    public static function json(int $response = 0, $message = null, int $statusCode = 200)
+    {
+        return new JsonResponse([
+            'response' => $response,
+            'message'  => $message,
+        ], $statusCode);
     }
 
     /**
