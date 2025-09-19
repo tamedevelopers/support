@@ -27,6 +27,7 @@ $CubicMeterWeight   = Tame()->calculateCubicMeterWeight($volume[2]['length'], $v
 // $emailChecker = Tame()->emailValidator('tamedev@gmail.com');
 
 $emails = [
+    // your original list (12)
     'supportw@axdbfs.com',
     'tamedevelopers@gmail.com',
     'supportrsd@lhkexpress.com',
@@ -40,6 +41,7 @@ $emails = [
     'support@10launcheds.com',
     'support@11852dbmobbil.emlhub.com',
 
+    // common providers / likely resolvable (10)
     'test1@gmail.com',
     'hello@yahoo.com',
     'check@outlook.com',
@@ -51,6 +53,7 @@ $emails = [
     'noreply@aol.com',
     'test@tutanota.com',
 
+    // bogus / non-resolving examples (20)
     'support@nosuchdomain123456.com',
     'fake@notrealmail.zzz',
     'user@expired-example.org',
@@ -61,6 +64,88 @@ $emails = [
     'info@0-nonexistent-domain.xyz',
     'support@bogusmail999999.org',
     'hello@thisdomaindoesnotexist.test',
+
+    // mixed additional real / well-known (12)
+    'contact@github.com',
+    'security@google.com',
+    'postmaster@yahoo.co.uk',
+    'info@amazon.com',
+    'no-reply@facebook.com',
+    'support@twitter.com',
+    'help@linkedin.com',
+    'admin@microsoft.com',
+    'mailbox@office365.com',
+    'team@slack.com',
+    'devnull@example.com',
+    'bounce@localhost',
+
+    // more test / reserved / local (10)
+    'user@example.invalid',
+    'test@localhost',
+    'webmaster@domain.local',
+    'info@mytestdomain.dev',
+    'hello@sampledomain.xyz',
+    'contact@temporary-mail.org',
+    'support@tempmail.net',
+    'info@disposablemail.com',
+    'test@throwawaymail.com',
+    'qa@staging.example.com',
+
+    // enterprise / intranet style (10)
+    'sysadmin@enterprise.corp',
+    'ops@intranet.local',
+    'mailer-daemon@lists.example.com',
+    'bounce@mailer.example',
+    'postmaster@subdomain.example.com',
+    'sales@onlineshop.example',
+    'orders@shop-example.com',
+    'billing@finance.example',
+    'noreply@notifications.example',
+    'subscribe@newsletter.example',
+
+    // business / startup style (12)
+    'info@company-example.org',
+    'contact@business-example.co',
+    'hello@startup-example.io',
+    'team@opensource.org',
+    'support@wordpress.org',
+    'info@drupal.org',
+    'admin@joomla.org',
+    'test@invalid-domain-xyz-123.com',
+    'demo@nonexistent-subdomain.example',
+    'user@thisshouldnotexist.tld',
+    'fakeuser@madeup-domain.zz',
+    'sample@no-mx-record.test',
+
+    // probing / scanning style (14)
+    'ping@unresolved-domain.example',
+    'probe@host-without-mx.com',
+    'check@mx-missing-domain.org',
+    'scan@null-record-domain.xyz',
+    'try@parked-domain-example.com',
+    'mail@temporary-example-mail.biz',
+    'post@old-domain-archive.org',
+    'contact@company12345.net',
+    'support@alpha-beta-gamma.io',
+    'info@server-down-example.com',
+    'admin@backup-server.org',
+    'noreply@mailer2025.example',
+    'test.account@exampleservice.com',
+    'user.service@servicexyz.net',
+
+    // monitoring / ops / edge cases (12)
+    'helpdesk@enterprise-example.com',
+    'reporting@analytics.example',
+    'alerts@monitoring.example',
+    'security@infosec.example',
+    'abuse@isp-example.net',
+    'contact@legal-example.org',
+    'info@research-lab.edu',
+    'webmaster@college-example.edu',
+    'support@nonprofit-example.org',
+    'mail@edgecase-domain.test',
+    'probe2@nonexistent-12345.test',
+    'fake2@veryfake-domain-000.com'
 ];
 
 
