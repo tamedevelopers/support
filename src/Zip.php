@@ -20,23 +20,45 @@ class Zip {
     private $archivePath;
 
     /**
+     * @var string|null The source path for compression
+     */
+    private $sourcePath;
+
+    /**
+     * @var string|null The last created archive path (static)
+     */
+    private static $lastArchivePath = null;
+
+    /**
      * Constructor
      *
+     * @param string|null $sourcePath The source path
      * @param string|null $archivePath The path to the archive file
      */
-    public function __construct($archivePath = null)
+    public function __construct($sourcePath = null, $archivePath = null)
     {
+        $this->sourcePath = $sourcePath;
         $this->archivePath = $archivePath;
     }
 
     /**
      * Get the path to the current archive file.
      *
-     * @return mixed
+     * @return string|null
      */
     public function getArchivePath()
     {
         return $this->archivePath;
+    }
+
+    /**
+     * Get the last created archive path (static).
+     *
+     * @return string|null
+     */
+    public static function getLastArchivePath()
+    {
+        return self::$lastArchivePath;
     }
 
     /**
@@ -74,7 +96,12 @@ class Zip {
             $result = File::exists($destinationZip);
         }
 
-        return $result ? new self($destinationZip) : false;
+        if ($result) {
+            self::$lastArchivePath = $destinationZip;
+            return new self($sourcePath, $destinationZip);
+        }
+
+        return false;
     }
 
     /**
@@ -82,9 +109,10 @@ class Zip {
      *
      * @param string $sourcePath The path to the file to gzip.
      * @param string $destinationGz The path for the resulting gz file.
+     * @param int $level Compression level (0-9, default 9).
      * @return Zip|bool Returns a new Zip instance on success, false on failure.
      */
-    public static function gzip($sourcePath, $destinationGz)
+    public static function gzip($sourcePath, $destinationGz, $level = 9)
     {
         $sourcePath     = self::getBasePath($sourcePath);
         $destinationGz  = self::getBasePath($destinationGz);
@@ -97,7 +125,7 @@ class Zip {
             return false;
         }
 
-        $gz = gzopen($destinationGz, 'w9');
+        $gz = gzopen($destinationGz, 'w' . $level);
         if (!$gz) {
             return false;
         }
@@ -108,7 +136,12 @@ class Zip {
 
         $result = File::exists($destinationGz);
 
-        return $result ? new self($destinationGz) : false;
+        if ($result) {
+            self::$lastArchivePath = $destinationGz;
+            return new self($sourcePath, $destinationGz);
+        }
+
+        return false;
     }
 
     /**
@@ -146,30 +179,39 @@ class Zip {
 
         $success = $result && File::exists($destinationRar);
 
-        return $success ? new self($destinationRar) : false;
+        if ($success) {
+            self::$lastArchivePath = $destinationRar;
+            return new self($sourcePath, $destinationRar);
+        }
+
+        return false;
     }
 
+
+
     /**
-     * Compress a file or folder into zip, gzip, and rar formats.
+     * Compress the source into gzip and rar formats using the archive path as base.
      *
-     * @param string $sourcePath The path to the file or folder to compress.
-     * @param string $destinationBase The base path for the resulting files (without extension).
-     * @return Zip|bool Returns a new Zip instance with the zip file on success, false on failure.
+     * @param int $level Compression level for gzip (0-9, default 9).
+     * @return Zip|bool Returns $this on success, false on failure.
      */
-    public static function compress($sourcePath, $destinationBase)
+    public function compress($level = 9)
     {
-        $success = true;
-        $zipPath = $destinationBase . '.zip';
-        $gzPath = $destinationBase . '.gz';
-        $rarPath = $destinationBase . '.rar';
-
-        $zipResult = self::zip($sourcePath, $zipPath);
-        if (!File::isDirectory($sourcePath)) {
-            $success &= (self::gzip($sourcePath, $gzPath) !== false);
+        if (!$this->sourcePath || !$this->archivePath) {
+            return false;
         }
-        $success &= (self::rar($sourcePath, $rarPath) !== false);
 
-        return $success && $zipResult ? $zipResult : false;
+        $base = pathinfo($this->archivePath, PATHINFO_DIRNAME) . '/' . pathinfo($this->archivePath, PATHINFO_FILENAME);
+        $gzPath = $base . '.gz';
+        $rarPath = $base . '.rar';
+
+        $success = true;
+        if (!File::isDirectory($this->sourcePath)) {
+            $success &= (self::gzip($this->sourcePath, $gzPath, $level) !== false);
+        }
+        $success &= (self::rar($this->sourcePath, $rarPath) !== false);
+
+        return $success ? $this : false;
     }
 
     /**
@@ -250,7 +292,7 @@ class Zip {
      */
     public static function downloadStatic($fileName, $unlink = true)
     {
-        $instance = new self($fileName);
+        $instance = new self(null, $fileName);
         $instance->download($unlink);
     }
 
