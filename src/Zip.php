@@ -75,9 +75,10 @@ class Zip {
      * @param string $destinationZip The path for the resulting zip file.
      * - [base path will be automatically added]
      *
+     * @param int $level Compression level (0-9, default 0 for no compression).
      * @return Zip Returns a new Zip instance.
      */
-    public static function zip($sourcePath, $destinationZip)
+    public static function zip($sourcePath, $destinationZip, $level = 0)
     {
         $sourcePath     = self::getBasePath($sourcePath);
         $destinationZip = self::getBasePath($destinationZip);
@@ -89,7 +90,7 @@ class Zip {
 
         // If it's a folder, call the zipFolder function
         if (File::isDirectory($sourcePath)) {
-            $result = self::zipFolder($sourcePath, $destinationZip);
+            $result = self::zipFolder($sourcePath, $destinationZip, $level);
         } else {
             // If it's a file, create a zip containing just that file
             $zip = new ZipArchive();
@@ -104,7 +105,7 @@ class Zip {
 
             // Add the file to the zip
             $zip->addFile($sourcePath, basename($sourcePath));
-            $zip->setCompressionName(basename($sourcePath), ZipArchive::CM_DEFLATE, 9);
+            $zip->setCompressionName(basename($sourcePath), ZipArchive::CM_DEFLATE, $level);
 
             $zip->close();
 
@@ -238,6 +239,17 @@ class Zip {
             $this->compressed = true;
         }
 
+        // For ZIP archives, re-compress with level 9
+        if ($this->archivePath && pathinfo($this->archivePath, PATHINFO_EXTENSION) === 'zip') {
+            if (File::exists($this->archivePath)) {
+                File::delete($this->archivePath);
+            }
+            $reZipResult = self::zip($this->sourcePath, $this->archivePath, 9);
+            if ($reZipResult->getArchivePath() !== null) {
+                $this->compressed = true;
+            }
+        }
+
         return $this;
     }
 
@@ -364,9 +376,10 @@ class Zip {
      *
      * @param string $sourceFolder The path to the folder to zip.
      * @param string $destinationZip The path for the resulting zip file.
+     * @param int $level Compression level.
      * @return bool True if the zip operation was successful, false otherwise.
      */
-    private static function zipFolder($sourceFolder, $destinationZip)
+    private static function zipFolder($sourceFolder, $destinationZip, $level = 0)
     {
         $zip = new ZipArchive();
 
@@ -388,7 +401,7 @@ class Zip {
 
                 // Add the contents of the source folder to the zip without the source folder name
                 $zip->addFile($filePath, $localPath);
-                $zip->setCompressionName($localPath, ZipArchive::CM_DEFLATE, 9);
+                $zip->setCompressionName($localPath, ZipArchive::CM_DEFLATE, $level);
             }
         }
 
