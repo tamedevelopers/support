@@ -104,6 +104,7 @@ class Zip {
 
             // Add the file to the zip
             $zip->addFile($sourcePath, basename($sourcePath));
+            $zip->setCompressionName(basename($sourcePath), ZipArchive::CM_DEFLATE, 9);
 
             $zip->close();
 
@@ -387,6 +388,7 @@ class Zip {
 
                 // Add the contents of the source folder to the zip without the source folder name
                 $zip->addFile($filePath, $localPath);
+                $zip->setCompressionName($localPath, ZipArchive::CM_DEFLATE, 9);
             }
         }
 
