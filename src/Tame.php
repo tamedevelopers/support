@@ -1245,7 +1245,7 @@ class Tame extends TameHelper{
      * @return bool 
      * - Whether the email address is valid (true) or not (false).
      */
-    public static function emailValidator($email = null, $use_internet = false, $server_verify = false) 
+    public static function emailValidator($email = null, $use_internet = false, $server_verify = false)
     {
         $filteredEmail = filter_var($email, FILTER_VALIDATE_EMAIL);
 

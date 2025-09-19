@@ -54,23 +54,28 @@ class TameHelper
         // check is there's a valid mx record
         $emailPingExist = self::emailPing($pingEmail); 
 
+        dump(
+            ($emailPingExist) ? "Ping: {$email} - Yes" : "Ping: {$email} - No"
+        );
+
         if($emailPingExist){
             // check for disposable email
             $disposable = Utility::isDisposableEmail($email);
+
+            // dump(
+            //     ($disposable) ? "Disposable: {$email} - Yes" : "Disposable: {$email} - No"
+            // );
             if($disposable){
-                return false;
-            }
+                // return false;
+            } 
 
             // perform email verification using <internet and server validation>
             $validate = Tame::emailValidator($email, false, false);
-
-            dd(
-                $emailPingExist
-            );
-
-            if($validate){
-                return true;
+            if(!$validate){
+                return false;
             }
+
+            return true;
         }
 
         return false;
