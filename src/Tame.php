@@ -194,7 +194,8 @@ class Tame {
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
         curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Max time for the entire request
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2); // Connection timeout
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // For some servers, you may need this
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Skip SSL peer verification
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // Skip SSL host verification (since we're using IP)
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: ' . $host]); // Set Host header for virtual hosting
 
         // Execute cURL and get the header output
