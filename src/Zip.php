@@ -67,6 +67,16 @@ class Zip {
     }
 
     /**
+     * Check if the source has been compressed into additional formats.
+     *
+     * @return bool
+     */
+    public function isCompressed()
+    {
+        return $this->compressed;
+    }
+
+    /**
      * Zip a file or folder.
      *
      * @param string $sourcePath The path to the file or folder to zip.
@@ -158,53 +168,7 @@ class Zip {
     }
 
     /**
-     * Rar a file or folder.
-     *
-     * @param string $sourcePath The path to the file or folder to rar.
-     * @param string $destinationRar The path for the resulting rar file.
-     * @return Zip Returns a new Zip instance.
-     */
-    public static function rar($sourcePath, $destinationRar)
-    {
-        if (!extension_loaded('rar')) {
-            return new self($sourcePath, null);
-        }
-
-        $sourcePath     = self::getBasePath($sourcePath);
-        $destinationRar = self::getBasePath($destinationRar);
-
-        // Delete existing file to avoid appending to it
-        if (File::exists($destinationRar)) {
-            File::delete($destinationRar);
-        }
-
-        $rar = \RarArchive::open($destinationRar, \RarArchive::CREATE);
-        if (!$rar) {
-            return new self($sourcePath, null);
-        }
-
-        if (File::isDirectory($sourcePath)) {
-            $result = self::rarFolder($sourcePath, $rar);
-        } else {
-            if (!File::exists($sourcePath)) {
-                $rar->close();
-                return new self($sourcePath, null);
-            }
-            $result = $rar->addFile($sourcePath, basename($sourcePath));
-        }
-
-        $rar->close();
-
-        $success = $result && File::exists($destinationRar);
-
-        self::$lastArchivePath = $success ? $destinationRar : null;
-        return new self($sourcePath, $success ? $destinationRar : null);
-    }
-
-
-
-    /**
-     * Compress the source into gzip and rar formats using the archive path as base.
+     * Compress the source into gzip format using the archive path as base.
      *
      * @param int $level Compression level for gzip (0-9, default 9).
      * @return Zip Returns $this.
@@ -217,14 +181,10 @@ class Zip {
 
         $base = pathinfo($this->archivePath, PATHINFO_DIRNAME) . '/' . pathinfo($this->archivePath, PATHINFO_FILENAME);
         $gzPath = $base . '.gz';
-        $rarPath = $base . '.rar';
 
         // Delete existing files to avoid appending
         if (File::exists($gzPath)) {
             File::delete($gzPath);
-        }
-        if (File::exists($rarPath)) {
-            File::delete($rarPath);
         }
 
         $this->compressed = false;
@@ -233,10 +193,6 @@ class Zip {
             if ($gzipResult->getArchivePath() !== null) {
                 $this->compressed = true;
             }
-        }
-        $rarResult = self::rar($this->sourcePath, $rarPath);
-        if ($rarResult->getArchivePath() !== null) {
-            $this->compressed = true;
         }
 
         // For ZIP archives, re-compress with level 9
@@ -251,16 +207,6 @@ class Zip {
         }
 
         return $this;
-    }
-
-    /**
-     * Check if the source has been compressed into additional formats.
-     *
-     * @return bool
-     */
-    public function isCompressed()
-    {
-        return $this->compressed;
     }
 
     /**
@@ -284,8 +230,6 @@ class Zip {
             return self::unzipFile($sourcePath, $destination);
         } elseif ($extension === 'gz') {
             return self::unzipGz($sourcePath, $destination);
-        } elseif ($extension === 'rar') {
-            return self::unzipRar($sourcePath, $destination);
         } elseif (File::isDirectory($sourcePath)) {
             return self::unzipFolder($sourcePath, $destination);
         }
@@ -294,7 +238,7 @@ class Zip {
     }
 
     /**
-     * Download Archive File (zip, gz, rar)
+     * Download Archive File (zip, gz)
      *
      * @param  bool $unlink
      * @return void
@@ -313,7 +257,6 @@ class Zip {
             $contentType = match($extension) {
                 'zip' => 'application/zip',
                 'gz' => 'application/gzip',
-                'rar' => 'application/x-rar-compressed',
                 default => 'application/octet-stream'
             };
 
@@ -330,19 +273,6 @@ class Zip {
                 File::delete($filePath);
             }
         }
-    }
-
-    /**
-     * Static download method for backward compatibility
-     *
-     * @param  string $fileName
-     * @param  bool $unlink
-     * @return void
-     */
-    public static function downloadStatic($fileName, $unlink = true)
-    {
-        $instance = new self(null, $fileName);
-        $instance->download($unlink);
     }
 
     /**
@@ -452,31 +382,6 @@ class Zip {
     }
 
     /**
-     * Rar a folder and its contents.
-     *
-     * @param string $sourceFolder The path to the folder to rar.
-     * @param \RarArchive $rar The rar archive object.
-     * @return bool True if the rar operation was successful, false otherwise.
-     */
-    private static function rarFolder($sourceFolder, $rar)
-    {
-        $files = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($sourceFolder),
-            RecursiveIteratorIterator::LEAVES_ONLY
-        );
-
-        foreach ($files as $name => $file) {
-            if (!$file->isDir()) {
-                $filePath = $file->getRealPath();
-                $localPath = substr($filePath, strlen($sourceFolder) + 1);
-                $rar->addFile($filePath, $localPath);
-            }
-        }
-
-        return true;
-    }
-
-    /**
      * Unzip a gz file.
      *
      * @param string $file The path to the gz file.
@@ -504,27 +409,4 @@ class Zip {
         return true;
     }
 
-    /**
-     * Unzip a rar file.
-     *
-     * @param string $file The path to the rar file.
-     * @param string $destination The path to the destination directory.
-     * @return bool True if the unzip operation was successful, false otherwise.
-     */
-    private static function unzipRar($file, $destination)
-    {
-        if (!extension_loaded('rar')) {
-            return false;
-        }
-
-        $rar = \RarArchive::open($file);
-        if (!$rar) {
-            return false;
-        }
-
-        $rar->extractTo($destination);
-        $rar->close();
-
-        return true;
-    }
 }
