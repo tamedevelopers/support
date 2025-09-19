@@ -25,6 +25,11 @@ class Zip {
     private $sourcePath;
 
     /**
+     * @var bool Whether the source has been compressed into additional formats
+     */
+    private $compressed = false;
+
+    /**
      * @var string|null The last created archive path (static)
      */
     private static $lastArchivePath = null;
@@ -77,6 +82,11 @@ class Zip {
         $sourcePath     = self::getBasePath($sourcePath);
         $destinationZip = self::getBasePath($destinationZip);
 
+        // Delete existing file to avoid appending to it
+        if (File::exists($destinationZip)) {
+            File::delete($destinationZip);
+        }
+
         // If it's a folder, call the zipFolder function
         if (File::isDirectory($sourcePath)) {
             $result = self::zipFolder($sourcePath, $destinationZip);
@@ -117,6 +127,11 @@ class Zip {
         $sourcePath     = self::getBasePath($sourcePath);
         $destinationGz  = self::getBasePath($destinationGz);
 
+        // Delete existing file to avoid appending to it
+        if (File::exists($destinationGz)) {
+            File::delete($destinationGz);
+        }
+
         if (File::isDirectory($sourcePath)) {
             return new self($sourcePath, null); // Gzip not supported for directories
         }
@@ -156,6 +171,11 @@ class Zip {
         $sourcePath     = self::getBasePath($sourcePath);
         $destinationRar = self::getBasePath($destinationRar);
 
+        // Delete existing file to avoid appending to it
+        if (File::exists($destinationRar)) {
+            File::delete($destinationRar);
+        }
+
         $rar = \RarArchive::open($destinationRar, \RarArchive::CREATE);
         if (!$rar) {
             return new self($sourcePath, null);
@@ -185,25 +205,49 @@ class Zip {
      * Compress the source into gzip and rar formats using the archive path as base.
      *
      * @param int $level Compression level for gzip (0-9, default 9).
-     * @return Zip|bool Returns $this on success, false on failure.
+     * @return Zip Returns $this.
      */
     public function compress($level = 9)
     {
         if (!$this->sourcePath || !$this->archivePath) {
-            return false;
+            return $this;
         }
 
         $base = pathinfo($this->archivePath, PATHINFO_DIRNAME) . '/' . pathinfo($this->archivePath, PATHINFO_FILENAME);
         $gzPath = $base . '.gz';
         $rarPath = $base . '.rar';
 
-        $success = false;
-        if (!File::isDirectory($this->sourcePath)) {
-            $success = $success || (self::gzip($this->sourcePath, $gzPath, $level) !== false);
+        // Delete existing files to avoid appending
+        if (File::exists($gzPath)) {
+            File::delete($gzPath);
         }
-        $success = $success || (self::rar($this->sourcePath, $rarPath) !== false);
+        if (File::exists($rarPath)) {
+            File::delete($rarPath);
+        }
 
-        return $success ? $this : false;
+        $this->compressed = false;
+        if (!File::isDirectory($this->sourcePath)) {
+            $gzipResult = self::gzip($this->sourcePath, $gzPath, $level);
+            if ($gzipResult->getArchivePath() !== null) {
+                $this->compressed = true;
+            }
+        }
+        $rarResult = self::rar($this->sourcePath, $rarPath);
+        if ($rarResult->getArchivePath() !== null) {
+            $this->compressed = true;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Check if the source has been compressed into additional formats.
+     *
+     * @return bool
+     */
+    public function isCompressed()
+    {
+        return $this->compressed;
     }
 
     /**
