@@ -23,7 +23,6 @@ Support Package For PHP and Laravel
     * [unlink](#unlink)
     * [mask](#mask)
     * [imageToBase64](#imageToBase64)
-    * [emailValidator](#emailValidator)
     * [platformIcon](#platformIcon)
     * [paymentIcon](#paymentIcon)
     * [calPercentageBetweenNumbers](#calPercentageBetweenNumbers)
@@ -504,27 +503,6 @@ Tame()->imageToBase64(base_path('path/to/image.jpg'));
 
 Tame()->imageToBase64('https://example.com/image.png', true);
 // Output: "data:image/png;base64,..." (Base64 string for the URL image)
-```
-
-### emailValidator
-- Validates an email address with optional domain and server verification - `bool`
-
-| Params         | Description                                                                                                   |
-|----------------|---------------------------------------------------------------------------------------------------------------|
-| email          | The email address to validate.                                                                                |
-| use_internet   | By default is set to `false`. If `true`, checks the domain using DNS (`checkdnsrr()` and `getmxrr()`) for validity. If `false`, skips domain validation (default: `false`). |
-| server_verify  | Verifies the mail server by checking MX records (default: `false`). Only used if `use_internet` is `true`.   |
-
-```php
-Tame()->emailValidator('example@example.com');
-// Output: true (Valid email with domain check using DNS)
-
-
-Tame()->emailValidator('example@example.com', false);
-// Output: true (Valid format only, no internet or DNS checks)
-
-Tame()->emailValidator('example@example.com', true, true);
-// Output: true or false (Valid format with domain and server verification)
 ```
 
 ### platformIcon  

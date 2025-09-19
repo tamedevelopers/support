@@ -48,6 +48,12 @@ class TameHelper
         $hostName = Tame::getHostFromUrl((string) $email);
         $emailPingExist = self::emailPing("u@$hostName"); //10x faster than urlExist method
 
+
+        dd(
+            $emailPingExist,
+            "u@$hostName"
+        );
+
         if($emailPingExist){
             // check for disposable email
             $disposable = Utility::isDisposableEmail($email);

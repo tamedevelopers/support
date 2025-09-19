@@ -20,8 +20,8 @@ $filePath = base_path('hello.php');
 
 dd(
     $gzip->compress(),
-    $zip->compress(),
-    'nothing has been zipped yet',
+    $zip,
+
     $folderPath,
     $filePath
 );

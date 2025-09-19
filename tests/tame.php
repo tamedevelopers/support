@@ -42,16 +42,16 @@ $emails = [
 ];
 
 dd(
+    $emailChecker,
     // Tame::emailPing('support@google.com'),
-    // Tame::deepEmailPing('info@tamedevelopers.com'),
-    Tame::batchDeepEmailPing($emails),
+    Tame::deepEmailPing('info@tamedevelopers.com'),
+    // Tame::batchDeepEmailPing($emails),
 );
 exit();
 
 dd(
     [
       Tame::urlExist('google.com'),
-    //   Tame::urlExist('lhkexpress.com'),
       Tame::isInternetAvailable(),
     ],
     [
