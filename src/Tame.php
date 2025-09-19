@@ -90,6 +90,78 @@ class Tame {
     }
 
     /**
+     * Resolve hostname to IP using DNS query to 8.8.8.8
+     *
+     * @param string $hostname
+     * @return string|false
+     */
+    private static function resolveDNS($hostname)
+    {
+        $dnsServer = '8.8.8.8';
+        $port = 53;
+
+        // Build DNS query
+        $id = rand(0, 65535);
+        $flags = 0x0100; // Standard query, recursion desired
+        $qdcount = 1;
+        $header = pack('n*', $id, $flags, $qdcount, 0, 0, 0);
+
+        // Question
+        $labels = explode('.', $hostname);
+        $qname = '';
+        foreach ($labels as $label) {
+            $qname .= chr(strlen($label)) . $label;
+        }
+        $qname .= chr(0);
+        $qtype = 1; // A record
+        $qclass = 1; // IN
+        $question = $qname . pack('n*', $qtype, $qclass);
+        $query = $header . $question;
+
+        // Send via UDP
+        $socket = @fsockopen('udp://' . $dnsServer, $port, $errno, $errstr, 2);
+        if (!$socket) return false;
+        fwrite($socket, $query);
+        $response = fread($socket, 512);
+        fclose($socket);
+
+        // Parse response
+        if (strlen($response) < 12) return false;
+        $header = unpack('nid/nflags/nqdcount/nancount', substr($response, 0, 8));
+        if ($header['ancount'] == 0) return false;
+
+        $pos = 12;
+        // Skip question
+        while ($response[$pos] != chr(0)) {
+            $len = ord($response[$pos]);
+            $pos += $len + 1;
+        }
+        $pos += 5;
+
+        // Answers
+        for ($i = 0; $i < $header['ancount']; $i++) {
+            if ((ord($response[$pos]) & 0xC0) == 0xC0) {
+                $pos += 2;
+            } else {
+                while ($response[$pos] != chr(0)) {
+                    $len = ord($response[$pos]);
+                    $pos += $len + 1;
+                }
+                $pos += 1;
+            }
+            $type = unpack('n', substr($response, $pos, 2))[1];
+            $pos += 8; // Skip type, class, ttl
+            $rdlength = unpack('n', substr($response, $pos, 2))[1];
+            $pos += 2;
+            if ($type == 1 && $rdlength == 4) {
+                return inet_ntop(substr($response, $pos, 4));
+            }
+            $pos += $rdlength;
+        }
+        return false;
+    }
+
+    /**
      * Check IF URL Exists
      *
      * @param string $url
@@ -97,7 +169,23 @@ class Tame {
      */
     public static function urlExist($url)
     {
-        $ch = curl_init($url);
+        // Ensure URL has a scheme
+        if (!preg_match('/^https?:\/\//', $url)) {
+            $url = 'http://' . $url;
+        }
+
+        $urlParts = parse_url($url);
+        $host = $urlParts['host'] ?? '';
+        if (!$host) return false;
+
+        // Resolve hostname to IP
+        $ip = self::resolveDNS($host);
+        if (!$ip) return false;
+
+        // Replace host with IP in URL
+        $urlWithIp = str_replace($host, $ip, $url);
+
+        $ch = curl_init($urlWithIp);
 
         // Set cURL options
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -107,8 +195,9 @@ class Tame {
         curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Max time for the entire request
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2); // Connection timeout
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // For some servers, you may need this
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: ' . $host]); // Set Host header for virtual hosting
 
-        // Execute cURL and get the header output (not needed for the check, but required for the status code)
+        // Execute cURL and get the header output
         curl_exec($ch);
 
         // Use curl_getinfo to get the HTTP status code
