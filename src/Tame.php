@@ -6,6 +6,7 @@ namespace Tamedevelopers\Support;
 
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\ApiResponse;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\TameTrait;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -57,43 +58,35 @@ class Tame {
      *
      * @param  int $response
      * @param  mixed $message
+     * @param  int      $statusCode
      * @return mixed
      */
-    public static function jsonEcho(int $response = 0, $message = null)
+    public static function jsonEcho(int $response = 0, $message = null, $statusCode = 200)
     {
-        self::echoJson($response, $message);
-    }
-    
-    /**
-     * Echo `json_encode` with response and message
-     *
-     * @param  int $response
-     * @param  mixed $message
-     * @return mixed
-     */
-    public static function echoJson(int $response = 0, $message = null)
-    {
-        header('Content-Type: application/json');
-        echo json_encode([
-            'response' => $response,
-            'message'  => $message,
-        ]);
+        self::echoJson($response, $message, $statusCode);
     }
 
     /**
-     * Return a JSON response with status code and message
-     *
-     * @param  int   $response
-     * @param  mixed $message
-     * @param  int   $statusCode
-     * @return \Symfony\Component\HttpFoundation\JsonResponse
+     * Echo `json_encode` with response and message
+     * Common HTTP status codes for API responses:
+     * - 200 OK - Request succeeded. Example: Successful login, data fetched successfully.
+     * - 201 Created - Resource created successfully. Example: User registered, item stored.
+     * - 400 Bad Request - Invalid request. Example: Malformed JSON, missing parameters.
+     * - 401 Unauthorized - Authentication failed. Example: Wrong password, invalid token.
+     * - 403 Forbidden - Not allowed. Example: User without permission attempts action.
+     * - 404 Not Found - Resource missing. Example: User ID not found, endpoint invalid.
+     * - 419 Page Expired - CSRF mismatch/session expired. Example: Invalid CSRF token.
+     * - 422 Unprocessable Entity - Validation failed. Example: Invalid email, missing fields.
+     * - 500 Internal Server Error - Server bug. Example: Database failure, fatal exception.
+     * 
+     * @param  int      $response
+     * @param  mixed    $message
+     * @param  int      $statusCode
+     * @return mixed
      */
-    public static function json(int $response = 0, $message = null, int $statusCode = 200)
+    public static function echoJson(int $response = 0, $message = null, $statusCode = 200)
     {
-        return new JsonResponse([
-            'response' => $response,
-            'message'  => $message,
-        ], $statusCode);
+        ApiResponse::jsonEcho($response, $message, $statusCode);
     }
 
     /**
@@ -124,11 +117,12 @@ class Tame {
     /**
      * Check IF Internet is Available
      * 
+     * @param  string|null $url
      * @return bool
      */
-    public static function isInternetAvailable()
+    public static function isInternetAvailable($url = null)
     {
-        return self::urlExists('https://www.google.com');
+        return self::urlExists($url ?: 'https://www.google.com');
     }
 
     /**
