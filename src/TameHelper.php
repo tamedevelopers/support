@@ -46,8 +46,7 @@ class TameHelper
         $email = is_array($email) ? ($email[0] ?? null) : $email;
 
         $hostName = Tame::getHostFromUrl((string) $email);
-        $emailPingExist = self::emailPing("u@$hostName"); //10x faster than urlExist method
-
+        $emailPingExist = self::emailPing("info@$hostName"); //10x faster than urlExist method
 
         dd(
             $emailPingExist,
@@ -65,8 +64,8 @@ class TameHelper
             $validate = Tame::emailValidator($email, true, true);
             if($validate){
                 return true;
-            } 
-        } 
+            }
+        }
 
         return false;
     }
@@ -77,10 +76,10 @@ class TameHelper
      * without sending an actual email. This provides a fast way to verify if the domain's mail server is responsive.
      *
      * @param string|null $email The email address to ping
-     * @param int $timeout Connection timeout in seconds (default: 1)
+     * @param int $timeout Connection timeout in seconds (default: 3)
      * @return bool True if the mail server is reachable, false otherwise
      */
-    public static function emailPing($email = null, $timeout = 1)
+    public static function emailPing($email = null, $timeout = 3)
     {
         // First, validate the email format
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -96,24 +95,24 @@ class TameHelper
             return false; // No MX records
         }
 
-        // Get the primary MX server (lowest priority)
-        $primaryMx = $mxRecords[0] ?? null;
-        if (!$primaryMx) {
+        if (empty($mxRecords)) {
             return false;
         }
 
         // Attempt connection on common SMTP ports: 25, 587, 465
         $ports = [25, 587, 465];
-        foreach ($ports as $port) {
-            $fp = @fsockopen($primaryMx, $port, $errno, $errstr, $timeout);
-            if ($fp) {
-                // Connection successful, close immediately
-                fclose($fp);
-                return true;
+        foreach ($mxRecords as $mx) {
+            foreach ($ports as $port) {
+                $fp = @fsockopen($mx, $port, $errno, $errstr, $timeout);
+                if ($fp) {
+                    // Connection successful, close immediately
+                    fclose($fp);
+                    return true;
+                }
             }
         }
 
-        // If no port worked
+        // If no MX or port worked
         return false;
     }
 
