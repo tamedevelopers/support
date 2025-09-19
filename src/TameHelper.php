@@ -14,12 +14,14 @@ class TameHelper
      *
      * Note: Not all mail servers support or allow this verification due to anti-spam measures.
      * Some servers may accept all recipients to prevent address harvesting.
+     * For bulk processing (e.g., 1000+ emails), this method is slow and may not be ideal.
+     * Consider using emailPing() for faster domain-only checks.
      *
      * @param string|null $email The email address to verify
-     * @param int $timeout Connection timeout in seconds (default: 10)
+     * @param int $timeout Connection timeout in seconds (default: 1)
      * @return bool True if the mailbox appears to exist, false otherwise
      */
-    public static function deepEmailPing($email = null, $timeout = 2)
+    public static function deepEmailPing($email = null, $timeout = 1)
     {
         // First, validate the email format
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -81,7 +83,7 @@ class TameHelper
             }
 
             // Send MAIL FROM (use a dummy sender from the same domain if possible, else example.com)
-            $sender = "noreply@{$domain}";
+            $sender = $email;
             if (!filter_var($sender, FILTER_VALIDATE_EMAIL)) {
                 $sender = 'noreply@example.com';
             }
@@ -114,10 +116,10 @@ class TameHelper
      * without sending an actual email. This provides a fast way to verify if the domain's mail server is responsive.
      *
      * @param string|null $email The email address to ping
-     * @param int $timeout Connection timeout in seconds (default: 5)
+     * @param int $timeout Connection timeout in seconds (default: 1)
      * @return bool True if the mail server is reachable, false otherwise
      */
-    public static function emailPing($email = null, $timeout = 5)
+    public static function emailPing($email = null, $timeout = 1)
     {
         // First, validate the email format
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -152,6 +154,24 @@ class TameHelper
 
         // If no port worked
         return false;
+    }
+
+    /**
+     * Batch Deep Ping Email - Verify Multiple Mailbox Existences
+     * Processes multiple emails for deep verification. Note: Still processes serially,
+     * so for large batches, consider running in background or using emailPing() for speed.
+     *
+     * @param array $emails Array of email addresses to verify
+     * @param int $timeout Connection timeout in seconds per email (default: 1)
+     * @return array Associative array of email => bool (true if appears valid)
+     */
+    public static function batchDeepEmailPing(array $emails, $timeout = 1)
+    {
+        $results = [];
+        foreach ($emails as $email) {
+            $results[$email] = self::deepEmailPing($email, $timeout);
+        }
+        return $results;
     }
 
 }

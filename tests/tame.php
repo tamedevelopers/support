@@ -61,7 +61,8 @@ foreach($emails as $key => $email) {
 dd(
     Tame::emailPing('s@google.com'),
     Tame::emailPing('s@tamedevelopers.com'),
-    Tame::deepEmailPing('tamedevelopers@gmail.com'),
+    Tame::emailPing('s@tamedevelopers.com'),
+    // Tame::deepEmailPing('info@tamedevelopers.com'),
     $sortedEmails
 );
 exit();
