@@ -7,7 +7,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // Powerful Zip Class
 
 
-$zip = Zip::zip('tests', 'newData.zip');
+$zip = Zip::zip('testss', 'newData.zip');
 $rar = Zip::rar('tests', 'newData.rar');
 $gzip = Zip::gzip('tests', 'newData.gz');
 

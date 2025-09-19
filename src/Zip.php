@@ -87,6 +87,10 @@ class Zip {
             if ($zip->open($destinationZip, ZipArchive::CREATE) !== true) {
                 return false;
             }
+            
+            if(!File::exists($sourcePath)){
+                return false;
+            }
 
             // Add the file to the zip
             $zip->addFile($sourcePath, basename($sourcePath));
