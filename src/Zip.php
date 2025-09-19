@@ -172,7 +172,7 @@ class Zip {
     }
 
     /**
-     * Download Zipped File
+     * Download Archive File (zip, gz, rar)
      *
      * @param  string $fileName
      * @param  bool $unlink
@@ -180,20 +180,29 @@ class Zip {
      */
     public static function download($fileName, $unlink = true)
     {
-        $zipfilePath = self::getBasePath($fileName);
+        $filePath = self::getBasePath($fileName);
 
-        if(File::exists($zipfilePath)){
-            // Set headers to download the ZIP file
-            header('Content-Type: application/zip');
+        if(File::exists($filePath)){
+            // Determine content type based on file extension
+            $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $contentType = match($extension) {
+                'zip' => 'application/zip',
+                'gz' => 'application/gzip',
+                'rar' => 'application/x-rar-compressed',
+                default => 'application/octet-stream'
+            };
+
+            // Set headers to download the archive file
+            header("Content-Type: {$contentType}");
             header("Content-Disposition: attachment; filename={$fileName}");
-            header('Content-Length: ' . filesize($zipfilePath));
-    
+            header('Content-Length: ' . filesize($filePath));
+
             // Read the file to output the download
-            readfile($zipfilePath);
-    
-            // Delete the ZIP file after download (optional)
+            readfile($filePath);
+
+            // Delete the archive file after download (optional)
             if($unlink){
-                File::delete($zipfilePath);
+                File::delete($filePath);
             }
         }
     }
