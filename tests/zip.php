@@ -8,6 +8,8 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 
 $zip = Zip::zip('tests', 'newData.zip');
+$rar = Zip::rar('tests', 'newData.rar');
+$gzip = Zip::gzip('tests', 'newData.gz');
 
 // TameZip()->zip('tests', 'newData.zip');
 // TameZip()->unzip('newData.zip', '/');
@@ -18,6 +20,8 @@ $basePath = base_path('hello.php');
 
 dd(
     $zip,
+    $rar,
+    $gzip,
     $zip->compress(),
     'nothing has been zipped yet',
     $folderPath,

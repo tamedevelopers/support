@@ -205,11 +205,11 @@ class Zip {
         $gzPath = $base . '.gz';
         $rarPath = $base . '.rar';
 
-        $success = true;
+        $success = false;
         if (!File::isDirectory($this->sourcePath)) {
-            $success &= (self::gzip($this->sourcePath, $gzPath, $level) !== false);
+            $success = $success || (self::gzip($this->sourcePath, $gzPath, $level) !== false);
         }
-        $success &= (self::rar($this->sourcePath, $rarPath) !== false);
+        $success = $success || (self::rar($this->sourcePath, $rarPath) !== false);
 
         return $success ? $this : false;
     }
