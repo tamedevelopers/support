@@ -46,7 +46,7 @@ class TameHelper
         $email = is_array($email) ? ($email[0] ?? null) : $email;
 
         $hostName = Tame::getHostFromUrl((string) $email);
-        $emailPingExist = self::emailPing("info@$hostName"); //10x faster than urlExist method
+        $emailPingExist = self::emailPing("noreply@$hostName"); //10x faster than urlExist method
 
         dd(
             $emailPingExist,
