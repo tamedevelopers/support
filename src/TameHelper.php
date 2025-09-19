@@ -46,11 +46,16 @@ class TameHelper
         $email = is_array($email) ? ($email[0] ?? null) : $email;
 
         $hostName = Tame::getHostFromUrl((string) $email);
-        $emailPingExist = self::emailPing("noreply@$hostName"); //10x faster than urlExist method
+
+        // 10x faster than urlExist methods
+        // check is there's a valid mx record
+        $pingEmail = "noreply@{$hostName}";
+        $emailPingExist = self::emailPing($pingEmail); 
 
         dd(
             $emailPingExist,
-            "u@$hostName"
+            $pingEmail,
+            Tame::emailValidator($pingEmail, true, true)
         );
 
         if($emailPingExist){
@@ -76,10 +81,11 @@ class TameHelper
      * without sending an actual email. This provides a fast way to verify if the domain's mail server is responsive.
      *
      * @param string|null $email The email address to ping
-     * @param int $timeout Connection timeout in seconds (default: 3)
+     * @param bool $fsocket to verify using fsocket
+     * @param int $timeout Connection timeout in seconds (default: 1)
      * @return bool True if the mail server is reachable, false otherwise
      */
-    public static function emailPing($email = null, $timeout = 3)
+    public static function emailPing($email = null, $fsocket = false, $timeout = 1)
     {
         // First, validate the email format
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -95,24 +101,26 @@ class TameHelper
             return false; // No MX records
         }
 
-        if (empty($mxRecords)) {
+        // Get the primary MX server (lowest priority)
+        $primaryMx = $mxRecords[0] ?? null;
+        if (!$primaryMx) {
             return false;
         }
 
-        // Attempt connection on common SMTP ports: 25, 587, 465
-        $ports = [25, 587, 465];
-        foreach ($mxRecords as $mx) {
-            foreach ($ports as $port) {
-                $fp = @fsockopen($mx, $port, $errno, $errstr, $timeout);
-                if ($fp) {
-                    // Connection successful, close immediately
-                    fclose($fp);
-                    return true;
-                }
+        if($fsocket){
+            // Attempt connection on port 25 (most common SMTP port)
+            $fp = @fsockopen($primaryMx, 25, $errno, $errstr, $timeout);
+    
+            if ($fp) {
+                fclose($fp);
+                return true;
             }
         }
 
-        // If no MX or port worked
+        if($primaryMx){
+            return true;
+        }
+
         return false;
     }
 

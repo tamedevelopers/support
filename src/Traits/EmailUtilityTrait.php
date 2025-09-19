@@ -57,11 +57,11 @@ trait EmailUtilityTrait{
      * - The email address to validate.
      *
      * @param bool $use_internet 
-     * - By default is set to false, Which uses the checkdnsrr() and getmxrr()
-     * To validate valid domain emails
+     * - [false] Check for valid email format only
+     * - [true] Uses the checkdnsrr() and getmxrr() to validate email
      *
      * @param bool $server_verify 
-     * - Verify Mail Server
+     * - [true] Verify email server using dns_get_record()
      * 
      * @return bool 
      * - Whether the email address is valid (true) or not (false).

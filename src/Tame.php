@@ -1236,33 +1236,34 @@ class Tame extends TameHelper{
      * - The email address to validate.
      *
      * @param bool $use_internet 
-     * - By default is set to false, Which uses the checkdnsrr() and getmxrr()
-     * To validate valid domain emails
+     * - [false] Check for valid email format only
+     * - [true] Uses the checkdnsrr() and getmxrr() to validate email
      *
      * @param bool $server_verify 
-     * - Verify Mail Server
+     * - [true] Verify email server using dns_get_record()
      * 
      * @return bool 
      * - Whether the email address is valid (true) or not (false).
      */
-    public static function emailValidator($email = null, ?bool $use_internet = false, ?bool $server_verify = false) 
+    public static function emailValidator($email = null, $use_internet = false, $server_verify = false) 
     {
         $filteredEmail = filter_var($email, FILTER_VALIDATE_EMAIL);
 
         // if internet usage if set to false
+        // only validate email as a valid email
         if(!$use_internet){
             return $filteredEmail !== false;
         }
-        
+
         // Email format is invalid
         if (!$filteredEmail) {
             return false; 
         }
-        
+
         // Extract the domain from the email address
         $domain     = explode('@', $email)[1];
         $mxRecords  = [];
-        
+
         // Check DNS records corresponding to a given Internet host name or IP address
         if (checkdnsrr($domain, 'MX')) {
             getmxrr($domain, $mxRecords);
