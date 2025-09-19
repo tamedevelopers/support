@@ -25,7 +25,7 @@ $CubicMeterWeight   = Tame()->calculateCubicMeterWeight($volume[2]['length'], $v
 
 dd(
     [
-      Tame::urlExists('google.com'),
+      Tame::urlExist('https://google.com'),
       Tame::isInternetAvailable(),
     ],
     [

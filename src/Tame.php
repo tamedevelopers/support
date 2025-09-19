@@ -95,36 +95,30 @@ class Tame {
      * @param string $url
      * @return bool
      */
-    public static function urlExists($url)
+    public static function urlExist($url)
     {
-        $urlParts = parse_url($url);
-        if (!$urlParts || !isset($urlParts['host'])) {
-            return false;
-        }
+        $ch = curl_init($url);
 
-        $scheme = $urlParts['scheme'] ?? 'http';
-        $host = $urlParts['host'];
-        $port = $urlParts['port'] ?? ($scheme === 'https' ? 443 : 80);
-        $path = $urlParts['path'] ?? '/';
-        $query = isset($urlParts['query']) ? '?' . $urlParts['query'] : '';
+        // Set cURL options
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HEADER, true);
+        curl_setopt($ch, CURLOPT_NOBODY, true); // Use HEAD request
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Max time for the entire request
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2); // Connection timeout
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // For some servers, you may need this
 
-        $address = ($scheme === 'https' ? 'ssl://' : '') . $host . ':' . $port;
+        // Execute cURL and get the header output (not needed for the check, but required for the status code)
+        curl_exec($ch);
 
-        $fp = @stream_socket_client($address, $errno, $errstr, 5, STREAM_CLIENT_CONNECT);
-        if (!$fp) {
-            return false;
-        }
+        // Use curl_getinfo to get the HTTP status code
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-        $request = "HEAD {$path}{$query} HTTP/1.1\r\n";
-        $request .= "Host: {$host}\r\n";
-        $request .= "Connection: close\r\n";
-        $request .= "\r\n";
+        // Close cURL handle
+        curl_close($ch);
 
-        fwrite($fp, $request);
-        $response = fgets($fp, 1024);
-        fclose($fp);
-
-        return strpos($response, '200') !== false;
+        // Return true if the HTTP code is a success code (e.g., 200)
+        return ($httpCode >= 200 && $httpCode < 300);
     }
 
     /**
