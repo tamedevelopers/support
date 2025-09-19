@@ -18,6 +18,7 @@ $basePath = base_path('hello.php');
 
 dd(
     $zip,
+    $zip->compress(),
     'nothing has been zipped yet',
     $folderPath,
     $basePath

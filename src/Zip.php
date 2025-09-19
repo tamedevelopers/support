@@ -15,15 +15,40 @@ class Zip {
     use TameTrait;
 
     /**
+     * @var string|null The path to the current archive file
+     */
+    private $archivePath;
+
+    /**
+     * Constructor
+     *
+     * @param string|null $archivePath The path to the archive file
+     */
+    public function __construct($archivePath = null)
+    {
+        $this->archivePath = $archivePath;
+    }
+
+    /**
+     * Get the path to the current archive file.
+     *
+     * @return mixed
+     */
+    public function getArchivePath()
+    {
+        return $this->archivePath;
+    }
+
+    /**
      * Zip a file or folder.
      *
      * @param string $sourcePath The path to the file or folder to zip.
      * - [base path will be automatically added]
-     * 
+     *
      * @param string $destinationZip The path for the resulting zip file.
      * - [base path will be automatically added]
-     * 
-     * @return bool True if the zip operation was successful, false otherwise.
+     *
+     * @return Zip|bool Returns a new Zip instance on success, false on failure.
      */
     public static function zip($sourcePath, $destinationZip)
     {
@@ -32,22 +57,24 @@ class Zip {
 
         // If it's a folder, call the zipFolder function
         if (File::isDirectory($sourcePath)) {
-            return self::zipFolder($sourcePath, $destinationZip);
+            $result = self::zipFolder($sourcePath, $destinationZip);
+        } else {
+            // If it's a file, create a zip containing just that file
+            $zip = new ZipArchive();
+
+            if ($zip->open($destinationZip, ZipArchive::CREATE) !== true) {
+                return false;
+            }
+
+            // Add the file to the zip
+            $zip->addFile($sourcePath, basename($sourcePath));
+
+            $zip->close();
+
+            $result = File::exists($destinationZip);
         }
 
-        // If it's a file, create a zip containing just that file
-        $zip = new ZipArchive();
-
-        if ($zip->open($destinationZip, ZipArchive::CREATE) !== true) {
-            return false;
-        }
-
-        // Add the file to the zip
-        $zip->addFile($sourcePath, basename($sourcePath));
-
-        $zip->close();
-
-        return File::exists($destinationZip);
+        return $result ? new self($destinationZip) : false;
     }
 
     /**
@@ -55,7 +82,7 @@ class Zip {
      *
      * @param string $sourcePath The path to the file to gzip.
      * @param string $destinationGz The path for the resulting gz file.
-     * @return bool True if the gzip operation was successful, false otherwise.
+     * @return Zip|bool Returns a new Zip instance on success, false on failure.
      */
     public static function gzip($sourcePath, $destinationGz)
     {
@@ -79,7 +106,9 @@ class Zip {
         gzwrite($gz, $content);
         gzclose($gz);
 
-        return File::exists($destinationGz);
+        $result = File::exists($destinationGz);
+
+        return $result ? new self($destinationGz) : false;
     }
 
     /**
@@ -87,7 +116,7 @@ class Zip {
      *
      * @param string $sourcePath The path to the file or folder to rar.
      * @param string $destinationRar The path for the resulting rar file.
-     * @return bool True if the rar operation was successful, false otherwise.
+     * @return Zip|bool Returns a new Zip instance on success, false on failure.
      */
     public static function rar($sourcePath, $destinationRar)
     {
@@ -115,7 +144,9 @@ class Zip {
 
         $rar->close();
 
-        return $result && File::exists($destinationRar);
+        $success = $result && File::exists($destinationRar);
+
+        return $success ? new self($destinationRar) : false;
     }
 
     /**
@@ -123,7 +154,7 @@ class Zip {
      *
      * @param string $sourcePath The path to the file or folder to compress.
      * @param string $destinationBase The base path for the resulting files (without extension).
-     * @return bool True if all compressions were successful, false otherwise.
+     * @return Zip|bool Returns a new Zip instance with the zip file on success, false on failure.
      */
     public static function compress($sourcePath, $destinationBase)
     {
@@ -132,13 +163,13 @@ class Zip {
         $gzPath = $destinationBase . '.gz';
         $rarPath = $destinationBase . '.rar';
 
-        $success &= self::zip($sourcePath, $zipPath);
+        $zipResult = self::zip($sourcePath, $zipPath);
         if (!File::isDirectory($sourcePath)) {
-            $success &= self::gzip($sourcePath, $gzPath);
+            $success &= (self::gzip($sourcePath, $gzPath) !== false);
         }
-        $success &= self::rar($sourcePath, $rarPath);
+        $success &= (self::rar($sourcePath, $rarPath) !== false);
 
-        return (bool) $success;
+        return $success && $zipResult ? $zipResult : false;
     }
 
     /**
@@ -174,17 +205,20 @@ class Zip {
     /**
      * Download Archive File (zip, gz, rar)
      *
-     * @param  string $fileName
      * @param  bool $unlink
      * @return void
      */
-    public static function download($fileName, $unlink = true)
+    public function download($unlink = true)
     {
-        $filePath = self::getBasePath($fileName);
+        if (!$this->archivePath) {
+            return;
+        }
+
+        $filePath = self::getBasePath($this->archivePath);
 
         if(File::exists($filePath)){
             // Determine content type based on file extension
-            $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $extension = strtolower(pathinfo($this->archivePath, PATHINFO_EXTENSION));
             $contentType = match($extension) {
                 'zip' => 'application/zip',
                 'gz' => 'application/gzip',
@@ -194,7 +228,7 @@ class Zip {
 
             // Set headers to download the archive file
             header("Content-Type: {$contentType}");
-            header("Content-Disposition: attachment; filename={$fileName}");
+            header("Content-Disposition: attachment; filename=" . basename($this->archivePath));
             header('Content-Length: ' . filesize($filePath));
 
             // Read the file to output the download
@@ -205,6 +239,19 @@ class Zip {
                 File::delete($filePath);
             }
         }
+    }
+
+    /**
+     * Static download method for backward compatibility
+     *
+     * @param  string $fileName
+     * @param  bool $unlink
+     * @return void
+     */
+    public static function downloadStatic($fileName, $unlink = true)
+    {
+        $instance = new self($fileName);
+        $instance->download($unlink);
     }
 
     /**
