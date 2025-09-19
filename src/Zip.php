@@ -42,16 +42,103 @@ class Zip {
             return false;
         }
 
-        if(!File::isDirectory($sourcePath)){
-            return false;
-        }
-
         // Add the file to the zip
         $zip->addFile($sourcePath, basename($sourcePath));
 
         $zip->close();
 
         return File::exists($destinationZip);
+    }
+
+    /**
+     * Gzip a file.
+     *
+     * @param string $sourcePath The path to the file to gzip.
+     * @param string $destinationGz The path for the resulting gz file.
+     * @return bool True if the gzip operation was successful, false otherwise.
+     */
+    public static function gzip($sourcePath, $destinationGz)
+    {
+        $sourcePath     = self::getBasePath($sourcePath);
+        $destinationGz  = self::getBasePath($destinationGz);
+
+        if (File::isDirectory($sourcePath)) {
+            return false; // Gzip not supported for directories
+        }
+
+        if (!File::exists($sourcePath)) {
+            return false;
+        }
+
+        $gz = gzopen($destinationGz, 'w9');
+        if (!$gz) {
+            return false;
+        }
+
+        $content = File::get($sourcePath);
+        gzwrite($gz, $content);
+        gzclose($gz);
+
+        return File::exists($destinationGz);
+    }
+
+    /**
+     * Rar a file or folder.
+     *
+     * @param string $sourcePath The path to the file or folder to rar.
+     * @param string $destinationRar The path for the resulting rar file.
+     * @return bool True if the rar operation was successful, false otherwise.
+     */
+    public static function rar($sourcePath, $destinationRar)
+    {
+        if (!extension_loaded('rar')) {
+            return false;
+        }
+
+        $sourcePath     = self::getBasePath($sourcePath);
+        $destinationRar = self::getBasePath($destinationRar);
+
+        $rar = \RarArchive::open($destinationRar, \RarArchive::CREATE);
+        if (!$rar) {
+            return false;
+        }
+
+        if (File::isDirectory($sourcePath)) {
+            $result = self::rarFolder($sourcePath, $rar);
+        } else {
+            if (!File::exists($sourcePath)) {
+                $rar->close();
+                return false;
+            }
+            $result = $rar->addFile($sourcePath, basename($sourcePath));
+        }
+
+        $rar->close();
+
+        return $result && File::exists($destinationRar);
+    }
+
+    /**
+     * Compress a file or folder into zip, gzip, and rar formats.
+     *
+     * @param string $sourcePath The path to the file or folder to compress.
+     * @param string $destinationBase The base path for the resulting files (without extension).
+     * @return bool True if all compressions were successful, false otherwise.
+     */
+    public static function compress($sourcePath, $destinationBase)
+    {
+        $success = true;
+        $zipPath = $destinationBase . '.zip';
+        $gzPath = $destinationBase . '.gz';
+        $rarPath = $destinationBase . '.rar';
+
+        $success &= self::zip($sourcePath, $zipPath);
+        if (!File::isDirectory($sourcePath)) {
+            $success &= self::gzip($sourcePath, $gzPath);
+        }
+        $success &= self::rar($sourcePath, $rarPath);
+
+        return (bool) $success;
     }
 
     /**
@@ -69,17 +156,18 @@ class Zip {
     {
         $sourcePath  = self::getBasePath($sourcePath);
         $destination = self::getBasePath($destination);
-        
-        // If it's a zip file, call the unzipFile function
-        if (pathinfo($sourcePath, PATHINFO_EXTENSION) === 'zip') {
+
+        $extension = pathinfo($sourcePath, PATHINFO_EXTENSION);
+        if ($extension === 'zip') {
             return self::unzipFile($sourcePath, $destination);
-        }
-        
-        // If it's a folder, call the unzipFolder function
-        if (File::isDirectory($sourcePath)) {
+        } elseif ($extension === 'gz') {
+            return self::unzipGz($sourcePath, $destination);
+        } elseif ($extension === 'rar') {
+            return self::unzipRar($sourcePath, $destination);
+        } elseif (File::isDirectory($sourcePath)) {
             return self::unzipFolder($sourcePath, $destination);
         }
-        
+
         return false; // Unsupported file type
     }
 
@@ -210,6 +298,83 @@ class Zip {
                 File::copy($filePath, $destinationPath);
             }
         }
+
+        return true;
+    }
+
+    /**
+     * Rar a folder and its contents.
+     *
+     * @param string $sourceFolder The path to the folder to rar.
+     * @param \RarArchive $rar The rar archive object.
+     * @return bool True if the rar operation was successful, false otherwise.
+     */
+    private static function rarFolder($sourceFolder, $rar)
+    {
+        $files = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($sourceFolder),
+            RecursiveIteratorIterator::LEAVES_ONLY
+        );
+
+        foreach ($files as $name => $file) {
+            if (!$file->isDir()) {
+                $filePath = $file->getRealPath();
+                $localPath = substr($filePath, strlen($sourceFolder) + 1);
+                $rar->addFile($filePath, $localPath);
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Unzip a gz file.
+     *
+     * @param string $file The path to the gz file.
+     * @param string $destination The path to the destination directory or file.
+     * @return bool True if the unzip operation was successful, false otherwise.
+     */
+    private static function unzipGz($file, $destination)
+    {
+        $gz = gzopen($file, 'r');
+        if (!$gz) {
+            return false;
+        }
+
+        $content = '';
+        while (!gzeof($gz)) {
+            $content .= gzread($gz, 8192);
+        }
+        gzclose($gz);
+
+        $filename = pathinfo($file, PATHINFO_FILENAME);
+        $destFile = File::isDirectory($destination) ? $destination . '/' . $filename : $destination;
+        File::makeDirectory(dirname($destFile), 0777, true);
+        file_put_contents($destFile, $content);
+
+        return true;
+    }
+
+    /**
+     * Unzip a rar file.
+     *
+     * @param string $file The path to the rar file.
+     * @param string $destination The path to the destination directory.
+     * @return bool True if the unzip operation was successful, false otherwise.
+     */
+    private static function unzipRar($file, $destination)
+    {
+        if (!extension_loaded('rar')) {
+            return false;
+        }
+
+        $rar = \RarArchive::open($file);
+        if (!$rar) {
+            return false;
+        }
+
+        $rar->extractTo($destination);
+        $rar->close();
 
         return true;
     }
