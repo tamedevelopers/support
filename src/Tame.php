@@ -9,7 +9,6 @@ use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\ApiResponse;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\TameTrait;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Tamedevelopers\Support\Traits\NumberToWordsTraits;
 
 /**
@@ -90,85 +89,15 @@ class Tame {
     }
 
     /**
-     * Resolve hostname to IP using DNS query to 8.8.8.8
-     *
-     * @param string $hostname
-     * @return string|false
-     */
-    private static function resolveDNS($hostname)
-    {
-        $dnsServer = '8.8.8.8';
-        $port = 53;
-
-        // Build DNS query
-        $id = rand(0, 65535);
-        $flags = 0x0100; // Standard query, recursion desired
-        $qdcount = 1;
-        $header = pack('n*', $id, $flags, $qdcount, 0, 0, 0);
-
-        // Question
-        $labels = explode('.', $hostname);
-        $qname = '';
-        foreach ($labels as $label) {
-            $qname .= chr(strlen($label)) . $label;
-        }
-        $qname .= chr(0);
-        $qtype = 1; // A record
-        $qclass = 1; // IN
-        $question = $qname . pack('n*', $qtype, $qclass);
-        $query = $header . $question;
-
-        // Send via UDP
-        $socket = @fsockopen('udp://' . $dnsServer, $port, $errno, $errstr, 2);
-        if (!$socket) return false;
-        fwrite($socket, $query);
-        $response = fread($socket, 512);
-        fclose($socket);
-
-        // Parse response
-        if (strlen($response) < 12) return false;
-        $header = unpack('nid/nflags/nqdcount/nancount', substr($response, 0, 8));
-        if ($header['ancount'] == 0) return false;
-
-        $pos = 12;
-        // Skip question
-        while ($response[$pos] != chr(0)) {
-            $len = ord($response[$pos]);
-            $pos += $len + 1;
-        }
-        $pos += 5;
-
-        // Answers
-        for ($i = 0; $i < $header['ancount']; $i++) {
-            if ((ord($response[$pos]) & 0xC0) == 0xC0) {
-                $pos += 2;
-            } else {
-                while ($response[$pos] != chr(0)) {
-                    $len = ord($response[$pos]);
-                    $pos += $len + 1;
-                }
-                $pos += 1;
-            }
-            $type = unpack('n', substr($response, $pos, 2))[1];
-            $pos += 8; // Skip type, class, ttl
-            $rdlength = unpack('n', substr($response, $pos, 2))[1];
-            $pos += 2;
-            if ($type == 1 && $rdlength == 4) {
-                return inet_ntop(substr($response, $pos, 4));
-            }
-            $pos += $rdlength;
-        }
-        return false;
-    }
-
-    /**
-     * Check IF URL Exists
+     * Check if a given URL is reachable
      *
      * @param string $url
      * @return bool
      */
     public static function urlExist($url)
     {
+        $url = self::getHostFromUrl($url);
+
         // Ensure URL has a scheme
         if (!preg_match('/^https?:\/\//', $url)) {
             $url = 'http://' . $url;
@@ -212,7 +141,7 @@ class Tame {
     }
 
     /**
-     * Check IF Internet is Available
+     * Check if the internet connection is available
      *
      * @param string|null $host The host to check (default: '8.8.8.8' - Google's DNS).
      * @param int $port The port to check (default: 53 for DNS).
@@ -501,15 +430,9 @@ class Tame {
     /**
      * Getting weight calculation
      *
-     * @param mixed $length
-     * - float|int
-     * 
-     * @param mixed $width
-     * - float|int
-     * 
-     * @param mixed $height
-     * - float|int
-     * 
+     * @param mixed $length: float|int
+     * @param mixed $width: float|int
+     * @param mixed $height: float|int
      * @param bool $format
      * - [optional] Default is `true` and round using provided or default decimal of `0.5`
      * if set to false, it return converted value without rounding
@@ -530,15 +453,9 @@ class Tame {
     /**
      * Getting weight calculation
      *
-     * @param mixed $length
-     * - float|int
-     * 
-     * @param mixed $width
-     * - float|int
-     * 
-     * @param mixed $height
-     * - float|int
-     * 
+     * @param mixed $length: float|int
+     * @param mixed $width: float|int
+     * @param mixed $height: float|int
      * @param bool $format
      * - [optional] Default is `true` and round using provided or default decimal of `0.1`
      * if set to false, it return converted value without rounding
@@ -559,18 +476,10 @@ class Tame {
     /**
      * Getting actual weight length
      *
-     * @param mixed $length
-     * - float|int
-     * 
-     * @param mixed $width
-     * - float|int
-     * 
-     * @param mixed $height
-     * - float|int
-     * 
-     * @param mixed $weight
-     * - float|int
-     * 
+     * @param mixed $length: float|int
+     * @param mixed $width: float|int
+     * @param mixed $height: float|int
+     * @param mixed $weight: float|int
      * @param bool $format
      * - [optional] Default is `true` and round using provided or default decimal of `0.5`
      * if set to false, it return converted value without rounding
@@ -594,21 +503,13 @@ class Tame {
     /**
      * Getting actual weight length
      *
-     * @param mixed $length
-     * - float|int
-     * 
-     * @param mixed $width
-     * - float|int
-     * 
-     * @param mixed $height
-     * - float|int
-     * 
-     * @param mixed $weight
-     * - float|int
-     * 
+     * @param mixed $length: float|int
+     * @param mixed $width: float|int
+     * @param mixed $height: float|int
+     * @param mixed $weight: float|int
      * @param bool $format
      * - [optional] Default is `true` and round using provided or default decimal of `0.1`
-     * if set to false, it return converted value without rounding
+     * - if set to false, it return converted value without rounding
      * 
      * @param int|float|string $decimal
      * - [optional] Default is `0.1` value to round to if $format is `true`
@@ -629,12 +530,8 @@ class Tame {
     /**
      * Getting actual weight between Volume/Dimensional weight and Weight in `kg`
      *
-     * @param mixed $dimensional_weight
-     * - float|int
-     * 
-     * @param mixed $actual_weight
-     * - float|int
-     * 
+     * @param mixed $dimensional_weight: float|int
+     * @param mixed $actual_weight: float|int
      * @return int
      */
     public static function getBetweenDimensionalWeightAndWeightInKg(mixed $dimensional_weight = 0, mixed $actual_weight = 0) 

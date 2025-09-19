@@ -290,4 +290,110 @@ trait TameTrait{
         return self::getBasePath($replacer);
     }
 
+    /**
+     * Parse URL and reliably extract the host, sanitizing protocol typos.
+     *
+     * @param string $url
+     * @return string
+     */
+    public static function getHostFromUrl($url)
+    {
+        // 1. Sanitize the protocol: remove common typos like "httpss"
+        $url = preg_replace('/^(https?)s:\/\//i', '\1://', $url);
+
+        // 2. Prepend a scheme if it's still missing, to ensure proper parsing
+        if (!preg_match('/^https?:\/\//i', $url)) {
+            $url = 'http://' . $url;
+        }
+
+        $urlParts = parse_url($url);
+
+        // 3. Handle parsing failures
+        if ($urlParts === false) {
+            return '';
+        }
+
+        // 4. Extract the host
+        $host = $urlParts['host'] ?? '';
+        if (empty($host) && isset($urlParts['path'])) {
+            // As a final fallback, take the first part of the path as the host
+            $pathParts = explode('/', $urlParts['path'], 2);
+            $host = $pathParts[0] ?? '';
+        }
+
+        return $host;
+    }
+
+    /**
+     * Resolve hostname to IP using DNS query to 8.8.8.8
+     *
+     * @param string $hostname
+     * @return string|false
+     */
+    private static function resolveDNS($hostname)
+    {
+        $dnsServer = '8.8.8.8';
+        $port = 53;
+
+        // Build DNS query
+        $id = rand(0, 65535);
+        $flags = 0x0100; // Standard query, recursion desired
+        $qdcount = 1;
+        $header = pack('n*', $id, $flags, $qdcount, 0, 0, 0);
+
+        // Question
+        $labels = explode('.', $hostname);
+        $qname = '';
+        foreach ($labels as $label) {
+            $qname .= chr(strlen($label)) . $label;
+        }
+        $qname .= chr(0);
+        $qtype = 1; // A record
+        $qclass = 1; // IN
+        $question = $qname . pack('n*', $qtype, $qclass);
+        $query = $header . $question;
+
+        // Send via UDP
+        $socket = @fsockopen('udp://' . $dnsServer, $port, $errno, $errstr, 2);
+        if (!$socket) return false;
+        fwrite($socket, $query);
+        $response = fread($socket, 512);
+        fclose($socket);
+
+        // Parse response
+        if (strlen($response) < 12) return false;
+        $header = unpack('nid/nflags/nqdcount/nancount', substr($response, 0, 8));
+        if ($header['ancount'] == 0) return false;
+
+        $pos = 12;
+        // Skip question
+        while ($response[$pos] != chr(0)) {
+            $len = ord($response[$pos]);
+            $pos += $len + 1;
+        }
+        $pos += 5;
+
+        // Answers
+        for ($i = 0; $i < $header['ancount']; $i++) {
+            if ((ord($response[$pos]) & 0xC0) == 0xC0) {
+                $pos += 2;
+            } else {
+                while ($response[$pos] != chr(0)) {
+                    $len = ord($response[$pos]);
+                    $pos += $len + 1;
+                }
+                $pos += 1;
+            }
+            $type = unpack('n', substr($response, $pos, 2))[1];
+            $pos += 8; // Skip type, class, ttl
+            $rdlength = unpack('n', substr($response, $pos, 2))[1];
+            $pos += 2;
+            if ($type == 1 && $rdlength == 4) {
+                return inet_ntop(substr($response, $pos, 4));
+            }
+            $pos += $rdlength;
+        }
+        return false;
+    }
+
 }

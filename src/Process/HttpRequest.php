@@ -6,6 +6,7 @@ namespace Tamedevelopers\Support\Process;
 
 use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Process\Concerns\RequestInterface;
 
@@ -187,13 +188,46 @@ class HttpRequest implements RequestInterface
     }
 
     /**
-     * Determine if the script is running in CLI mode.
+     * Get Host from URL
+     * - Parse URL and reliably extract the host, sanitizing protocol typos.
+     *
+     * @param string $url
+     * @return string
+     */
+    public static function getHost($url)
+    {
+        return Tame::getHostFromUrl($url);
+    }
+
+    /**
+     * Check if a given URL is reachable
+     *
+     * @param string $url
+     * @return bool
+     */
+    public static function urlExist($url)
+    {
+        return Tame::urlExist($url);
+    }
+
+    /**
+     * Check if the internet connection is available
      *
      * @return bool
      */
-    public static function runningInConsole()
+    public static function isInternet()
     {
-        return (php_sapi_name() === 'cli' || PHP_SAPI === 'cli');
+        return Tame::isInternetAvailable(null, 53, 2);
+    }
+
+    /**
+     * Alias for `runningInConsole` method
+     *
+     * @return bool
+     */
+    public static function isConsole()
+    {
+        return self::runningInConsole();
     }
 
     /**
@@ -207,6 +241,29 @@ class HttpRequest implements RequestInterface
             $_SERVER['REMOTE_ADDR'] ?? '', 
             self::host()
         );
+    }
+
+    /**
+     * Is IP accessed via localhost port in browser
+     *
+     * @return bool
+     */ 
+    public static function isIpAccessedViaLocalHost()
+    {
+        return Str::contains(
+            $_SERVER['REMOTE_ADDR'] ?? '',
+            'localhost'
+        );
+    }
+
+    /**
+     * Determine if the script is running in CLI mode.
+     *
+     * @return bool
+     */
+    public static function runningInConsole()
+    {
+        return (php_sapi_name() === 'cli' || PHP_SAPI === 'cli');
     }
 
     /**
