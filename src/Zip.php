@@ -70,7 +70,7 @@ class Zip {
      * @param string $destinationZip The path for the resulting zip file.
      * - [base path will be automatically added]
      *
-     * @return Zip|bool Returns a new Zip instance on success, false on failure.
+     * @return Zip Returns a new Zip instance.
      */
     public static function zip($sourcePath, $destinationZip)
     {
@@ -85,11 +85,11 @@ class Zip {
             $zip = new ZipArchive();
 
             if ($zip->open($destinationZip, ZipArchive::CREATE) !== true) {
-                return false;
+                return new self($sourcePath, null);
             }
             
             if(!File::exists($sourcePath)){
-                return false;
+                return new self($sourcePath, null);
             }
 
             // Add the file to the zip
@@ -100,12 +100,8 @@ class Zip {
             $result = File::exists($destinationZip);
         }
 
-        if ($result) {
-            self::$lastArchivePath = $destinationZip;
-            return new self($sourcePath, $destinationZip);
-        }
-
-        return false;
+        self::$lastArchivePath = $result ? $destinationZip : null;
+        return new self($sourcePath, $result ? $destinationZip : null);
     }
 
     /**
@@ -114,7 +110,7 @@ class Zip {
      * @param string $sourcePath The path to the file to gzip.
      * @param string $destinationGz The path for the resulting gz file.
      * @param int $level Compression level (0-9, default 9).
-     * @return Zip|bool Returns a new Zip instance on success, false on failure.
+     * @return Zip Returns a new Zip instance.
      */
     public static function gzip($sourcePath, $destinationGz, $level = 9)
     {
@@ -122,16 +118,16 @@ class Zip {
         $destinationGz  = self::getBasePath($destinationGz);
 
         if (File::isDirectory($sourcePath)) {
-            return false; // Gzip not supported for directories
+            return new self($sourcePath, null); // Gzip not supported for directories
         }
 
         if (!File::exists($sourcePath)) {
-            return false;
+            return new self($sourcePath, null);
         }
 
         $gz = gzopen($destinationGz, 'w' . $level);
         if (!$gz) {
-            return false;
+            return new self($sourcePath, null);
         }
 
         $content = File::get($sourcePath);
@@ -140,12 +136,8 @@ class Zip {
 
         $result = File::exists($destinationGz);
 
-        if ($result) {
-            self::$lastArchivePath = $destinationGz;
-            return new self($sourcePath, $destinationGz);
-        }
-
-        return false;
+        self::$lastArchivePath = $result ? $destinationGz : null;
+        return new self($sourcePath, $result ? $destinationGz : null);
     }
 
     /**
@@ -153,12 +145,12 @@ class Zip {
      *
      * @param string $sourcePath The path to the file or folder to rar.
      * @param string $destinationRar The path for the resulting rar file.
-     * @return Zip|bool Returns a new Zip instance on success, false on failure.
+     * @return Zip Returns a new Zip instance.
      */
     public static function rar($sourcePath, $destinationRar)
     {
         if (!extension_loaded('rar')) {
-            return false;
+            return new self($sourcePath, null);
         }
 
         $sourcePath     = self::getBasePath($sourcePath);
@@ -166,7 +158,7 @@ class Zip {
 
         $rar = \RarArchive::open($destinationRar, \RarArchive::CREATE);
         if (!$rar) {
-            return false;
+            return new self($sourcePath, null);
         }
 
         if (File::isDirectory($sourcePath)) {
@@ -174,7 +166,7 @@ class Zip {
         } else {
             if (!File::exists($sourcePath)) {
                 $rar->close();
-                return false;
+                return new self($sourcePath, null);
             }
             $result = $rar->addFile($sourcePath, basename($sourcePath));
         }
@@ -183,12 +175,8 @@ class Zip {
 
         $success = $result && File::exists($destinationRar);
 
-        if ($success) {
-            self::$lastArchivePath = $destinationRar;
-            return new self($sourcePath, $destinationRar);
-        }
-
-        return false;
+        self::$lastArchivePath = $success ? $destinationRar : null;
+        return new self($sourcePath, $success ? $destinationRar : null);
     }
 
 

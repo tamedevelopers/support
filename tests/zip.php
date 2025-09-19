@@ -7,9 +7,9 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // Powerful Zip Class
 
 
-$zip = Zip::zip('testss', 'newData.zip');
+$zip = Zip::zip('vendor', 'newData.zip');
 $rar = Zip::rar('tests', 'newData.rar');
-$gzip = Zip::gzip('tests', 'newData.gz');
+$gzip = Zip::gzip('domains.json', 'domains.json.gz');
 
 // TameZip()->zip('tests', 'newData.zip');
 // TameZip()->unzip('newData.zip', '/');
@@ -19,10 +19,9 @@ $folderPath = 'tests/layout';
 $basePath = base_path('hello.php');
 
 dd(
-    $zip,
-    $rar,
-    $gzip,
     $zip->compress(),
+    $gzip->compress(),
+    $rar,
     'nothing has been zipped yet',
     $folderPath,
     $basePath
