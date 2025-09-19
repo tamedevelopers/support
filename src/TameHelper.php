@@ -112,7 +112,7 @@ class TameHelper
             $fp = @fsockopen($primaryMx, 25, $errno, $errstr, $timeout);
             if ($fp && is_resource($fp)) {
                 fclose($fp);
-                // return true;
+                return true;
             } 
         }
 
