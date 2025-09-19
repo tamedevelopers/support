@@ -40,26 +40,27 @@ $sortedEmails = [
 ];
 
 foreach($emails as $key => $email) {
-    $hostName = Tame::getHostFromUrl($email);
-    $urlPingExist = Tame::emailPing("u@$hostName"); //10x faster than urlExist method
-    // $urlExist = Tame::urlExist($hostName);
+    // $hostName = Tame::getHostFromUrl($email);
+    // $urlPingExist = Tame::emailPing("u@$hostName"); //10x faster than urlExist method
+    // // $urlExist = Tame::urlExist($hostName);
     
 
-    if($urlPingExist){
-        // perform email verification here
-        $validateEmail = Tame()->emailValidator($email, true, true);
-        if($validateEmail){
-            $sortedEmails['sorted'][$key] = $email;
-        } else{
-            $sortedEmails['unsorted'][$key] = $email;
-        }
-    } else{
-        $sortedEmails['unsorted'][$key] = $email;
-    }
+    // if($urlPingExist){
+    //     // perform email verification here
+    //     $validateEmail = Tame()->emailValidator($email, true, true);
+    //     if($validateEmail){
+    //         $sortedEmails['sorted'][$key] = $email;
+    //     } else{
+    //         $sortedEmails['unsorted'][$key] = $email;
+    //     }
+    // } else{
+    //     $sortedEmails['unsorted'][$key] = $email;
+    // }
 }
 
 dd(
     Tame::emailPing('s@googles.com'),
+    Tame::deepEmailPing('supportw@axdbfs.com'),
     $sortedEmails
 );
 exit();
