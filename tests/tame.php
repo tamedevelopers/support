@@ -27,9 +27,9 @@ $CubicMeterWeight   = Tame()->calculateCubicMeterWeight($volume[2]['length'], $v
 // $emailChecker = Tame()->emailValidator('tamedev@gmail.com');
 
 $emails = [
+    'supportw@axdbfs.com',
     'tamedevelopers@gmail.com',
     'supportrsd@lhkexpress.com',
-    'supportw@axdbfs.com',
     'support@liftukrainianup.com',
     'support@saltonmining.com',
     'info@tamedevelopers.com',
@@ -43,9 +43,9 @@ $emails = [
 
 dd(
     // $emailChecker,
-    // Tame::emailPing('support@google.com'),
-    Tame::deepEmailPing('info@tamedevelopers.com'),
-    // Tame::batchDeepEmailPing($emails),
+    // Tame::emailPing('supportw@axdbfs.com'),
+    // Tame::deepEmailPing('info@tamedevelopers.com'),
+    Tame::batchDeepEmailPing($emails),
 );
 exit();
 

@@ -47,16 +47,12 @@ class TameHelper
 
         $hostName = Tame::getHostFromUrl((string) $email);
 
+        // create sample ping email
+        $pingEmail = "noreply@{$hostName}";
+
         // 10x faster than urlExist methods
         // check is there's a valid mx record
-        $pingEmail = "noreply@{$hostName}";
-        $emailPingExist = self::emailPing($pingEmail, true); 
-
-        dd(
-            $emailPingExist,
-            $pingEmail,
-            Tame::emailValidator($pingEmail, true, true)
-        );
+        $emailPingExist = self::emailPing($pingEmail); 
 
         if($emailPingExist){
             // check for disposable email
@@ -66,7 +62,12 @@ class TameHelper
             }
 
             // perform email verification using <internet and server validation>
-            $validate = Tame::emailValidator($email, true, true);
+            $validate = Tame::emailValidator($email, false, false);
+
+            dd(
+                $emailPingExist
+            );
+
             if($validate){
                 return true;
             }
