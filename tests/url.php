@@ -1,5 +1,6 @@
 <?php 
 
+use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Process\Http;
 use Tamedevelopers\Support\Process\HttpRequest;
 
@@ -14,7 +15,6 @@ config_asset('/', true);
 $http = new Http();
 
 dump(
-
     [
       'Domain: ' . domain(), 
       'Domain with path: ' . domain('admin'),

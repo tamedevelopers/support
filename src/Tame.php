@@ -91,38 +91,59 @@ class Tame {
 
     /**
      * Check IF URL Exists
-     * 
+     *
      * @param string $url
      * @return bool
      */
     public static function urlExists($url)
     {
-        $ch = curl_init($url);
+        $urlParts = parse_url($url);
+        if (!$urlParts || !isset($urlParts['host'])) {
+            return false;
+        }
 
-        // Set cURL options
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HEADER, true);
-        curl_setopt($ch, CURLOPT_NOBODY, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
+        $scheme = $urlParts['scheme'] ?? 'http';
+        $host = $urlParts['host'];
+        $port = $urlParts['port'] ?? ($scheme === 'https' ? 443 : 80);
+        $path = $urlParts['path'] ?? '/';
+        $query = isset($urlParts['query']) ? '?' . $urlParts['query'] : '';
 
-        // Execute cURL and get the HTTP status code
-        $httpCode = curl_exec($ch);
+        $address = ($scheme === 'https' ? 'ssl://' : '') . $host . ':' . $port;
 
-        // Close cURL handle
-        curl_close($ch);
+        $fp = @stream_socket_client($address, $errno, $errstr, 5, STREAM_CLIENT_CONNECT);
+        if (!$fp) {
+            return false;
+        }
 
-        return $httpCode && preg_match('/\b200\b/', $httpCode);
+        $request = "HEAD {$path}{$query} HTTP/1.1\r\n";
+        $request .= "Host: {$host}\r\n";
+        $request .= "Connection: close\r\n";
+        $request .= "\r\n";
+
+        fwrite($fp, $request);
+        $response = fgets($fp, 1024);
+        fclose($fp);
+
+        return strpos($response, '200') !== false;
     }
 
     /**
      * Check IF Internet is Available
-     * 
-     * @param  string|null $url
+     *
+     * @param string|null $host The host to check (default: '8.8.8.8' - Google's DNS).
+     * @param int $port The port to check (default: 53 for DNS).
+     * @param int $timeout Connection timeout in seconds (default: 2).
      * @return bool
      */
-    public static function isInternetAvailable($url = null)
+    public static function isInternetAvailable($host = null, $port = 53, $timeout = 2)
     {
-        return self::urlExists($url ?: 'https://www.google.com');
+        $host = $host ?: '8.8.8.8'; // Google's public DNS (fast and reliable)
+        $fp = @fsockopen($host, $port, $errno, $errstr, $timeout);
+        if ($fp) {
+            fclose($fp);
+            return true;
+        }
+        return false;
     }
 
     /**
