@@ -56,19 +56,14 @@ trait EmailUtilityTrait{
      * @param string|null $email 
      * - The email address to validate.
      *
-     * @param bool $use_internet 
-     * - [false] Check for valid email format only
-     * - [true] Uses the checkdnsrr() and getmxrr() to validate email
-     *
      * @param bool $server_verify 
-     * - [true] Verify email server using dns_get_record()
+     * - [true] Verify email using emailPing
      * 
-     * @return bool 
-     * - Whether the email address is valid (true) or not (false).
+     * @return bool
      */
-    public static function validateEmail($email = null, $use_internet = false, $server_verify = false) 
+    public static function validateEmail($email = null, $server_verify = false) 
     {
-        return Tame::emailValidator($email, $use_internet, $server_verify);
+        return Tame::emailValidator($email, $server_verify);
     }
 
     /**

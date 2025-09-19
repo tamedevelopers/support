@@ -1200,7 +1200,7 @@ class Tame extends TameHelper{
 
         // Check if it's an email by finding the last occurrence of "@"
         $atPosition = mb_strrpos($str, "@", 0, 'UTF-8');
-        $isEmail = self::emailValidator($str, false, false);
+        $isEmail = self::emailValidator($str, false);
 
         // If it's a valid email, mask only the email part (excluding the domain)
         if ($isEmail && $atPosition !== false) {
@@ -1235,23 +1235,18 @@ class Tame extends TameHelper{
      * @param string|null $email 
      * - The email address to validate.
      *
-     * @param bool $use_internet 
-     * - [false] Check for valid email format only
-     * - [true] Uses the checkdnsrr() and getmxrr() to validate email
-     *
      * @param bool $server_verify 
-     * - [true] Verify email server using dns_get_record()
+     * - [true] Verify email using emailPing
      * 
-     * @return bool 
-     * - Whether the email address is valid (true) or not (false).
+     * @return bool
      */
-    public static function emailValidator($email = null, $use_internet = false, $server_verify = false)
+    public static function emailValidator($email = null, $server_verify = false)
     {
         $filteredEmail = filter_var($email, FILTER_VALIDATE_EMAIL);
 
-        // if internet usage and server verify are both false
+        // if server verify is false
         // only validate email as a valid email
-        if(!$use_internet && !$server_verify){
+        if(!$server_verify){
             return $filteredEmail !== false;
         }
 
@@ -1260,28 +1255,7 @@ class Tame extends TameHelper{
             return false; 
         }
 
-        // Extract the domain from the email address
-        $hostname   = explode('@', $email)[1];
-        $mxRecords  = [];
-
-        // Check DNS records corresponding to a given Internet host name or IP address
-        if (checkdnsrr($hostname, 'MX')) {
-            getmxrr($hostname, $mxRecords);
-        } else {
-            // Domain does not have MX records
-            return false; 
-        }
-
-        // Count total MX records presents
-        $mxCount = count($mxRecords);
-        
-        // if server verify is not true
-        if(!$server_verify){
-            return $mxCount > 0;
-        }
-
-        // verify domain and mx records
-        return self::verifyDomain_AndMxRecord($hostname, $mxCount);
+        return TameHelper::emailPing($email);
     }
 
     /**

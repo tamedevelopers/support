@@ -210,7 +210,7 @@ trait MailTrait{
     {
         if(!empty($this->recipients['cc'])){
             foreach($this->recipients['cc'] as $cc){
-                if(Tame()->emailValidator($cc, false, false)){
+                if(Tame()->emailValidator($cc, false)){
                     $this->mailer->addCC($cc);
                 }
             }
@@ -226,7 +226,7 @@ trait MailTrait{
     {
         if(!empty($this->recipients['bcc'])){
             foreach($this->recipients['bcc'] as $bcc){
-                if(Tame()->emailValidator($bcc, false, false)){
+                if(Tame()->emailValidator($bcc, false)){
                     $this->mailer->addBCC($bcc);
                 }
             }
@@ -365,7 +365,7 @@ trait MailTrait{
         $this->mailer->Host     = $this->smtpData['host'];
         $this->mailer->Port     = $this->smtpData['port']; 
 
-        if(Tame()->emailValidator($this->smtpData['from_email'], false, false)){
+        if(Tame()->emailValidator($this->smtpData['from_email'], false)){
             $this->mailer->setFrom($this->smtpData['from_email'], $this->smtpData['from_name']);
         }
     }
@@ -503,7 +503,7 @@ trait MailTrait{
             $sendEmails[] = function() use ($email, $callable) {
                 try {
                     // Validate the recipient email
-                    $verify = Tame()->emailValidator($email, true, true);
+                    $verify = Tame()->emailValidator($email, true);
                     if (!$verify) {
                         // Custom error code: 509
                         throw new \Exception("Invalid email address: {$email}", 509); 

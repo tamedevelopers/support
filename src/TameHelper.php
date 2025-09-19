@@ -19,19 +19,23 @@ class TameHelper
      */
     public static function batchDeepEmailPing(array $emails)
     {
+        $good = 'verified';
+        $wrong = 'unverified';
+
         $results = [
-            'sorted' => [], 
-            'unsorted' => []
+            $good => [], 
+            $wrong => []
         ];
 
         foreach ($emails as $email) {
             $valid = self::deepEmailPing($email);
             if ($valid) {
-                $results['sorted'][] = $email;
+                $results[$good][] = $email;
             } else {
-                $results['unsorted'][] = $email;
+                $results[$wrong][] = $email;
             }
         }
+        
         return $results;
     }
 
@@ -52,26 +56,12 @@ class TameHelper
 
         // 10x faster than urlExist methods
         // check is there's a valid mx record
-        $emailPingExist = self::emailPing($pingEmail); 
-
-        dump(
-            ($emailPingExist) ? "Ping: {$email} - Yes" : "Ping: {$email} - No"
-        );
+        $emailPingExist = self::emailPing($pingEmail);
 
         if($emailPingExist){
             // check for disposable email
             $disposable = Utility::isDisposableEmail($email);
-
-            // dump(
-            //     ($disposable) ? "Disposable: {$email} - Yes" : "Disposable: {$email} - No"
-            // );
             if($disposable){
-                // return false;
-            } 
-
-            // perform email verification using <internet and server validation>
-            $validate = Tame::emailValidator($email, false, false);
-            if(!$validate){
                 return false;
             }
 
@@ -100,35 +90,44 @@ class TameHelper
 
         // Extract the hostname
         $hostname = explode('@', $email)[1];
-
-        // Get MX records
         $mxRecords = [];
-        if (!getmxrr($hostname, $mxRecords)) {
-            return false; // No MX records
+
+        // Try MX first
+        if (checkdnsrr($hostname, 'MX') && getmxrr($hostname, $mxRecords) && !empty($mxRecords)) {
+            $targets = $mxRecords; // use MX records
+        } else {
+            // Fallback to A/AAAA (ensure dns_get_record always returns array)
+            $aRecord    = @dns_get_record($hostname, DNS_A)    ?: [];
+            $aaaaRecord = @dns_get_record($hostname, DNS_AAAA) ?: [];
+
+            if (empty($aRecord) && empty($aaaaRecord)) {
+                return false; // No valid DNS records at all
+            }
+
+            // Collect IPs/domains from A and AAAA
+            $targets = [];
+            if (!empty($aRecord)) {
+                $targets = array_merge($targets, array_column($aRecord, 'ip'));
+            }
+            if (!empty($aaaaRecord)) {
+                $targets = array_merge($targets, array_column($aaaaRecord, 'ipv6'));
+            }
         }
 
-        // Get the primary MX server (lowest priority)
-        $primaryMx = $mxRecords[0] ?? null;
-        if (!$primaryMx) {
+        // If fsocket enabled, try SMTP connection on port 25
+        if ($fsocket && !empty($targets)) {
+            foreach ($targets as $target) {
+                $fp = @fsockopen($target, 25, $errno, $errstr, $timeout);
+                if ($fp && is_resource($fp)) {
+                    fclose($fp);
+                    return true; // Found a reachable mail server
+                }
+            }
             return false;
         }
 
-        if($fsocket){
-            // Attempt connection on port 25 (most common SMTP port)
-            $fp = @fsockopen($primaryMx, 25, $errno, $errstr, $timeout);
-            if ($fp && is_resource($fp)) {
-                fclose($fp);
-                return true;
-            } 
-        }
-
-        // if mx record came back with no error 
-        // then it means that the email server is reachable
-        if($primaryMx){
-            return true;
-        }
-
-        return false;
+        // If we got here, we have valid MX or A/AAAA records
+        return true;
     }
 
 }

@@ -39,7 +39,30 @@ $emails = [
     'support@130gmail.com',
     'support@10launcheds.com',
     'support@11852dbmobbil.emlhub.com',
+
+    'test1@gmail.com',
+    'hello@yahoo.com',
+    'check@outlook.com',
+    'demo@protonmail.com',
+    'info@icloud.com',
+    'support@hotmail.com',
+    'admin@zoho.com',
+    'contact@mail.com',
+    'noreply@aol.com',
+    'test@tutanota.com',
+
+    'support@nosuchdomain123456.com',
+    'fake@notrealmail.zzz',
+    'user@expired-example.org',
+    'noreply@invalid-mx-domain.net',
+    'mail@unconfigured12345.io',
+    'test@deadserverexample.com',
+    'admin@nullmxexample.com',
+    'info@0-nonexistent-domain.xyz',
+    'support@bogusmail999999.org',
+    'hello@thisdomaindoesnotexist.test',
 ];
+
 
 dd(
     // $emailChecker,
