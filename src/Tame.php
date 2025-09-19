@@ -12,9 +12,55 @@ use Tamedevelopers\Support\Traits\TameTrait;
 use Tamedevelopers\Support\Traits\NumberToWordsTraits;
 
 /**
+ * Tame Support Class
+ *
+ * This class provides a collection of static utility methods for common PHP development tasks,
+ * including URL validation, network checks, file operations, unit conversions, mathematical calculations,
+ * and more. All methods are designed to be simple, efficient, and easy to use.
+ *
+ * Available Methods:
+ *
+ * Network & URL Utilities:
+ * - urlExist($url): Check if a given URL is reachable (supports HTTP/HTTPS with custom DNS resolution)
+ * - isInternetAvailable($host, $port, $timeout): Check if internet connection is available
+ *
+ * JSON & Response Handling:
+ * - jsonEcho($response, $message, $statusCode): Alias for echoJson
+ * - echoJson($response, $message, $statusCode): Output JSON-encoded response with status code
+ *
+ * Class & Version Checks:
+ * - class_exists($class, $closure): Check if class exists and optionally execute closure
+ * - checkAnyClassExists(...$classNames): Check if at least one of the given classes exists
+ * - versionCompare($version): Compare current PHP version against specified version
+ *
+ * File Operations:
+ * - include($path): Include file if it exists
+ * - includeOnce($path): Include file once if it exists
+ * - require($path): Require file if it exists
+ * - requireOnce($path): Require file once if it exists
+ * - fileTime($path): Get file modification time
+ *
+ * Unit Conversions:
+ * - byteToUnit($bytes, $format, $gb, $mb, $kb): Convert bytes to human-readable units (KB, MB, GB)
+ * - sizeToBytes($size): Convert size string (e.g., '1MB') to bytes
+ * - unitToByte($size): Alias for sizeToBytes
+ *
+ * Mathematical Calculations:
+ * - countDivisibleNumbers($index, $amount): Count numbers divisible by index within a range
+ * - exponent($base, $exponent): Alias for calculateExponent
+ * - calculateExponent($base, $exponent): Calculate base raised to exponent
+ * - calculateVolumeWeight($length, $width, $height, $format, $decimal): Calculate volume weight for shipping
+ *
+ * Other Utilities:
+ * - HeadersSent(): Check if HTTP headers have been sent and terminate if so
+ *
+ * @package Tamedevelopers\Support
+ * @author Tamedevelopers
+ * @link https://github.com/tamedevelopers/support
+ *
  * @see \Tamedevelopers\Support\Str
  * @see \Tamedevelopers\Support\Server
- * @see \Tamedevelopers\Support\Time
+ * @see \Tamedevelopers\Support\ApiResponse
  */
 class Tame {
 
