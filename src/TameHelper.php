@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
-
-
 class TameHelper
 {
 
@@ -87,7 +85,7 @@ class TameHelper
 
         return $isValid;
     }
-    
+
     /**
      * Ping Email Server
      * Checks if the email server is reachable by attempting a connection to the SMTP server
