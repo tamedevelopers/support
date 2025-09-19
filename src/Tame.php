@@ -1249,9 +1249,9 @@ class Tame extends TameHelper{
     {
         $filteredEmail = filter_var($email, FILTER_VALIDATE_EMAIL);
 
-        // if internet usage if set to false
+        // if internet usage and server verify are both false
         // only validate email as a valid email
-        if(!$use_internet){
+        if(!$use_internet && !$server_verify){
             return $filteredEmail !== false;
         }
 
@@ -1261,19 +1261,18 @@ class Tame extends TameHelper{
         }
 
         // Extract the domain from the email address
-        $domain     = explode('@', $email)[1];
+        $hostname   = explode('@', $email)[1];
         $mxRecords  = [];
 
         // Check DNS records corresponding to a given Internet host name or IP address
-        if (checkdnsrr($domain, 'MX')) {
-            getmxrr($domain, $mxRecords);
+        if (checkdnsrr($hostname, 'MX')) {
+            getmxrr($hostname, $mxRecords);
         } else {
             // Domain does not have MX records
             return false; 
         }
 
-        // Check if domain validated in mxRecords is greater than 0 or not
-        // returns bool\ true|false
+        // Count total MX records presents
         $mxCount = count($mxRecords);
         
         // if server verify is not true
@@ -1282,7 +1281,7 @@ class Tame extends TameHelper{
         }
 
         // verify domain and mx records
-        return self::verifyDomain_AndMxRecord($domain, $mxCount);
+        return self::verifyDomain_AndMxRecord($hostname, $mxCount);
     }
 
     /**

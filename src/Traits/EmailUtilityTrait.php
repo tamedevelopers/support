@@ -39,15 +39,15 @@ trait EmailUtilityTrait{
         $emalPosition = mb_strrpos($email, "@", 0, 'UTF-8');
         
         if ($emalPosition !== false) {
-            [$local, $domain] = explode('@', $email, 2);
-            $domain = "@{$domain}";
+            [$local, $hostname] = explode('@', $email, 2);
+            $hostname = "@{$hostname}";
         } else {
             // Invalid email (no @ found)
             $local = $email;
-            $domain = "@" . str_repeat($mask, 4);
+            $hostname = "@" . str_repeat($mask, 4);
         }
 
-        return Str::mask($local, $length, $position, $mask) . $domain;
+        return Str::mask($local, $length, $position, $mask) . $hostname;
     }
 
     /**
@@ -78,23 +78,24 @@ trait EmailUtilityTrait{
      * @param bool $lowercaseLocal
      * - If true, local part will be converted to lowercase. Default is false.
      * 
-     * @return string|null
+     * @return string
+     * - Replace alias as Default email address
      */
     public static function normalizeEmail(string $email, bool $lowercaseLocal = false)
     {
-        $email = trim($email);
+        $email = Str::trim($email);
         if ($email === '' || strpos($email, '@') === false) {
-            return null;
+            return '';
         }
 
-        [$local, $domain] = explode('@', $email, 2);
-        $domain = mb_strtolower($domain);
+        [$local, $hostname] = explode('@', $email, 2);
+        $hostname = mb_strtolower($hostname);
 
         // load children data
         self::loadProvidersChildren();
 
-        if (isset(self::$providersChildren[$domain])) {
-            $rules = self::$providersChildren[$domain];
+        if (isset(self::$providersChildren[$hostname])) {
+            $rules = self::$providersChildren[$hostname];
 
             if (!empty($rules['strip_plus'])) {
                 $plusPos = strpos($local, '+');
@@ -104,7 +105,7 @@ trait EmailUtilityTrait{
             }
 
             if (!empty($rules['strip_dots'])) {
-                $local = str_replace('.', '', $local);
+                $local = Str::replace('.', '', $local);
             }
         }
 
@@ -112,7 +113,7 @@ trait EmailUtilityTrait{
             $local = mb_strtolower($local);
         }
 
-        return $local . '@' . $domain;
+        return $local . '@' . $hostname;
     }
 
     /**

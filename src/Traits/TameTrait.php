@@ -203,8 +203,8 @@ trait TameTrait{
     /**
      * Verify the existence of an email address even when the socket connection is blocked.
      *
-     * @param string|null $domain 
-     * - The domain extracted from the email address.
+     * @param string|null $hostname 
+     * - The hostname extracted from the email address.
      * 
      * @param int $mxRecords 
      * - Counted numbers of MX records associated with the domain.
@@ -212,11 +212,11 @@ trait TameTrait{
      * @return bool 
      * - Whether the email address is valid (true) or not (false).
      */
-    private static function verifyDomain_AndMxRecord($domain = null, ?int $mxCount = 0)
+    private static function verifyDomain_AndMxRecord($hostname = null, ?int $mxCount = 0)
     {
         // Method 2: Use DNS check on domain A record
-        $domainRecords = @dns_get_record($domain, DNS_A);
-        if (($domainRecords && count($domainRecords) > 0) && $mxCount > 0) {
+        $hostnameRecords = @dns_get_record($hostname, DNS_A);
+        if (($hostnameRecords && count($hostnameRecords) > 0) && $mxCount > 0) {
             return true; // Consider it valid based on having domain A record
         }
         

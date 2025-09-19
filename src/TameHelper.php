@@ -92,12 +92,12 @@ class TameHelper
             return false;
         }
 
-        // Extract the domain
-        $domain = explode('@', $email)[1];
+        // Extract the hostname
+        $hostname = explode('@', $email)[1];
 
         // Get MX records
         $mxRecords = [];
-        if (!getmxrr($domain, $mxRecords)) {
+        if (!getmxrr($hostname, $mxRecords)) {
             return false; // No MX records
         }
 
