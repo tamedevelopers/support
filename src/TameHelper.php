@@ -19,7 +19,7 @@ class TameHelper
      * @param int $timeout Connection timeout in seconds (default: 10)
      * @return bool True if the mailbox appears to exist, false otherwise
      */
-    public static function deepEmailPing($email = null, $timeout = 10)
+    public static function deepEmailPing($email = null, $timeout = 2)
     {
         // First, validate the email format
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -41,49 +41,71 @@ class TameHelper
             return false;
         }
 
-        // Attempt connection on SMTP port (25)
-        $fp = @fsockopen($primaryMx, 25, $errno, $errstr, $timeout);
-        if (!$fp) {
-            return false;
-        }
+        // Try different connection methods and ports
+        $connections = [
+            ['scheme' => 'tcp', 'host' => $primaryMx, 'port' => 25],
+            ['scheme' => 'ssl', 'host' => $primaryMx, 'port' => 465],
+            ['scheme' => 'tls', 'host' => $primaryMx, 'port' => 587],
+        ];
 
-        // Read initial server response
-        $response = fgets($fp, 1024);
-        if (!$response || !preg_match('/^220/', $response)) {
+        foreach ($connections as $conn) {
+            $context = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+            $fp = @stream_socket_client("{$conn['scheme']}://{$conn['host']}:{$conn['port']}", $errno, $errstr, $timeout, STREAM_CLIENT_CONNECT, $context);
+            if (!$fp) {
+                continue; // Try next connection
+            }
+
+            // Read initial server response
+            $response = fgets($fp, 1024);
+            if (!$response || !preg_match('/^220/', $response)) {
+                fclose($fp);
+                continue;
+            }
+
+            // Send EHLO
+            fputs($fp, "EHLO localhost\r\n");
+            $response = '';
+            $start = time();
+            while ((time() - $start) < $timeout && $line = fgets($fp, 1024)) {
+                $response .= $line;
+                if (preg_match('/^\d{3} /', $line)) break;
+            }
+            if (!preg_match('/^250/', $response)) {
+                // Try HELO if EHLO fails
+                fputs($fp, "HELO localhost\r\n");
+                $response = fgets($fp, 1024);
+                if (!preg_match('/^250/', $response)) {
+                    fclose($fp);
+                    continue;
+                }
+            }
+
+            // Send MAIL FROM (use a dummy sender from the same domain if possible, else example.com)
+            $sender = "noreply@{$domain}";
+            if (!filter_var($sender, FILTER_VALIDATE_EMAIL)) {
+                $sender = 'noreply@example.com';
+            }
+            fputs($fp, "MAIL FROM:<{$sender}>\r\n");
+            $response = fgets($fp, 1024);
+            if (!preg_match('/^250/', $response)) {
+                fclose($fp);
+                continue;
+            }
+
+            // Send RCPT TO (check the recipient)
+            fputs($fp, "RCPT TO:<{$email}>\r\n");
+            $response = fgets($fp, 1024);
+            $isValid = preg_match('/^250/', $response);
+
+            // Send QUIT
+            fputs($fp, "QUIT\r\n");
             fclose($fp);
-            return false;
+
+            return $isValid;
         }
 
-        // Send EHLO
-        fputs($fp, "EHLO localhost\r\n");
-        $response = '';
-        while ($line = fgets($fp, 1024)) {
-            $response .= $line;
-            if (preg_match('/^\d{3} /', $line)) break; // End of response
-        }
-        if (!preg_match('/^250/', $response)) {
-            fclose($fp);
-            return false;
-        }
-
-        // Send MAIL FROM (use a dummy sender)
-        fputs($fp, "MAIL FROM:<test@example.com>\r\n");
-        $response = fgets($fp, 1024);
-        if (!preg_match('/^250/', $response)) {
-            fclose($fp);
-            return false;
-        }
-
-        // Send RCPT TO (check the recipient)
-        fputs($fp, "RCPT TO:<{$email}>\r\n");
-        $response = fgets($fp, 1024);
-        $isValid = preg_match('/^250/', $response);
-
-        // Send QUIT
-        fputs($fp, "QUIT\r\n");
-        fclose($fp);
-
-        return $isValid;
+        // If all connections failed
+        return false;
     }
 
     /**
@@ -131,6 +153,5 @@ class TameHelper
         // If no port worked
         return false;
     }
-
 
 }
