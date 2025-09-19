@@ -554,12 +554,8 @@ class Tame {
     /**
      * Getting actual weight between Volume/Dimensional weight and Weight in `CBM`
      *
-     * @param mixed $dimensional_weight
-     * - float|int
-     * 
-     * @param mixed $actual_weight
-     * - float|int
-     * 
+     * @param mixed $dimensional_weight: float|int
+     * @param mixed $actual_weight: float|int
      * @return int
      */
     public static function getBetweenDimensionalWeightAndWeightInCBM(mixed $dimensional_weight = 0, mixed $actual_weight = 0) 
@@ -1285,6 +1281,52 @@ class Tame {
 
         // verify domain and mx records
         return self::verifyDomain_AndMxRecord($domain, $mxCount);
+    }
+
+    /**
+     * Ping Email Server
+     * Checks if the email server is reachable by attempting a connection to the SMTP server
+     * without sending an actual email. This provides a fast way to verify if the domain's mail server is responsive.
+     *
+     * @param string|null $email The email address to ping
+     * @param int $timeout Connection timeout in seconds (default: 5)
+     * @return bool True if the mail server is reachable, false otherwise
+     */
+    public static function emailPing($email = null, $timeout = 5)
+    {
+        // First, validate the email format
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        // Extract the domain
+        $domain = explode('@', $email)[1];
+
+        // Get MX records
+        $mxRecords = [];
+        if (!getmxrr($domain, $mxRecords)) {
+            return false; // No MX records
+        }
+
+        // Get the primary MX server (lowest priority)
+        $primaryMx = $mxRecords[0] ?? null;
+        if (!$primaryMx) {
+            return false;
+        }
+
+        // Attempt connection on common SMTP ports: 25, 587, 465
+        $ports = [25, 587, 465];
+        foreach ($ports as $port) {
+            $fp = @fsockopen($primaryMx, $port, $errno, $errstr, $timeout);
+            if ($fp) {
+                // Connection successful, close immediately
+                fclose($fp);
+                return true;
+            }
+        }
+
+        // If no port worked
+        return false;
     }
 
     /**

@@ -23,10 +23,51 @@ $volume = [
 $VolumeWeight       = Tame()->calculateVolumeWeight($volume[1]['length'], $volume[1]['width'], $volume[1]['height'], false, 0.5);
 $CubicMeterWeight   = Tame()->calculateCubicMeterWeight($volume[2]['length'], $volume[2]['width'], $volume[2]['height'], false, 0.1);
 
+
+$emailChecker = Tame()->emailValidator('tamedev@gmail.com');
+
+$emails = [
+    'tamedevelopers@gmail.com',
+    'supportrsd@lhkexpress.com',
+    'supportw@axdbfs.com',
+    'support@liftukrainianup.com',
+    'support@saltonmining.com',
+];
+
+$sortedEmails = [
+    'sorted' => [], 
+    'unsorted' => []
+];
+
+foreach($emails as $key => $email) {
+    $hostName = Tame::getHostFromUrl($email);
+    $urlPingExist = Tame::emailPing("u@$hostName"); //10x faster than urlExist method
+    // $urlExist = Tame::urlExist($hostName);
+    
+
+    if($urlPingExist){
+        // perform email verification here
+        $validateEmail = Tame()->emailValidator($email, true, true);
+        if($validateEmail){
+            $sortedEmails['sorted'][$key] = $email;
+        } else{
+            $sortedEmails['unsorted'][$key] = $email;
+        }
+    } else{
+        $sortedEmails['unsorted'][$key] = $email;
+    }
+}
+
+dd(
+    Tame::emailPing('s@googles.com'),
+    $sortedEmails
+);
+exit();
+
 dd(
     [
-      Tame::urlExist('httpss://gmail.com'),
-      Tame::urlExist('lhkexpress.com'),
+      Tame::urlExist('google.com'),
+    //   Tame::urlExist('lhkexpress.com'),
       Tame::isInternetAvailable(),
     ],
     [
