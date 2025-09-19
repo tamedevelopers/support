@@ -50,7 +50,7 @@ class TameHelper
         // 10x faster than urlExist methods
         // check is there's a valid mx record
         $pingEmail = "noreply@{$hostName}";
-        $emailPingExist = self::emailPing($pingEmail); 
+        $emailPingExist = self::emailPing($pingEmail, true); 
 
         dd(
             $emailPingExist,
@@ -110,13 +110,14 @@ class TameHelper
         if($fsocket){
             // Attempt connection on port 25 (most common SMTP port)
             $fp = @fsockopen($primaryMx, 25, $errno, $errstr, $timeout);
-    
-            if ($fp) {
+            if ($fp && is_resource($fp)) {
                 fclose($fp);
-                return true;
-            }
+                // return true;
+            } 
         }
 
+        // if mx record came back with no error 
+        // then it means that the email server is reachable
         if($primaryMx){
             return true;
         }
