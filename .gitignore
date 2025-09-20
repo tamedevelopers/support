@@ -8,6 +8,6 @@
 /.zencoder
 /lang
 /.htaccess
+/domains.json
 tame
 composer.lock
-domains.json
