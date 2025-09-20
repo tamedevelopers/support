@@ -29,7 +29,7 @@ class TameHelper
         ];
 
         foreach ($emails as $email) {
-            $valid = self::deepEmailPing($email);
+            $valid = self::deepEmailPing($email, true);
             if ($valid) {
                 $results[$correct][] = $email;
             } else {
@@ -46,9 +46,10 @@ class TameHelper
     /**
      * Deep Ping Email - Verify Email-Domain Existence, Disposable Emails
      * @param string|null $email The email address to verify
+     * @param bool $disposable Verify disposable emails? Default: false
      * @return bool
      */
-    public static function deepEmailPing($email = null)
+    public static function deepEmailPing($email = null, $disposable = false)
     {
         $email = is_array($email) ? Str::flatten($email) : $email;
         $email = is_array($email) ? ($email[0] ?? null) : $email;
@@ -64,11 +65,12 @@ class TameHelper
 
         if($emailPingExist){
             // check for disposable email
-            $disposable = Utility::isDisposableEmail($email);
             if($disposable){
-                return false;
+                $disposable = Utility::isDisposableEmail($email);
+                if($disposable){
+                    return false;
+                }
             }
-
             return true;
         }
 
