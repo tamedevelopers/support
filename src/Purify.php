@@ -26,22 +26,16 @@ class Purify
             $config->set('AutoFormat.AutoParagraph', true);
             $config->set('Core.EscapeInvalidTags', false);
 
-            // Set unique ID for extended definition (required for maybeGetRawHTMLDefinition)
-            $config->set('HTML.DefinitionID', 'cms-html5-purifier'); // unique name
-            $config->set('HTML.DefinitionRev', 1); // revision number
+            // Unique definition ID/revision
+            $config->set('HTML.DefinitionID', 'cms-html5-purifier');
+            $config->set('HTML.DefinitionRev', 2);
 
-            // Allowed tags and attributes for CMS/blog content
+            // Base allowed tags/attributes (only those HTMLPurifier natively supports)
             $config->set('HTML.Allowed', implode(',', [
-                // Links & references
-                'a[href|title|target]',       // links with optional title and target
-                'abbr[title]',                // abbreviations
-                'acronym[title]',             // acronyms
-                'b', 'strong',                // bold text
-                'i', 'em',                    // italic text
-                'u',                          // underline
-                'strike',                     // strikethrough
-                'sub', 'sup',                 // subscripts/superscripts
-                'mark',                       // highlighted text
+                'a[href|title|target]',
+                'abbr[title]', 'acronym[title]',
+                'b', 'strong', 'i', 'em', 'u', 'strike',
+                'sub', 'sup',
                 'p', 'br', 'hr',
                 'h1','h2','h3','h4','h5','h6',
                 'blockquote[cite]',
@@ -49,18 +43,14 @@ class Purify
                 'ul','ol','li','dl','dt','dd',
                 'table','thead','tbody','tfoot','tr','th','td',
                 'img[src|alt|title|width|height]',
-                'audio[src|controls|width|height|preload]',
-                'video[src|controls|width|height|preload|poster]',
-                'header','footer','main','section','article','aside','figure','figcaption','nav',
                 'div[style|class|id]',
                 'span[style|class|id]',
-                'iframe[src|width|height|frameborder|allow|allowfullscreen]',
             ]));
 
-            // Extend HTML5 support for semantic tags and media
-            $def = $config->maybeGetRawHTMLDefinition();
-            if ($def) {
-                // Semantic blocks
+            // Extend HTML5 support
+            if ($def = $config->maybeGetRawHTMLDefinition()) {
+                // Semantic HTML5
+                $def->addElement('mark', 'Inline', 'Inline', 'Common');
                 $def->addElement('header', 'Block', 'Flow', 'Common');
                 $def->addElement('footer', 'Block', 'Flow', 'Common');
                 $def->addElement('main', 'Block', 'Flow', 'Common');
@@ -72,11 +62,38 @@ class Purify
                 $def->addElement('nav', 'Block', 'Flow', 'Common');
 
                 // Multimedia
-                $def->addElement('audio', 'Block', 'Optional: Flow', 'Common', ['src' => 'URI', 'controls' => 'Bool', 'width' => 'Length', 'height' => 'Length', 'preload' => 'Enum#auto,metadata,none']);
-                $def->addElement('video', 'Block', 'Optional: Flow', 'Common', ['src' => 'URI', 'controls' => 'Bool', 'width' => 'Length', 'height' => 'Length', 'poster' => 'URI', 'preload' => 'Enum#auto,metadata,none']);
+                $def->addElement('audio', 'Block', 'Optional: Flow', 'Common', [
+                    'src'     => 'URI',
+                    'controls'=> 'Bool',
+                    'width'   => 'Length',
+                    'height'  => 'Length',
+                    'preload' => 'Enum#auto,metadata,none'
+                ]);
+                $def->addElement('video', 'Block', 'Optional: Flow', 'Common', [
+                    'src'     => 'URI',
+                    'controls'=> 'Bool',
+                    'width'   => 'Length',
+                    'height'  => 'Length',
+                    'poster'  => 'URI',
+                    'preload' => 'Enum#auto,metadata,none'
+                ]);
+                $def->addElement('source', 'Block', 'Flow', 'Common', [
+                    'src'  => 'URI',
+                    'type' => 'Text'
+                ]);
+
+                // iframe with extended attributes
+                $def->addElement('iframe', 'Block', 'Flow', 'Common', [
+                    'src'             => 'URI',
+                    'width'           => 'Length',
+                    'height'          => 'Length',
+                    'frameborder'     => 'Text',
+                    'allow'           => 'Text',
+                    'allowfullscreen' => 'Bool'
+                ]);
             }
 
-            self::$purifierHtml = new HTMLPurifier($config);
+            self::$purifierHtml = new \HTMLPurifier($config);
         }
     }
 
