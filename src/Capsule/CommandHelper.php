@@ -35,9 +35,9 @@ class CommandHelper
      */
     public function __construct($conn = null)
     {
-        $instance = "Tamedevelopers\Database\DB";
-        if(class_exists($instance) && is_null($conn)){
-            $conn = $instance::connection();
+        $dbInstance = "\Tamedevelopers\Database\DB";
+        if(!is_null($conn) && $conn instanceof $dbInstance){
+            $conn = $dbInstance::connection();
         }
         
         $this->conn = $conn;

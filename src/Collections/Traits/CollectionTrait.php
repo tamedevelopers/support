@@ -8,8 +8,6 @@ use Exception;
 use Traversable;
 use JsonSerializable;
 use Tamedevelopers\Support\Str;
-use Tamedevelopers\Database\Schema\Builder;
-use Tamedevelopers\Database\Schema\Pagination\Paginator;
 use Tamedevelopers\Support\Collections\CollectionMapper;
 
 
@@ -85,13 +83,16 @@ trait CollectionTrait{
      */
     protected function isBuilderOrPaginator($expression = null)
     {
+        $paginatorInstance  = '\Tamedevelopers\Database\Schema\Pagination\Paginator';
+        $builderInstance    = '\Tamedevelopers\Database\Schema\Builder';
+
         $this->builder = $expression;
-        if ($expression instanceof \Builder){
+        if ($expression instanceof $builderInstance){
             self::$isBuilder = true;
         } else{
             self::$isBuilder = false;
         }
-        if ($expression instanceof \Paginator){
+        if ($expression instanceof $paginatorInstance){
             $this->isPaginate = true;
         }
     }
