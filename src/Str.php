@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use Tamedevelopers\Support\Purify;
 use Tamedevelopers\Support\Traits\StrTrait;
 
 class Str
@@ -212,6 +213,7 @@ class Str
 
     /**
      * Alias for changeKeysFromArray() method
+     * - Rename keys of an Array
      *
      * @param  array $array
      * @param  array|string $fromKey
@@ -225,6 +227,7 @@ class Str
 
     /**
      * Alias for removeKeysFromArray() method.
+     * - Remove keys from an Array
      *
      * @param  array $array
      * @param  string|array $keys
@@ -237,6 +240,7 @@ class Str
 
     /**
      * Alias for convertArrayKey() method.
+     * - Convert array keys to specified key if available, else return the original array.
      *
      * @param array $array The input data array.
      * @param string $key The key to use for conversion.
@@ -342,6 +346,7 @@ class Str
 
     /**
      * Alias for flattenValue() method.
+     * - Flatten a multidimensional array into a single-dimensional array.
      *
      * @param array $array The multidimensional array to flatten.
      * @return array The flattened array.
@@ -542,6 +547,18 @@ class Str
     public static function sanitize($string = null)
     {
         return Tame::filter_input($string);
+    }
+
+    /**
+     * Convert HTML content to readable string
+     *
+     * @param string $content
+     * @param bool $allowUrl
+     * @return string
+     */
+    public static function readable(string $content, bool $allowUrl = true)
+    {
+        return Purify::readable($content, $allowUrl);
     }
 
     /**
@@ -1058,6 +1075,7 @@ class Str
 
     /**
      * Alias for (getFileExtension) method
+     * - Get the file extension from a filename or path.
      *
      * @param string $filename
      * @return string|null

@@ -86,16 +86,20 @@ trait TextUtilityTrait{
     }
 
     /**
-     * Count words in text.
-     *
+     * Unicode-safe words count in text.
      * @return int
      */
     public function wordCount(): int
     {
-        // str_word_count handles many edge cases; fallback to zero for empty
         $trimmed = $this->getText();
+        if ($trimmed === '') {
+            return 0;
+        }
 
-        return $trimmed === '' ? 0 : str_word_count($trimmed);
+        // Match "words" in any language (letters, numbers, marks, emojis, etc.)
+        preg_match_all('/[\p{L}\p{N}\p{M}]+/u', $trimmed, $matches);
+
+        return count($matches[0]);
     }
 
     /**
@@ -106,44 +110,56 @@ trait TextUtilityTrait{
      */
     public function charCount(bool $includeSpaces = true): int
     {
-        if ($includeSpaces) {
-            return strlen($this->text);
+        $text = $this->text;
+
+        if (function_exists('mb_strlen')) {
+            if ($includeSpaces) {
+                return mb_strlen($text, 'UTF-8');
+            }
+            return mb_strlen(preg_replace('/\s+/u', '', $text), 'UTF-8');
         }
+
+        if ($includeSpaces) {
+            return strlen($text);
+        }
+
         // remove all whitespace chars, not just spaces
-        return strlen(preg_replace('/\s+/', '', $this->text));
+        return strlen(preg_replace('/\s+/u', '', $text));
     }
 
     /**
      * Count text sentences (approximate) by splitting on punctuation.
-     *
      * @return int
      */
     public function sentenceCount(): int
     {
         $parts = preg_split('/[.!?]+(?:\s|$)/u', $this->getText());
-        if ($parts === false) return 0;
+        if ($parts === false){
+            return 0;
+        }
+        
         $filtered = array_filter(array_map('trim', $parts), fn($p) => $p !== '');
         return count($filtered);
     }
 
     /**
      * Reverse text string (simple).
-     *
      * For multibyte safe reversal, a more advanced routine is required.
-     *
      * @return string
      */
     public function reverse(): string
     {
+        $text = $this->text;
+
         // Multibyte-safe reversal if mb functions exist
         if (function_exists('mb_strlen')) {
             $out = '';
-            for ($i = mb_strlen($this->text) - 1; $i >= 0; $i--) {
-                $out .= mb_substr($this->text, $i, 1);
+            for ($i = mb_strlen($text) - 1; $i >= 0; $i--) {
+                $out .= mb_substr($text, $i, 1);
             }
             return $out;
         }
-        return strrev($this->text);
+        return Str::reverse($text);
     }
 
     /**
@@ -154,7 +170,7 @@ trait TextUtilityTrait{
     public function isPalindrome(): bool
     {
         // keep only alphanumeric chars
-        $clean = preg_replace('/[^a-z0-9]/i', '', $this->getText());
+        $clean = preg_replace('/[^a-z0-9]/iu', '', $this->getText());
         if ($clean === null) return false;
         $clean = mb_strtolower($clean);
         // reverse using multibyte-safe method

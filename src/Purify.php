@@ -101,6 +101,104 @@ class Purify
 
         return new HTMLPurifier($config);
     }
+    
+    /**
+     * Preserve structural newlines
+     *
+     * @param  string $content
+     * @param  bool $collapse
+     * @return string
+     */
+    protected static function preserveNewLine($content, $collapse = false)
+    {
+        $text = preg_replace('/<\s*br\s*\/?>/i', "\n", $content);
+        $text = preg_replace('/<\/p\s*>/i', "\n\n", $text);
+        $text = preg_replace('/<\/div\s*>/i', "\n\n", $text);
+        $text = preg_replace('/<\/h[1-6]\s*>/i', "\n\n", $text);
+
+        // Collapse whitespace
+        if($collapse){
+            $text = preg_replace('/\s+/u', ' ', $text);
+        }
+
+        return $text;
+    }
+    
+    /**
+     * cleanUrlLink
+     *
+     * @param  string $url
+     * @return string
+     */
+    protected static function cleanUrlLink($url)
+    {
+        // Clean URL: decode %xx + HTML entities
+        $url = rawurldecode($url ?: '');
+
+        return html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    /**
+     * Convert HTML content to readable string
+     *
+     * @param string $content
+     * @param bool $allowUrl
+     * @return string
+     */
+    public static function readable(string $content, bool $allowUrl = true): string
+    {
+        $text = $content;
+        $text = self::preserveNewLine($text, true);
+
+        // Handle all tags with link-like attributes (href, src, data-src, poster, etc.)
+        $text = preg_replace_callback(
+            '/<(a|img|iframe|video|audio|source|embed|track|script)[^>]+?(?:href|src|data-src|poster)=["\']([^"\']+)["\'][^>]*>(?:([\s\S]*?)<\/\1>)?/i',
+            function ($matches) use($allowUrl) {
+                if($allowUrl){
+                    $tag   = strtolower($matches[1]);
+                    $url   = self::cleanUrlLink($matches[2]);
+                    $alt   = trim($matches[3] ?? '');   // alt attr if exists
+                    $label = trim(strip_tags($matches[4] ?? '')); // inner text if exists
+
+                    switch ($tag) {
+                        case 'a':
+                            // Prefer label, otherwise fall back to domain
+                            return !empty($label) ? "[$label]" : "[link]";
+                        case 'img':
+                            return !empty($alt) ? "[$alt]" : "[image]";
+                        case 'iframe':
+                        case 'video':
+                        case 'audio':
+                        case 'source':
+                        case 'embed':
+                        case 'track':
+                        case 'script':
+                            // Prefer url if any
+                            if (!empty($url)) {
+                                return "[$url]";
+                            }
+                            return "[$tag]";
+                        default:
+                            return "[$tag]";
+                    }
+                } else{
+                    return  "";
+                }
+            },
+            $text
+        );
+
+        // Remove all other HTML tags
+        $text = strip_tags($text);
+
+        // Decode HTML entities (&amp; → & etc.)
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return html_entity_decode(
+            trim($text), 
+            ENT_QUOTES | ENT_HTML5, 'UTF-8'
+        );
+    }
 
     /**
      * Purify HTML for CMS/blog posts
