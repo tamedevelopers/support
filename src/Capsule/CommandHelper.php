@@ -338,14 +338,23 @@ class CommandHelper
      */
     protected function confirm(string $question, bool $default = false): bool
     {
-        $yesNo  = $default ? 'y/n' : 'Y/N';
-        $answer = readline("{$question} ({$yesNo}): ");
+        $yesNo = $default ? 'y/n' : 'Y/N';
+        
+        while (true) {
+            $answer = readline("{$question} ({$yesNo}): ");
 
-        if (empty($answer)) {
-            return $default;
+            if (!empty($answer)) {
+                $answer = Str::lower(trim($answer));
+
+                if (in_array($answer, ['y', 'yes'], true)) {
+                    return true;
+                }
+
+                if (in_array($answer, ['n', 'no'], true)) {
+                    return false;
+                }
+            }
         }
-
-        return in_array(Str::lower($answer), ['y', 'yes'], true);
     }
 
     /**
