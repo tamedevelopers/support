@@ -27,9 +27,9 @@ class Collection extends CollectionProperty implements IteratorAggregate, ArrayA
     /**
      * Create a new collection instance.
      *
-     * @param  array $items
+     * @param array|null $items
      * 
-     * @param  mixed $instance
+     * @param mixed $instance
      * - [optional] Used on ORM Database Only
      * Meant for easy manupulation of collection instance
      * This doesn't have affect on using this the Collection class on other projects

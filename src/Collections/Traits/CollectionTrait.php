@@ -109,6 +109,10 @@ trait CollectionTrait{
             return $items;
         }
 
+        if(empty($items) || is_null($items)){
+            return [];
+        }
+
         return match (true) {
             $items instanceof Traversable => iterator_to_array($items),
             $items instanceof JsonSerializable => $items->jsonSerialize(),

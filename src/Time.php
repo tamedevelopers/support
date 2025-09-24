@@ -148,6 +148,7 @@ final class Time {
 
     /**
      * Substract Second from curent date
+     * 
      * @param int $value
      * @return $this
      */
@@ -158,6 +159,7 @@ final class Time {
 
     /**
      * Add Minutes to curent date
+     * 
      * @param int $value
      * @return $this
      */
@@ -168,6 +170,7 @@ final class Time {
 
     /**
      * Substract Minutes from curent date
+     * 
      * @param int $value
      * @return $this
      */
@@ -178,6 +181,7 @@ final class Time {
 
     /**
      * Add Hours to curent date
+     * 
      * @param int $value
      * @return $this
      */
@@ -188,6 +192,7 @@ final class Time {
 
     /**
      * Substract Hours from curent date
+     * 
      * @param int $value
      * @return $this
      */
@@ -198,6 +203,7 @@ final class Time {
 
     /**
      * Add days to curent date
+     * 
      * @param int $value
      * @return $this
      */
@@ -208,6 +214,7 @@ final class Time {
 
     /**
      * Substract days from curent date
+     * 
      * @param int $value
      * @return $this
      */
@@ -218,6 +225,7 @@ final class Time {
 
     /**
      * Add Week to curent date
+     * 
      * @param int $value
      * @return $this
      */
@@ -228,6 +236,7 @@ final class Time {
 
     /**
      * Substract Week from curent date
+     * 
      * @param int $value
      * @return $this
      */
@@ -238,6 +247,7 @@ final class Time {
 
     /**
      * Add Month to curent date
+     * 
      * @param int $value
      * @return $this
      */
@@ -248,6 +258,7 @@ final class Time {
 
     /**
      * Substract Month from curent date
+     * 
      * @param int $value
      * @return $this
      */
@@ -258,6 +269,7 @@ final class Time {
 
     /**
      * Add Year to curent date
+     * 
      * @param int $value
      * @return $this
      */
@@ -268,6 +280,7 @@ final class Time {
 
     /**
      * Substract Year from curent date
+     * 
      * @param int $value
      * @return $this
      */
@@ -278,6 +291,7 @@ final class Time {
     
     /**
      * Set custom time
+     * 
      * @param int|string $date
      * @return $this
      */
@@ -286,6 +300,17 @@ final class Time {
         $base = self::baseInstance();
 
         return $base->setDate($date);
+    }
+
+    /**
+     * Alias for `date` method 
+     * 
+     * @param int|string $date
+     * @return $this
+     */
+    public static function parse($date)
+    {
+        return self::date($date);
     }
 
     /**
@@ -320,7 +345,6 @@ final class Time {
 
     /**
      * Set time to `now`
-     * 
      * @return $this
      */
     public static function now()
@@ -330,7 +354,6 @@ final class Time {
 
     /**
      * Set time to `today`
-     * 
      * @return $this
      */
     public static function today()
@@ -340,7 +363,6 @@ final class Time {
 
     /**
      * Set time to `yesterday`
-     * 
      * @return $this
      */
     public static function yesterday()
@@ -420,7 +442,6 @@ final class Time {
 
     /**
      * toDateTimeString
-     *
      * @return string
      */
     public function toDateTimeString()
@@ -430,7 +451,6 @@ final class Time {
 
     /**
      * toDateString
-     *
      * @return string
      */
     public function toDateString()
@@ -440,7 +460,6 @@ final class Time {
 
     /**
      * toTimeString
-     *
      * @return string
      */
     public function toTimeString()
@@ -465,7 +484,6 @@ final class Time {
      * Set the configuration options for text representations.
      * 
      * @param array|null $options
-     * 
      * @return void
      */
     public static function config(?array $options = [])
@@ -568,8 +586,8 @@ final class Time {
 
     /**
      * Get a greeting based on the current time.
-     * @param string|int $date
      * 
+     * @param string|int $date
      * @return string
      */
     public function __greeting($date = 'now') 
@@ -604,7 +622,6 @@ final class Time {
      * @param mixed $firstDate
      * @param mixed $lastDate
      * @param string|null $mode
-     * 
      * @return mixed
      */
     public function __timeDifferenceBetween($firstDate, $lastDate, $mode = null)
@@ -624,8 +641,8 @@ final class Time {
 
     /**
      * Calculate the time difference between the stored time and the current time.
-     * @param string|null $mode
      * 
+     * @param string|null $mode
      * @return mixed
      */
     public function __timeDifference($mode  = null)
@@ -647,6 +664,7 @@ final class Time {
 
     /**
      * Get a time ago representation based on the time difference.
+     * 
      * @param string|null $mode
      * - [optional] int|short|full
      * 

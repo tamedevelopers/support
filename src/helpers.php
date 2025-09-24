@@ -110,7 +110,7 @@ if (! function_exists('TameCollect')) {
     /**
      * Collection Class
      *
-     * @param array $items 
+     * @param array|null $items 
      * 
      * @return \Tamedevelopers\Support\Collections\Collection
      */
@@ -124,7 +124,7 @@ if (! function_exists('tcollect')) {
     /**
      * Collection Class
      *
-     * @param array $items 
+     * @param array|null $items 
      * 
      * @return \Tamedevelopers\Support\Collections\Collection
      */
