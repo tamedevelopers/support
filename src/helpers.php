@@ -112,7 +112,7 @@ if (! function_exists('TameCollect')) {
      *
      * @param array|null $items 
      * 
-     * @return \Tamedevelopers\Support\Collections\Collection
+     * @return \Tamedevelopers\Support\Collections\Collection|mixed
      */
     function TameCollect($items = [])
     {
@@ -126,7 +126,7 @@ if (! function_exists('tcollect')) {
      *
      * @param array|null $items 
      * 
-     * @return \Tamedevelopers\Support\Collections\Collection
+     * @return \Tamedevelopers\Support\Collections\Collection|mixed
      */
     function tcollect($items = [])
     {
