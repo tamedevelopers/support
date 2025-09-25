@@ -535,6 +535,86 @@ trait RelatedTrait{
     }
 
     /**
+     * Check if any item in the collection starts with the given value.
+     *
+     * @param  string  $needle
+     * @param  bool    $caseSensitive
+     * @return bool
+     */
+    public function startsWith(string $needle, bool $caseSensitive = true)
+    {
+        foreach ($this->items as $item) {
+            if (!is_string($item)) {
+                continue;
+            }
+
+            $haystack = $caseSensitive ? $item : strtolower($item);
+            $target   = $caseSensitive ? $needle : strtolower($needle);
+
+            if (str_starts_with($haystack, $target)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if any item in the collection ends with the given value.
+     *
+     * @param  string  $needle
+     * @param  bool    $caseSensitive
+     * @return bool
+     */
+    public function endsWith(string $needle, bool $caseSensitive = true)
+    {
+        foreach ($this->items as $item) {
+            if (!is_string($item)) {
+                continue;
+            }
+
+            $haystack = $caseSensitive ? $item : strtolower($item);
+            $target   = $caseSensitive ? $needle : strtolower($needle);
+
+            if (str_ends_with($haystack, $target)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Return true if the provided $haystack starts with any item in the collection.
+     *
+     * Example: tcollect(['127.', '192.168.'])->matchesAnyPrefixOf('192.168.1.173') => true
+     *
+     * @param  string  $haystack
+     * @param  bool    $caseSensitive
+     * @return bool
+     */
+    public function matchesAnyPrefixOf(string $haystack, bool $caseSensitive = true)
+    {
+        if (!$caseSensitive) {
+            $haystack = strtolower($haystack);
+        }
+
+        foreach ($this->items as $prefix) {
+            if (!is_string($prefix)) {
+                continue;
+            }
+
+            $p = $caseSensitive ? $prefix : strtolower($prefix);
+
+            if (str_starts_with($haystack, $p)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Determine if the collection contains a given value.
      *
      * @param  mixed $value

@@ -8,6 +8,7 @@ use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\Collections\Collection;
 use Tamedevelopers\Support\Process\Concerns\RequestInterface;
 
 /**
@@ -221,13 +222,34 @@ class HttpRequest implements RequestInterface
     }
 
     /**
-     * Alias for `runningInConsole` method
+     * Alias for `runningInConsole()` method
      *
      * @return bool
      */
     public static function isConsole()
     {
         return self::runningInConsole();
+    }
+
+    /**
+     * Check if the server is using a local/private IP.
+     *
+     * @return bool
+     */
+    public static function isLocalIp()
+    {
+        // Strict mode: only verify if machine is local/private
+        $serverAddr = $_SERVER['SERVER_ADDR'] ?? gethostbyname(gethostname());
+
+        // Check if it's loopback or private LAN range
+        // 127.* loopback IPv4
+        // ::1 loopback IPv6
+        // 10.*, 172.16.*, 192.168.* → private LAN ranges
+        // localhost - explicit hostname, which some setups resolve instead of raw IP
+        $localRanges = ['127.', '::1', '10.', '172.16.', 'localhost'];
+
+        // return TRUE if the current server address starts with any local prefix
+        return (new Collection($localRanges))->startsWith($serverAddr);
     }
 
     /**

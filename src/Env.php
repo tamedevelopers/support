@@ -12,7 +12,9 @@ use Tamedevelopers\Support\Constant;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Traits\ServerTrait;
+use Tamedevelopers\Support\Process\HttpRequest;
 use Tamedevelopers\Support\Traits\ReusableTrait;
+use Tamedevelopers\Support\Collections\Collection;
 use Tamedevelopers\Support\Capsule\CustomException;
 
 class Env {
@@ -37,10 +39,15 @@ class Env {
     private static $class;
 
     /**
+     * When .env file is loaded
+     * @var bool
+     */
+    private static $envFileIsLoaded = false;
+
+    /**
      * Define custom Server root path
      * 
      * @param string|null $path
-     * 
      * @return void
      */
     public function __construct($path = null) 
@@ -80,7 +87,7 @@ class Env {
 
         try{
             // env class not exists
-            if(!self::isDotenvInstalled()){
+            if(!self::isDotEnvInstanceAvailable()){
                 return [
                     'status'    => Constant::STATUS_404,
                     'message'   => sprintf(
@@ -92,6 +99,8 @@ class Env {
             
             $dotenv = Dotenv::createImmutable(self::$sym_path);
             $dotenv->load();
+
+            self::$envFileIsLoaded = true;
             return [
                 'status'    => Constant::STATUS_200,
                 'message'   => ".env File Loaded Successfully",
@@ -109,8 +118,8 @@ class Env {
     /**
      * Inherit the load() method and returns an error message 
      * if any or load environment variables
-     * @param string|null $path Path to .env Folder\Not needed exept called statically
      * 
+     * @param string|null $path Path to .env Folder\Not needed exept called statically
      * @return void
      */
     public static function loadOrFail($path = null)
@@ -178,7 +187,6 @@ class Env {
      * Turn off error reporting and log errors to a file
      * 
      * @param string $logFile The name of the file to log errors to
-     * 
      * @return void
      */
     public static function bootLogger() 
@@ -202,7 +210,7 @@ class Env {
 
         // If APP_DEBUG = false
         // Turn off error reporting for the application
-        if(!self::is_debug()){
+        if(!self::isApplicationOnDebug()){
             // PHP 8+: E_STRICT is removed; suppress deprecations instead
             error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
             ini_set('display_errors', '0');
@@ -239,12 +247,8 @@ class Env {
      * - If .env was not used, 
      * - Then it will get all App Configuration Data as well
      * 
-     * @param string|null $key
-     * - [optional] ENV KEY or APP Configuration Key
-     * 
-     * @param mixed $value
-     * - [optional] Default value if key not found
-     * 
+     * @param string|null $key - [optional] ENV KEY or APP Configuration Key
+     * @param mixed $value - [optional] Default value if key not found
      * @return mixed
      */
     public static function env($key = null, $value = null)
@@ -256,18 +260,6 @@ class Env {
         $key = Str::upper(Str::trim($key));
 
         return $envData[$key] ?? $value;
-    }
-
-    /**
-     * Checks if the specified environment variable has been set or started.
-     *
-     * @param string $key The name of the environment variable to check. Defaults to 'APP_NAME'.
-     * @return bool 
-     * - Returns true if the environment variable is set, false otherwise.
-     */
-    public static function isEnvStarted($key = 'APP_NAME')
-    {
-        return Manager::isEnvSet($key);
     }
 
     /**
@@ -346,11 +338,69 @@ class Env {
     }
 
     /**
+     * If Dotenv SInstance Class Available
+     * @return bool
+     */
+    public static function isDotEnvInstanceAvailable()
+    {
+        return class_exists('Dotenv\Dotenv');
+    }
+
+    /**
+     * Checks if the specified environment variable has been set or started.
+     * 
+     * @param string $key The name of the environment variable to check. Defaults to 'APP_NAME'.
+     * @return bool
+     */
+    public static function isEnvStarted($key = 'APP_NAME')
+    {
+        return (self::$envFileIsLoaded === true) || (Manager::isEnvSet($key) === true);
+    }
+
+    /**
+     * Alias for `isEnvStarted()` method
+     * @return bool
+     */
+    public static function isEnvFileLoaded()
+    {
+        return self::isEnvStarted();
+    }
+
+    /**
+     * If Application debug mode is on or off
+     * @return bool 
+     */
+    public static function isApplicationOnDebug() 
+    {
+        return Manager::isEnvBool(env('APP_DEBUG'));
+    }    
+
+    /**
+     * Determines if the application is running in a given environment.
+     * 
+     * @param array|string $env     Environment(s) to check against (default: 'local')
+     * @param bool         $strict  Whether to validate using server IP ranges instead of .env (default: false)
+     * @return bool 
+     */
+    public static function environment($env = 'local', $strict = false)
+    {
+        [$envs, $current] = self::normalizeEnvs($env);
+
+        // If environment checking should be strict - using ip check for IP range matches too!
+        if($strict){
+            // must pass strict validation AND match expected envs
+            return self::validateStrict($current) && in_array($current, $envs, true);
+        }
+        
+        // Final check: does current env match expected ones?
+        return in_array($current, $envs, true);
+    }
+
+    /**
      * Create needed directory and files
      *
-     *  @param string|null $directory
-     *  @param string|null $filename
-     *  
+     * @param string|null $directory
+     * @param string|null $filename
      * @return void
      */
     private static function createDir_AndFiles($directory = null,  $filename = null)
@@ -362,17 +412,17 @@ class Env {
         }
 
         // if \storage folder not found
-        if(!is_dir(self::$sym_path. "storage")){
-            @mkdir(self::$sym_path. "storage", 0777);
+        if(!File::isDirectory(self::$sym_path. "storage")){
+            File::makeDirectory(self::$sym_path. "storage", 0777);
         }
 
         // if \storage\logs\ folder not found
-        if(!is_dir($directory)){
-            @mkdir($directory, 0777);
+        if(!File::isDirectory($directory)){
+            File::makeDirectory($directory, 0777);
         }
 
         // If the log file doesn't exist, create it
-        if(!file_exists($filename)) {
+        if(!File::exists($filename)) {
             touch($filename);
             chmod($filename, 0777);
         }
@@ -402,17 +452,42 @@ class Env {
     }
 
     /**
-     * isDotenvInstalled
-     *
+     * Validate strict environment rules
+     * 
+     * @param string $current
      * @return bool
      */
-    private static function isDotenvInstalled()
+    private static function validateStrict(string $current)
     {
-        if(class_exists('Dotenv\Dotenv')){
-            return true;
+        $isLocal = HttpRequest::isLocalIp();
+        $localAliases = ['local', 'localhost', 'dev', 'development'];
+
+        $productionAliases = [
+            'prod', 'production', 'stage', 'staging',  'test', 'testing', 'preprod', 'pre-production',
+            'live', 'online', 'public', 'remote', 'qa', 'uat', 'user-acceptance-testing', 'unknown'
+        ];
+
+        // If the current env is "local-like", require a local IP
+        if (in_array($current, $localAliases, true) && ($isLocal === true)) {
+            return $isLocal;
         }
 
-        return false;
+        // Anything else (production/live/unknown) => must NOT be local
+        return ! $isLocal && in_array($current, $productionAliases, true);
+    }
+
+    /**
+     * Normalize environments.
+     *
+     * @param array|string $env
+     * @return array [$envs, $current]
+     */
+    private static function normalizeEnvs($env)
+    {
+        $envs = array_map([Str::class, 'lower'], Str::flatten((array) $env));
+        $current = Str::lower(env('APP_ENV', env('APP_ENVIRONMENT')));
+
+        return [$envs, $current];
     }
 
     /**
@@ -434,33 +509,7 @@ class Env {
             E_DEPRECATED        => 'Deprecated',
             E_USER_DEPRECATED   => 'User Deprecated',
         );
-    }    
-
-    /**
-     * GET Application debug
-     *
-     * @return bool 
-     */
-    private static function is_debug() 
-    {
-        return Manager::isEnvBool(env('APP_DEBUG', true));
-    }    
-
-    /**
-     * Determines if the application is running in local environment.
-     *
-     * @return bool Returns true if the application is running in local environment, false otherwise.
-     */
-    private static function is_local()
-    {
-        // check using default setting
-        if(env('APP_ENV') == 'local'){
-            return true;
-        }
-        
-        // check if running on localhost
-        return !(!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' && $_SERVER['SERVER_ADDR'] !== '127.0.0.1');
-    }
+    }  
 
     /**
      * Sample copy of env file

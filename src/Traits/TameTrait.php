@@ -218,9 +218,7 @@ trait TameTrait{
     /**
      * Get file modification time
      *
-     * @param string|null $path
-     * - [full path to file is required]
-     * 
+     * @param string|null $path (Relative|Absolute Path)
      * @return int|bool 
      */
     private static function getFiletime($path = null) 

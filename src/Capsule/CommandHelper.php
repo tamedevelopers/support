@@ -54,6 +54,15 @@ class CommandHelper
     }
     
     /**
+     * Alias for `isConsole()` method
+     * @param bool
+     */
+    protected function runningInConsole(): bool
+    {
+        return $this->isConsole();
+    }
+    
+    /**
      * Check if database connection is successful.
      * @param \Tamedevelopers\Database\Connectors\Connector $conn
      */
@@ -71,14 +80,14 @@ class CommandHelper
     }
 
     /**
-     * Determine if the current environment is production. 
+     * Determines if the application is running in a given environment.
+     * 
+     * @param array|string $env
+     * @param bool $strict
      */
-    protected function isProduction(): bool
+    protected function environment($env = 'local', $strict = false): bool
     {
-        $env = Env::env('APP_ENV');
-        $productionAliases = ['prod', 'production', 'live'];
-
-        return in_array(Str::lower($env), $productionAliases, true);
+        return Env::environment($env, $strict);
     }
     
     /**
@@ -94,7 +103,7 @@ class CommandHelper
 
         $force = (isset($args['force']) || isset($args['f']));
 
-        if ($this->isProduction()) {
+        if ($this->environment('production')) {
             if (!$force) {
                 $this->error("You are in production! Use [--force|-f] flag, to run this command.");
                 if($this->isConsole()){

@@ -21,10 +21,7 @@ final class Cookie{
      */
     protected static $expireName;
 
-    /** 
-     * Time Cookie name
-     * @var string
-     */
+    /** @var string Time Cookie name */
     protected static $timeName;
 
     /** 
@@ -38,13 +35,17 @@ final class Cookie{
      * @var mixed
      */
     protected static $expireFormat;
+
+    /** 
+     * Queued cookies
+     * @var mixed
+     */
+    protected static $queued;
     
     /** 
-     * Create Sitename From .env
-     * 
-     * @return $this
+     * Initialize site-specific cookie names and formats.
      */
-    protected static function init()
+    protected static function init(): static
     {
         self::$name         = Str::lower(Str::replace([' '], '', env('APP_NAME', '')));
         self::$timeName     = "__time_" . self::$name;
@@ -55,39 +56,19 @@ final class Cookie{
         return new self();
     }
 
-    /** 
-     * Create Cookie
-     * @param mixed $name
-     * - Cookie Name
-     * 
-     * @param mixed $value
-     * - Cookie Value
-     * 
-     * @param int|string $minutes
-     * [optional] The time the cookie expires. 
-     * This is a Unix timestamp so is in number of seconds since the epoch. 
-     * In other words, you'll most likely set this with the time function plus the number of seconds before you want it to expire. 
-     * Or you might use mktime. time()+606024*30 will set the cookie to expire in 30 days. 
-     * If set to 0, or omitted, the cookie will expire at the end of the session (when the browser closes).
-     * 
-     * @param string|null $path
-     * [optional] The path on the server in which the cookie will be available on. 
-     * If set to '/', the cookie will be available within the entire domain.
-     * 
-     * @param string|null $domain
-     * [optional] The domain that the cookie is available. 
-     * To make the cookie available on all subdomains of example.com then you'd set it to '.example.com'.
-     * 
-     * @param bool|null $secure
-     * [optional] Indicates that the cookie should only be transmitted over a secure HTTPS connection from the client.
-     * 
-     * @param bool|null $httponly 
-     * [optional] When true the cookie will be made accessible only through the HTTP protocol. 
+    /**
+     * Create a cookie.
+     *
+     * @param mixed       $name     Cookie name.
+     * @param mixed       $value    Cookie value.
+     * @param int|string  $minutes  Expiration in minutes or strtotime string (0 = session).
+     * @param string|null $path     Path where the cookie is available (default: '/').
+     * @param string|null $domain   Domain for the cookie (e.g. '.example.com').
+     * @param bool|null   $secure   Send only over HTTPS.
+     * @param bool|null   $httponly Accessible only through HTTP (not JS).
+     * @param bool|null   $force    Force setting even if headers are already sent.
      * 
      * @return void
-     * If output exists prior to calling this function, setcookie will fail and return false. 
-     * If setcookie successfully runs, it will return true. 
-     * This does not indicate whether the user accepted the cookie.
      */
     public static function set($name, $value = null, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null)
     {
@@ -99,101 +80,65 @@ final class Cookie{
             $path, $value, $domain, $secure, $httponly, $force
         );
 
-        $name = self::getItemValue($name);
-        $value = self::getItemValue($value);
-
-        // Prefer new setcookie signature with array options (PHP 7.3+), fallback otherwise
+        // Set the cookie if headers not sent or forced
         if (!headers_sent() || $force === true) {
-            $options = [
-                'expires'  => $expires,
-                'path'     => $path,
-                'domain'   => $domain ?: '',
-                'secure'   => (bool) $secure,
-                'httponly' => (bool) $httponly,
-                'samesite' => 'Lax', // sensible default
-            ];
+            $name = self::getName($name);
+            $value = self::getValue($value);
 
-            // Try modern signature; if it fails (older PHP), fallback to legacy
-            try {
-                if (PHP_VERSION_ID >= 70300) {
-                    @setcookie($name, $value, $options);
-                } else {
-                    @setcookie($name, $value, (int) $expires, (string) $path, (string) $domain, (bool) $secure, (bool) $httponly);
-                }
-            } catch (\Throwable $e) {
-                @setcookie($name, $value, (int) $expires, (string) $path, (string) $domain, (bool) $secure, (bool) $httponly);
-            }
+            self::normalizeCookie($name, $value, $expires, $path, $domain, $secure, $httponly);
         }
     }
 
     /**
      * Expire the given cookie.
      *
-     * @param  mixed  $name
-     * @param  string|null  $path
-     * @param  string|null  $domain
+     * @param mixed $name
      * @return void
      */
-    public static function forget($name, $path = null, $domain = null)
+    public static function forget($name)
     {
-        self::set(
-            name: self::getItemValue($name),
-            minutes: 'last year', 
-            path: $path, 
-            domain: $domain,
-            force: true
-        );
+        self::set($name, null, -2628000); // 5 years ago
     }
 
     /**
      * Expire the given cookie.
      *
      * @param  mixed  $name
-     * @param  string|null  $path
-     * @param  string  $domain
      * @return void
      */
-    public static function expire($name, $path = null, $domain = null)
+    public static function expire($name)
     {
-        self::forget($name, $path, $domain);
+        self::forget($name);
     }
 
     /** 
      * Set Cookie Time
-     * 
-     * @return void
      */
-    public static function setTime()
+    public static function setTime(): void
     {
         self::init()->set(self::$timeName, self::$timeFormat);
     }
 
     /** 
      * Set Cookie Expiration Time
-     * 
-     * @return void
      */
-    public static function setExpire()
+    public static function setExpire(): void
     {
         self::init()->set(self::$expireName, self::$expireFormat);
     }
 
     /** 
      * Get Time Data
-     * 
-     * @return mixed
      */
-    public static function getTime()
+    public static function getTime(): mixed
     {
         return self::init()->get(self::$timeName);
     }
 
     /** 
      * Get Expire Time Data
-     * 
-     * @return mixed
      */
-    public static function getExpire()
+    public static function getExpire(): mixed
     {
         return self::init()->get(self::$expireName);
     }
@@ -202,52 +147,152 @@ final class Cookie{
      * Cookie has name that exists
      * 
      * @param mixed $name
-     * - Cookie name
-     * 
      * @return bool
      */
     public static function has($name = null)
     {
-        return isset($_COOKIE[self::getItemValue($name)]);
+        return isset($_COOKIE[self::getName($name)]);
     }
 
     /** 
      * Get cookie 
-     * @param mixed $name
-     * - Cookie name
      * 
+     * @param mixed $name
+     * @param mixed $default
      * @return mixed
      */
-    public static function get($name = null)
+    public static function get($name = null, $default = null)
     {
-        $name = self::getItemValue($name);
-
-        return self::has($name) ? $_COOKIE[$name] : null;
+        return $_COOKIE[self::getName($name)] ?? $default;
     }
 
     /** 
      * Get all cookie 
-     * @param string $name
      * 
-     * [optional] Cookiename or return all cookies
-     * 
+     * @param mixed $name
      * @return mixed
      */
     public static function all($name = null)
     {
         return self::get($name) ?? $_COOKIE;
     }
+
+    /**
+     * Get the cookie value and immediately delete it.
+     * 
+     * @param mixed $name
+     * @param mixed $default
+     * @return mixed
+     */
+    public static function pull($name, $default = null)
+    {
+        $value = self::get($name, $default);
+        self::forget($name);
+        return $value;
+    }
+
+    /**
+     * Set a short-lived cookie for the next request only.
+     * Typically used for flash messages.
+     *
+     * @param mixed $name
+     * @param mixed $value
+     */
+    public static function flash($name, $value): void
+    {
+        self::set($name, $value, '+1 minute');
+    }
+
+    /**
+     * Queue a cookie to be set later.
+     * Useful in response middleware before headers are sent.
+     *
+     * @param mixed $name
+     * @param mixed $value
+     * @param int|string $minutes
+     * @param string|null $path
+     * @param string|null $domain
+     * @param bool|null $secure
+     * @param bool|null $httponly
+     * @param bool|null   $force    Force setting even if headers are already sent.
+     * @return void
+     */
+    public static function queue($name, $value, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null)
+    {
+        self::$queued[] = compact(
+            'name', 'value', 'minutes', 'path', 'domain', 'secure', 'httponly', 'force'
+        );
+    }
+
+    /**
+     * Apply all queued cookies by sending them to the client,
+     * then clear the queue.
+     */
+    public static function setQueue(): void
+    {
+        foreach (self::$queued as $cookie) {
+            self::set(
+                $cookie['name'],
+                $cookie['value'],
+                $cookie['minutes'],
+                $cookie['path'],
+                $cookie['domain'],
+                $cookie['secure'],
+                $cookie['httponly'],
+                $cookie['force']
+            );
+        }
+        self::$queued = [];
+    }
+
+    /**
+     * Flush (clear) all cookies.
+     * Removes everything in $_COOKIE by expiring them.
+     */
+    public static function flush(): void
+    {
+        foreach ($_COOKIE as $name => $value) {
+            self::forget($name);
+        }
+    }
+
+    /** 
+     * Normalize a value into a string. 
+     * 
+     * @param mixed $name
+     * @return string 
+     */
+    private static function getName($name = null)
+    {
+        if (is_array($name)) {
+            return (string) (Str::head($name) ?? '');
+        }
+
+        if (is_object($name)) { 
+            $array = Server::toArray($name); 
+            return (string) (Str::last($array) ?? ''); 
+        }
+
+        return (string) $name;
+    }
     
     /**
-     * Item Value
+     *  Normalize a value into a string.
      *
      * @param  mixed $value
      * @return string
      */
-    private static function getItemValue($value = null)
+    private static function getValue($value = null)
     {
-        if(is_array($value)){
-            $value = Str::head($value);
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE) ?: '';
+        }
+
+        if (is_object($value)) {
+            if (method_exists($value, '__toString')) {
+                return (string) $value;
+            }
+            return json_encode($value, JSON_UNESCAPED_UNICODE) ?: '';
         }
 
         return (string) $value;
@@ -275,6 +320,40 @@ final class Cookie{
         }
         return (int) $ts;
     }
+    
+    /**
+     * Normalize Cookie
+     *
+     * @param  mixed $name
+     * @param  mixed $value
+     * @param  mixed $expires
+     * @param  mixed $path
+     * @param  mixed $domain
+     * @param  mixed $secure
+     * @param  mixed $httponly
+     * @return void
+     */
+    private static function normalizeCookie($name, $value, $expires, $path, $domain, $secure, $httponly)
+    {
+        [$expires, $path, $domain, $secure, $httponly] = [
+            (int) $expires, (string) $path, (string) $domain, (bool) $secure, (bool) $httponly
+        ];
+
+        // PHP 7.3+ supports array options
+        if (PHP_VERSION_ID >= 70300) {
+            @setcookie($name, $value, [
+                'expires'  => $expires,
+                'path'     => $path,
+                'domain'   => $domain,
+                'secure'   => $secure,
+                'httponly' => $httponly,
+                'samesite' => 'Lax', // sensible default
+            ]);
+        } else {
+            // fails (older PHP), fallback to legacy signature
+            @setcookie($name, $value, $expires, $path, $domain, $secure, $httponly);
+        }
+    }
 
     /**
      * Get default path/domain and flags.
@@ -289,6 +368,10 @@ final class Cookie{
      */
     private static function getDefaultPathAndDomain($path = null, $value = null, $domain = null, $secure = null, $httponly = null, $force = null)
     {
+        if(is_null($secure)){
+            $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+        }
+
         return [
             !empty($path) ? $path : '/', 
             !empty($value) ? $value : '', 

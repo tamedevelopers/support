@@ -233,11 +233,9 @@ class Tame extends TameHelper{
     }
     
     /**
-     * include if file exist
+     * Include if file exist
      * 
-     * @param string $path
-     * - [full path to file]
-     * 
+     * @param string $path (Relative|Absolute Path)
      * @return void
      */
     public static function include($path)
@@ -250,11 +248,9 @@ class Tame extends TameHelper{
     }
 
     /**
-     * include once if file exist
+     * Include once if file exist
      * 
-     * @param string $path
-     * - [full path to file]
-     * 
+     * @param string $path (Relative|Absolute Path)
      * @return void
      */
     public static function includeOnce($path)
@@ -267,11 +263,9 @@ class Tame extends TameHelper{
     }
 
     /**
-     * require if file exist
+     * Require if file exist
      * 
-     * @param string $path
-     * - [full path to file]
-     * 
+     * @param string $path (Relative|Absolute Path)
      * @return void
      */
     public static function require($path)
@@ -284,11 +278,9 @@ class Tame extends TameHelper{
     }
 
     /**
-     * require_once if file exist
+     * Require_once if file exist
      * 
-     * @param string $path
-     * - [full path to file]
-     * 
+     * @param string $path (Relative|Absolute Path)
      * @return void
      */
     public static function requireOnce($path)
@@ -382,9 +374,7 @@ class Tame extends TameHelper{
     /**
      * Get file modification time
      *
-     * @param string|null $path
-     * - [full path to file is required]
-     * 
+     * @param string|null $path (Relative|Absolute Path)
      * @return int|bool
      */
     public static function fileTime($path = null) 
@@ -450,7 +440,7 @@ class Tame extends TameHelper{
      * 
      * @return int
      */
-    public static function calculateVolumeWeight($length = 0, $width = 0, $height = 0, ?bool $format = true, $decimal = 0.5) 
+    public static function calculateVolumeWeight($length = 0, $width = 0, $height = 0, $format = true, $decimal = 0.5) 
     {
         $value = ((float) $length * (float) $width * (float) $height) / 5000;
         return  $format ? 
@@ -473,7 +463,7 @@ class Tame extends TameHelper{
      * 
      * @return int
      */
-    public static function calculateCubicMeterWeight($length = 0, $width = 0, $height = 0, ?bool $format = true, $decimal = 0.1)
+    public static function calculateCubicMeterWeight($length = 0, $width = 0, $height = 0, $format = true, $decimal = 0.1)
     {
         $value = ((float) $length * (float) $width * (float) $height) / 1000000;
         return  $format ? 
@@ -497,7 +487,7 @@ class Tame extends TameHelper{
      * 
      * @return int
      */
-    public static function getBetweenBoxLengthAndWeightInKg($length = 0, $width = 0, $height = 0, $weight = 0, ?bool $format = true, $decimal = 0.5) 
+    public static function getBetweenBoxLengthAndWeightInKg($length = 0, $width = 0, $height = 0, $weight = 0, $format = true, $decimal = 0.5) 
     {
         $weight = (float) $weight; 
         $dimensional_weight = self::calculateVolumeWeight($length, $width, $height, $format, $decimal);
@@ -524,7 +514,7 @@ class Tame extends TameHelper{
      * 
      * @return int
      */
-    public static function getBetweenBoxLengthAndWeightInCMB($length = 0, $width = 0, $height = 0, $weight = 0, ?bool $format = true, $decimal = 0.1) 
+    public static function getBetweenBoxLengthAndWeightInCMB($length = 0, $width = 0, $height = 0, $weight = 0, $format = true, $decimal = 0.1) 
     {
         $weight = (float) $weight; 
         $dimensional_weight = self::calculateCubicMeterWeight($length, $width, $height, $format, $decimal);
@@ -542,7 +532,7 @@ class Tame extends TameHelper{
      * @param mixed $actual_weight: float|int
      * @return int
      */
-    public static function getBetweenDimensionalWeightAndWeightInKg(mixed $dimensional_weight = 0, mixed $actual_weight = 0) 
+    public static function getBetweenDimensionalWeightAndWeightInKg($dimensional_weight = 0, $actual_weight = 0) 
     {
         $actual_weight      = (float) $actual_weight;
         $dimensional_weight = (float) $dimensional_weight;
@@ -559,7 +549,7 @@ class Tame extends TameHelper{
      * @param mixed $actual_weight: float|int
      * @return int
      */
-    public static function getBetweenDimensionalWeightAndWeightInCBM(mixed $dimensional_weight = 0, mixed $actual_weight = 0) 
+    public static function getBetweenDimensionalWeightAndWeightInCBM($dimensional_weight = 0, $actual_weight = 0) 
     {
         return self::getBetweenDimensionalWeightAndWeightInKg($dimensional_weight, $actual_weight);
     } 
@@ -569,10 +559,9 @@ class Tame extends TameHelper{
      * 
      * @param float|int|string $value The value to be rounded.
      * @param float|int|string $decimal The decimal value for rounding. Default is 0.5.
-     * 
      * @return int|float
      */
-    public static function roundToDecimal(mixed $value = 0, mixed $decimal = 0.5)
+    public static function roundToDecimal($value = 0, $decimal = 0.5)
     {
         $value  = (float) $value;
         $decimal = (float) $decimal;
@@ -598,7 +587,7 @@ class Tame extends TameHelper{
      * @param  bool $reverse_order
      * @return array
      */
-    public static function setCheckbox($status = null, ?bool $reverse_order = false)
+    public static function setCheckbox($status = null, $reverse_order = false)
     {
         $order = ['on' => 1, 'off' => 0];
         if($reverse_order){
@@ -785,13 +774,12 @@ class Tame extends TameHelper{
      * Clean phone string
      *
      * @param string|null $phone
-     * 
      * @param bool $allow --- Default is true
      * - [optional] to allow int format `+` (before number)
      * 
      * @return string
      */
-    public static function cleanPhoneNumber($phone = null, ?bool $allow = true)
+    public static function cleanPhoneNumber($phone = null, $allow = true)
     {
         $phone = Str::trim($phone);
         $phone = str_replace([' ', '-'], '', $phone);
@@ -887,7 +875,6 @@ class Tame extends TameHelper{
      * Convert string to clean text without html tags
      * 
      * @param string|null $string
-     * 
      * @return string
      * - strip all tags from string content
      */
@@ -938,9 +925,7 @@ class Tame extends TameHelper{
     /**
      * File exist and not a directory
      * 
-     * @param string|null $path
-     * - [full path to file]
-     * 
+     * @param string|null $path (Relative|Absolute Path)
      * @return bool
      */
     public static function exists($path = null)
@@ -953,9 +938,7 @@ class Tame extends TameHelper{
     /**
      * Unlink File from Server
      *
-     * @param string $file
-     * - [full path to file is required]
-     * 
+     * @param string $file (Relative|Absolute Path)
      * @param string|null $restrictedfileName
      * - [optional] file name. <avatar.png>
      * 
@@ -975,9 +958,7 @@ class Tame extends TameHelper{
     /**
      * Convert json data to array|object
      * 
-     * @param string $path
-     * - [full path to destination]
-     * 
+     * @param string $path (Relative|Absolute Path)
      * @param bool $format
      * - [optional] `true` will convert to an array
      *
@@ -995,38 +976,35 @@ class Tame extends TameHelper{
     /**
      * Save Data to Path as a Json Object
      *
-     * @param  string $destination
-     * - [full path to destination]
-     * 
+     * @param  string $destination (Relative|Absolute Path)
      * @param  mixed $data
-     * @param  bool $type
+     * @param  bool $pretty (Default is true)
      * - Saveas[JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE]
      * 
-     * @return bool
+     * @return bool|int
      */
-    public static function saveDataAsJsonObject(string $destination, mixed $data, ?bool $type = true)
+    public static function saveDataAsJsonObject($destination, $data, $pretty = true)
     {
         $destination = self::stringReplacer($destination);
 
-        // Choose the JSON encoding format
-        $format = $type ? JSON_PRETTY_PRINT : JSON_UNESCAPED_UNICODE;
-
         // check or convert data to an array
-        if(!is_array(!$data)){
+        if(!is_array($data)){
             $data = Server::toArray($data);
         }
 
-        // try to read destination
-        $fopen = fopen($destination, "w");
+        // Choose JSON encoding options
+        $options = $pretty
+            ? JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE 
+            : JSON_UNESCAPED_UNICODE;
 
-        // must be a type of resource
-        if(is_resource($fopen)){
-            fwrite($fopen, json_encode($data, $format));
-            fclose($fopen); 
-            return true;
+        $json = json_encode($data, $options);
+
+        // Fail silently if encoding fails
+        if ($json === false) {
+            return false;
         }
-
-        return false;
+        
+        return File::put($destination, $json);
     }
     
     /**
@@ -1035,9 +1013,7 @@ class Tame extends TameHelper{
      * @param  string $url
      * - [url path] <https://google.com/file.pdf>
      * 
-     * @param  string $destination
-     * - [full path to destination]
-     * 
+     * @param  string $destination (Relative|Absolute Path)
      * @return string|null
      */
     public static function saveFileFromURL($url, $destination)
@@ -1076,12 +1052,8 @@ class Tame extends TameHelper{
     /**
      * Read PDF TO Browser
      *
-     * @param  string|null $path
-     * - [full path to file is required]
-     * 
-     * @param  bool $delete
-     * - [optional] Delete file from server after reading
-     * 
+     * @param  string|null $path (Relative|Absolute Path)
+     * @param  bool $delete - [optional] Delete file from server after reading
      * @return void
      */
     public static function readPDFToBrowser($path = null, $delete = false)
@@ -1128,16 +1100,14 @@ class Tame extends TameHelper{
     /**
      * Convert image to base64
      *
-     * @param string|null $path
-     * - [full path to file is required]
-     * 
-     * @param bool $useUrl
-     * - [If path should be treated as direct url]
-     * 
+     * @param string|null $path (Relative|Absolute Path)
+     * @param bool $useUrl - If path should be treated as url
      * @return null|string
      */
     public static function imageToBase64($path = null, $useUrl = false) 
     {
+        $data = null;
+
         // If url path is true
         if($useUrl){
             // Parse the URL to get the path
