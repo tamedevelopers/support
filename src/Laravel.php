@@ -92,6 +92,7 @@ class Laravel{
                     str_replace(rtrim(domain('')), '', tasset(\$path, false, false))
                 );
 
+                libxml_use_internal_errors(true);
                 if (\\Tamedevelopers\\Support\\Tame::exists(\$fullPath)) {
                     \$svg = new \\DOMDocument();
                     \$svg->load(\$fullPath);
@@ -102,6 +103,7 @@ class Laravel{
 
                     echo \$svg->saveXML(\$svg->documentElement);
                 }
+                libxml_clear_errors();
             ?>";
         });
     }
