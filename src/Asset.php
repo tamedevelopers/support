@@ -34,13 +34,13 @@ class Asset{
         // asset path
         $assetPath = ASSET_BASE_DIRECTORY;
 
-        // if asset method cache is not null
+        // if asset method cache is not bool
         // then we override the global configuration
         if(!is_bool($cache)){
             $cache = $assetPath['cache'];
         }
 
-        // if asset method path_type is not null
+        // if asset method path_type is not bool
         // then we override the global configuration
         if(!is_bool($path_type)){
             $path_type = $assetPath['path_type'];

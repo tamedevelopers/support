@@ -9,83 +9,122 @@ use Illuminate\Support\Facades\Blade;
 
 
 /**
- * Laravel Wrapper
- */ 
+ * Laravel Blade Directives Wrapper
+ * Provides custom reusable Blade directives
+ */
 class Laravel{
-
+    
+    /**
+     * Initialize blade facades
+     */
+    private static function initBladeFacades(): string
+    {
+        return "\Illuminate\Support\Facades\Blade";
+    }
 
     /**
-     * Register a Blade directive
+     * Register all directives at once
+     * Useful for quick bootstrapping inside a ServiceProvider
      *
      * @return void
      */
-    public function cssDirective()
+    public static function registerDirectives()
     {
-        Blade::directive('css', function ($expression) {
-            list($path, $class) = array_pad(explode(',', $expression, 2), 2, '');
+        self::cssDirective();
+        self::jsDirective();
+        self::svgDirective();
+        self::assetDirective();
+    }
 
-            $path = str_replace(['"', "'"], '', $path);
-            $class = str_replace(['"', "'"], '', $class);
-
-            // fullpath
-            $assets = tasset($path, true);
-
-            return "<link rel='stylesheet' type='text/css' href='{$assets}'>";
+    /**
+     * Register the @css directive
+     * Usage: @css('css/app.css')
+     *
+     * @return void
+     */
+    public static function cssDirective()
+    {
+        self::initBladeFacades()::directive('css', function ($expression) {
+            return "<?php
+                list(\$path, \$class) = array_pad(explode(',', {$expression}, 2), 2, '');
+                \$path = str_replace(['\"', \"'\"], '', \$path);
+                \$class = str_replace(['\"', \"'\"], '', \$class);
+                \$assets = tasset(\$path, true, true);
+                echo \"<link rel='stylesheet' type='text/css' href='\$assets'>\";
+            ?>";
         });
     }
     
     /**
-     * Register a Blade directive
+     * Register the @js directive
+     * Usage: @js('js/app.js')
      *
      * @return void
      */
-    public function jsDirective()
+    public static function jsDirective()
     {
-        Blade::directive('js', function ($expression) {
-            list($path, $class) = array_pad(explode(',', $expression, 2), 2, '');
-
-            $path = str_replace(['"', "'"], '', $path);
-            $class = str_replace(['"', "'"], '', $class);
-
-            // fullpath
-            $assets = tasset($path, true);
-
-            return "<script src='{$assets}'></script>";
+        self::initBladeFacades()::directive('js', function ($expression) {
+            return "<?php
+                list(\$path, \$class) = array_pad(explode(',', {$expression}, 2), 2, '');
+                \$path = str_replace(['\"', \"'\"], '', \$path);
+                \$class = str_replace(['\"', \"'\"], '', \$class);
+                \$assets = tasset(\$path, true, true);
+                echo \"<script src='\$assets'></script>\";
+            ?>";
         });
     }
     
     /**
-     * Register a Blade directive
+     * Register the @svg directive
+     * Usage: @svg('images/icon.svg', 'w-6 h-6 text-gray-500')
      *
-     * @return mixed
+     * @return void
      */
-    public function svgDirective()
+    public static function svgDirective()
     {
-        Blade::directive('svg', function ($expression) {
-            list($path, $class) = array_pad(explode(',', $expression, 2), 2, '');
-
-            $path = str_replace(['"', "'"], '', $path);
-            $class = str_replace(['"', "'"], '', $class);
-            
-            // fullpath
-            $fullPath = public_path($path);
-
-            // if file exists
-            if(Tame::exists($fullPath)){
+        self::initBladeFacades()::directive('svg', function ($expression) {
+            return "<?php
+                list(\$path, \$class) = array_pad(explode(',', {$expression}, 2), 2, '');
+                \$path = str_replace(['\"', \"'\"], '', \$path);
+                \$class = str_replace(['\"', \"'\"], '', \$class);
                 
-                $svg = new \DOMDocument();
-                $svg->load($fullPath);
+                \$fullPath = tasset(\$path, false, false);
 
-                // If a class is provided, add it to the SVG element
-                if (!empty($class)) {
-                    $svg->documentElement->setAttribute("class", $class);
+                if (\\Tamedevelopers\\Support\\Tame::exists(\$fullPath)) {
+                    \$svg = new \\DOMDocument();
+                    \$svg->load(\$fullPath);
+
+                    if (!empty(\$class)) {
+                        \$svg->documentElement->setAttribute('class', \$class);
+                    }
+
+                    echo \$svg->saveXML(\$svg->documentElement);
                 }
+            ?>";
+        });
+    }
 
-                $output = $svg->saveXML($svg->documentElement);
+    /**
+     * Register the @asset directive
+     * Allows passing extra params for cache-busting control
+     * Usage: @asset('images/logo.png', true, true)
+     *
+     * @return void
+     */
+    public static function assetDirective(): void
+    {
+        self::initBladeFacades()::directive('asset', function ($expression) {
+            return "<?php
+                \$params = explode(',', {$expression});
+                \$params = array_map(fn(\$p) => trim(\$p, '\"\\' '), \$params);
 
-                // Return the modified SVG
-                return $output;
-            };
+                // Extract parameters with defaults
+                \$asset     = \$params[0] ?? '';
+                \$cache     = isset(\$params[1]) ? filter_var(\$params[1], FILTER_VALIDATE_BOOLEAN) : true;
+                \$path_type = isset(\$params[2]) ? filter_var(\$params[2], FILTER_VALIDATE_BOOLEAN) : true;
+
+                echo tasset(\$asset, \$cache, \$path_type);
+            ?>";
         });
     }
 

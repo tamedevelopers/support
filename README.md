@@ -1,5 +1,5 @@
 # Support Package
-Support Package For PHP and Laravel
+Support Package For PHP, Laravel and PHP Frameworks
 
 [![Total Downloads](https://poser.pugx.org/tamedevelopers/support/downloads)](https://packagist.org/packages/tamedevelopers/support)
 [![Latest Stable Version](https://poser.pugx.org/tamedevelopers/support/version)](https://packagist.org/packages/tamedevelopers/support)
@@ -308,6 +308,8 @@ Support Package For PHP and Laravel
 * [Asset](#Asset)
     * [Asset config](#asset-config)
         * [Asset Cache](#asset-cache)
+* [Laravel](#laravel)
+    * [Blade Directives](#blade-directives)
 * [View](#view)
     * [Usage](#view-usage)
     * [Support](#view-support)
@@ -1325,6 +1327,39 @@ config_asset('storage/main.js', true);
 // relative url path
 config_asset('storage/style.css', true, true);
 // Output: /storage/style.css?v=111111111
+```
+
+
+## Laravel
+- Customer Laravel Blade Directives out of th box
+
+
+### Blade Directives
+- Uses the `config_asset()` Default path as an entry level for root-level folder
+
+| name   | Description/Usage           |
+|--------|-----------------------------|
+| @css   | `@css('css/app.css')`       |
+| @js    | `@js('js/app.js')`          |
+| @asset | `@asset('images/logo.png', true, true)` - Similar to `tasset()` |
+| @svg   | `@svg('images/icon.svg', 'w-6 h-6 text-gray-500')` - Takes path and custom class to be attached to the svg |
+
+
+```php
+// if you've define root access inside the public folder
+
+config_asset(
+    base_path: '/', // staring from project root[no default folder]
+    cache: true, // ability to invalidate and cache files 
+);
+```
+- `then`
+
+```html
+<div>
+    @js('public/assets/ckeditor5/build/ckeditor.js');
+    @svg('resources/svg/icon.svg');
+</div>
 ```
 
 ## View
