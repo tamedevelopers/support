@@ -88,7 +88,9 @@ class Laravel{
                 \$path = str_replace(['\"', \"'\"], '', \$path);
                 \$class = str_replace(['\"', \"'\"], '', \$class);
                 
-                \$fullPath = tasset(\$path, false, false);
+                \$fullPath = \\Tamedevelopers\\Support\\Tame::stringReplacer(
+                    str_replace(rtrim(domain('')), '', tasset(\$path, false, false))
+                );
 
                 if (\\Tamedevelopers\\Support\\Tame::exists(\$fullPath)) {
                     \$svg = new \\DOMDocument();
