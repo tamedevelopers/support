@@ -1098,6 +1098,65 @@ class Tame extends TameHelper{
     }
 
     /**
+     * Clean and minify an SVG into a single line string.
+     *
+     * @param string $svgContent Raw SVG XML string, local path, or remote URL.
+     * @param bool   $url   If true, treat $svgContent as a URL instead of a file.
+     * @param bool   $quote If true, force double quotes ("), else single quotes (').
+     * @return string|null  Cleaned one-line SVG string or null on failure.
+     */
+    public static function cleanSvg($svgContent, $url = false, $quote = true)
+    {
+        if ($url) {
+            // Fetch remote image via cURL
+            $ch = curl_init($svgContent);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4); 
+            $data = curl_exec($ch);
+
+            if (curl_errno($ch)) {
+                curl_close($ch);
+                return null; // failed request
+            }
+            curl_close($ch);
+        } else {
+            $data = FIle::get($svgContent);
+        }
+
+        if ($data === false || $data === null) {
+            return null;
+        }
+
+        // Remove XML declaration
+        $svgContent = preg_replace('/<\?xml.*?\?>/i', '', $data);
+
+        // Remove DOCTYPE
+        $svgContent = preg_replace('/<!DOCTYPE.*?>/i', '', $svgContent);
+
+        // Remove comments
+        $svgContent = preg_replace('/<!--.*?-->/s', '', $svgContent);
+
+        // Remove newlines, tabs, multiple spaces
+        $svgContent = preg_replace('/\s+/', ' ', $svgContent);
+
+        // Trim spaces between tags
+        $svgContent = preg_replace('/>\s+</', '><', $svgContent);
+
+        // Normalize quotes if needed
+        if ($quote) {
+            // Force double quotes
+            $svgContent = preg_replace("/'/", '"', $svgContent);
+        } else {
+            // Force single quotes
+            $svgContent = preg_replace('/"/', "'", $svgContent);
+        }
+
+        return trim($svgContent);
+    }
+
+    /**
      * Convert image to base64
      *
      * @param string|null $path (Relative|Absolute Path)

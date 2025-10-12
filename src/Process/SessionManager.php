@@ -129,6 +129,7 @@ final class SessionManager implements BaseSessionInterface
         $ttl = $lifetime ?? (int) ($cfg['ttl'] ?? (int) ini_get('session.gc_maxlifetime'));
 
         $handler = new RedisSessionHandler($host, $port, $timeout, $auth, $database, $prefix, $ttl);
+        
         $this->registerHandler($handler);
     }
 

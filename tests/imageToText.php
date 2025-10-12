@@ -4,6 +4,7 @@ use Tamedevelopers\Support\ImageToText;
 use Tamedevelopers\Support\Capsule\Artisan;
 
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/FilesCollection.php';
 
 // Simple example demonstrating ImageToText usage from CLI or Web.
 //
@@ -24,6 +25,7 @@ if ($isCli) {
   );
 }
 
+
 // Web mode
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lang = isset($_POST['lang']) && $_POST['lang'] !== '' ? (string)$_POST['lang'] : 'eng';
@@ -36,9 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'threshold' => ($_POST['threshold'] !== '' ? (int)$_POST['threshold'] : null),
     ];
 
+    // get uploaded file
+    $files = FilesCollection::file('image');
+
     try {
         $text = ImageToText::run([
-            'upload'     => $_FILES['image'] ?? null,
+            'upload'     => $files->first(),
             'language'   => $lang,
             'psm'        => $psm,
             'preprocess' => $preprocess,
@@ -65,7 +70,8 @@ $error = $error ?? null;
     .row { margin-bottom: .75rem; }
     label { display: inline-block; width: 130px; }
     input[type="number"] { width: 100px; }
-  </style>
+    </style>
+    <?= FilesCollection::publishJS();?>
 </head>
 <body>
   <h1>ImageToText (Tesseract OCR) Demo</h1>
@@ -77,14 +83,14 @@ $error = $error ?? null;
       <legend>Upload an image</legend>
       <div class="row">
         <label for="image">Image</label>
-        <input id="image" type="file" name="image" accept="image/*" required />
+        <input id="image" type="file" name="image" accept="image/*" required multiple/>
       </div>
       <div class="row">
         <label for="lang">Language</label>
         <input id="lang" type="text" name="lang" value="eng" placeholder="eng" />
       </div>
       <div class="row">
-        <label for="psm">PSM</label>
+        <label for="psm">PSM</label>2348184
         <input id="psm" type="number" name="psm" min="0" max="13" placeholder="6" />
       </div>
       <div class="row">

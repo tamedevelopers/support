@@ -10,7 +10,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // URL Helpers
 
 
-config_asset('/', true);
+// config_asset('/', true);
 
 $http = new Http();
 

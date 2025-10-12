@@ -405,18 +405,14 @@ if (! function_exists('tasset')) {
      * Create assets Real path url
      * 
      * @param string $asset
-     * - asset file e.g (style.css | js/main.js)
-     * 
      * @param bool|null $cache
-     * 
-     * @param bool|null $path_type
-     * -[optional] Default is true (Absolute Path)|Else -- false is (Relative path)
+     * @param bool|null $type "absolute" | "relative" (default: false → absolute)
      * 
      * @return string
      */
-    function tasset($asset = null, $cache = null, $path_type = null)
+    function tasset($asset, $cache = null, $type = null)
     {
-        return Asset::asset($asset, $cache, $path_type);
+        return Asset::asset($asset, $cache, $type);
     }
 }
 
@@ -424,24 +420,16 @@ if (! function_exists('config_asset')) {
     /**
      * Configure Assets Default Directory
      * 
-     * @param string|null $base_path
-     * - [optional] Default is `base_directory/assets`
-     * - If set and directory is not found, then we revert back to the default
-     * 
-     * @param bool $cache
-     * - [optional] Default is false
-     * - End point of link `?v=xxxxxxxx` is with cache of file time change
-     * - This will automatically tells the broswer to fetch new file if the time change
-     * - Time will only change if you make changes or modify the request file
-     * 
-     * @param bool $path_type
-     * -[optional] Default is false[Absolute Path] | true[Relative path]
+     * @param string|null $path
+     * @param bool $cache       Whether to use cache-busting (default: true)
+     * - End point of link `?v=xxxxxxxx` is with cache of file time chang
+     * @param bool $type   "absolute" | "relative" (default: false → absolute)
      * 
      * @return void
      */
-    function config_asset($base_path = null, ?bool $cache = false, ?bool $path_type = false)
+    function config_asset($path = null, $cache = false, $type = false)
     {
-        Asset::config($base_path, $cache, $path_type);
+        Asset::config($path, $cache, $type);
     }
 }
 

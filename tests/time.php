@@ -71,7 +71,7 @@ dd(
         $time->greetings(),
         $time2->greetings('now'),
         $time3->greetings('24 Jan 2025 14:00:00'),
-        TameTime()->toJs('today 9:23pm'),
+        TameTime()->toJsTimer('today 9:23pm'),
         // $time->date('last year december')->format(),
         // $time->addMonth(10)->addWeek(2)->format(),
         // $time4->addDay(20000)->ago('date'),
@@ -88,6 +88,7 @@ dd(
         $time4->format(null, 'first day of December 2008'),
         $time4->date('last year december')->diff('weeks'),
         $time4->date('today')->ago(),
+        $time4
         // $time4->setTimezone('Indian/Antananarivo')->diffBetween('last year', 'today', 'weeks'),
     ],
     

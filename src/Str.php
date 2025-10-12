@@ -819,9 +819,30 @@ class Str
      */
     public static function slug(string $value, string $separator = '-')
     {
-        $value = preg_replace('/[^a-zA-Z0-9]+/', $separator, $value);
+        // Try PHP's transliterator first (most comprehensive)
+        if (extension_loaded('intl')) {
+            $transliterated = transliterator_transliterate('Any-Latin; Latin-ASCII', $value);
+            if ($transliterated !== false) {
+                return self::trim($transliterated, $separator);
+            }
+        }
+
+        // Convert to UTF-8 if not already
+        if (!mb_detect_encoding($value, 'UTF-8', true)) {
+            $value = mb_convert_encoding($value, 'UTF-8');
+        }
+        
+        // Remove all special characters but keep letters, numbers, and Chinese characters
+        $value = preg_replace('/[^\p{L}\p{N}\s]/u', '', $value);
+        
+        // Replace whitespace with separator
+        $value = preg_replace('/\s+/u', $separator, $value);
+        
+        // Trim separators from start and end
         $value = self::trim($value, $separator);
-        $value = self::lower($value);
+        
+        // Convert to lowercase
+        $value = mb_strtolower($value, 'UTF-8');
 
         return $value;
     }

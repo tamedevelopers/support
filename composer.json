@@ -48,5 +48,8 @@
         },
         "classmap": ["src/*"]
     },
-    "minimum-stability": "stable"
+    "minimum-stability": "stable",
+    "require-dev": {
+        "predis/predis": "^3.2"
+    }
 }

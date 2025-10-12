@@ -16,14 +16,10 @@ class Asset{
      * Create assets Real path url
      * 
      * @param string $asset
-     * - asset file e.g (style.css | js/main.js)
-     * 
      * @param bool|null $cache
-     * @param bool|null $path_type
-     * 
-     * @return string
+     * @param bool|null $type "absolute" | "relative" (default: false → absolute)
      */
-    public static function asset(?string $asset = null, $cache = null, $path_type = null)
+    public static function asset($asset = null, $cache = null, $type = null): string
     {
         // if coniguration has not been used in the global space
         // then we call to define paths for us
@@ -34,16 +30,14 @@ class Asset{
         // asset path
         $assetPath = ASSET_BASE_DIRECTORY;
 
-        // if asset method cache is not bool
-        // then we override the global configuration
+        // Only override global config, when <cache> it's not boolean
         if(!is_bool($cache)){
             $cache = $assetPath['cache'];
         }
 
-        // if asset method path_type is not bool
-        // then we override the global configuration
-        if(!is_bool($path_type)){
-            $path_type = $assetPath['path_type'];
+        // Only override global config, when <type> it's not boolean
+        if(!is_bool($type)){
+            $type = $assetPath['type'];
         }
 
         // trim
@@ -58,15 +52,12 @@ class Asset{
         $cacheTimeAppend = null;
 
         // cache allow from self method
-        if($cache){
-            if(!empty($asset)){
-                $cacheTimeAppend = self::getFiletime($file_server) ?? null;
-            }
+        if($cache && !empty($asset)){
+            $cacheTimeAppend = self::getFiletime($file_server) ?? null;
         }
-
-        // if `$path_type` is true, then we'll use relative path
-        if($path_type){
-
+        
+        // Using <relative path> when true
+        if($type === true){
             // replace domain path
             $domain = Str::replace($assetPath['removeDomain'], '', $file_domain);
             $domain = ltrim($domain, '/');
@@ -74,43 +65,42 @@ class Asset{
             return "/{$domain}{$cacheTimeAppend}";
         }
 
-        // Using absolute path
+        // Using <absolute path>
         return "{$file_domain}{$cacheTimeAppend}";
     }
     
     /**
      * Configure Assets Default Directory
      * 
-     * @param string $base_path
-     * - [optional] Default is `base_directory/assets`
-     * - If set and directory is not found, then we revert back to the default
-     * 
-     * @param bool $cache
-     * - [optional] Default is true
-     * - End point of link `?v=xxxxxxxx` is with cache of file time change
-     * - This will automatically tells the broswer to fetch new file if the time change
-     * - Time will only change if you make changes or modify the request file
-     * 
-     * @param string $path_type
-     * -[optional] Default is false[Absolute Path] | true[Relative path]
-     * 
-     * @return void
+     * @param string|null $path
+     * @param bool $cache       Whether to use cache-busting (default: true)
+     * - End point of link `?v=xxxxxxxx` is with cache of file time chang
+     * @param bool $type   "absolute" | "relative" (default: false → absolute)
      */
-    public static function config(?string $base_path = null, ?bool $cache = false, $path_type = false) 
+    public static function config($path = null, $cache = false, $type = false): void
     {
         // if not defined
         if(!defined('ASSET_BASE_DIRECTORY')){
             // url helper class
-            $urlFromhelper = HttpRequest::url();
+            $urlFromhelper = HttpRequest::host();
+
+            // we don't care the configured url address
+            // prepare a fallback of using combination of full url
+            if(empty($urlFromhelper)){
+                $urlFromhelper = HttpRequest::url();
+            }
+
+            // clean http from url
+            $urlFromhelper = Str::replace(HttpRequest::http(), '', $urlFromhelper);
 
             // if base path is set
-            if(!empty($base_path)){
+            if(!empty($path)){
 
                 // - Trim forward slash from left and right
-                $base_path = Str::trim($base_path, '/');
+                $path = Str::trim($path, '/');
 
                 // base for url path
-                $baseForUrlPath = $base_path;
+                $baseForUrlPath = $path;
 
                 // check if accessed from default ip:address
                 if(HttpRequest::isIpAccessedVia127Port()){
@@ -123,10 +113,11 @@ class Asset{
 
             define('ASSET_BASE_DIRECTORY', [
                 'cache'     => $cache,
-                'path_type' => $path_type,
-                'server'    => self::formatWithBaseDirectory($base_path),
+                'type'      => $type,
+                'path'      => $path,
+                'server'    => self::formatWithBaseDirectory($path),
                 'domain'    => rtrim(
-                    self::cleanServerPath($urlFromhelper), 
+                    self::cleanServerPath(HttpRequest::http() . $urlFromhelper), 
                     '/'
                 ),
                 'removeDomain' => HttpRequest::http() . HttpRequest::host()
@@ -138,7 +129,6 @@ class Asset{
      * Get Last Modification of File
      * 
      * @param string $file_path
-     * 
      * @return int|false
      */
     private static function getFiletime(?string $file_path = null) 
