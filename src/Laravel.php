@@ -46,7 +46,12 @@ class Laravel{
     {
         self::initBladeFacades()::directive('css', function ($expression) {
             return "<?php
-                list(\$path, \$class) = array_pad(explode(',', {$expression}, 2), 2, '');
+                // Put Blade expression into an array so PHP parses arguments correctly
+                \$arguments = [{$expression}];
+
+                // Normalize args and ensure two elements
+                list(\$path, \$class) = array_pad(\$arguments, 2, '');
+                
                 \$path = str_replace(['\"', \"'\"], '', \$path);
                 \$class = str_replace(['\"', \"'\"], '', \$class);
                 \$assets = tasset(\$path, true, true);
@@ -65,7 +70,12 @@ class Laravel{
     {
         self::initBladeFacades()::directive('js', function ($expression) {
             return "<?php
-                list(\$path, \$class) = array_pad(explode(',', {$expression}, 2), 2, '');
+                // Put Blade expression into an array so PHP parses arguments correctly
+                \$arguments = [{$expression}];
+
+                // Normalize args and ensure two elements
+                list(\$path, \$class) = array_pad(\$arguments, 2, '');
+
                 \$path = str_replace(['\"', \"'\"], '', \$path);
                 \$class = str_replace(['\"', \"'\"], '', \$class);
                 \$assets = tasset(\$path, true, true);
@@ -84,10 +94,16 @@ class Laravel{
     {
         self::initBladeFacades()::directive('svg', function ($expression) {
             return "<?php
-                list(\$path, \$class) = array_pad(explode(',', {$expression}, 2), 2, '');
-                \$path = str_replace(['\"', \"'\"], '', \$path);
-                \$class = str_replace(['\"', \"'\"], '', \$class);
+                // Put Blade expression into an array so PHP parses arguments correctly
+                \$arguments = [{$expression}];
+
+                // Normalize args and ensure two elements
+                list(\$path, \$class) = array_pad(\$arguments, 2, '');
                 
+                // Clean quotes/whitespace
+                \$path = trim(str_replace(['\"', \"'\"], '', (string)\$path));
+                \$class = trim(str_replace(['\"', \"'\"], '', (string)\$class));
+
                 \$fullPath = \\Tamedevelopers\\Support\\Tame::stringReplacer(
                     str_replace(rtrim(domain('')), '', tasset(\$path, false, false))
                 );

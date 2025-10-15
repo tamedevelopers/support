@@ -253,6 +253,16 @@ class HttpRequest implements RequestInterface
     }
 
     /**
+     * Is IP accessed via private LAN port in browser
+     * 
+     * @return bool
+     */
+    public static function isIpAccessedViaPrivateLanPort()
+    {
+        return self::isIpAccessedVia127Port();
+    }
+
+    /**
      * Is IP accessed via 127.0.0.1 port in browser
      * 
      * @return bool

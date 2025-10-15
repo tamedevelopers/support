@@ -81,17 +81,16 @@ class Asset{
     {
         // if not defined
         if(!defined('ASSET_BASE_DIRECTORY')){
-            // url helper class
-            $urlFromhelper = HttpRequest::host();
 
-            // we don't care the configured url address
-            // prepare a fallback of using combination of full url
-            if(empty($urlFromhelper)){
-                $urlFromhelper = HttpRequest::url();
-            }
+            // http
+            $http = HttpRequest::http();
+            $host = HttpRequest::host();
+
+            // url helper class
+            $urlFromhelper = HttpRequest::url();
 
             // clean http from url
-            $urlFromhelper = Str::replace(HttpRequest::http(), '', $urlFromhelper);
+            $urlFromhelper = Str::replace($http, '', $urlFromhelper);
 
             // if base path is set
             if(!empty($path)){
@@ -103,7 +102,7 @@ class Asset{
                 $baseForUrlPath = $path;
 
                 // check if accessed from default ip:address
-                if(HttpRequest::isIpAccessedVia127Port()){
+                if(HttpRequest::isIpAccessedViaPrivateLanPort()){
                     $baseForUrlPath = '';
                 }
 
@@ -117,10 +116,10 @@ class Asset{
                 'path'      => $path,
                 'server'    => self::formatWithBaseDirectory($path),
                 'domain'    => rtrim(
-                    self::cleanServerPath(HttpRequest::http() . $urlFromhelper), 
+                    self::cleanServerPath("{$http}{$urlFromhelper}"), 
                     '/'
                 ),
-                'removeDomain' => HttpRequest::http() . HttpRequest::host()
+                'removeDomain' => "{$http}{$host}"
             ]);
         }
     }

@@ -173,7 +173,7 @@ class File {
     }
 
     /**
-     * Get the file's basename.
+     * Get the file's name.
      *
      * @param string $path
      * @return string
@@ -181,6 +181,17 @@ class File {
     public static function name(string $path): string
     {
         return pathinfo($path, PATHINFO_FILENAME);
+    }
+
+    /**
+     * Get the file's basename.
+     *
+     * @param string $path
+     * @return string
+     */
+    public static function base(string $path): string
+    {
+        return basename($path);
     }
 
     /**

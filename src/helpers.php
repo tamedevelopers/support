@@ -134,6 +134,24 @@ if (! function_exists('tcollect')) {
     }
 }
 
+if (! function_exists('toptional')) {
+    /**
+     * Optional Class
+     *
+     * @param array|object|null $items 
+     * 
+     * @return \Tamedevelopers\Support\Collections\Collection|mixed
+     */
+    function toptional($items = [])
+    {
+        if(!is_array($items) && !is_null($items)){
+            $items = Server::toArray($items);
+        }
+
+        return new Collection($items);
+    }
+}
+
 if (! function_exists('tmanager')) {
     /**
      * Manager Class

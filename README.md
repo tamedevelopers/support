@@ -137,6 +137,7 @@ Support Package For PHP, Laravel and PHP Frameworks
     * [lastModified](#file-lastmodified) 
     * [extension](#file-extension) 
     * [name](#file-name) 
+    * [base](#file-base) 
     * [mimeType](#file-mimetype) 
     * [type](#file-type) 
     * [permissions](#file-permissions)

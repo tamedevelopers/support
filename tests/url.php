@@ -10,7 +10,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // URL Helpers
 
 
-// config_asset('/', true);
+config_asset('/', true);
 
 $http = new Http();
 
@@ -35,7 +35,7 @@ dump(
       'Host: ' . $http->host(),
       'Path: ' . $http->path(),
       'Is AJAX: ' . ($http->isAjax() ? 'yes' : 'no'),
-      'Accessed via 127.0.0.1: ' . ($http->isIpAccessedVia127Port() ? 'yes' : 'no'),
+      'Accessed via Private Lan - 127.0.0.1: ' . ($http->isIpAccessedViaPrivateLanPort() ? 'yes' : 'no'),
     ],
 
     [
