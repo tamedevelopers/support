@@ -47,9 +47,9 @@ class Utility
 
     /**
      * Text to analyze/manipulate.
-     * @var string
+     * @var string|null
      */
-    protected string $text;
+    protected $text;
 
     /**
      * Configuration for unit text labels and behavior.

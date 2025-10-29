@@ -149,6 +149,17 @@ class Tame extends TameHelper{
     }
 
     /**
+     * Alias for `urlExist` method
+     *
+     * @param  string $url
+     * @return bool
+     */
+    public static function urlExists($url)
+    {
+        return self::urlExist($url);
+    }
+
+    /**
      * Check if the internet connection is available
      *
      * @param string|null $host The host to check (default: '8.8.8.8' - Google's DNS).
@@ -1185,6 +1196,99 @@ class Tame extends TameHelper{
         if($data){
             return 'data:image/' . $type . ';base64,' . base64_encode($data);
         }
+    }
+
+    /**
+     * Convert image or SVG content into an SVG wrapper
+     *
+     * @param string|null $path (File path | URL | SVG content)
+     * @param string|null $saveAs - If provided, saves SVG to this file path
+     * @param bool $useUrl - If path should be treated as URL
+     * @param bool $compress - Compress the image
+     * @return null|string
+     */
+    public static function imageToSVG($path = null, $saveAs = true, $useUrl = false, $compress = true)
+    {
+        $svg = null;
+        $data = null;
+        $type = null;
+
+        // Get file data
+        if ($useUrl) {
+            $parse = parse_url($path, PHP_URL_PATH);
+            $type  = pathinfo($parse, PATHINFO_EXTENSION);
+            $data = File::get($path);
+        } else {
+            $path = self::stringReplacer($path);
+            if (self::exists($path)) {
+                $type = pathinfo($path, PATHINFO_EXTENSION);
+                $data = File::get($path);
+            }
+        }
+
+        // --- Advanced Compression ---
+        if ($compress && $data && in_array($type, ['jpg', 'jpeg', 'png'])) {
+            $img = @imagecreatefromstring($data);
+            if ($img) {
+                ob_start();
+
+                if (in_array($type, ['jpg', 'jpeg'])) {
+                    // Progressive JPEG with smart recompression
+                    imageinterlace($img, true); // progressive scan
+                    imagejpeg($img, null, 60); // quality (lower = smaller)
+                } elseif ($type === 'png') {
+                    // Convert truecolor PNG to palette-based (reduces size a lot)
+                    imagepalettetotruecolor($img);
+                    imagetruecolortopalette($img, true, 128);
+                    imagesavealpha($img, true);
+                    imagepng($img, null, 9); // max compression
+                }
+
+                $data = ob_get_clean();
+                imagedestroy($img);
+            }
+        }
+
+        // If file exists and is already an SVG
+        if ($type === 'svg' && $data) {
+            $svg = $data;
+        }
+
+        //  If not SVG, wrap it inside an SVG <image>
+        if ($data && $type !== 'svg') {
+            $mime = File::mimeType($path);
+
+            // Attempt to get image size
+            $size = @getimagesizefromstring($data);
+            $w = $size[0] ?? 100;
+            $h = $size[1] ?? 100;
+
+            // Base64 embed inside SVG
+            $b64 = base64_encode($data);
+            $svg = '<?xml version="1.0" encoding="UTF-8"?>' .
+                '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ' .
+                'width="' . $w . '" height="' . $h . '" viewBox="0 0 ' . $w . ' ' . $h . '">' .
+                '<image x="0" y="0" width="100%" height="100%" href="data:' . $mime . ';base64,' . $b64 . '"/>' .
+                '</svg>';
+        }
+
+        // Save to file if requested
+        if ($svg && $saveAs) {
+            $fileName = File::name($path);
+            $filePath = $saveAs === true ? $path : $saveAs;
+
+            $fullPath = !File::isDirectory($filePath)
+                        ? dirname($path) . "/{$fileName}.svg"
+                        : trim($filePath, '/') . "/{$fileName}.svg";
+            
+            $saveAs = self::stringReplacer($fullPath);
+
+            if(File::put($saveAs, $svg)){
+                return $saveAs;
+            }
+        }
+
+        return $svg ?: null;
     }
     
     /**

@@ -15,9 +15,10 @@ class TameHelper
      * so for large batches, consider running in background or using emailPing() for speed.
      *
      * @param array $emails Array of email addresses to verify
+     * @param bool $disposable Verify disposable emails? Default: true
      * @return array Associative array of email [verified|unverified|runtime]
      */
-    public static function batchDeepEmailPing(array $emails)
+    public static function batchDeepEmailPing(array $emails, $disposable = true)
     {
         $correct    = 'verified';
         $incorrect  = 'unverified';
@@ -29,7 +30,7 @@ class TameHelper
         ];
 
         foreach ($emails as $email) {
-            $valid = self::deepEmailPing($email, true);
+            $valid = self::deepEmailPing($email, $disposable);
             if ($valid) {
                 $results[$correct][] = $email;
             } else {

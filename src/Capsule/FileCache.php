@@ -6,14 +6,21 @@ namespace Tamedevelopers\Support\Capsule;
 
 use Tamedevelopers\Support\Capsule\File;
 
-class FileCache{    
+class FileCache
+{    
+    /**
+     * Cache storage path
+     *
+     * @var string|null
+     */
+    protected static ?string $cachePath = null;
 
     /**
-     * cachePath
+     * Enable or disable serialization mode for complex objects.
      *
-     * @var mixed
+     * @var bool
      */
-    public static $cachePath;
+    protected static bool $serializeMode = false;
 
     /**
      * Set the cache storage path.
@@ -24,14 +31,35 @@ class FileCache{
     public static function setCachePath(string $path = "cache"): void
     {
         $path = storage_path($path);
-
         File::makeDirectory($path, 0777);
-
         self::$cachePath = rtrim($path, '/\\');
     }
 
     /**
-     * Put an item in the cache with an optional expiration time.
+     * Ensure cache path is initialized.
+     *
+     * @return void
+     */
+    protected static function ensurePathInitialized(): void
+    {
+        if (!self::$cachePath) {
+            self::setCachePath('cache');
+        }
+    }
+
+    /**
+     * Enable or disable serialization mode.
+     *
+     * @param bool $enable
+     * @return void
+     */
+    public static function serializeMode(bool $enable = true): void
+    {
+        self::$serializeMode = $enable;
+    }
+
+    /**
+     * Store an item in the cache.
      *
      * @param string $key
      * @param mixed $value
@@ -40,74 +68,113 @@ class FileCache{
      */
     public static function put(string $key, $value, ?int $expirationTime = 604800): void
     {
+        self::ensurePathInitialized();
+
         $cachePath = self::getCachePath($key);
+
+        // Handle serialization if enabled
+        $value = self::$serializeMode
+            ? base64_encode(serialize($value))
+            : $value;
 
         $data = [
             'value' => $value,
             'expires_at' => $expirationTime !== null ? time() + $expirationTime : null,
         ];
 
-        File::put($cachePath, json_encode($data));
+        $json = json_encode($data);
+
+        // Atomic write
+        $tempFile = $cachePath . '.tmp';
+        File::put($tempFile, $json);
+        rename($tempFile, $cachePath);
     }
 
     /**
-     * Retrieve an item from the cache if it exists and has not expired.
+     * Retrieve an item from cache.
      *
      * @param string $key
      * @return mixed|null
      */
     public static function get(string $key)
     {
+        self::ensurePathInitialized();
+
         $cachePath = self::getCachePath($key);
-        
-        if (File::exists($cachePath)) {
-            $data = json_decode(File::get($cachePath), true);
 
-            if (self::expired($key)) {
-                self::forget($key);
-                return null;
-            }
-
-            return $data['value'];
+        if (!File::exists($cachePath)) {
+            return null;
         }
 
-        return null;
+        $data = json_decode(File::get($cachePath), true);
+
+        if (!is_array($data) || self::expired($key)) {
+            self::forget($key);
+            return null;
+        }
+
+        $value = $data['value'];
+
+        // Deserialize if enabled
+        if (self::$serializeMode) {
+            $value = unserialize(base64_decode($value));
+        }
+
+        return $value;
     }
 
     /**
-     * Retrieve an item from the cache if it exists
+     * Retrieve an item or compute and cache it.
+     *
+     * @param string $key
+     * @param int $seconds
+     * @param callable $callback
+     * @return mixed
+     */
+    public static function remember(string $key, int $seconds, callable $callback)
+    {
+        if (self::has($key)) {
+            return self::get($key);
+        }
+
+        $value = $callback();
+        self::put($key, $value, $seconds);
+        return $value;
+    }
+
+    /**
+     * Check if a cache file exists (ignoring expiration).
      *
      * @param string $key
      * @return bool
      */
-    public static function exists(string $key)
+    public static function exists(string $key): bool
     {   
-        $key = self::getCachePath($key);
-
-        return File::exists($key);
+        self::ensurePathInitialized();
+        return File::exists(self::getCachePath($key));
     }
 
     /**
-     * Check if an item exists in the cache and has not expired.
+     * Check if a cache key exists and has not expired.
      *
      * @param string $key
      * @return bool
      */
     public static function has(string $key): bool
     {
+        self::ensurePathInitialized();
+
         $cachePath = self::getCachePath($key);
 
-        if (File::exists($cachePath)) {
-            $data = json_decode(File::get($cachePath), true);
-
-            return !self::expired($key);
+        if (!File::exists($cachePath)) {
+            return false;
         }
 
-        return false;
+        return !self::expired($key);
     }
 
     /**
-     * Check if the cached data associated with the key has expired.
+     * Determine if a cached item has expired.
      *
      * @param string $key
      * @return bool
@@ -116,25 +183,56 @@ class FileCache{
     {
         $cachePath = self::getCachePath($key);
 
-        if (File::exists($cachePath)) {
-            $data = json_decode(File::get($cachePath), true);
-
-            $expiresAt = $data['expires_at'] ?? null;
-
-            return $expiresAt !== null && $expiresAt < time();
+        if (!File::exists($cachePath)) {
+            return false;
         }
 
-        return false;
+        $data = json_decode(File::get($cachePath), true);
+        $expiresAt = $data['expires_at'] ?? null;
+
+        return $expiresAt !== null && $expiresAt < time();
     }
 
     /**
-     * Remove an item from the cache.
+     * Increment a numeric cache value.
+     *
+     * @param string $key
+     * @param int $value
+     * @return int
+     */
+    public static function increment(string $key, int $value = 1): int
+    {
+        $current = (int) self::get($key);
+        $new = $current + $value;
+        self::put($key, $new);
+        return $new;
+    }
+
+    /**
+     * Decrement a numeric cache value.
+     *
+     * @param string $key
+     * @param int $value
+     * @return int
+     */
+    public static function decrement(string $key, int $value = 1): int
+    {
+        $current = (int) self::get($key);
+        $new = $current - $value;
+        self::put($key, $new);
+        return $new;
+    }
+
+    /**
+     * Remove a specific cache key.
      *
      * @param string $key
      * @return void
      */
     public static function forget(string $key): void
     {
+        self::ensurePathInitialized();
+
         $cachePath = self::getCachePath($key);
 
         if (File::exists($cachePath)) {
@@ -143,19 +241,97 @@ class FileCache{
     }
 
     /**
-     * Clear all items from the cache.
+     * Clear all cache files.
      *
      * @return void
      */
     public static function clear(): void
     {
-        $files = glob(self::$cachePath . '/*.cache');
+        self::ensurePathInitialized();
+
+        $files = glob(self::$cachePath . '/*.cache') ?: [];
 
         foreach ($files as $file) {
             if (File::exists($file)) {
                 unlink($file);
             }
         }
+    }
+
+    /**
+     * Clear only expired cache files.
+     *
+     * @return void
+     */
+    public static function clearExpired(): void
+    {
+        self::ensurePathInitialized();
+
+        $files = glob(self::$cachePath . '/*.cache') ?: [];
+
+        foreach ($files as $file) {
+            if (!File::exists($file)) continue;
+
+            $data = json_decode(File::get($file), true);
+            $expiresAt = $data['expires_at'] ?? null;
+
+            if ($expiresAt !== null && $expiresAt < time()) {
+                unlink($file);
+            }
+        }
+    }
+
+    /**
+     * Occasionally clear expired cache automatically (Garbage Collection).
+     *
+     * @return void
+     */
+    public static function gc(): void
+    {
+        // 1 in 50 chance of triggering cleanup
+        if (mt_rand(1, 50) === 1) {
+            self::clearExpired();
+        }
+    }
+
+    /**
+     * Get all cache filenames.
+     *
+     * @return array
+     */
+    public static function all(): array
+    {
+        self::ensurePathInitialized();
+        return array_map('basename', glob(self::$cachePath . '/*.cache') ?: []);
+    }
+
+    /**
+     * Get cache stats: total count, expired count, and total size.
+     *
+     * @return array
+     */
+    public static function stats(): array
+    {
+        self::ensurePathInitialized();
+
+        $files = glob(self::$cachePath . '/*.cache') ?: [];
+        $count = count($files);
+        $expired = 0;
+        $totalSize = 0;
+
+        foreach ($files as $file) {
+            $totalSize += filesize($file);
+            $data = json_decode(File::get($file), true);
+            if (($data['expires_at'] ?? 0) < time()) {
+                $expired++;
+            }
+        }
+
+        return [
+            'count' => $count,
+            'expired' => $expired,
+            'total_size_kb' => round($totalSize / 1024, 2),
+        ];
     }
 
     /**
@@ -166,6 +342,7 @@ class FileCache{
      */
     protected static function getCachePath(string $key): string
     {
+        self::ensurePathInitialized();
         return self::$cachePath . '/' . md5($key) . '.cache';
     }
 }

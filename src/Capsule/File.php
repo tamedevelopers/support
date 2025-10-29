@@ -202,7 +202,167 @@ class File {
      */
     public static function mimeType(string $path): string|false
     {
-        return mime_content_type($path);
+        // Check if path is a URL
+        $isUrl = filter_var($path, FILTER_VALIDATE_URL);
+
+        [$extension, $mime] = [
+            pathinfo($path, PATHINFO_EXTENSION),
+            !$isUrl && self::isFile($path) ? (@mime_content_type($path) ?: false) : false
+        ];
+        
+        // if mime is not found, try to guess it from the extension
+        if ($mime === false) {
+            $mimes = [
+                // ====== IMAGES ======
+                'jpg'   => 'image/jpeg',
+                'jpeg'  => 'image/jpeg',
+                'jpe'   => 'image/jpeg',
+                'png'   => 'image/png',
+                'gif'   => 'image/gif',
+                'bmp'   => 'image/bmp',
+                'webp'  => 'image/webp',
+                'avif'  => 'image/avif',
+                'heif'  => 'image/heif',
+                'heic'  => 'image/heic',
+                'svg'   => 'image/svg+xml',
+                'svgz'  => 'image/svg+xml',
+                'ico'   => 'image/x-icon',
+                'cur'   => 'image/x-icon',
+                'tif'   => 'image/tiff',
+                'tiff'  => 'image/tiff',
+                'psd'   => 'image/vnd.adobe.photoshop',
+                'ai'    => 'application/postscript',
+                'eps'   => 'application/postscript',
+                'pdf'   => 'application/pdf',
+                'apng'  => 'image/apng',
+                'jxr'   => 'image/jxr',
+                'wdp'   => 'image/vnd.ms-photo',
+                'exr'   => 'image/x-exr',
+                'hdr'   => 'image/vnd.radiance',
+
+                // ====== DOCUMENTS ======
+                'txt'   => 'text/plain',
+                'csv'   => 'text/csv',
+                'tsv'   => 'text/tab-separated-values',
+                'log'   => 'text/plain',
+                'rtf'   => 'application/rtf',
+                'doc'   => 'application/msword',
+                'dot'   => 'application/msword',
+                'docx'  => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'dotx'  => 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+                'odt'   => 'application/vnd.oasis.opendocument.text',
+                'ott'   => 'application/vnd.oasis.opendocument.text-template',
+                'xls'   => 'application/vnd.ms-excel',
+                'xlt'   => 'application/vnd.ms-excel',
+                'xlsx'  => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'xltx'  => 'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
+                'ods'   => 'application/vnd.oasis.opendocument.spreadsheet',
+                'odp'   => 'application/vnd.oasis.opendocument.presentation',
+                'ppt'   => 'application/vnd.ms-powerpoint',
+                'pptx'  => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'ppsx'  => 'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
+                'potx'  => 'application/vnd.openxmlformats-officedocument.presentationml.template',
+                'xml'   => 'application/xml',
+                'html'  => 'text/html',
+                'htm'   => 'text/html',
+                'json'  => 'application/json',
+                'yaml'  => 'application/x-yaml',
+                'yml'   => 'application/x-yaml',
+                'md'    => 'text/markdown',
+
+                // ====== ARCHIVES ======
+                'zip'   => 'application/zip',
+                'rar'   => 'application/x-rar-compressed',
+                'tar'   => 'application/x-tar',
+                'gz'    => 'application/gzip',
+                'tgz'   => 'application/gzip',
+                'bz2'   => 'application/x-bzip2',
+                '7z'    => 'application/x-7z-compressed',
+                'xz'    => 'application/x-xz',
+                'iso'   => 'application/x-iso9660-image',
+
+                // ====== AUDIO ======
+                'mp3'   => 'audio/mpeg',
+                'wav'   => 'audio/wav',
+                'ogg'   => 'audio/ogg',
+                'oga'   => 'audio/ogg',
+                'flac'  => 'audio/flac',
+                'aac'   => 'audio/aac',
+                'm4a'   => 'audio/mp4',
+                'opus'  => 'audio/opus',
+                'mid'   => 'audio/midi',
+                'midi'  => 'audio/midi',
+
+                // ====== VIDEO ======
+                'mp4'   => 'video/mp4',
+                'm4v'   => 'video/x-m4v',
+                'mov'   => 'video/quicktime',
+                'wmv'   => 'video/x-ms-wmv',
+                'avi'   => 'video/x-msvideo',
+                'flv'   => 'video/x-flv',
+                'webm'  => 'video/webm',
+                'mkv'   => 'video/x-matroska',
+                '3gp'   => 'video/3gpp',
+                '3g2'   => 'video/3gpp2',
+
+                // ====== CODE / WEB ======
+                'php'   => 'application/x-httpd-php',
+                'js'    => 'application/javascript',
+                'mjs'   => 'application/javascript',
+                'jsx'   => 'text/jsx',
+                'ts'    => 'application/typescript',
+                'tsx'   => 'text/tsx',
+                'css'   => 'text/css',
+                'scss'  => 'text/x-scss',
+                'less'  => 'text/x-less',
+                'csv'   => 'text/csv',
+                'conf'  => 'text/plain',
+                'ini'   => 'text/plain',
+                'env'   => 'text/plain',
+
+                // ====== FONTS ======
+                'woff'  => 'font/woff',
+                'woff2' => 'font/woff2',
+                'ttf'   => 'font/ttf',
+                'otf'   => 'font/otf',
+                'eot'   => 'application/vnd.ms-fontobject',
+
+                // ====== EXECUTABLES / BINARIES ======
+                'exe'   => 'application/x-msdownload',
+                'dll'   => 'application/x-msdownload',
+                'bin'   => 'application/octet-stream',
+                'dat'   => 'application/octet-stream',
+                'msi'   => 'application/x-msi',
+                'apk'   => 'application/vnd.android.package-archive',
+                'deb'   => 'application/vnd.debian.binary-package',
+                'rpm'   => 'application/x-rpm',
+                'dmg'   => 'application/x-apple-diskimage',
+
+                // ====== TEXT / SCRIPTING ======
+                'sh'    => 'application/x-sh',
+                'bat'   => 'application/x-msdos-program',
+                'cmd'   => 'application/cmd',
+                'py'    => 'text/x-python',
+                'rb'    => 'text/x-ruby',
+                'go'    => 'text/x-go',
+                'java'  => 'text/x-java-source',
+                'c'     => 'text/x-c',
+                'cpp'   => 'text/x-c++',
+                'h'     => 'text/x-c',
+                'cs'    => 'text/x-csharp',
+
+                // ====== OTHER ======
+                'bak'   => 'application/octet-stream',
+                'lock'  => 'text/plain',
+                'sql'   => 'application/sql',
+                'db'    => 'application/x-sqlite3',
+                'sqlite'=> 'application/x-sqlite3',
+            ];
+
+            $mime = $mimes[$extension] ?? false;
+        }
+
+        return $mime;
     }
 
     /**

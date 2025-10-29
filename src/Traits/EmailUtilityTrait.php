@@ -209,6 +209,81 @@ trait EmailUtilityTrait{
         return self::isDomainIn($email, array_keys(self::$providers['focused']));
     }
 
+    public function getMailboxType(string $email): string|null
+    {
+        if ($this->isGmail($email)) return 'Gmail';
+        if ($this->isOutlook($email)) return 'Outlook';
+        if ($this->isIcloud($email)) return 'iCloud';
+        if ($this->isZoho($email)) return 'Zoho';
+        if ($this->isYandex($email)) return 'Yandex';
+
+        if($this->isProtonmail($email) 
+            || $this->isMailboxOrg($email) 
+            || $this->isPosteo($email) 
+            || $this->isRunbox($email) 
+            || $this->isStartmail($email) 
+            || $this->isStartmail($email) 
+            || $this->isGmx($email)){
+            return 'Privacy Mail';
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve mailbox provider based on MX host patterns
+     */
+    public function getMailboxTypeFromMx($mxHost = null): string|null
+    {
+        $patterns = [
+            // Microsoft / Outlook / Office365
+            'hotmail|outlook|office365|protection\.outlook' => 'Outlook',
+            'microsoft\.com'                        => 'Outlook',
+
+            // Google Workspace / Gmail
+            'google(mail)?\.com|aspmx\.l\.google\.com' => 'Gmail',
+
+            // Yahoo / AOL / Verizon
+            'yahoo|ymail|rocketmail|aol|verizon'    => 'Yahoo',
+
+            // Zoho Mail
+            'zoho(mail)?\.(com|in|eu)'              => 'Zoho',
+
+            // iCloud / Apple
+            'icloud\.com|me\.com|mac\.com'          => 'iCloud',
+
+            // Amazon SES
+            'amazonaws\.com|amazonses\.com'         => 'Amazon SES',
+
+            // Proton / Tutanota / Fastmail
+            'protonmail|tutanota|fastmail|mailbox\.org|mailfence' => 'Privacy Mail',
+
+            // Yandex / Mail.ru
+            'yandex|mail\.ru|rambler\.ru'           => 'Yandex',
+
+            // Transactional
+            'sendgrid|mailgun|postmarkapp|sparkpost|mailjet|mandrill|sendinblue|pepipost' => 'Transactional',
+
+            // Hosting
+            'bluehost|hostgator|godaddy|secureserver|siteground|ionos|ovh|dreamhost|namecheap|namesilio' => 'Webmail',
+
+            // Cloud / Security gateways
+            'proofpoint|mimecast|barracudanetworks|messagelabs|trendmicro|sophos|cloudflare' => 'Security Gateway',
+        ];
+
+        foreach ($patterns as $regex => $type) {
+            if (@preg_match("/{$regex}/i", $mxHost)) {
+                return $type;
+            }
+        }
+
+        if(!empty($mxHost)){
+            return 'Professional';
+        }
+
+        return 'Unknown Mail';
+    }
+
     /**
      * Load providers data child elements
      * @return void
