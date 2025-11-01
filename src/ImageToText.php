@@ -181,7 +181,7 @@ class ImageToText
 
         } elseif (is_string($config['source']) && $config['source'] !== '') {
             // Validate source file
-            if (!is_readable($config['source'])) {
+            if (!@is_readable($config['source'])) {
                 throw new CustomException('Source image is not readable: ' . $config['source']);
             }
 
@@ -255,7 +255,7 @@ class ImageToText
      */
     private static function ocrspaceEngine(string $imagePath, string $language, string $apiKey): string
     {
-        if (!is_readable($imagePath)) {
+        if (!@is_readable($imagePath)) {
             throw new CustomException('OCR input not readable.');
         }
 

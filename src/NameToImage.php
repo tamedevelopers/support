@@ -352,7 +352,7 @@ class NameToImage
     private static function resolveFontPath(?string $path, string $weight = 'bold'): ?string
     {
         // If user provided a readable path, use it as-is regardless of weight
-        if (is_string($path) && $path !== '' && is_readable($path)) {
+        if (is_string($path) && $path !== '' && @is_readable($path)) {
             return $path;
         }
 
@@ -386,7 +386,7 @@ class NameToImage
             : array_merge($winFontsBold, $unixFontsBold, $winFontsRegular, $unixFontsRegular);
 
         foreach ($ordered as $cand) {
-            if (is_readable($cand)) {
+            if (@is_readable($cand)) {
                 return $cand;
             }
         }

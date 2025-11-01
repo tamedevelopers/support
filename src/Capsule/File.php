@@ -395,7 +395,7 @@ class File {
      */
     public static function isReadable(string $path): bool
     {
-        return is_readable($path);
+        return @is_readable($path);
     }
 
     /**
