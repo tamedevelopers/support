@@ -887,6 +887,26 @@ class Str
     }
 
     /**
+     * Capitalize words in a string to StudlyCase.
+     *
+     * @param string $value
+     * @return string
+     */
+    public static function capitalizeWords(string $value): string
+    {
+        // Replace any non-alphanumeric characters with space
+        $value = preg_replace('/[^a-zA-Z0-9]+/', ' ', $value);
+
+        // Capitalize first letter of each word
+        $value = ucwords($value);
+
+        // Remove spaces
+        $value = str_replace(' ', '', $value);
+
+        return $value;
+    }
+
+    /**
      * Convert a string to Title Case.
      *
      * @param  string  $value

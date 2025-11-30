@@ -344,6 +344,77 @@ final class Time {
     }
 
     /**
+     * Convert any time expression into seconds.
+     *
+     * Supported formats:
+     *  - "5 mins"
+     *  - "1h 30m"
+     *  - "2 days 4 hours 10 mins"
+     *  - "1h30m20s"
+     *  - "2.5 hours"
+     *  - "3weeks 2days 4hrs 10mins"
+     *
+     * @param string|int|bool $time
+     * @return int
+     */
+    public static function toSeconds($time = false)
+    {
+        // Default time in seconds (10 minutes)
+        $defaultTime = 600; 
+
+        // If numeric seconds
+        if (is_numeric($time) && $time > 0) {
+            return (int) $time;
+        }
+
+        // If invalid input
+        if (!is_string($time) || Str::trim($time) === '') {
+            return $defaultTime;
+        }
+
+        $time = Str::lower($time);
+
+        // Units map
+        $units = [
+            's|sec|secs|second|seconds'    => 1,
+            'm|min|mins|minute|minutes'    => 60,
+            'h|hr|hrs|hour|hours'          => 3600,
+            'd|day|days'                   => 86400, // 24hours
+            'w|wk|wks|week|weeks'          => 604800, // 7days
+            'mo|mon|month|months'          => 2592000, // 30days (approximate)
+            'y|yr|yrs|year|years'          => 31536000, // 365days
+        ];
+
+        // Build a pattern for all units
+        $unitPattern = implode('|', array_keys($units));
+
+        // REGEX: extract (value + unit) pairs even without spaces
+        preg_match_all('/(\d+(\.\d+)?)\s*(' . $unitPattern . ')/i', $time, $matches, PREG_SET_ORDER);
+
+        // If no match, return default
+        if (empty($matches)) {
+            return $defaultTime;
+        }
+
+        $seconds = 0;
+
+        // Process each matched (value, unit)
+        foreach ($matches as $match) {
+            $value = floatval($match[1]);
+            $unit  = $match[3];
+
+            foreach ($units as $key => $multiplier) {
+                if (preg_match('/^(' . $key . ')$/i', $unit)) {
+                    $seconds += $value * $multiplier;
+                    break;
+                }
+            }
+        }
+
+        return (int) $seconds;
+    }
+
+    /**
      * Set time to `now`
      * @return $this
      */

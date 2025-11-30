@@ -198,14 +198,14 @@ class NameToImage
                     }
                 }
                 imagepng($img);
-                imagedestroy($img);
+                unset($img);
                 return null;
 
             case 'data':
                 ob_start();
                 imagepng($img);
                 $bin = ob_get_clean();
-                imagedestroy($img);
+                unset($img);
                 return 'data:image/png;base64,' . base64_encode($bin ?: '');
 
             case 'save':
@@ -229,7 +229,7 @@ class NameToImage
                 File::makeDirectory(dirname($dest));
 
                 imagepng($img, $dest);
-                imagedestroy($img);
+                unset($img);
                 return $dest;
         }
     }

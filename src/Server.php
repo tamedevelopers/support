@@ -15,9 +15,28 @@ use Tamedevelopers\Support\Tame;
 class Server{
     
     use ServerTrait, ReusableTrait;
+
+    /**
+     * In-memory loaded config files (filename => array)
+     *
+     * @var array
+     */
+    private static array $loadedConfigs = [];
+
+    /**
+     * Runtime overrides (dot.notation.key => mixed)
+     *
+     * @var array
+     */
+    private static array $overrides = [];
     
     /**
      * Get the value of a configuration option.
+     * 
+     * * Usage:
+     *  - Server::config('app.name'); // get
+     *  - Server::config('app', ['name' => 'MyApp']); // returns merged or default if not found
+     *  - Server::config(['app.name' => 'MyApp', 'session.driver' => 'database']); // set overrides
      *
      * @param mixed $key
      * The configuration key in dot notation (e.g., 'database.connections.mysql')
@@ -56,7 +75,7 @@ class Server{
                         self::requireFrameWorkBootstrap("{$basePath}/config/bootstrap.php");
                     }
                     // Symfony
-                    elseif ($tame->isCakePhp()) {
+                    elseif ($tame->isSymfony()) {
                         self::requireFrameWorkBootstrap("{$basePath}/config/bootstrap.php");
                         self::requireFrameWorkBootstrap("{$basePath}/src/Kernel.php");
                     }
@@ -66,37 +85,125 @@ class Server{
             // Ignore and fall back to normal file-based config loading
         }
 
-        // Convert the key to an array
-        $parts  = explode('.', $key);
-        $config = [];
-
-        // Get the file name
-        $filePath = self::formatWithBaseDirectory("{$base_folder}/{$parts[0]}.php");
-
-        // Check if the configuration file exists
-        if (File::exists($filePath)) {
-            // Load the configuration array from the file
-            $config = require($filePath);
+        // If $key is an array => setter mode (Laravel-style)
+        if (is_array($key)) {
+            foreach ($key as $k => $v) {
+                // normalize and set using dot notation
+                self::arrayDotSet($k, $v, $base_folder);
+            }
+            return true;
         }
 
-        // Remove the file name from the parts array
+        // If exact override exists, return it immediately
+        if (isset(self::$overrides[$key])) {
+            return self::$overrides[$key];
+        }
+
+        // split key into file and nested parts
+        $parts = explode('.', $key);
+        $file  = $parts[0] ?? '';
         unset($parts[0]);
 
-        // Compile the configuration value
-        foreach ($parts as $part) {
-            if (isset($config[$part])) {
-                $config = $config[$part];
+        // load file into memory if not loaded
+        if (!isset(self::$loadedConfigs[$file])) {
+            $filePath = self::formatWithBaseDirectory("{$base_folder}/{$file}.php");
+
+            if (File::exists($filePath)) {
+                // require the php config file which returns an array
+                $loaded = require $filePath;
+
+                // ensure we have an array
+                self::$loadedConfigs[$file] = is_array($loaded) ? $loaded : [];
             } else {
-                $config = null;
+                self::$loadedConfigs[$file] = [];
             }
         }
 
-        // try merging data if an array
-        if(!empty($config) && is_array($config) && is_array($default)){
-            return array_merge($config, $default);
+        $config = self::$loadedConfigs[$file];
+
+        // if no nested parts, return entire file (or merged default)
+        if (empty($parts)) {
+            // if default is array and config is array, merge and return
+            if (is_array($config) && is_array($default) && !empty($default)) {
+                return array_merge($config, $default);
+            }
+
+            return $config ?: ($default ?? null);
         }
 
-        return $config ?? $default;
+        // reconstruct full dotted nested key string for override checks
+        $nestedKey = $file . '.' . implode('.', $parts);
+
+        // if override exists for nested key, return it
+        if (isset(self::$overrides[$nestedKey])) {
+            return self::$overrides[$nestedKey];
+        }
+
+        // traverse nested parts
+        $cursor = $config;
+        foreach ($parts as $part) {
+            if (is_array($cursor) && array_key_exists($part, $cursor)) {
+                $cursor = $cursor[$part];
+            } else {
+                // not found => return default
+                return $default;
+            }
+        }
+
+        // if cursor is array and default is array => merge (behaviour you had previously)
+        if (is_array($cursor) && is_array($default) && !empty($default)) {
+            return array_merge($cursor, $default);
+        }
+
+        return $cursor;
+    }
+
+    /**
+     * Set a nested dot-notated key into the overrides and into loadedConfigs (merge with existing)
+     *
+     * @param string $key dot notation e.g. 'session.driver'
+     * @param mixed $value
+     * @param string $base_folder base config folder (keeps parity with loader)
+     * @return void
+     */
+    protected static function arrayDotSet(string $key, $value, string $base_folder = 'config'): void
+    {
+        // set override store (full key)
+        self::$overrides[$key] = $value;
+
+        // also merge into loadedConfigs so subsequent calls to config('file') reflect change
+        $parts = explode('.', $key);
+        $file  = array_shift($parts);
+
+        // ensure file loaded
+        if (!isset(self::$loadedConfigs[$file])) {
+            $filePath = self::formatWithBaseDirectory("{$base_folder}/{$file}.php");
+            if (File::exists($filePath)) {
+                $loaded = require $filePath;
+                self::$loadedConfigs[$file] = is_array($loaded) ? $loaded : [];
+            } else {
+                self::$loadedConfigs[$file] = [];
+            }
+        }
+
+        // merge the nested value into loadedConfigs[$file]
+        $cursor =& self::$loadedConfigs[$file];
+
+        while (count($parts) > 0) {
+            $segment = array_shift($parts);
+            if (!isset($cursor[$segment]) || !is_array($cursor[$segment])) {
+                // if next level either not exist or not array, replace with array to allow merging
+                $cursor[$segment] = [];
+            }
+            $cursor =& $cursor[$segment];
+        }
+
+        // if both cursor and value are arrays, merge, else set
+        if (is_array($cursor) && is_array($value)) {
+            $cursor = array_replace_recursive($cursor, $value);
+        } else {
+            $cursor = $value;
+        }
     }
 
     /**

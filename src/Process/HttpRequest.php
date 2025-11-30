@@ -311,7 +311,11 @@ class HttpRequest implements RequestInterface
             self::getServerPath()
         );
 
-        return self::isIpAccessedVia127Port() ? '/' : $domainPath;
+        if((new Tame)->isAppFramework() && self::isIpAccessedVia127Port()){
+            return '/';
+        }
+
+        return $domainPath;
     }
 
     /**

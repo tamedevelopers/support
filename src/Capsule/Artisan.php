@@ -74,28 +74,8 @@ class Artisan extends CommandHelper
         // Instantiate dispatcher and ensure default/internal commands are registered
         $artisan = new self();
 
-        $makeCmd = '\Tamedevelopers\Support\Commands\MakeCommand';
-        $processorCmd = '\Tamedevelopers\Support\Commands\ProcessorCommand';
-
-        // Register built-in commands that are normally wired in the CLI entrypoint (idempotent)
-        if (class_exists($makeCmd)) {
-            if (!isset(self::$commands['make'])) {
-                $makeCmd = new $makeCmd();
-                [$signature, $description] = [
-                    $makeCmd->getSignatureName(), $makeCmd->description(),
-                ];
-                $artisan->register($signature, $makeCmd, $description);
-            }
-        }
-        if (class_exists($processorCmd)) {
-            if (!isset(self::$commands['processor'])) {
-                $processorCmd = new $processorCmd();
-                [$signature, $description] = [
-                    $processorCmd->getSignatureName(), $processorCmd->description(),
-                ];
-                $artisan->register($signature, $processorCmd, $description);
-            }
-        }
+        self::registerSingleCommands('\Tamedevelopers\Support\Commands\MakeCommand', $artisan);
+        self::registerSingleCommands('\Tamedevelopers\Support\Commands\ProcessorCommand', $artisan);
 
         // register and discover other commands from other packages
         $artisan->discoverExternal();
@@ -316,6 +296,26 @@ class Artisan extends CommandHelper
                 Logger::helpItem($ns, $method, null, $desc, 35, false, ['green', 'green']);
             }
             Logger::writeln('');
+        }
+    }
+
+    /**
+     * Register built-in commands that are normally wired in the CLI entrypoint (idempotent)
+     *
+     * @param  mixed $class
+     * @param  Artisan $artisan
+     * @return void
+     */
+    private static function registerSingleCommands($class, Artisan $artisan)
+    {
+        if (class_exists($class)) {
+            if (!isset(self::$commands['make'])) {
+                $command = new $class();
+                [$signature, $description] = [
+                    $command->getSignatureName(), $command->description(),
+                ];
+                $artisan->register($signature, $command, $description);
+            }
         }
     }
 

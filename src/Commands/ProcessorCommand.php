@@ -37,9 +37,9 @@ class ProcessorCommand extends CommandHelper
      */
     public function handle()
     {
-        Logger::helpHeader('<yellow>Usage:</yellow>');
-        Logger::writeln("  php tame processor:toImage --name --path --bgColor --textColor --fontWeight=[bold|normal] --type=[circle|radius]  --generate=[bool] \n");
-        Logger::writeln('  php tame processor:toText --path= --grayscale=[bool] --contrast=[int]');
+        $this->handleHeader('processor');
+        Logger::writeln("  processor:toImage --name --path --bgColor --textColor --fontWeight=[bold|normal] --type=[circle|radius]  --generate=[bool] \n");
+        Logger::writeln('  processor:toText --path= --grayscale=[bool] --contrast=[int]');
         Logger::writeln('');
     }
 

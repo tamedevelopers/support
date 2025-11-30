@@ -52,7 +52,7 @@ trait ImageToTextTrait{
 
         $out = rtrim($tmpDir, '/\\') . '/' . self::uniqueName('preprocessed', 'png');
         imagepng($im, $out);
-        imagedestroy($im);
+        unset($im);
         return $out;
     }
 

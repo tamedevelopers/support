@@ -329,19 +329,6 @@ if (! function_exists('TameRequest')) {
     }
 }
 
-if (! function_exists('TameSession')) {
-    /**
-     * Native Session accessor
-     * @return \Tamedevelopers\Support\Process\Session
-     */
-    function TameSession()
-    {
-        $s = new Session();
-        $s->start();
-        return $s;
-    }
-}
-
 if (! $Tame_isAppFramework && ! function_exists('config')) {
     /**
      * Get the value of a configuration option.
@@ -489,7 +476,6 @@ if (! function_exists('base_path')) {
      * Get Base Directory `Path`
      * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
-     * - Final result: i.e C:/server_path/path
      * 
      * @return string
      */
@@ -504,7 +490,6 @@ if (! function_exists('directory')) {
      * Get Base Directory `Path`
      * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
-     * - Final result: i.e C:/server_path/path
      * 
      * @return string
      */
@@ -519,7 +504,6 @@ if (! function_exists('storage_path')) {
      * Get Storage Directory `Path`
      * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
-     * - Final result: i.e C:/storage/path
      * 
      * @return string
      */
@@ -534,7 +518,6 @@ if (! function_exists('public_path')) {
      * Get Public Directory `Path`
      * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
-     * - Final result: i.e C:/public/path
      * 
      * @return string
      */
@@ -544,12 +527,25 @@ if (! function_exists('public_path')) {
     }
 }
 
+if (! function_exists('database_path')) {
+    /**
+     * Get Database Directory `Path`
+     * @param string|null $path
+     * - [optional] You can pass a path to include with the base directory
+     * 
+     * @return string
+     */
+    function database_path($path = null)
+    {
+        return base_path("database/{$path}");
+    }
+}
+
 if (! function_exists('app_path')) {
     /**
      * Get Storage Directory `Path`
      * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
-     * - Final result: i.e C:/app/path
      * 
      * @return string
      */
@@ -564,7 +560,6 @@ if (! function_exists('config_path')) {
      * Get Config Directory `Path`
      * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
-     * - Final result: i.e C:/server_path/path
      * 
      * @return string
      */
@@ -579,7 +574,6 @@ if (! function_exists('lang_path')) {
      * Get Config Directory `Path`
      * @param string|null $path
      * - [optional] You can pass a path to include with the base directory
-     * - Final result: i.e C:/lang/path
      * 
      * @return string
      */

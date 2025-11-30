@@ -134,6 +134,7 @@ class Tame extends TameHelper{
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Skip SSL peer verification
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // Skip SSL host verification (since we're using IP)
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: ' . $host]); // Set Host header for virtual hosting
+        curl_setopt($ch, CURLOPT_FORBID_REUSE, true);
 
         // Execute cURL and get the header output
         curl_exec($ch);
@@ -142,7 +143,7 @@ class Tame extends TameHelper{
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
         // Close cURL handle
-        curl_close($ch);
+        unset($ch);
 
         // Return true if the HTTP code is a success code (e.g., 200)
         return ($httpCode >= 200 && $httpCode < 300);
@@ -953,7 +954,7 @@ class Tame extends TameHelper{
      * @param string|null $restrictedfileName
      * - [optional] file name. <avatar.png>
      * 
-     * @return void
+     * @return bool
      */
     public static function unlink(string $file, $restrictedfileName = null)
     {
@@ -962,8 +963,11 @@ class Tame extends TameHelper{
         if(self::exists($fullPath)){
             if(basename($fullPath) != basename((string) $restrictedfileName)){
                 @unlink($fullPath);
+                return true;
             }
         }
+
+        return false;
     }
 
     /**
@@ -1125,13 +1129,15 @@ class Tame extends TameHelper{
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 5);
             curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4); 
+            curl_setopt($ch, CURLOPT_FORBID_REUSE, true);
+            
             $data = curl_exec($ch);
 
             if (curl_errno($ch)) {
-                curl_close($ch);
+                unset($ch);
                 return null; // failed request
             }
-            curl_close($ch);
+            unset($ch);
         } else {
             $data = FIle::get($svgContent);
         }
@@ -1245,7 +1251,7 @@ class Tame extends TameHelper{
                 }
 
                 $data = ob_get_clean();
-                imagedestroy($img);
+                unset($img);
             }
         }
 

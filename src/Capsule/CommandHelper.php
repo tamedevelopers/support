@@ -95,11 +95,7 @@ class CommandHelper
      */
     protected function forceChecker(): void
     {
-        // backtrace
-        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
-
-        // get backtrace information about the caller's context
-        $args = $this->debugTraceArgumentHandler($trace);
+        $args = $this->force();
 
         $force = (isset($args['force']) || isset($args['f']));
 
@@ -119,11 +115,7 @@ class CommandHelper
      */
     protected function force(): bool
     {
-        // backtrace
-        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
-
-        // get backtrace information about the caller's context
-        $args = $this->debugTraceArgumentHandler($trace);
+        $args = $this->flags();
 
         if(isset($args['force'])){
             return $args['force'];
@@ -144,13 +136,25 @@ class CommandHelper
      */
     protected function arguments($position = null)
     {
-        // backtrace
-        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
-
-        // get backtrace information about the caller's context
-        $args = $this->debugTraceArgumentHandler($trace, 'arguments');
+        $args = $this->argument();
 
         return $args[$position] ?? $args;
+    }
+    
+    /**
+     * Extracts all arguments available from command
+     * 
+     * @param string|null $name
+     * @return mixed
+     */
+    protected function argument($name = null)
+    {
+        $args = $this->argumentGrammer('arguments');
+
+        return match ($name) {
+            'name' => $args[0] ?? '',
+            default => $args,
+        };
     }
     
     /**
@@ -161,13 +165,7 @@ class CommandHelper
      */
     protected function flags()
     {
-        // backtrace
-        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
-
-        // get backtrace information about the caller's context
-        $args = $this->debugTraceArgumentHandler($trace);
-
-        return $args;
+        return $this->options();
     }
     
     /**
@@ -179,11 +177,7 @@ class CommandHelper
      */
     protected function flag(string $key)
     {
-        // backtrace
-        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
-
-        // get backtrace information about the caller's context
-        $args = $this->debugTraceArgumentHandler($trace);
+        $args = $this->flags();
 
         return $args[$key] ?? null;
     }
@@ -196,29 +190,17 @@ class CommandHelper
      */
     protected function hasFlag($key)
     {
-        // backtrace
-        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
-
-        // get backtrace information about the caller's context
-        $args = $this->debugTraceArgumentHandler($trace);
+        $args = $this->flags();
 
         return in_array($key, array_keys($args));
     }
 
     /**
      * Extracts all options available from command
-     * 
-     * @return array
      */
-    protected function options()
+    protected function options(): array
     {
-        // backtrace
-        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
-
-        // get backtrace information about the caller's context
-        $args = $this->debugTraceArgumentHandler($trace);
-
-        return $args;
+        return $this->argumentGrammer('options');
     }
 
     /**
@@ -232,11 +214,7 @@ class CommandHelper
      */
     protected function option(string $key, $default = null)
     {
-        // backtrace
-        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
-
-        // get backtrace information about the caller's context
-        $args = $this->debugTraceArgumentHandler($trace);
+        $args = $this->options();
 
         return $args[$key] ?? $default;
     }
@@ -246,11 +224,7 @@ class CommandHelper
      */
     protected function hasOption(string $key): bool
     {
-        // backtrace
-        $trace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4);
-
-        // get backtrace information about the caller's context
-        $args = $this->debugTraceArgumentHandler($trace);
+        $args = $this->options();
 
         return !empty($args[$key]);
     }
@@ -258,19 +232,28 @@ class CommandHelper
     /**
      * Get backtrace information about the caller's context
      *
-     * @param mixed $trace
-     * @param string $key 
+     * @param string|null $key
      * @return array
      */
-    protected function debugTraceArgumentHandler($trace, $key = 'options')
+    protected function argumentGrammer($key = null)
     {
-        $trace = $trace[3];
         $data = ['arguments' => [], 'options' => []];
+        $traces = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 10);
+        
+        foreach ($traces as $frame) {
+            $frameArgs = $frame['args'];
 
-        if(isset($trace['function']) && $trace['function'] == 'invokeCommandMethod'){
-            $args = $trace['args'];
+            if (empty($frameArgs) || !is_array($frameArgs)) {
+                continue;
+            }
 
-            $data = ['arguments' => $args[2], 'options' => $args[3]];
+            $isValidArgs = count($frameArgs) > 1 && is_object($frameArgs[0]) && is_string($frameArgs[1]);
+
+            if($isValidArgs){
+                $data['arguments']  = $frameArgs[2] ?? [];
+                $data['options']    = $frameArgs[3] ?? [];
+                break;
+            }
         }
 
         return $data[$key] ?? $data;
@@ -426,6 +409,18 @@ class CommandHelper
             // Finish the line
             $write(PHP_EOL);
         }
+    }
+
+    /**
+     * Write a header message.
+     * @param string $header
+     */
+    protected function handleHeader($header): void
+    {
+        Logger::writeln('<yellow>Usage:</yellow>');
+        Logger::writeln('  command [options] [arguments]');
+        Logger::writeln('');
+        Logger::writeln("<yellow>Available Commands for [{$header}] namespace:</yellow>");
     }
 
     /**

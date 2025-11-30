@@ -28,25 +28,30 @@ class Asset{
         }
 
         // asset path
-        $assetPath = ASSET_BASE_DIRECTORY;
+        $assetConfig = ASSET_BASE_DIRECTORY;
 
         // Only override global config, when <cache> it's not boolean
         if(!is_bool($cache)){
-            $cache = $assetPath['cache'];
+            $cache = $assetConfig['cache'];
         }
 
         // Only override global config, when <type> it's not boolean
         if(!is_bool($type)){
-            $type = $assetPath['type'];
+            $type = $assetConfig['type'];
+        }
+
+        $configPath = $assetConfig['path'];
+        if(!empty($configPath)){
+            $configPath = "/$configPath";
         }
 
         // trim
         $asset = Str::trim($asset, '/');
 
-        $file_domain = "{$assetPath['domain']}/{$asset}";
+        $file_domain = "{$assetConfig['domain']}{$configPath}/{$asset}";
 
         // file server path
-        $file_server = "{$assetPath['server']}/{$asset}";
+        $file_server = "{$assetConfig['server']}{$configPath}/{$asset}";
 
         // append file update time
         $cacheTimeAppend = null;
@@ -59,7 +64,7 @@ class Asset{
         // Using <relative path> when true
         if($type === true){
             // replace domain path
-            $domain = Str::replace($assetPath['removeDomain'], '', $file_domain);
+            $domain = Str::replace($assetConfig['removeDomain'], '', $file_domain);
             $domain = ltrim($domain, '/');
 
             return "/{$domain}{$cacheTimeAppend}";
@@ -87,16 +92,16 @@ class Asset{
             $host = HttpRequest::host();
 
             // url helper class
-            $urlFromhelper = HttpRequest::url();
+            $url = HttpRequest::url();
 
             // clean http from url
-            $urlFromhelper = Str::replace($http, '', $urlFromhelper);
+            $urlFromhelper = Str::replace($http, '', $url);
 
             // if base path is set
             if(!empty($path)){
-
                 // - Trim forward slash from left and right
                 $path = Str::trim($path, '/');
+                $path = Str::trim($path, DIRECTORY_SEPARATOR);
 
                 // base for url path
                 $baseForUrlPath = $path;
@@ -110,15 +115,15 @@ class Asset{
                 $urlFromhelper = "{$urlFromhelper}/{$baseForUrlPath}";
             }
 
+            $domain = rtrim(self::cleanServerPath("{$http}{$urlFromhelper}"), '/');
+            $domain = rtrim($domain, DIRECTORY_SEPARATOR);
+
             define('ASSET_BASE_DIRECTORY', [
                 'cache'     => $cache,
                 'type'      => $type,
                 'path'      => $path,
                 'server'    => self::formatWithBaseDirectory($path),
-                'domain'    => rtrim(
-                    self::cleanServerPath("{$http}{$urlFromhelper}"), 
-                    '/'
-                ),
+                'domain'    => $domain,
                 'removeDomain' => "{$http}{$host}"
             ]);
         }

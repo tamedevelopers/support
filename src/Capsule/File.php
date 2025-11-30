@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Capsule;
 
+use Tamedevelopers\Support\Tame;
+
 /**
  * Class File
  *
@@ -87,7 +89,13 @@ class File {
      */
     public static function get(string $path): string|false
     {
-        return @file_get_contents($path);
+        // Prevent PHP from trying to open a missing file
+        if (!is_file($path)) {
+            return '';
+        }
+
+        // Safe read
+        return file_get_contents($path) ?: '';
     }
 
     /**
@@ -100,18 +108,19 @@ class File {
      */
     public static function put(string $path, string $contents, int $flags = 0): bool|int
     {
-        return @file_put_contents($path, $contents, $flags);
+        return file_put_contents($path, $contents, $flags);
     }
 
     /**
      * Delete the file at the given path.
      *
-     * @param string $path
+     * @param string $file (Relative|Absolute Path)
+     * @param string|null $restrictedfileName
      * @return bool
      */
-    public static function delete(string $path): bool
+    public static function delete(string $file, $restrictedfileName = null): bool
     {
-        return self::exists($path) ? unlink($path) : false;
+        return Tame::unlink($file, $restrictedfileName);
     }
 
     /**
