@@ -539,6 +539,15 @@ final class Time {
     }
 
     /**
+     * toDateInt
+     * @return string
+     */
+    public function toDateInt()
+    {
+        return strtotime($this->format());
+    }
+
+    /**
      * Create Javascript timer
      * 
      * @param string|int $date

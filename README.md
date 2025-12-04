@@ -275,6 +275,7 @@ Support Package For PHP, Laravel and PHP Frameworks
     * [toDateTimeString](#toDateTimeString)
     * [toDateString](#toDateString)
     * [toTimeString](#toTimeString)
+    * [toDateInt](#toDateInt)
     * [diff](#diff)
     * [diffBetween](#diffBetween)
     * [ago](#ago)
@@ -1074,6 +1075,13 @@ $time4->now()->toDateString()
 ```php
 $time4->now()->toTimeString()
 // 05:09:01
+```
+
+### toDateInt
+
+```php
+$time4->now()->toDateInt()
+// 1745798400
 ```
 
 ### diff
