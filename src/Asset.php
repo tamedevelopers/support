@@ -116,13 +116,14 @@ class Asset{
             }
 
             $domain = rtrim(self::cleanServerPath("{$http}{$urlFromhelper}"), '/');
-            $domain = rtrim($domain, DIRECTORY_SEPARATOR);
+            $domain = Str::replace($path, '', $domain);
+            $domain = rtrim($domain, '/');
 
             define('ASSET_BASE_DIRECTORY', [
                 'cache'     => $cache,
                 'type'      => $type,
                 'path'      => $path,
-                'server'    => self::formatWithBaseDirectory($path),
+                'server'    => self::formatWithBaseDirectory(),
                 'domain'    => $domain,
                 'removeDomain' => "{$http}{$host}"
             ]);
