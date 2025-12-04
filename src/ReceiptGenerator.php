@@ -859,9 +859,6 @@ class ReceiptGenerator {
 
         // divide 
         $whole = intdiv(strlen($amount), 5);
-        dump(
-            $whole
-        );
         for ($i=0; $i < $whole; $i++) {
             if($whole === 1){
                 $totalLeft = $totalLeft + 20;
@@ -1137,6 +1134,14 @@ class ReceiptGenerator {
             
             $data = $getFileInfo($newFilepath);
             $filepath = $newFilepath; // Update filepath for existence check
+        } else{
+            $extension = pathinfo($filepath, PATHINFO_EXTENSION);
+            
+            if(!empty($extension)){
+                $filepath = Str::replace(".{$extension}", ".{$this->outputFormat}", $filepath);
+            } else{
+                $filepath = $filepath . '.' . $this->outputFormat;
+            }
         }
 
         if($this->generate == false){

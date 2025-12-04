@@ -5,14 +5,9 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 use GdImage;
-use Exception;
 use RuntimeException;
 use Tamedevelopers\Support\Str;
-use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Capsule\File;
-use Tamedevelopers\Support\NumberToWords;
-
-
 
 trait ReceiptGeneratorTrait
 {
