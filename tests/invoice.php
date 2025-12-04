@@ -16,7 +16,7 @@ $receipt->setData([
     'customer_email' => 'jane@example.com',
     'description' => 'Web Development Services',
     'tax_amount' => 508.08,
-    'country_iso' => 'USA',
+    'currency' => 'USD',
     'company_name' => 'Tech Solutions Inc.'
 ]);
 

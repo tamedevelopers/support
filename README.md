@@ -10,11 +10,13 @@ Support Package For PHP, Laravel and PHP Frameworks
 * [Installation](#installation)
 * [All Paths](#all-paths)
 * [Number to Words](#number-to-words)
-    * [ISO](#iso)
+    * [Iso](#iso)
     * [Cents](#Cents)
     * [Value](#value)
     * [toText](#toText)
     * [toNumber](#toNumber)
+    * [allCurrency](#allCurrency)
+    * [getCurrencyByCode](#getCurrencyByCode)
 * [Tame](#tame)
     * [byteToUnit](#byteToUnit)
     * [unitToByte](#unitToByte)
@@ -379,9 +381,9 @@ composer require tamedevelopers/support
 
 ![Sample Units](https://raw.githubusercontent.com/tamedevelopers/support/master/thousand_units.png)
 
-| iso (country iso3)         | cents | number |
-|----------------------------|-------|--------|
-| `NGA \| GBR \| USA `| `true \| false` | `int\|float\|string` |
+| Currency (iso-4217) code | cents | number |
+|--------------------------|-------|--------|
+| `NGN \| EUR \| USD      `| `true \| false` | `int\|float\|string` |
 | If `iso` is given and found, it'll automatically converts the text into a currency format | If you want the decimals to be translated to text as well. | numeric figures: `299 \| '42,982' \| 3200.98` |
 
 
@@ -389,7 +391,7 @@ composer require tamedevelopers/support
 - Takes param as `string` and case-insensitive
 
 ```php
-NumberToWords::iso('nga');
+NumberToWords::iso('ngn');
 ```
 
 ### Cents

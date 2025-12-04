@@ -11,7 +11,7 @@ use Tamedevelopers\Support\Traits\NumberToWordsTraits;
  * Number-to-words converter with dynamic fluent API via __call/__callStatic.
  *
  * Builder-style magic methods (documented for static analysis):
- * @method self iso(?string $code = null) Set currency by ISO-3 code
+ * @method self iso(?string $code = null) Set currency by (iso-4217) code
  * @method self cents(?bool $allow = false) Toggle cents handling
  * @method self value(string|float|int $number) Set the value to convert
  *
@@ -72,11 +72,11 @@ class NumberToWords
     }
 
     /**
-     * Country ISO-3 code
+     * Currency code
      */
     public function __iso(?string $code = null): self
     {
-        $this->currencyData = self::getCurrencyByIso3($code);
+        $this->currencyData = self::getCurrencyByCode($code);
         return $this;
     }
 

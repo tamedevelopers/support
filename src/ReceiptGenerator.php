@@ -83,10 +83,10 @@ class ReceiptGenerator {
         }
 
         // get country iso
-        $iso = NumberToWords::getCurrencyByIso3($this->data['country_iso']);
+        $iso = NumberToWords::getCurrencyByCode($this->data['currency']);
 
         if (!is_array($iso)) {
-            throw new InvalidArgumentException("[{$this->data['country_iso']}] is not a valid iso3 country code.");
+            throw new InvalidArgumentException("[{$this->data['currency']}] is not a valid (iso-4217) currency code.");
         }
 
         $this->currency = $iso;

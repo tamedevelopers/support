@@ -326,7 +326,7 @@ trait ReceiptGeneratorTrait
             'receipt_number' => 'RCPT-' . date('Ymd') . '-' . rand(1000, 9999),
             'date' => date('Y-m-d H:i:s'),
             'amount' => 0.00,
-            'country_iso' => 'USA',
+            'currency' => 'USD',
             'payment_method' => 'Credit Card',
             'customer_name' => null,
             'customer_email' => null,

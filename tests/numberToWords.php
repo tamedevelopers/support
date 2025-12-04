@@ -6,13 +6,13 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 dd(
     
-    // NumberToWords::cents(true)->iso('FRA')->value('4531232221205435349345443534.21')->toText(),
+    // NumberToWords::cents(true)->iso('EUR')->value('4531232221205435349345443534.21')->toText(),
 
-    // NumberToWords::iso('FRA')->cents(true)->value('1000000000000000057857959942726969827393378689175040438172647424')->toText(),
+    // NumberToWords::iso('EUR')->cents(true)->value('1000000000000000057857959942726969827393378689175040438172647424')->toText(),
 
-    NumberToWords::iso('FRA')->cents(true)->value(34590323.231)->toText(),
+    NumberToWords::iso('EUR')->cents(true)->value(34590323.231)->toText(),
 
-    NumberToWords::value(12300000.698)->cents(true)->toText(),
+    NumberToWords::code('ngn')->value(12300000.698)->cents(true)->toText(),
 
     NumberToWords::value('10000000000000000000000000004540000000000000000000000000000.698')->cents(true)->toText(),
 
@@ -32,7 +32,7 @@ dd(
         ->toNumber(),
 
 
-    NumberToWords()->getCurrencyByIso3('nga'),
+    NumberToWords()->getCurrencyByIso3('ngn'),
     // NumberToWords()->allCurrency(),
     // NumberToWords::getUnits(),
 );
