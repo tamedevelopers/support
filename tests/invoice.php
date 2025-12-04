@@ -7,7 +7,6 @@ use Tamedevelopers\Support\ReceiptGenerator;
 require_once __DIR__ . '/../vendor/autoload.php';
 
 
-
 $receipt = new ReceiptGenerator();
 
 // Set basic data
@@ -23,8 +22,9 @@ $receipt->setData([
 
 // Choose design and format
 $receipt->setPaperSize('a4') //55mm|80mm|a4|a5|letter|legal|square
-        ->setDesign('classic') // ['modern', 'classic', 'minimal', 'corporate', 'invoice']
+        ->setDesign('corporate') // ['modern', 'classic', 'minimal', 'corporate', 'invoice']
         ->generate(false)
+        ->badge(true)
         // ->setFontFiles()
         ->setOutputFormat('png');
 

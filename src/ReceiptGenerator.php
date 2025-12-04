@@ -641,6 +641,17 @@ class ReceiptGenerator {
             'right', 
             true
         );
+
+        // Status badge - only show for larger receipts, not for thermal
+        if($this->badge === true && $width > 300 && !$this->isThermal()){
+            $this->drawStatusBadge(
+                $image, 
+                $width - $rightPadding, 
+                $rightPadding + $headerHeight + 30, 
+                $data['status'], 
+                $colors
+            );
+        }
         
         $this->footer($image, $colors);
     }
@@ -781,7 +792,7 @@ class ReceiptGenerator {
         
         // Receipt details in formal table
         $y = $headerHeight + ($this->isThermal() ? 30 : 30);
-        $tablePadding = $this->isThermal() ? 25 : 100;
+        $tablePadding = $this->isThermal() ? 25 : 50;
         
         // Table header
         $this->addText(
@@ -843,11 +854,14 @@ class ReceiptGenerator {
         // Total with double underline
         $y += $this->isThermal() ? 10 : 10;
         $totalLeft = $this->isThermal() ? $width - 125 : $width - 200;
-        $totalRight = $this->isThermal() ? $width - 25 : $width - 100;
+        $totalRight = $this->isThermal() ? $width - 25 : $width - 50;
         $amount = $this->format($data['total_amount']);
 
         // divide 
         $whole = intdiv(strlen($amount), 5);
+        dump(
+            $whole
+        );
         for ($i=0; $i < $whole; $i++) {
             if($whole === 1){
                 $totalLeft = $totalLeft + 20;
@@ -856,7 +870,6 @@ class ReceiptGenerator {
             } else{
                 $totalLeft = $totalLeft - 26;
             }
-            // $totalLeft = $whole === 1 ? $totalLeft + 20 : $totalLeft - 15;
         }
 
         imageline($image, $totalLeft, $y, $totalRight, $y, $colors['dark_gray']);
@@ -1017,7 +1030,7 @@ class ReceiptGenerator {
         $this->drawRoundedRect($image, $x, $y, $textWidth, $textHeight, 5, $statusColor);
 
         // Add border
-        imagerectangle($image, $x, $y, $x + $textWidth, $y + $textHeight, $colors['dark_gray']);
+        imagerectangle($image, $x, $y, $x + $textWidth, $y + $textHeight, $colors['light_gray']);
 
         $this->addText(
             $image, 
@@ -1030,7 +1043,7 @@ class ReceiptGenerator {
             true
         );
         
-        $this->addText($image, $status, $x + ($textWidth/2), $y + 5, 10, $colors['white'], 'center', true);
+        $this->addText($image, $status, $x + ($textWidth/2), $y + 6, 10, $colors['white'], 'center', true);
     }
     
     /**
