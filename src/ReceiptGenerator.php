@@ -1123,17 +1123,15 @@ class ReceiptGenerator {
                 'dirname' => pathinfo($path, PATHINFO_DIRNAME),
             ];
         };
-
-        $data = $getFileInfo($filepath);
         
         // Check if the original path is a directory
         if (File::isDirectory($filepath)) {
             // Generate a random filename with default extension
             $filename = bin2hex(random_bytes(10));
             $newFilepath = $filepath . '/' . $filename . '.' . $this->outputFormat;
-            
-            $data = $getFileInfo($newFilepath);
             $filepath = $newFilepath; // Update filepath for existence check
+
+            $data = $getFileInfo($filepath);
         } else{
             $extension = pathinfo($filepath, PATHINFO_EXTENSION);
             
@@ -1142,6 +1140,8 @@ class ReceiptGenerator {
             } else{
                 $filepath = $filepath . '.' . $this->outputFormat;
             }
+
+            $data = $getFileInfo($filepath);
         }
 
         if($this->generate == false){
@@ -1149,11 +1149,7 @@ class ReceiptGenerator {
         }
         
         // If file already exists, generate a unique filename
-        $counter = 0;
-        $maxAttempts = 5;
-        
-        while (File::exists($filepath) && $counter < $maxAttempts) {
-            $counter++;
+        while (File::exists($filepath)) {
             $append = random_int(10, 99);
             
             // Generate new filename with random suffix
@@ -1161,14 +1157,6 @@ class ReceiptGenerator {
             $filepath = $data['dirname'] . '/' . $newBasename;
             
             // Update data with new filepath
-            $data = $getFileInfo($filepath);
-        }
-        
-        // If we couldn't find a unique name, append timestamp
-        if ($counter >= $maxAttempts) {
-            $timestamp = time();
-            $newBasename = $data['filename'] . '_' . $timestamp . '.' . $data['extension'];
-            $filepath = $data['dirname'] . '/' . $newBasename;
             $data = $getFileInfo($filepath);
         }
         
