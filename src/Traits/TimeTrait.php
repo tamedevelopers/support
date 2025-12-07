@@ -273,13 +273,18 @@ trait TimeTrait{
         // Get difference
         $difference = $firstDate->diff($lastDate);
 
+        $seconds = ($difference->days * 24 * 3600) 
+                + ($difference->h * 3600)
+                + ($difference->i * 60)
+                + $difference->s;
+
         // Time difference breakdown
         $timeData = [
             'year'  => $difference->y,
             'month' => ($difference->y * 12) + $difference->m,
-            'hour'  => $difference->h,
-            'mins'  => $difference->i,
-            'sec'   => $difference->s,
+            'hour'  => ($difference->days * 24) + $difference->h,
+            'mins'  => ($difference->days * 24 * 60) + ($difference->h * 60) + $difference->i,
+            'sec'   => $seconds,
             'days'  => $difference->days, // Total number of days
             'weeks' => (int) floor($difference->days / 7), // Weeks
         ];
