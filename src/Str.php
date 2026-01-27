@@ -969,8 +969,9 @@ class Str
      */
     public static function replace($search, $replace, $subject = null)
     {
-        $subject = self::replaceSubject($subject);
+        $search  = self::replaceSubject($search);
         $replace = self::replaceSubject($replace);
+        $subject = self::replaceSubject($subject);
 
         return str_replace($search, $replace, $subject);
     }
