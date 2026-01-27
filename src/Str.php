@@ -961,8 +961,8 @@ class Str
 
     /**
      * Replace all occurrences of the search string with the replacement string
-     * @param array|string $search
-     * @param array|string $replace
+     * @param mixed <array|string|null> $search
+     * @param mixed <array|string|null> $replace
      * @param string|null $subject
      * 
      * @return string
