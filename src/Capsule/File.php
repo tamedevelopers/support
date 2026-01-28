@@ -89,13 +89,18 @@ class File {
      */
     public static function get(string $path): string|false
     {
+        // Handle URLs explicitly
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return self::getFromUrl($path);
+        }
+
         // Prevent PHP from trying to open a missing file
         if (!is_file($path)) {
             return '';
         }
 
         // Safe read
-        return file_get_contents($path) ?: '';
+        return @file_get_contents($path) ?: '';
     }
 
     /**
@@ -449,6 +454,32 @@ class File {
     public static function isFileType(?string $string = null) 
     {
         return pathinfo($string, PATHINFO_EXTENSION) !== '';
+    }
+
+    /**
+     * Fetch remote content safely via HTTP(S).
+     *
+     * @param string $url
+     * @return string|false
+     */
+    private static function getFromUrl(string $url): string|false
+    {
+        // Basic hardening
+        if (!in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
+            return false;
+        }
+
+        $context = stream_context_create([
+            'http' => [
+                'method'  => 'GET',
+                'timeout' => 10,
+                'header'  => "User-Agent: Tamedevelopers-Support/1.0\r\n",
+            ],
+        ]);
+
+        $result = @file_get_contents($url, false, $context);
+
+        return $result !== false ? $result : '';
     }
 
 }
