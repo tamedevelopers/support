@@ -14,7 +14,9 @@ use Tamedevelopers\Support\Capsule\CustomException;
  *
  * Features:
  * - Shape: circle or rounded-rectangle ("radius")
- * - Initials: first letters from two words; or first two letters if only one word
+ * - Initials: first character(s) from name – supports all languages (English, Chinese, Japanese,
+ *   Arabic, etc.); two words → first char of each; one word → first two characters
+ * - Font: automatically uses a Unicode/CJK-capable font when the name contains non-ASCII characters
  * - Custom background and text color
  * - Output: save to file, stream to browser (inline or download), or return as data URI
  */
@@ -32,9 +34,10 @@ class NameToImage
      * - text_color: string|array default '#FFFFFF'
      * - font_path: string|null (path to a TTF font). If null/unreadable, falls back to GD built-in font.
      * - font_size: int|null (auto-calculated when using TTF)
-     * - font_weight: string ('normal'|'bold') default 'bold' (applies when auto-resolving system font)
+     * - font_weight: string ('normal'|'bold') default 'normal' (applies when auto-resolving system font)
      * - output: string ('save'|'view'|'download'|'data') default 'save'
      * - destination: string (required only when output='save')
+     * - generate: boolean (default false). When true, appends a unique suffix to filename to avoid overwriting.
      *
      * @param array $options
      * @return string|null  Returns destination path for 'save', data URI for 'data', null when streaming
@@ -55,7 +58,7 @@ class NameToImage
             'text_color'  => '',
             'font_path'   => null,
             'font_size'   => null,     // auto-fit by default
-            'font_weight' => 'bold',   // 'normal' | 'bold' (used when auto-selecting system font)
+            'font_weight' => 'normal',   // 'normal' | 'bold' (used when auto-selecting system font)
             'output'      => 'save',   // 'save' | 'view' | 'download' | 'data'
             'destination' => null,     // file path or directory; if directory, slug.png will be appended
             'generate'  => false,    // when true, append a unique suffix to filename
@@ -86,6 +89,10 @@ class NameToImage
         if ($name === '') {
             throw new CustomException('Option "name" is required.');
         }
+
+        // Use first two letters as initials
+        $name = self::collectFirstTwoLetters($name);
+
 
         $size = max(32, (int)$opts['size']);
         $radius = $opts['radius'] !== null ? (int)$opts['radius'] : max(4, (int)round($size / 6));
@@ -131,11 +138,15 @@ class NameToImage
             self::imageFilledRoundedRect($img, 0, 0, $size - 1, $size - 1, $radius, $bgCol);
         }
 
-        // Compute initials
+        // Compute initials (supports all scripts: Latin, CJK, Arabic, etc.)
         $initials = self::computeInitials($name);
 
-        // Render text (TTF preferred)
-        $fontPath = self::resolveFontPath($opts['font_path'], (string)($opts['font_weight'] ?? 'bold'));
+        // Render text (TTF preferred); choose font that supports the script (e.g. CJK)
+        $fontPath = self::resolveFontPath(
+            $opts['font_path'],
+            (string)($opts['font_weight'] ?? 'bold'),
+            $initials
+        );
         $useTtf = $fontPath !== null && function_exists('imagettftext');
 
         if ($useTtf) {
@@ -235,25 +246,71 @@ class NameToImage
     }
 
     /**
-     * Compute initials from a name:
-     * - If 2+ words: take first letter of the first two words
-     * - Else: take first two letters of the single word
+     * Compute initials from a name (all languages):
+     * - If 2+ words: first character of first two words (letters or CJK/etc.)
+     * - Else: first two characters of the single word
+     * Uses Unicode-aware splitting so Chinese, Japanese, Arabic, etc. work.
      */
     private static function computeInitials(string $name): string
     {
-        // Split on any non-letter/digit as separator, keep unicode letters
-        $parts = preg_split('/[^\p{L}\p{N}]+/u', trim($name)) ?: [];
+        $name = trim($name);
+        if ($name === '') {
+            return 'NA';
+        }
+
+        // Split on any non-letter/digit as separator; \p{L} includes all Unicode letters (CJK, Arabic, etc.)
+        $parts = preg_split('/[^\p{L}\p{N}\p{M}]+/u', $name) ?: [];
         $parts = array_values(array_filter($parts, static fn($p) => $p !== ''));
 
         if (count($parts) >= 2) {
-            $a = mb_strtoupper(mb_substr($parts[0], 0, 1, 'UTF-8'), 'UTF-8');
-            $b = mb_strtoupper(mb_substr($parts[1], 0, 1, 'UTF-8'), 'UTF-8');
+            $a = self::firstCharUpper($parts[0]);
+            $b = self::firstCharUpper($parts[1]);
             return $a . $b;
         }
 
-        $w = $parts[0] ?? '';
-        $firstTwo = mb_strtoupper(mb_substr($w, 0, 2, 'UTF-8'), 'UTF-8');
-        return $firstTwo !== '' ? $firstTwo : 'NA';
+        $w = $parts[0] ?? $name;
+        $c1 = mb_substr($w, 0, 1, 'UTF-8');
+        $c2 = mb_substr($w, 1, 1, 'UTF-8');
+        // One or two initials; uppercase only for scripts that have case (Latin, etc.); leave CJK as-is
+        $init = self::firstCharUpper($c1) . ($c2 !== '' ? self::firstCharUpper($c2) : '');
+        return $init !== '' ? $init : 'NA';
+    }
+
+    /**
+     * Uppercase first character only if script has case (Latin, etc.); leave CJK/others unchanged.
+     */
+    private static function firstCharUpper(string $char): string
+    {
+        if ($char === '') {
+            return '';
+        }
+        $upper = mb_strtoupper($char, 'UTF-8');
+        // If uppercase changes the char and result is single char, use it; else keep original (CJK, etc.)
+        return ($upper !== '' && mb_strlen($upper, 'UTF-8') === 1) ? $upper : $char;
+    }
+
+    /**
+     * True if text contains any non-ASCII character (CJK, Arabic, etc.) and thus needs a Unicode font.
+     */
+    private static function needsUnicodeFont(string $text): bool
+    {
+        $len = mb_strlen($text, 'UTF-8');
+        for ($i = 0; $i < $len; $i++) {
+            $cp = self::mbOrd(mb_substr($text, $i, 1, 'UTF-8'));
+            if ($cp > 0x7F) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get Unicode codepoint of a single UTF-8 character.
+     */
+    private static function mbOrd(string $char): int
+    {
+        $c = mb_convert_encoding($char, 'UCS-4BE', 'UTF-8');
+        return $c === false ? 0 : unpack('N', $c)[1];
     }
 
     /**
@@ -346,12 +403,13 @@ class NameToImage
     }
 
     /**
-     * Try to resolve a readable TTF font path. Use provided path if valid; otherwise try common system fonts.
+     * Try to resolve a readable TTF/TTC font path. Use provided path if valid; otherwise try system fonts.
+     * When $textForFont contains non-ASCII (CJK, Arabic, etc.), Unicode/CJK-capable fonts are tried first.
      * Returns null if none found.
      */
-    private static function resolveFontPath(?string $path, string $weight = 'bold'): ?string
+    private static function resolveFontPath(?string $path, string $weight = 'bold', string $textForFont = ''): ?string
     {
-        // If user provided a readable path, use it as-is regardless of weight
+        // If user provided a readable path, use it as-is
         if (is_string($path) && $path !== '' && @is_readable($path)) {
             return $path;
         }
@@ -361,7 +419,33 @@ class NameToImage
             $weight = 'bold';
         }
 
-        // Common Windows fonts (bold and regular)
+        $needsUnicode = self::needsUnicodeFont($textForFont);
+
+        // Unicode/CJK-capable fonts (Windows, then Linux/macOS) – try first when text has non-ASCII
+        $unicodeFontsBold = [
+            'C:\\Windows\\Fonts\\msyhbd.ttf',   // Microsoft YaHei Bold
+            'C:\\Windows\\Fonts\\simhei.ttf',   // SimHei
+            'C:\\Windows\\Fonts\\simsun.ttc',   // SimSun (TTC; GD uses first font)
+            '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
+            '/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc',
+            '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+            '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+            '/Library/Fonts/PingFang.ttc',
+            '/System/Library/Fonts/PingFang.ttc',
+            '/Library/Fonts/Supplemental/Songti.ttc',
+        ];
+        $unicodeFontsRegular = [
+            'C:\\Windows\\Fonts\\msyh.ttf',     // Microsoft YaHei
+            'C:\\Windows\\Fonts\\simsun.ttc',
+            '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+            '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
+            '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+            '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+            '/Library/Fonts/PingFang.ttc',
+            '/System/Library/Fonts/PingFang.ttc',
+        ];
+
+        // Latin-only fonts (Arial, Segoe, DejaVu)
         $winFontsBold = [
             'C:\\Windows\\Fonts\\arialbd.ttf',
             'C:\\Windows\\Fonts\\segoeuib.ttf',
@@ -370,8 +454,6 @@ class NameToImage
             'C:\\Windows\\Fonts\\arial.ttf',
             'C:\\Windows\\Fonts\\segoeui.ttf',
         ];
-
-        // Common *nix/mac fonts (bold and regular)
         $unixFontsBold = [
             '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
             '/Library/Fonts/Arial Bold.ttf',
@@ -381,9 +463,18 @@ class NameToImage
             '/Library/Fonts/Arial.ttf',
         ];
 
-        $ordered = $weight === 'normal'
+        $unicodeOrdered = $weight === 'normal'
+            ? array_merge($unicodeFontsRegular, $unicodeFontsBold)
+            : array_merge($unicodeFontsBold, $unicodeFontsRegular);
+
+        $latinOrdered = $weight === 'normal'
             ? array_merge($winFontsRegular, $unixFontsRegular, $winFontsBold, $unixFontsBold)
             : array_merge($winFontsBold, $unixFontsBold, $winFontsRegular, $unixFontsRegular);
+
+        // When text has CJK/Unicode, try Unicode fonts first so glyphs render; else Latin first
+        $ordered = $needsUnicode
+            ? array_merge($unicodeOrdered, $latinOrdered)
+            : array_merge($latinOrdered, $unicodeOrdered);
 
         foreach ($ordered as $cand) {
             if (@is_readable($cand)) {
@@ -404,4 +495,50 @@ class NameToImage
         $height = (int)abs($bbox[7] - $bbox[1]);
         return [$width, $height];
     }
+
+    /**
+     * Collect the first two letters from words after explode(' ', $name).
+     *
+     * Rules:
+     * - Split by spaces
+     * - Iterate words in order
+     * - Take the first Unicode character of each word
+     * - Stop when two characters are collected
+     * - Fully UTF-8 safe
+     *
+     * Examples:
+     * - "John Doe"       → "JD"
+     * - "Mary Jane Lee" → "MJ"
+     * - "张 伟"          → "张伟"
+     * - "محمد علي"      → "مع"
+     *
+     * @param string $name
+     * @return string
+     */
+    private static function collectFirstTwoLetters(string $name): string
+    {
+        $words = array_values(array_filter(
+            explode(' ', trim($name)),
+            static fn ($w) => $w !== ''
+        ));
+
+        $count = count($words);
+
+        if ($count === 0) {
+            return 'NA';
+        }
+
+        // First word initial
+        $first = mb_substr($words[0], 0, 1, 'UTF-8');
+
+        // Last word initial (same as first if only one word)
+        $last = $count > 1
+            ? mb_substr($words[$count - 1], 0, 1, 'UTF-8')
+            : mb_substr($words[0], 1, 1, 'UTF-8');
+
+        $initials = $first . $last;
+
+        return mb_strtoupper($initials, 'UTF-8');
+    }
+
 }
