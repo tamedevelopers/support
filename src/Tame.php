@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
-use Tamedevelopers\Support\Str;
-use Tamedevelopers\Support\Server;
-use Tamedevelopers\Support\TameHelper;
+use Closure;
 use Tamedevelopers\Support\ApiResponse;
 use Tamedevelopers\Support\Capsule\File;
-use Tamedevelopers\Support\Traits\TameTrait;
+use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\TameHelper;
 use Tamedevelopers\Support\Traits\NumberToWordsTraits;
+use Tamedevelopers\Support\Traits\TameTrait;
 
 /**
  * Tame Class Support
@@ -1184,9 +1185,11 @@ class Tame extends TameHelper{
      *
      * @param string|null $path (Relative|Absolute Path)
      * @param bool $useUrl - If path should be treated as url
+     * @param bool $raw - For Email API attachments (set to true)
+     * 
      * @return null|string
      */
-    public static function imageToBase64($path = null, $useUrl = false) 
+    public static function imageToBase64($path = null, $useUrl = false, $raw = false) 
     {
         $data = null;
 
@@ -1206,6 +1209,11 @@ class Tame extends TameHelper{
 
         // if true
         if($data){
+            // email API attachments
+            if($raw){
+                return  base64_encode($data);
+            }
+
             return 'data:image/' . $type . ';base64,' . base64_encode($data);
         }
     }

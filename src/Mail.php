@@ -2,7 +2,6 @@
 
 namespace Tamedevelopers\Support;
 
-use Tamedevelopers\Support\Str;
 use PHPMailer\PHPMailer\PHPMailer;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\Manager;
@@ -151,22 +150,31 @@ class Mail{
     }
 
     /**
-     * Set the email body.
+     * Set the email driver.
      *
      * @param string $driver
-     * - [optional] Default is smtp
+     * - [optional] Default is smtp (mail, smtp, api)
      * 
      * @return $this
      */
     public function driver($driver = 'smtp')
     {
-        $driver = Str::lower($driver);
+        $this->driver = $this->configureDriver($driver);
 
-        $this->driver = match ($driver) {
-            'mail' => 'isMail',
-            'smtp' => 'isSMTP',
-            default => 'isSMTP'
-        };
+        return $this;
+    }
+
+    /**
+     * Set the email API Provider.
+     *
+     * @param string $provider
+     * - [optional] Default is zeptomail (sendgrid, mailgun, mailjet, sparkpost, brevo, postmark, aws)
+     * 
+     * @return $this
+     */
+    public function provider($provider = 'zeptomail')
+    {
+        $this->provider = $this->configureProvider($provider);
 
         return $this;
     }
@@ -269,11 +277,17 @@ class Mail{
         // create default options
         $defaultOption = $this->getDefaultOption($this->options);
 
-        // setup mailer
-        $this->setupMailer($defaultOption);
+        // setup mailer if only the driver is not an API
+        if(!$this->isAPI()){
+            $this->setupMailer($defaultOption);
+        }
 
         // create email closures
-        $sendEmails = $this->createEmailTempClosure($callable);
+        if($this->isAPI()){
+            $sendEmails = $this->createApiEmailTempClosure($callable);
+        } else{
+            $sendEmails = $this->createEmailTempClosure($callable);
+        }
 
         TameCollect($sendEmails)
             ->each(function($fn) use ($defaultOption) {

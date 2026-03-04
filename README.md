@@ -245,6 +245,8 @@ Support Package For PHP, Laravel and PHP Frameworks
 * [Mail](#mail)
     * [config](#config)
     * [to](#to)
+    * [driver](#driver)
+    * [provider](#provider)
     * [subject](#subject)
     * [altBody](#altBody)
     * [body](#body)
@@ -819,6 +821,7 @@ $even = (new Collection([1,2,3,4]))->filter(fn($v) => $v % 2 === 0)->all(); // [
 ## Mail
 - The Core Class/Wrapper For `PHPMailer`
     - It's helper class can be called, using -- `TameMail()`
+    - driver method now supports `Zeptomail API`
 
 ```php
 Tamedevelopers\Support\Mail
@@ -831,6 +834,8 @@ Mail::to('email@example.com')
 
 ### to
 - Accepts multiple emails as `array|string`
+    - All other methods should be called after you've called the `->to() method`
+    As the method returned a new instance of class
 
 ```php
 Mail::to('email@example.com')
@@ -838,6 +843,34 @@ Mail::to('email@example.com')
 Mail::to(['email@example.com', 'email2@example.com'])
 
 Mail::to('email@example.com', 'email2@example.com', 'email3@example.com')
+
+Mail::to('email@example.com')->driver('api')
+```
+
+### driver
+- Accepts mandatory `string` Default is: `smtp`
+    - Supported Values `smtp|mail|api`
+
+```php
+Mail::to('email@example.com')->driver('api')
+```
+
+### provider
+- Accepts mandatory `string` Default is: `zeptomail`
+
+| Drivers name  | Description                           |
+|---------------|---------------------------------------|
+| zeptomail     | 100% supported and working            |
+| sendgrid      | 100% supported and working            |
+| mailgun       | 0% `Undergoing Development`           |
+| mailjet       | 50% `Undergoing Development`          |
+| sparkpost     | 0% `Undergoing Development`           |
+| brevo         | 0% `Undergoing Development`           |
+| postmark      | 0% `Undergoing Development`           |
+| aws           | 0% `Undergoing Development`           |
+
+```php
+Mail::to('email@example.com')->driver('api')->provider('sendgrid')
 ```
 
 ### attach
