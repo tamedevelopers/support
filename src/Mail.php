@@ -5,6 +5,8 @@ namespace Tamedevelopers\Support;
 use PHPMailer\PHPMailer\PHPMailer;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\Manager;
+use Tamedevelopers\Support\Traits\MailApiTransport;
+use Tamedevelopers\Support\Traits\MailSMTPTransport;
 use Tamedevelopers\Support\Traits\MailTrait;
         
 /**
@@ -18,7 +20,9 @@ use Tamedevelopers\Support\Traits\MailTrait;
  */
 class Mail{
 
-    use MailTrait;
+    use MailTrait,
+        MailApiTransport,
+        MailSMTPTransport;
 
     /**
      * Constructor method to initialize the PHPMailer object
@@ -172,7 +176,7 @@ class Mail{
      * Set the email API Provider.
      *
      * @param string $provider
-     * - [optional] Default is zeptomail (sendgrid, mailgun, mailjet, brevo, postmark, aws, mailchimp, socketlabs, elastic)
+     * - [optional] Default is zeptomail (sendgrid, mailgun, mailjet, postmark, aws, mailchimp, socketlabs, elastic)
      * 
      * @return $this
      */
