@@ -860,17 +860,41 @@ Mail::to('email@example.com')->driver('api')
 
 | Drivers name  | Description                           |
 |---------------|---------------------------------------|
-| zeptomail     | 100% supported and working            |
-| sendgrid      | 100% supported and working            |
-| mailgun       | 0% `Undergoing Development`           |
+| zeptomail     | 100% supported and working  [ZeptoMail](https://zeptomail.zoho.com/)      |
+| sendgrid      | 100% supported and working  [Sendgrid](https://login.sendgrid.com/)       |
+| postmark      | 100% supported and working  [Postmark](https://postmarkapp.com/)          |
+| aws           | 100% supported and working but requires `AWS SDK - composer require aws/aws-sdk-php` and AWS-SES configuration |
+| mailchimp     | 100% supported and working  [Mailchimp](https://mailchimp.com/)           |
 | mailjet       | 50% `Undergoing Development`          |
-| sparkpost     | 0% `Undergoing Development`           |
-| brevo         | 0% `Undergoing Development`           |
-| postmark      | 0% `Undergoing Development`           |
-| aws           | 0% `Undergoing Development`           |
+| mailgun       | 0% `Undergoing Development`           |
+| brevo         | 50% `Undergoing Development`  [Brevo](https://app.brevo.com/)             |
+| socketlabs    | 50% `Undergoing Development`  [SocketLabs](https://www.socketlabs.com/)   |
+| elastic       | 0% `Undergoing Development`  [Elastic Email](https://elasticemail.com)    |
 
 ```php
 Mail::to('email@example.com')->driver('api')->provider('sendgrid')
+```
+
+### subject
+- Accepts mandatory `string`
+
+```php
+Mail::subject('subject');
+```
+
+### body
+- Accepts mandatory `string`
+
+```php
+Mail::subject('body');
+```
+
+### replyTo
+- Accepts two param as `string` (first is email and last is name) mandatory param `email`
+    - Attaching a file and using replyTo in most cases, will send your email to SPAM/JUNK by email client
+
+```php
+Mail::replyTo('info@example.com', 'Mathew');
 ```
 
 ### attach
@@ -886,20 +910,6 @@ Mail::attach([
     ['path' => public_path("image2.zip"), 'as' => 'New name2'],
     ['path' => public_path("image3.jpeng"), 'as' => 'New name2'],
 ])
-```
-
-### subject
-- Accepts mandatory `string`
-
-```php
-Mail::subject('subject');
-```
-
-### body
-- Accepts mandatory `string`
-
-```php
-Mail::subject('body');
 ```
 
 ### send

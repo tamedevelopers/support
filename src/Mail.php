@@ -103,8 +103,10 @@ class Mail{
      * @param string|array $emails
      * @return $this
      */
-    public function cc($emails)
+    public function cc(...$emails)
     {
+        $emails = Str::flatten($emails);
+
         $this->recipients['cc'] = $this->convert($emails, 'email');
 
         return $this;
@@ -116,8 +118,10 @@ class Mail{
      * @param string|array $emails
      * @return $this
      */
-    public function bcc($emails)
+    public function bcc(...$emails)
     {
+        $emails = Str::flatten($emails);
+        
         $this->recipients['bcc'] = $this->convert($emails, 'email');
 
         return $this;
@@ -168,7 +172,7 @@ class Mail{
      * Set the email API Provider.
      *
      * @param string $provider
-     * - [optional] Default is zeptomail (sendgrid, mailgun, mailjet, sparkpost, brevo, postmark, aws)
+     * - [optional] Default is zeptomail (sendgrid, mailgun, mailjet, brevo, postmark, aws, mailchimp, socketlabs, elastic)
      * 
      * @return $this
      */

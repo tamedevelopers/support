@@ -211,7 +211,7 @@ trait MailTrait{
     }
     
     /**
-     * addCC
+     * Add CC recipients.
      * 
      * @param array $payload
      * @param bool $isAPI
@@ -240,8 +240,21 @@ trait MailTrait{
                             case 'mailgun':
                                 $payload['cc'][] = $cc;
                                 break;
-                            case 'sparkpost':
-                                $payload['recipients'][] = ['address' => ['email' => $cc]];
+                            case 'mailchimp':
+                                $payload['message']['to'][] = [
+                                    'email' => $cc,
+                                    'type'  => 'cc'
+                                ];
+                                break;
+                            case 'socketlabs':
+                                $payload['Messages'][0]['Cc'][] = ['EmailAddress' => $cc];
+                                break;
+                            case 'elastic':
+                                if (!isset($payload['cc'])) {
+                                    $payload['cc'] = '';
+                                }
+
+                                $payload['cc'] .= empty($payload['cc']) ? $cc : ',' . $cc;
                                 break;
                             default:
                                 $payload['cc'][] = ['email_address' => ['address' => $cc]];
@@ -254,7 +267,7 @@ trait MailTrait{
     }
     
     /**
-     * addBCC
+     * Add BCC recipients.
      * 
      * @param array $payload
      * @param bool $isAPI
@@ -283,8 +296,23 @@ trait MailTrait{
                             case 'mailgun':
                                 $payload['bcc'][] = $bcc;
                                 break;
-                            case 'sparkpost':
-                                $payload['recipients'][] = ['address' => ['email' => $bcc]];
+                            case 'mailchimp':
+                                $payload['message']['to'][] = [
+                                    'email' => $bcc,
+                                    'type'  => 'bcc'
+                                ];
+                                break;
+                            case 'socketlabs':
+                                $payload['Messages'][0]['Bcc'][] = [
+                                    'EmailAddress' => $bcc
+                                ];
+                                break;
+                            case 'elastic':
+                                if (!isset($payload['bcc'])) {
+                                    $payload['bcc'] = '';
+                                }
+
+                                $payload['bcc'] .= empty($payload['bcc']) ? $bcc : ',' . $bcc;
                                 break;
                             default:
                                 $payload['bcc'][] = ['email_address' => ['address' => $bcc]];
@@ -297,7 +325,7 @@ trait MailTrait{
     }
     
     /**
-     * addReplyTo
+     * Add Reply-To recipient.
      * 
      * @param array $payload
      * @param bool $isAPI
@@ -328,8 +356,17 @@ trait MailTrait{
                     case 'mailgun':
                         $payload['h:Reply-To'] = $address;
                         break;
-                    case 'sparkpost':
-                        $payload['recipients'][] = ['address' => ['email' => $address, 'header' => ['Reply-To' => $address]]];
+                    case 'mailchimp':
+                        $payload['message']['headers']['Reply-To'] = $address;
+                        break;
+                    case 'socketlabs':
+                        $payload['Messages'][0]['ReplyTo'] = [
+                            'EmailAddress' => $address,
+                            'FriendlyName' => $name
+                        ];
+                        break;
+                    case 'elastic':
+                        $payload['replyTo'] = $address;
                         break;
                     default:
                         $payload['reply_to'] = ['address' => $address, 'name' => $name];
@@ -340,7 +377,7 @@ trait MailTrait{
     }
     
     /**
-     * addAltBody
+     * Add AltBody to payload if supported by provider.
      * 
      * @param array $payload
      * @param bool $isAPI
@@ -369,10 +406,14 @@ trait MailTrait{
                     case 'mailjet':
                         $payload['TextPart'] = $this->altbody;
                         break;
-                    case 'sparkpost':
-                        // SparkPost usually uses "content" array with text
-                        if(!isset($payload['content'])) $payload['content'] = [];
-                        $payload['content'][] = ['type' => 'text/plain', 'value' => $this->altbody];
+                    case 'mailchimp':
+                        $payload['message']['text'] = $this->altbody;
+                        break;
+                    case 'socketlabs':
+                        $payload['Messages'][0]['TextBody'] = $this->altbody;
+                        break;
+                    case 'elastic':
+                        $payload['bodyText'] = $this->altbody;
                         break;
                     default:
                         // Zeptomail / default
@@ -431,10 +472,16 @@ trait MailTrait{
                 ]]
             ],
             'postmark' => [
-                'From'    => $from['address'],
-                'To'      => $email,
-                'Subject' => $this->subject,
-                'HtmlBody'=> $this->body
+                'From'        => $from['address'],
+                'To'          => $email,
+                'Subject'     => $this->subject,
+                'HtmlBody'    => $this->body,
+                'TextBody'    => $this->altbody ?? $this->body,
+                'Tag'         => $this->smtpData['tag'] ?? null,
+                'TrackOpens'  => $this->smtpData['track_opens'] ?? true,
+                'TrackLinks'  => $this->smtpData['track_links'] ?? 'None',
+                'MessageStream'=> $this->smtpData['message_stream'] ?? 'outbound',
+                'Attachments' => [],           // Will be populated via attachPostfieldMultiparts()
             ],
             'aws' => [
                 'Source' => $from['address'],
@@ -444,20 +491,51 @@ trait MailTrait{
                     'Body'    => ['Html' => ['Data' => $this->body, 'Charset' => 'UTF-8']]
                 ]
             ],
-            'sparkpost' => [
-                'options' => ['sandbox' => false],
-                'content' => [
-                    'from'    => $from,
-                    'subject' => $this->subject,
-                    'html'    => $this->body
-                ],
-                'recipients' => [['address' => ['email' => $email]]]
-            ],
             'brevo' => [
                 'sender' => $from,
                 'to' => [['email' => $email]],
                 'subject' => $this->subject,
                 'htmlContent'=> $this->body
+            ],
+            'mailchimp' => [
+                'key' => $this->smtpData['api_token'],
+                'message' => [
+                    'from_email' => $from['address'],
+                    'from_name'  => $from['name'],
+                    'subject'    => $this->subject,
+                    'html'       => $this->body,
+                    'to' => [
+                        [
+                            'email' => $email,
+                            'type'  => 'to'
+                        ]
+                    ]
+                ]
+            ],
+            'socketlabs' => [
+                'ServerId' => (int) $this->smtpData['api_secret'],
+                'Messages' => [
+                    [
+                        'From' => [
+                            'EmailAddress' => $from['address'],
+                            'FriendlyName' => $from['name']
+                        ],
+                        'To' => [
+                            [
+                                'EmailAddress' => $email
+                            ]
+                        ],
+                        'Subject' => $this->subject,
+                        'HtmlBody' => $this->body
+                    ]
+                ]
+            ],
+            'elastic' => [
+                'from' => $from['address'],
+                'fromName' => $from['name'],
+                'subject' => $this->subject,
+                'bodyHtml' => $this->body,
+                'to' => $email
             ],
             default => [ // zeptomail
                 'from'    => $from,
@@ -475,37 +553,63 @@ trait MailTrait{
     {
         $token      = $this->smtpData['api_token'] ?? '';
         $secret     = $this->smtpData['api_secret'] ?? '';
-        $headers    = ["accept: application/json"];
+        $headers    = [];
 
         switch ($this->provider) {
+            case 'mailchimp': // Mandrill Transactional
             case 'sendgrid':
-                $headers[] = "Authorization: Bearer {$token}";
-                $headers[] = "Content-Type: application/json";
+                $headers = [
+                    "Authorization: Bearer {$token}",
+                    "Content-Type: application/json"
+                ];
                 break;
             case 'mailgun':
-                $headers[] = "Authorization: Basic " . base64_encode("api:{$token}");
+                $headers = [
+                    "Authorization: Basic " . base64_encode("api:{$token}"),
+                    "Content-Type: application/json"
+                ];
                 break;
             case 'mailjet':
                 if (empty($secret)) {
                     throw new \Exception("Mailjet requires API_SECRET.", 512);
                 }
-
-                $headers[] = "Authorization: Basic " . base64_encode("{$token}:{$secret}");
-                $headers[] = "Content-Type: application/json";
+                $headers = [
+                    "Authorization: Basic " . base64_encode("{$token}:{$secret}"),
+                    "Content-Type: application/json"
+                ];
                 break;
             case 'postmark':
-                $headers[] = "X-Postmark-Server-Token: {$token}";
-                $headers[] = "Content-Type: application/json";
+                $headers = [
+                    "X-Postmark-Server-Token: {$token}",
+                    "Content-Type: application/json"
+                ];
                 break;
-            case 'sparkpost':
             case 'brevo':
-                $headers[] = "api-key: {$token}";
-                $headers[] = "Content-Type: application/json";
+                $headers = [
+                    "Accept: application/json",
+                    "api-key: {$token}",
+                    "Content-Type: application/json"
+                ];
+                break;
+            case 'socketlabs': 
+                $headers =  [
+                    "X-Server-Id: {$secret}",
+                    "X-Api-Key: {$token}",
+                    "Content-Type: application/json"
+                ];
+                break;
+            case 'elastic': 
+                $headers =  [
+                    "X-ElasticEmail-ApiKey: {$token}",
+                    "Content-Type: application/json"
+                ];
                 break;
             default: // zeptomail
-                $headers[] = "authorization: {$token}";
-                $headers[] = "cache-control: no-cache";
-                $headers[] = "Content-Type: application/json";
+                $headers = [
+                    "authorization: {$token}",
+                    "cache-control: no-cache",
+                    "Content-Type: application/json"
+                ];
         }
 
         return $headers;
@@ -517,7 +621,7 @@ trait MailTrait{
      */
     private function getApiHeaders()
     {
-        if($this->isAWS()){
+        if(!$this->isAWS()){
             return $this->getDefaultHeaders();
         }
 
@@ -569,9 +673,18 @@ trait MailTrait{
             case 'mailgun':
             case 'postmark':
             case 'brevo':
-            case 'sparkpost':
-                // Use as-is, attachPostfieldMultiparts will handle CC/BCC/ReplyTo
+            case 'mailchimp':
+            case 'socketlabs':
                 $postFields = $payload;
+                break;
+
+            case 'elastic':
+                // If attachments exist, keep as array for multipart
+                if (!empty($this->attachments)) {
+                    $postFields = $payload;
+                } else {
+                    $postFields = http_build_query($payload);
+                }
                 break;
 
             default: // Zeptomail and others
@@ -615,11 +728,27 @@ trait MailTrait{
             foreach ($this->attachments as $path => $name) {
                 if (File::exists($path)) {
                     $attachments[] = match($this->provider){
-                        'sendgrid', 'mailjet', 'brevo', 'postmark' => [
+                        'sendgrid', 'mailjet', 'brevo' => [
                             'content' => Tame::imageToBase64($path, false, true),
                             'filename' => $name,
                             'type' => mime_content_type($path)
                         ],
+                        'postmark', 'socketlabs' => [
+                            'Name' => $name,
+                            'Content' => Tame::imageToBase64($path, false, true),
+                            'ContentType' => mime_content_type($path)
+                        ],
+                        'mailchimp' => [
+                            'type'    => mime_content_type($path),
+                            'name'    => $name,
+                            'content' => Tame::imageToBase64($path, false, true)
+                        ],
+                        // Elastic (uses multipart CURLFile, not base64 JSON)
+                        'elastic' => new \CURLFile(
+                            $path,
+                            mime_content_type($path),
+                            $name
+                        ),
                         default => [
                             'name' => $name,
                             'mime_type' => mime_content_type($path),
@@ -630,7 +759,17 @@ trait MailTrait{
             }
 
             if(!empty($attachments)){
-                $postFields['attachments'] = $attachments;
+                $attachmentName = match($this->provider){
+                    'sendgrid', 'mailjet', 'postmark', 'socketlabs' => 'Attachments',
+                    'brevo', 'elastic' => 'attachment',
+                    default => 'attachments'
+                };
+
+                if($this->isMailchimp()){
+                    $postFields['message']['attachments'] = $attachments;
+                } else{
+                    $postFields[$attachmentName] = $attachments;
+                }
             }
         }
     }
@@ -767,6 +906,22 @@ trait MailTrait{
     {
         return $this->provider === 'aws';
     }
+    
+    /**
+     * Checking if Call is Postmark
+     */
+    private function isPostmark(): bool
+    {
+        return $this->provider === 'postmark';
+    }
+    
+    /**
+     * Checking if Call is Mailchimp
+     */
+    private function isMailchimp(): bool
+    {
+        return $this->provider === 'mailchimp';
+    }
 
     /**
      * Configure Driver to Method
@@ -789,20 +944,23 @@ trait MailTrait{
      * Configure API Providers
      *
      * @param string $provider
+     * @param bool $error
      * @return string
      */
-    private function configureProvider($provider)
+    private function configureProvider($provider, $error = false)
     {
         $provider = Str::lower($provider);
-
+            
         return match ($provider) {
             'sendgrid'   => 'sendgrid',
             'mailgun'    => 'mailgun',
             'mailjet'    => 'mailjet',
             'postmark'   => 'postmark',
             'aws'        => 'aws',
-            'sparkpost'  => 'sparkpost',
             'brevo'      => 'brevo',
+            'mailchimp'  => 'mailchimp',
+            'elastic'    => 'elastic',
+            'socketlabs', 'socketlab'  => 'socketlabs',
             default      => 'zeptomail',
         };
     }
@@ -817,15 +975,28 @@ trait MailTrait{
     {
         $provider = Str::lower($provider);
 
+        $hosts = explode('@', $this->smtpData['from_email']);
+        $domain = $hosts[1] ?? '';
+
+        // mailgun requires domain in the API endpoint, 
+        // so we replace the placeholder with the actual domain
+        $mailgun = Str::replace(
+            'YOUR_DOMAIN_NAME', 
+            $domain, 
+            'https://api.mailgun.net/v3/YOUR_DOMAIN_NAME/messages'
+        );
+
         return match ($provider) {
             'sendgrid'   => 'https://api.sendgrid.com/v3/mail/send',
-            'mailgun'    => 'https://api.mailgun.net/v3/YOUR_DOMAIN_NAME/messages',
+            'mailgun'    => $mailgun,
             'mailjet'    => 'https://api.mailjet.com/v3.1/send',
             'postmark'   => 'https://api.postmarkapp.com/email',
             'aws'        => 'https://email.us-east-1.amazonaws.com',
-            'sparkpost'  => 'https://api.sparkpost.com/api/v1/transmissions',
             'brevo'      => 'https://api.brevo.com/v3/smtp/email',
             'zeptomail'  => 'https://api.zeptomail.com/v1.1/email',
+            'mailchimp'  => 'https://mandrillapp.com/api/1.0/messages/send.json',
+            'elastic'  => 'https://api.elasticemail.com/v2/email/send',
+            'socketlabs', 'socketlab'  => 'https://api.socketlabs.com/v1/email',
             default      => '', // return empty if unknown, user must provide
         };
     }
@@ -1121,11 +1292,9 @@ trait MailTrait{
 
                     $this->attachPostfieldMultiparts($postFields, $payload);
 
-                    // =======================
-                    // AWS SES via SDK
-                    // =======================
+                    // AWS SES via SDK or API
                     if ($this->isAWS()) {
-                        $this->sendViaAWS($postFields, $callable, $email);
+                        $this->sendViaAWS($callable, $email);
                     } else{
                         $this->sendViaCurl($apiUrl, $postFields, $callable, $email);
                     }
@@ -1148,12 +1317,11 @@ trait MailTrait{
     /**
      * sendViaAWS
      *
-     * @param  mixed $postFields
      * @param  mixed $callable
      * @param  mixed $email
      * @return void
      */
-    private function sendViaAWS($postFields, $callable, $email)
+    private function sendViaAWS($callable, $email)
     {
         $client = new \Aws\SesV2\SesV2Client([
             'version'     => 'latest',
@@ -1163,6 +1331,10 @@ trait MailTrait{
                 'secret' => $this->smtpData['api_secret'],
             ],
         ]);
+
+        $replyTo    = $this->recipients['reply_to'];
+        $address    = $replyTo[0] ?? null;
+        $name       = $replyTo[1] ?? '';
 
         // Build Destination
         $destination = [
@@ -1179,26 +1351,21 @@ trait MailTrait{
 
         // If attachments exist → RAW EMAIL
         if (!empty($this->attachments)) {
-
             $mime = $this->mailer;
             $mime->setFrom($this->smtpData['from_email'], $this->smtpData['from_name']);
             $mime->addAddress($email);
 
-            if(!empty($destination['CcAddresses'])){
-                foreach ($destination['CcAddresses'] ?? [] as $cc) {
+            if(!empty($this->recipients['cc'])){
+                foreach ($this->recipients['cc'] ?? [] as $cc) {
                     $mime->addCC($cc);
                 }
             }
 
-            if(!empty($destination['BccAddresses'])){
-                foreach ($destination['BccAddresses'] ?? [] as $bcc) {
+            if(!empty($this->recipients['bcc'])){
+                foreach ($this->recipients['bcc'] ?? [] as $bcc) {
                     $mime->addBCC($bcc);
                 }
             }
-
-            $replyTo    = $this->recipients['reply_to'];
-            $address    = $replyTo[0] ?? null;
-            $name       = $replyTo[1] ?? '';
 
             if (!empty($address)) {
                 $mime->addReplyTo($address, $name);
@@ -1225,40 +1392,45 @@ trait MailTrait{
                 'Destination'      => $destination,
                 'Content' => [
                     'Raw' => [
-                        'Data' => base64_encode($mime->getSentMIMEMessage())
+                        'Data' => $mime->getSentMIMEMessage()
                     ]
                 ]
             ]);
 
         } else {
 
-            // =========================
             // Simple Email
-            // =========================
+            $bodyData = [
+                'Html' => [
+                    'Data'    => $this->body,
+                    'Charset' => 'UTF-8',
+                ],
+            ];
 
-            dd(
-                $this
-            );
+            if($this->altbody){
+                $bodyData['Text'] = [
+                    'Data'    => $this->altbody,
+                    'Charset' => 'UTF-8',
+                ];
+            }
+
+            // Include Reply-To if available
+            $replyToAddresses = [];
+            if (!empty($address)) {
+                $replyToAddresses[] = $address;
+            }
 
             $result = $client->sendEmail([
                 'FromEmailAddress' => $this->smtpData['from_email'],
                 'Destination'      => $destination,
+                'ReplyToAddresses' => $replyToAddresses,
                 'Content' => [
                     'Simple' => [
                         'Subject' => [
-                            'Data'    => $postFields['subject'] ?? '',
+                            'Data'    => $this->subject,
                             'Charset' => 'UTF-8',
                         ],
-                        'Body' => [
-                            'Html' => [
-                                'Data'    => $postFields['htmlbody'] ?? '',
-                                'Charset' => 'UTF-8',
-                            ],
-                            'Text' => [
-                                'Data'    => $postFields['textbody'] ?? strip_tags($postFields['htmlbody'] ?? ''),
-                                'Charset' => 'UTF-8',
-                            ],
-                        ],
+                        'Body' => $bodyData,
                     ],
                 ],
             ]);
@@ -1299,25 +1471,70 @@ trait MailTrait{
             CURLOPT_TIMEOUT => $this->timeout,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => json_encode($postFields),
             CURLOPT_HTTPHEADER => $this->getApiHeaders(),
         ));
 
-        $response = curl_exec($curl);
-        $err = curl_error($curl);
+        if ($this->isPostmark()) {
+
+            // If Cc or Bcc exists, leave them as formatted strings
+            foreach (['Cc', 'Bcc'] as $field) {
+                if (!empty($postFields[$field])) {
+                    // Make sure it's a string, just in case it's an array
+                    if (is_array($postFields[$field])) {
+                        $postFields[$field] = implode(', ', array_map(function($item) {
+                            if (is_array($item)) {
+                                $name = !empty($item['Name']) ? "\"{$item['Name']}\" " : '';
+                                return $name . "<{$item['Email']}>";
+                            }
+                            return (string)$item;
+                        }, $postFields[$field]));
+                    }
+                }
+            }
+
+            // Remove empty fields
+            $payload = array_filter($postFields, function($value, $key) {
+                return !is_array($value) ? !empty($value) : true; // Keep arrays for further processing
+            }, ARRAY_FILTER_USE_BOTH);
+
+            // Encode to JSON without escaping slashes and unicode characters
+            $jsonPayload = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $jsonPayload);
+            curl_setopt($curl, CURLOPT_HTTPHEADER, [
+                "X-Postmark-Server-Token: {$this->smtpData['api_token']}",
+                'Content-Type: application/json', 
+            ]);
+        } else {
+            curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($postFields));
+        }
+
+        $response   = curl_exec($curl);
+        $httpCode   = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $err        = curl_error($curl);
 
         // if attachment delete is allowed
         $this->deleteAttachment();
 
         if($err){
             unset($curl);
-            throw new \Exception($err, 500);
+            throw new \Exception("cURL error: {$err}", 500);
+        }
+
+        $decodedResponse = json_decode($response, true) ?: $response;
+
+        if ($httpCode < 200 || $httpCode >= 300) {
+            $responseText = (is_array($decodedResponse) ? json_encode($decodedResponse) : $decodedResponse);
+            throw new \Exception(
+                sprintf("%s - API request failed with HTTP status %d: %s", $this->provider, $httpCode, $responseText),
+                $httpCode
+            );
         }
 
         if(is_callable($callable)){
             call_user_func($callable, (object)[
                 'status' => 200,
-                'message' => 'Sent via API',
+                'message' => "Sent via API - {$this->provider}",
                 'mid' => null,
                 'to' => $email,
                 'response' => $response

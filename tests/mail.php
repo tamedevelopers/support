@@ -12,7 +12,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 $mailer = Mail::config([
     // 'driver' => 'api', //api|mail|smtp
-    // 'provider' => 'api', //zeptomail|sendgrid|mailgun|mailjet|sparkpost|brevo|postmark|aws
+    // 'provider' => 'api', //zeptomail|sendgrid|mailgun|mailjet|brevo|postmark|aws|mailchimp|socketlabs|elastic
     // 'host' => 'sandbox.smtp.mailtrap.io',
     // 'port' => 587,
     // 'username' => '',
@@ -44,17 +44,21 @@ $mailer = Mail::config([
 
 
 
-$mailer->to('tamegurus@gmail.com')
+$mailer
+        ->to('notification@uphlb.com')
+        // ->to('tamegurus@gmail.com')
         ->driver('api')
-        ->provider('aws') //sendgrid|zeptomail|
-        // ->bcc('tamedevelopers@gmail.com')
+        ->provider('mailchimp') 
+        // ->bcc('notification@uphlb.com', 'notification@uphlb.com')
+        // ->cc(['tamegurus@gmail.com', 'notification@uphlb.com'])
+        // ->reply('tamedevelopers@gmail.com', 'Tame Developers')
         ->subject('New subject')
         ->body('Hello this is a body text')
-        // ->altBody('')
-        // ->attach(
-        //     'New Units File',
-        //     base_path("thousand_units.png"), 
-        // )
+        ->altBody('fff')
+        ->attach(
+            'New Units File',
+            base_path("thousand_units.png"), 
+        )
         ->send(function($response){
             // $response
             dd(
