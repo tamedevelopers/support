@@ -45,13 +45,9 @@ $mailer = Mail::config([
 
 
 $mailer
-        // ->to('notification@uphlb.com')
-        ->to('tamegurus@gmail.com')
+        ->to('tamedevelopers@gmail.com')
         ->driver('api')
         ->provider('elastic')
-        // ->bcc('notification@uphlb.com', 'notification@uphlb.com')
-        // ->cc(['tamegurus@gmail.com', 'notification@uphlb.com'])
-        ->reply('tamedevelopers@gmail.com', 'Tame Developers')
         ->subject('New subject')
         ->body('Hello this is a body text')
         ->altBody('fff')
