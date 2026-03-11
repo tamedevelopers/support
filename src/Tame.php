@@ -1526,6 +1526,8 @@ class Tame extends TameHelper{
             $platform = 'mac';
         } elseif(in_array($platform, ['iphone', 'ios']) || in_array($os_name, ['ios'])){
             $platform = 'iphone';
+        } elseif(in_array($platform, ['androidos']) || in_array($os_name, ['androidos'])){
+            $platform = 'android';
         }
 
         return self::stringReplacer($dataSet[$platform] ?? $dataSet['unknown']);
