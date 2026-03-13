@@ -1048,13 +1048,20 @@ class ReceiptGenerator {
      */
     public function outputToBrowser(string $filename = 'receipt'): void 
     {
-        $image = $this->generateImage();
+        $image      = $this->generateImage();
+        $data       = $this->getFileName($filename);
+
+        if (ob_get_length()) {
+            ob_clean(); // remove stray output
+        }
         
         header('Content-Type: image/' . $this->outputFormat);
-        header('Content-Disposition: attachment; filename="' . $filename . '.' . $this->outputFormat . '"');
+        header('Content-Disposition: attachment; filename="' . $data['filename'] . '.' . $this->outputFormat . '"');
         
         $this->outputImage($image);
+
         unset($image);
+        exit;
     }
     
     /**
@@ -1087,14 +1094,17 @@ class ReceiptGenerator {
     {
         $format     = $this->outputFormat === 'jpg' ? 'jpeg' : $this->outputFormat;
         $function   = 'image' . $format;
-        $dirPath    = dirname($filepath);
+
+        if($filepath){
+            $dirPath  = dirname($filepath);
+
+            if(!File::isDirectory($dirPath)){
+                File::makeDirectory($dirPath);
+            }
+        }
         
         if (!function_exists($function)) {
             throw new RuntimeException("Function $function is not available. Check GD library support.");
-        }
-
-        if(!File::isDirectory($dirPath)){
-            File::makeDirectory($dirPath);
         }
         
         if ($filepath) {

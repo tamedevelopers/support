@@ -1,7 +1,5 @@
 <?php 
 
-use Tamedevelopers\Support\Mail;
-use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\ReceiptGenerator;
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -17,7 +15,13 @@ $receipt->setData([
     'description' => 'Web Development Services',
     'tax_amount' => 508.08,
     'currency' => 'USD',
-    'company_name' => 'Tech Solutions Inc.'
+    'company_name' => 'Tech Solutions Inc.',
+    'company_address' => 'Example address - Lagos, Nigeria.',
+    'company_phone' => '+234 9XXXX XXXX',
+    'tax_amount' => 0.00,
+    'total_amount' => 0.00,
+    'footer' => 'Thank you for using our services!',
+    'status' => 'PAID'
 ]);
 
 // Choose design and format

@@ -249,15 +249,17 @@ trait ReceiptGeneratorTrait
             
             // Only show address/phone if there's space
             if ($height > 400) {
-                $this->addText(
-                    $image, 
-                    "{$data['company_address']} | {$data['company_phone']}", 
-                    $width/2,
-                    $footerY + 15, 
-                    max(4, $footerFontSize - 2), 
-                    $colors['gray'], 
-                    'center'
-                );
+                if(!empty($data['company_address']) || !empty($data['company_phone'])){
+                    $this->addText(
+                        $image, 
+                        "{$data['company_address']} | {$data['company_phone']}", 
+                        $width/2,
+                        $footerY + 15, 
+                        max(4, $footerFontSize - 2), 
+                        $colors['gray'], 
+                        'center'
+                    );
+                }
             }
         } else {
             // Regular footer for larger papers
@@ -270,16 +272,18 @@ trait ReceiptGeneratorTrait
                 $colors['text'], 
                 'center'
             );
-
-            $this->addText(
-                $image, 
-                "{$data['company_address']} | {$data['company_phone']}", 
-                $width/2,
-                $footerY + 20, 
-                max(8, $footerFontSize - 2), 
-                $colors['gray'], 
-                'center'
-            );
+            
+            if(!empty($data['company_address']) || !empty($data['company_phone'])){
+                $this->addText(
+                    $image, 
+                    "{$data['company_address']} | {$data['company_phone']}", 
+                    $width/2,
+                    $footerY + 20, 
+                    max(8, $footerFontSize - 2), 
+                    $colors['gray'], 
+                    'center'
+                );
+            }
         }
     }
 
