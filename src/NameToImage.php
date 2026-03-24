@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 use Exception;
-use Tamedevelopers\Support\Str;
-use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\CustomException;
+use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Traits\TameTrait;
 
 /**
  * Generate initial-based avatar images similar to Google profile placeholders.
@@ -22,6 +23,8 @@ use Tamedevelopers\Support\Capsule\CustomException;
  */
 class NameToImage
 {
+    use TameTrait;
+    
     /**
      * Create an avatar image based on a name or text.
      *
@@ -413,13 +416,29 @@ class NameToImage
         if (is_string($path) && $path !== '' && @is_readable($path)) {
             return $path;
         }
+        
+        // 2. Check if text contains CJK or other non-ASCII characters
+        $isUnicode = self::needsUnicodeFont($textForFont);
+        
+        // creating 
+        $path = self::stringReplacer( __DIR__  . DIRECTORY_SEPARATOR);
+
+        // Define your bundled paths
+        $bundledUnicode = "{$path}icons/fonts/" . ($weight === 'bold' ? 'NotoSansSC-Bold.ttf' : 'NotoSansSC-Medium.ttf');
+        $bundledLatin = "{$path}icons/fonts/" . ($weight === 'bold' ? 'Inter-Bold.ttf' : 'Inter-Medium.ttf');
+        
+        if ($isUnicode && file_exists($bundledUnicode)) {
+            return $bundledUnicode;
+        }
+
+        if (file_exists($bundledLatin)) {
+            return $bundledLatin;
+        }
 
         $weight = strtolower($weight);
         if (!in_array($weight, ['normal', 'bold'], true)) {
             $weight = 'bold';
         }
-
-        $needsUnicode = self::needsUnicodeFont($textForFont);
 
         // Unicode/CJK-capable fonts (Windows, then Linux/macOS) – try first when text has non-ASCII
         $unicodeFontsBold = [
@@ -472,7 +491,7 @@ class NameToImage
             : array_merge($winFontsBold, $unixFontsBold, $winFontsRegular, $unixFontsRegular);
 
         // When text has CJK/Unicode, try Unicode fonts first so glyphs render; else Latin first
-        $ordered = $needsUnicode
+        $ordered = $isUnicode
             ? array_merge($unicodeOrdered, $latinOrdered)
             : array_merge($latinOrdered, $unicodeOrdered);
 
