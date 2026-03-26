@@ -69,6 +69,13 @@ trait MailTrait{
     private $flushBuffering = false;
     
     /**
+     * from address
+     *
+     * @var array
+     */
+    private $from = [];
+    
+    /**
      * config
      *
      * @var array
@@ -236,6 +243,9 @@ trait MailTrait{
                             case 'mailgun':
                                 $payload['cc'][] = $cc;
                                 break;
+                            case 'brevo':
+                                $payload['cc'][] = ['email' => $cc];
+                                break;
                             case 'mailchimp':
                                 $payload['message']['to'][] = [
                                     'email' => $cc,
@@ -285,6 +295,9 @@ trait MailTrait{
                             case 'mailgun':
                                 $payload['bcc'][] = $bcc;
                                 break;
+                            case 'brevo':
+                                $payload['bcc'][] = ['email' => $bcc];
+                                break;
                             case 'mailchimp':
                                 $payload['message']['to'][] = [
                                     'email' => $bcc,
@@ -332,6 +345,9 @@ trait MailTrait{
                     case 'mailjet':
                         $payload['ReplyTo'] = ['Email' => $address, 'Name' => $name];
                         break;
+                    case 'brevo':
+                        $payload['replyTo'] = ['email' => $address, 'name' => $name];
+                        break;
                     case 'postmark':
                         $payload['ReplyTo'] = $address;
                         break;
@@ -377,6 +393,9 @@ trait MailTrait{
                         break;
                     case 'mailgun':
                         $payload['text'] = $this->altbody;
+                        break;
+                    case 'brevo':
+                        $payload['textContent'] = $this->altbody;
                         break;
                     case 'postmark':
                         $payload['TextBody'] = $this->altbody;
@@ -475,8 +494,8 @@ trait MailTrait{
         $this->mailer->Host     = $this->smtpData['host'];
         $this->mailer->Port     = $this->smtpData['port']; 
 
-        if(Tame()->emailValidator($this->smtpData['from_email'], false)){
-            $this->mailer->setFrom($this->smtpData['from_email'], $this->smtpData['from_name']);
+        if(Tame()->emailValidator($this->from['name'], false)){
+            $this->mailer->setFrom($this->from['email'], $this->from['name']);
         }
     }
     
@@ -523,6 +542,7 @@ trait MailTrait{
             'aws'        => 'aws',
             'mailchimp'  => 'mailchimp',
             'elastic'    => 'elastic',
+            'brevo'      => 'brevo',
             'socketlabs', 'socketlab'  => 'socketlabs',
             default      => 'zeptomail',
         };
@@ -538,7 +558,7 @@ trait MailTrait{
     {
         $provider = Str::lower($provider);
 
-        $hosts = explode('@', $this->smtpData['from_email']);
+        $hosts = explode('@', $this->from['email']);
         $domain = $hosts[1] ?? '';
 
         // mailgun requires domain in the API endpoint, 
@@ -553,11 +573,12 @@ trait MailTrait{
             'sendgrid'   => 'https://api.sendgrid.com/v3/mail/send',
             'mailgun'    => $mailgun,
             'mailjet'    => 'https://api.mailjet.com/v3.1/send',
+            'brevo'      => 'https://api.brevo.com/v3/smtp/email',
             'postmark'   => 'https://api.postmarkapp.com/email',
             'aws'        => 'https://email.us-east-1.amazonaws.com',
             'zeptomail'  => 'https://api.zeptomail.com/v1.1/email',
             'mailchimp'  => 'https://mandrillapp.com/api/1.0/messages/send.json',
-            'elastic'  => 'https://api.elasticemail.com/v4/emails/transactional',
+            'elastic'    => 'https://api.elasticemail.com/v4/emails/transactional',
             'socketlabs', 'socketlab'  => 'https://api.socketlabs.com/v1/email',
             default      => '', // return empty if unknown, user must provide
         };
@@ -621,6 +642,16 @@ trait MailTrait{
             'api_secret'    => $options['api_secret']   ?? env('MAIL_API_SECRET'),
             'api_region'    => $options['api_region']   ?? env('MAIL_API_REGION'),
         ];
+
+        // from email is empty
+        if(empty($this->from['email'])){
+            $this->from['email'] = $this->smtpData['from_email'];
+        }
+
+        // from name is empty
+        if(empty($this->from['name'])){
+            $this->from['name'] = $this->smtpData['from_name'];
+        }
 
         // if driver is null
         if(empty($this->driver)){

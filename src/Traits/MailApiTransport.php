@@ -59,46 +59,51 @@ trait MailApiTransport{
      */
     private function apiPayloadBuilder($email)
     {
-        $from = [
-            'address' => $this->smtpData['from_email'],
-            'name'    => $this->smtpData['from_name']
+        $fromData = [
+            'address' => $this->from['email'],
+            'name'    => $this->from['name']
         ];
 
         return match($this->provider) {
             'sendgrid' => [
                 'personalizations' => [[ 'to' => [[ 'email' => $email ]] ]],
-                'from' => $from,
+                'from' => $fromData,
                 'subject' => $this->subject,
                 'content' => [[ 'type' => 'text/html', 'value' => $this->body ]]
             ],
+            'brevo' => [
+                'sender'        => ['name' => $this->from['name'], 'email' => $this->from['email']],
+                'to'            => [['email' => $email]],
+                'subject'       => $this->subject,
+                'htmlContent'   => $this->body,
+            ],
             'mailgun' => [
-                'from'    => "{$from['name']} <{$from['address']}>",
+                'from'    => "{$this->from['name']} <{$this->from['email']}>",
                 'to'      => $email,
                 'subject' => $this->subject,
                 'html'    => $this->body
             ],
             'mailjet' => [
                 'Messages' => [[
-                    'From' => $from,
+                    'From' => $fromData,
                     'To'   => [['Email' => $email]],
                     'Subject' => $this->subject,
                     'HTMLPart' => $this->body
                 ]]
             ],
             'postmark' => [
-                'From'        => $from['address'],
+                'From'        => $this->from['email'],
                 'To'          => $email,
                 'Subject'     => $this->subject,
                 'HtmlBody'    => $this->body,
-                'TextBody'    => $this->altbody ?? $this->body,
                 'Tag'         => $this->smtpData['tag'] ?? null,
                 'TrackOpens'  => $this->smtpData['track_opens'] ?? true,
                 'TrackLinks'  => $this->smtpData['track_links'] ?? 'None',
                 'MessageStream'=> $this->smtpData['message_stream'] ?? 'outbound',
-                'Attachments' => [],           // Will be populated via attachPostfieldMultiparts()
+                'Attachments' => [],
             ],
             'aws' => [
-                'Source' => $from['address'],
+                'Source' => $this->from['email'],
                 'Destination' => ['ToAddresses' => [$email]],
                 'Message' => [
                     'Subject' => ['Data' => $this->subject, 'Charset' => 'UTF-8'],
@@ -108,8 +113,8 @@ trait MailApiTransport{
             'mailchimp' => [
                 'key' => $this->smtpData['api_token'],
                 'message' => [
-                    'from_email' => $from['address'],
-                    'from_name'  => $from['name'],
+                    'from_email' => $this->from['email'],
+                    'from_name'  => $this->from['name'],
                     'subject'    => $this->subject,
                     'html'       => $this->body,
                     'to' => [
@@ -125,8 +130,8 @@ trait MailApiTransport{
                 'Messages' => [
                     [
                         'From' => [
-                            'EmailAddress' => $from['address'],
-                            'FriendlyName' => $from['name']
+                            'EmailAddress' => $this->from['email'],
+                            'FriendlyName' => $this->from['name']
                         ],
                         'To' => [
                             [
@@ -143,7 +148,7 @@ trait MailApiTransport{
                     "To" => [$email]
                 ],
                 "Content" => [
-                    "From" => "{$from['name']} <{$from['address']}>",
+                    "From" => "{$this->from['name']} <{$this->from['email']}>",
                     "Subject" => $this->subject,
                     "Body" => [
                         [
@@ -155,7 +160,7 @@ trait MailApiTransport{
                 ]
             ],
             default => [ // zeptomail
-                'from'    => $from,
+                'from'    => $fromData,
                 'to'      => [['email_address' => ['address' => $email]]],
                 'subject' => $this->subject,
                 'htmlbody'=> $this->body
@@ -183,6 +188,12 @@ trait MailApiTransport{
             case 'mailgun':
                 $headers = [
                     "Authorization: Basic " . base64_encode("api:{$token}"),
+                    "Content-Type: application/json"
+                ];
+                break;
+            case 'brevo':
+                $headers = [
+                    "api-key: {$token}",
                     "Content-Type: application/json"
                 ];
                 break;
@@ -263,8 +274,8 @@ trait MailApiTransport{
                 $from = $payload['from'] ?? [];
                 if (!isset($from['email'])) {
                     $from = [
-                        'email' => $this->smtpData['from_email'] ?? '',
-                        'name'  => $this->smtpData['from_name'] ?? ''
+                        'email' => $this->from['email'] ?? '',
+                        'name'  => $this->from['name'] ?? ''
                     ];
                 }
 
@@ -282,6 +293,7 @@ trait MailApiTransport{
             case 'postmark':
             case 'mailchimp':
             case 'socketlabs':
+            case 'brevo':
             case 'elastic':
                 $postFields = $payload;
                 break;
@@ -346,6 +358,10 @@ trait MailApiTransport{
                             "ContentType" => mime_content_type($path),
                             'name' => $name,
                         ],
+                        'brevo' => [
+                            'name' => $name,
+                            'content' => Tame::imageToBase64($path, false, true)
+                        ],
                         default => [
                             'name' => $name,
                             'mime_type' => mime_content_type($path),
@@ -358,6 +374,7 @@ trait MailApiTransport{
             if(!empty($attachments)){
                 $attachmentName = match($this->provider){
                     'sendgrid', 'mailjet', 'postmark', 'socketlabs' => 'Attachments',
+                    'brevo' => 'attachment',
                     default => 'attachments'
                 };
 
@@ -411,7 +428,7 @@ trait MailApiTransport{
                         throw new \Exception("Email body cannot be empty.", 510);
                     }
 
-                    $fromEmail = $this->smtpData['from_email'];
+                    $fromEmail = $this->from['email'];
                     
                     if (!Tame()->emailValidator($fromEmail, true)) {
                         throw new \Exception("Invalid From-Email address: {$fromEmail}", 511);
@@ -497,7 +514,7 @@ trait MailApiTransport{
         // If attachments exist → RAW EMAIL
         if (!empty($this->attachments)) {
             $mime = $this->mailer;
-            $mime->setFrom($this->smtpData['from_email'], $this->smtpData['from_name']);
+            $mime->setFrom($this->from['email'], $this->from['name']);
             $mime->addAddress($email);
 
             if(!empty($this->recipients['cc'])){
@@ -533,7 +550,7 @@ trait MailApiTransport{
             $mime->preSend();
 
             $result = $client->sendEmail([
-                'FromEmailAddress' => $this->smtpData['from_email'],
+                'FromEmailAddress' => $this->from['email'],
                 'Destination'      => $destination,
                 'Content' => [
                     'Raw' => [
@@ -566,7 +583,7 @@ trait MailApiTransport{
             }
 
             $result = $client->sendEmail([
-                'FromEmailAddress' => $this->smtpData['from_email'],
+                'FromEmailAddress' => $this->from['email'],
                 'Destination'      => $destination,
                 'ReplyToAddresses' => $replyToAddresses,
                 'Content' => [

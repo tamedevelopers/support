@@ -245,6 +245,7 @@ Support Package For PHP, Laravel and PHP Frameworks
 * [Mail](#mail)
     * [config](#config)
     * [to](#to)
+    * [from](#from)
     * [driver](#driver)
     * [provider](#provider)
     * [subject](#subject)
@@ -840,19 +841,19 @@ Mail::to('email@example.com')
 
 ```php
 $mailer = Mail::config([
-    // 'driver' => 'api', //api|mail|smtp
-    // 'provider' => 'api', //zeptomail|sendgrid|mailgun|mailjet|postmark|aws|mailchimp|socketlabs|elastic
-    // 'host' => 'sandbox.smtp.mailtrap.io',
-    // 'port' => 587,
-    // 'username' => '',
-    // 'password' => '',
-    // 'encryption' => 'ssl',
-    // 'from_email' => 'noreply@mailtrap.io',
-    // 'from_name' => 'Email Name',
-    // 'api_url' => 'https://api.zeptomail.com/v1.1/email',
-    // 'api_token' => 'api_token_or_key',
-    // 'api_secret' => 'api_secret', 
-    // 'api_region' => 'api_region', //for amazon-ses
+    'driver' => 'api', //api|mail|smtp
+    'provider' => 'brevo',
+    'host' => 'sandbox.smtp.mailtrap.io',
+    'port' => 587,
+    'username' => '',
+    'password' => '',
+    'encryption' => 'ssl',
+    'from_email' => 'noreply@mailtrap.io',
+    'from_name' => 'Email Name',
+    'api_url' => 'https://api.zeptomail.com/v1.1/email',
+    'api_token' => 'api_token_or_key',
+    'api_secret' => 'api_secret', 
+    'api_region' => 'api_region', //for amazon-ses
 ]);
 ```
 - or -- `.env`
@@ -889,6 +890,15 @@ Mail::to('email@example.com', 'email2@example.com', 'email3@example.com')
 Mail::to('email@example.com')->driver('api')
 ```
 
+### from
+- Accepts associative `array` and only the email key is required by default.
+    - Good for immediate testing and directly setting/changing the from email data
+
+```php
+Mail::to('email@example.com')
+    ->from(['email' => 'example@example.com', 'name' => 'Mywebsite'])
+```
+
 ### driver
 - Accepts mandatory `string` Default is: `smtp`
     - Supported Values `smtp|mail|api`
@@ -907,10 +917,11 @@ Mail::to('email@example.com')->driver('api')
 | postmark      | 100% supported and working  [Postmark](https://postmarkapp.com/)          |
 | aws           | 100% supported and working but requires `AWS SDK - composer require aws/aws-sdk-php` and AWS-SES configuration |
 | mailchimp     | 100% supported and working  [Mailchimp](https://mailchimp.com/)           |
-| elastic       | 100% supported and working  [Elastic Email](https://elasticemail.com)    |
+| elastic       | 100% supported and working  [Elastic Email](https://elasticemail.com)     |
+| brevo         | 100% supported and working  [Brevo Email](https://login.brevo.com/)     |
 | mailjet       | 50% `Undergoing Development`          |
-| mailgun       | 0% `Undergoing Development`           |
 | socketlabs    | 50% `Undergoing Development`  [SocketLabs](https://www.socketlabs.com/)   |
+| mailgun       | 0% `Undergoing Development`           |
 
 ```php
 Mail::to('email@example.com')->driver('api')->provider('sendgrid')

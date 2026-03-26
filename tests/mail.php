@@ -12,7 +12,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 $mailer = Mail::config([
     // 'driver' => 'api', //api|mail|smtp
-    // 'provider' => 'api', //zeptomail|sendgrid|mailgun|mailjet|postmark|aws|mailchimp|socketlabs|elastic
+    // 'provider' => 'api', //zeptomail|sendgrid|mailgun|mailjet|postmark|aws|mailchimp|socketlabs|elastic|brevo
     // 'host' => 'sandbox.smtp.mailtrap.io',
     // 'port' => 587,
     // 'username' => '',
@@ -47,7 +47,7 @@ $mailer = Mail::config([
 $mailer
         ->to('tamedevelopers@gmail.com')
         ->driver('api')
-        ->provider('elastic')
+        ->provider('brevo')
         ->subject('New subject')
         ->body('Hello this is a body text')
         ->altBody('fff')

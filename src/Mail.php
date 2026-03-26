@@ -132,6 +132,32 @@ class Mail{
     }
 
     /**
+     * Set the from data.
+     *
+     * @param array $subject
+     * @return $this
+     */
+    public function from($from)
+    {
+        if(empty($from['email'])){
+            throw new \Exception("Email address field is required: ['email' => 'email@example.com']", 508);
+        }
+
+        if (!Tame()->emailValidator($from['email'], false)) {
+            throw new \Exception("Invalid email address: {$from['email']}", 509);
+        }
+
+        // passed email
+        $this->from['email'] = $from['email'];
+
+        if(!empty($from['name'])){
+            $this->from['name'] = $from['name'];
+        }
+
+        return $this;
+    }
+
+    /**
      * Set the email subject.
      *
      * @param string $subject
@@ -176,7 +202,7 @@ class Mail{
      * Set the email API Provider.
      *
      * @param string $provider
-     * - [optional] Default is zeptomail (sendgrid, mailgun, mailjet, postmark, aws, mailchimp, socketlabs, elastic)
+     * - [optional] Default is zeptomail (sendgrid, mailgun, mailjet, postmark, aws, mailchimp, socketlabs, elastic, brevo)
      * 
      * @return $this
      */
