@@ -563,33 +563,30 @@ trait MailTrait{
 
     /**
      * Resolve the sender "from" address and name based on configuration priority.
-     * * Priority Order:
-     * 1. Fluent $this->from() method.
-     * 2. Inline options passed to the constructor/config.
-     * 3. Global Mail::config() runtime settings.
-     * 4. Static config/mail.php file defaults.
      *
      * @param  array  $mailConfig
-     * @param  array  $globalRuntime
      * @param  array  $finalConfig
      */
-    private function resolveFromAddress($mailConfig, $globalRuntime, $finalConfig): void
+    private function resolveFromAddress($mailConfig, $finalConfig): void
     {
-        // Priority: Fluent $this->from > config(['from_email']) > Mail::config > config/mail.php
-        $fromEmail = $this->from['email'] 
-            ?? $finalConfig['from_email'] 
-            ?? $globalRuntime['from_email'] 
-            ?? $mailConfig['from']['address'] 
+        if(isset($finalConfig['from.address']) || isset($finalConfig['from']['address'])){
+            $address = $finalConfig['from.address'] ?? $finalConfig['from']['address'];
+        }
+        if(isset($finalConfig['from.name']) || isset($finalConfig['from']['name'])){
+            $name = $finalConfig['from.name'] ?? $finalConfig['from']['name'];
+        }
+
+        // Priority: Fluent $this->from > 
+        $fromAddress = $this->from['address'] ?? $address
+            ?? $mailConfig['from']['address']
             ?? null;
 
-        $fromName = $this->from['name'] 
-            ?? $finalConfig['from_name'] 
-            ?? $globalRuntime['from_name'] 
+        $fromName = $this->from['name'] ?? $name
             ?? $mailConfig['from']['name'] 
             ?? 'Mailer';
 
         $this->from = [
-            'email' => $fromEmail,
+            'address' => $fromAddress,
             'name'  => $fromName
         ];
     }
@@ -599,7 +596,7 @@ trait MailTrait{
      */
     private function resolveHostNameFromEmail(): string
     {
-        $hosts = explode('@', $this->from['email'] ?? '');
+        $hosts = explode('@', $this->from['address'] ?? '');
         
         return $hosts[1] ?? '';
     }
@@ -612,19 +609,31 @@ trait MailTrait{
     private function configureSMTPData(?array $globalRuntime = []): void
     {
         // Pull base defaults from config/mail.php
-        $mailConfig = Server::config('mail');
-
+        $mailConfig = config('mail');
+        
+        // mail fallback key
+        $defaultKey = 'smtp';
+        
         // Priority Logic: (Priority: Instance > Global Runtime > Config File)
         // We treat 'this->transport' as the source of truth if it was set via fluent method
         $this->transport = $this->configureTransport(
-            $this->transport ?? $globalRuntime['transport'] ?? $mailConfig['default']
+            $this->transport ?? $globalRuntime['transport'] ?? $mailConfig['default'] ?? $defaultKey
         );
+        
+        // If no data found, then we assume the data does'nt exists
+        // inside of the mail.mailers.$providerKey[data], we revert back to default
+        $defaultMailerData = config("mail.mailers.{$this->transport}") ?? config("mail.mailers.{$defaultKey}");
 
-        // Get the specific mailer config (e.g., mail.mailers.smtp)
-        $mailerDefaults = $mailConfig['mailers'][$this->transport] ?? [];
+        // should be changed by setters
+        $setterConfig = Server::config('mail');
+        $settersValue = isset($setterConfig['transport']) ? $setterConfig : [];
 
         // Merge data correctly
-        $finalConfig = array_merge($mailerDefaults, $globalRuntime);
+        $finalConfig = array_merge(
+            $defaultMailerData, 
+            $globalRuntime,
+            $settersValue
+        );
 
         // Map to internal smtpData property
         $this->smtpData = [
@@ -641,7 +650,7 @@ trait MailTrait{
         ];
 
         // Handle "From" Address Priority
-        $this->resolveFromAddress($mailConfig, $globalRuntime, $finalConfig);
+        $this->resolveFromAddress($mailConfig, $finalConfig);
 
         // Configure url if an api and url is empty
         if($this->isAPI() && empty($this->smtpData['url'])){

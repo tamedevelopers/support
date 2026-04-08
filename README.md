@@ -900,8 +900,7 @@ $mailer = Mail::config([
     'username' => '',
     'password' => '',
     'encryption' => 'ssl',
-    'from_email' => 'noreply@mailtrap.io',
-    'from_name' => 'Email Name',
+    'from' => ['address' => 'email@example.com', 'name' => 'Name'],
     'url' => 'https://api.zeptomail.com/v1.1/email',
     'token' => 'api_token_or_key',
     'secret' => 'api_secret', 
@@ -911,7 +910,7 @@ $mailer = Mail::config([
 - or -- `.env`
 
 ```env
-MAIL_MAILER=smtp
+MAIL_MAILER=smtp|brevo|
 MAIL_HOST=smtp.zeptomail.com
 MAIL_PORT=587 
 MAIL_USERNAME=noreply@example.com

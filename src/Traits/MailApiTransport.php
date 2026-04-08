@@ -59,7 +59,7 @@ trait MailApiTransport{
     private function apiPayloadBuilder($email)
     {
         $fromData = [
-            'address' => $this->from['email'],
+            'address' => $this->from['address'],
             'name'    => $this->from['name']
         ];
 
@@ -71,13 +71,13 @@ trait MailApiTransport{
                 'content' => [[ 'type' => 'text/html', 'value' => $this->body ]]
             ],
             'brevo' => [
-                'sender'        => ['name' => $this->from['name'], 'email' => $this->from['email']],
+                'sender'        => ['name' => $this->from['name'], 'email' => $this->from['address']],
                 'to'            => [['email' => $email]],
                 'subject'       => $this->subject,
                 'htmlContent'   => $this->body,
             ],
             'mailgun' => [
-                'from'    => "{$this->from['name']} <{$this->from['email']}>",
+                'from'    => "{$this->from['name']} <{$this->from['address']}>",
                 'to'      => $email,
                 'subject' => $this->subject,
                 'html'    => $this->body
@@ -91,7 +91,7 @@ trait MailApiTransport{
                 ]]
             ],
             'postmark' => [
-                'From'        => $this->from['email'],
+                'From'        => $this->from['address'],
                 'To'          => $email,
                 'Subject'     => $this->subject,
                 'HtmlBody'    => $this->body,
@@ -102,7 +102,7 @@ trait MailApiTransport{
                 'Attachments' => [],
             ],
             'ses' => [
-                'Source' => $this->from['email'],
+                'Source' => $this->from['address'],
                 'Destination' => ['ToAddresses' => [$email]],
                 'Message' => [
                     'Subject' => ['Data' => $this->subject, 'Charset' => 'UTF-8'],
@@ -112,7 +112,7 @@ trait MailApiTransport{
             'mailchimp' => [
                 'key' => $this->smtpData['token'],
                 'message' => [
-                    'from_email' => $this->from['email'],
+                    'from_email' => $this->from['address'],
                     'from_name'  => $this->from['name'],
                     'subject'    => $this->subject,
                     'html'       => $this->body,
@@ -129,7 +129,7 @@ trait MailApiTransport{
                 'Messages' => [
                     [
                         'From' => [
-                            'EmailAddress' => $this->from['email'],
+                            'EmailAddress' => $this->from['address'],
                             'FriendlyName' => $this->from['name']
                         ],
                         'To' => [
@@ -147,7 +147,7 @@ trait MailApiTransport{
                     "To" => [$email]
                 ],
                 "Content" => [
-                    "From" => "{$this->from['name']} <{$this->from['email']}>",
+                    "From" => "{$this->from['name']} <{$this->from['address']}>",
                     "Subject" => $this->subject,
                     "Body" => [
                         [
@@ -271,9 +271,9 @@ trait MailApiTransport{
             case 'sendgrid':
                 // Ensure 'from' is an object with 'email' and optional 'name'
                 $from = $payload['from'] ?? [];
-                if (!isset($from['email'])) {
+                if (!isset($from['address'])) {
                     $from = [
-                        'email' => $this->from['email'] ?? '',
+                        'email' => $this->from['address'] ?? '',
                         'name'  => $this->from['name'] ?? ''
                     ];
                 }
@@ -431,7 +431,7 @@ trait MailApiTransport{
                         throw new \Exception("Email body cannot be empty.", 510);
                     }
 
-                    $fromEmail = $this->from['email'];
+                    $fromEmail = $this->from['address'];
                     
                     if (!Tame()->emailValidator($fromEmail, true)) {
                         throw new \Exception("Invalid From-Email address: {$fromEmail}", 511);
@@ -517,7 +517,7 @@ trait MailApiTransport{
         // If attachments exist → RAW EMAIL
         if (!empty($this->attachments)) {
             $mime = $this->mailer;
-            $mime->setFrom($this->from['email'], $this->from['name']);
+            $mime->setFrom($this->from['address'], $this->from['name']);
             $mime->addAddress($email);
 
             if(!empty($this->recipients['cc'])){
@@ -553,7 +553,7 @@ trait MailApiTransport{
             $mime->preSend();
 
             $result = $client->sendEmail([
-                'FromEmailAddress' => $this->from['email'],
+                'FromEmailAddress' => $this->from['address'],
                 'Destination'      => $destination,
                 'Content' => [
                     'Raw' => [
@@ -586,7 +586,7 @@ trait MailApiTransport{
             }
 
             $result = $client->sendEmail([
-                'FromEmailAddress' => $this->from['email'],
+                'FromEmailAddress' => $this->from['address'],
                 'Destination'      => $destination,
                 'ReplyToAddresses' => $replyToAddresses,
                 'Content' => [

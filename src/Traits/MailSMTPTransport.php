@@ -39,7 +39,7 @@ trait MailSMTPTransport{
                         throw new \Exception("Email body cannot be empty.", 510);
                     }
 
-                    $fromEmail = $this->from['email'];
+                    $fromEmail = $this->from['address'];
 
                     if(!Tame()->emailValidator($fromEmail, false)){
                         throw new \Exception("Invalid From-Email address: {$fromEmail}", 511);

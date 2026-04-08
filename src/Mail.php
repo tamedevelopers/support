@@ -147,16 +147,16 @@ class Mail{
      */
     public function from($from)
     {
-        if(empty($from['email'])){
-            throw new \Exception("Email address field is required: ['email' => 'email@example.com']", 508);
+        if(empty($from['address'])){
+            throw new \Exception("Email address field is required: ['address' => 'email@example.com']", 508);
         }
 
-        if (!Tame()->emailValidator($from['email'], false)) {
-            throw new \Exception("Invalid email address: {$from['email']}", 509);
+        if (!Tame()->emailValidator($from['address'], false)) {
+            throw new \Exception("Invalid email address: {$from['address']}", 509);
         }
 
         // passed email
-        $this->from['email'] = $from['email'];
+        $this->from['address'] = $from['address'];
 
         if(!empty($from['name'])){
             $this->from['name'] = $from['name'];
