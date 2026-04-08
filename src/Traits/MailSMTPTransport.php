@@ -21,12 +21,11 @@ trait MailSMTPTransport{
     {
         $sendEmails = [];
 
-        /**
-         * Iterates over the list of 'to' recipients and performs actions for each email address.
-         */
+        // We iterate and create a "blueprint" for each email
         foreach($this->recipients['to'] as $email){
-            // Closure to hold emails of each recipient
-            // Without executing immediately
+
+            // We return a wrapper function. Nothing inside this block 
+            // runs until $fn() is called in your TameCollect loop.
             $sendEmails[] = function() use ($email, $callable) {
                 try {
 
@@ -66,8 +65,14 @@ trait MailSMTPTransport{
                     
                     $this->addAltBody();
 
+                    // Persistent Connection Check
+                    // If the mailer isn't connected (or was closed), reconnect.
+                    if (!$this->mailer->getSMTPInstance()->connected()) {
+                        $this->mailer->SMTPConnect();
+                    }
+
                     // Connect
-                    $this->mailer->SMTPConnect();
+                    // $this->mailer->SMTPConnect();
                     if (!$this->mailer->send()) {
                         throw new \Exception($this->mailer->ErrorInfo, 500);
                     }
@@ -76,7 +81,7 @@ trait MailSMTPTransport{
                     $mid = $this->mailer->getLastMessageID();
                     
                     // Post-Send Cleanup
-                    $this->mailer->SMTPClose();
+                    // $this->mailer->SMTPClose();
                     $this->deleteAttachment();
                     
                     // $this->mail->ErrorInfo

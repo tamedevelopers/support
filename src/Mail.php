@@ -306,13 +306,16 @@ class Mail{
         // create default options
         $defaultOption = $this->getDefaultOption($this->options);
 
+        // define once
+        $isApi = $this->isAPI();
+
         // setup mailer if only the driver is not an API
-        if(!$this->isAPI()){
+        if(!$isApi){
             $this->setupMailer($defaultOption);
         }
 
         // create email closures
-        if($this->isAPI()){
+        if($isApi){
             $sendEmails = $this->createApiEmailTempClosure($callable);
         } else{
             $sendEmails = $this->createEmailTempClosure($callable);
@@ -327,6 +330,11 @@ class Mail{
                     $fn();
                 }
             });
+
+        // Final SMTP Cleanup after the collection is done
+        if (!$isApi) {
+            $this->mailer->SMTPClose();
+        }
     }
     
     /**

@@ -52,7 +52,7 @@ $mailer
         )
         ->send(function($response){
             // $response
-            dd(
+            dump(
                 $response
             );
         });
