@@ -640,20 +640,17 @@ trait MailApiTransport{
         ));
 
         if ($this->isPostmark()) {
-
             // If Cc or Bcc exists, leave them as formatted strings
             foreach (['Cc', 'Bcc'] as $field) {
-                if (!empty($postFields[$field])) {
-                    // Make sure it's a string, just in case it's an array
-                    if (is_array($postFields[$field])) {
-                        $postFields[$field] = implode(', ', array_map(function($item) {
-                            if (is_array($item)) {
-                                $name = !empty($item['Name']) ? "\"{$item['Name']}\" " : '';
-                                return $name . "<{$item['Email']}>";
-                            }
-                            return (string)$item;
-                        }, $postFields[$field]));
-                    }
+                // Make sure it's a string, just in case it's an array
+                if (!empty($postFields[$field]) && is_array($postFields[$field])) {
+                    $postFields[$field] = implode(', ', array_map(function($item) {
+                        if (is_array($item)) {
+                            $name = !empty($item['Name']) ? "\"{$item['Name']}\" " : '';
+                            return $name . "<{$item['Email']}>";
+                        }
+                        return (string)$item;
+                    }, $postFields[$field]));
                 }
             }
 

@@ -45,52 +45,38 @@ trait MailSMTPTransport{
                     if(!Tame()->emailValidator($fromEmail, false)){
                         throw new \Exception("Invalid From-Email address: {$fromEmail}", 511);
                     }
+
+                    // Important: Clear state first to prevent BCC/CC from leaking to the next recipient
+                    $this->mailer->clearAllRecipients();
+                    $this->mailer->clearAttachments();
+                    $this->mailer->clearCustomHeaders();
                         
                     $this->mailer->setFrom($fromEmail, $this->from['name']);
-
-                    // email and name of receiver as name is optional
                     $this->mailer->addAddress($email);
                     
-                    // add cc
+                    // Internal Trait Logic for CC, BCC, and Reply-To
                     $this->addCC();
-                    
-                    // add bcc
                     $this->addBCC();
-        
-                    // add reply to
                     $this->addReplyTo();
         
                     // Set email format to HTML
                     $this->mailer->isHTML(true); 
-        
-                    // subject
                     $this->mailer->Subject = $this->subject;
                     $this->mailer->Body    = $this->body;
                     
-                    // If support alternative message
                     $this->addAltBody();
 
                     // Connect
                     $this->mailer->SMTPConnect();
-        
-                    // send mail
-                    $this->mailer->send();
+                    if (!$this->mailer->send()) {
+                        throw new \Exception($this->mailer->ErrorInfo, 500);
+                    }
         
                     // get message id
                     $mid = $this->mailer->getLastMessageID();
-        
-                    // Clear previous addresses to avoid duplication
-                    $this->mailer->clearAllRecipients();
-                    $this->mailer->clearAttachments();
-                    $this->mailer->clearCustomHeaders();
-
-                    $this->recipients['cc'] = [];
-                    $this->recipients['bcc'] = [];
                     
-                    // Close the SMTP session
+                    // Post-Send Cleanup
                     $this->mailer->SMTPClose();
-                    
-                    // if attachment delete is allowed
                     $this->deleteAttachment();
                     
                     // $this->mail->ErrorInfo
