@@ -61,13 +61,14 @@ trait ImageToTextTrait{
      */
     private static function resolveTesseractPath($provided): ?string
     {
-        if (is_string($provided) && $provided !== '' && is_executable($provided)) {
+        if (is_string($provided) && !empty($provided) && is_executable($provided)) {
             return $provided;
         }
         $candidates = [
             'C:\\Program Files\\Tesseract-OCR\\tesseract.exe',
             'C:\\Program Files (x86)\\Tesseract-OCR\\tesseract.exe',
-            '/usr/bin/tesseract', '/usr/local/bin/tesseract',
+            '/usr/bin/tesseract', 
+            '/usr/local/bin/tesseract',
         ];
         foreach ($candidates as $cand) {
             if (is_executable($cand)) return $cand;

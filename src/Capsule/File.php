@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Capsule;
 
 use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\Traits\FileTrait;
 
 /**
  * Class File
@@ -13,6 +14,23 @@ use Tamedevelopers\Support\Tame;
  * Supports reading, writing, deleting, copying, moving, and checking files.
  */
 class File {
+
+    use FileTrait;
+
+    protected $collection = [];
+
+    /**
+     * Constructor of class.
+     * 
+     * @param array|null $collection
+     * @return void
+     */
+    public function __construct($collection = null) 
+    {
+        if(!empty($collection)){
+            $this->collection = $collection;
+        }
+    }
 
     /**
      * Get all files in a directory as SplFileInfo objects.

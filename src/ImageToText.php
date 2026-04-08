@@ -44,7 +44,7 @@ class ImageToText
     /**
      * Supported OCR engines
      */
-    private const ENGINES = ['ocrspace', 'tesseract', 'google', 'azure', 'freeocr', 'auto'];
+    private const ENGINES = ['tesseract', 'ocrspace' , 'google', 'azure', 'freeocr', 'auto'];
 
     /**
      * Extract text from an image using OCR
@@ -118,7 +118,7 @@ class ImageToText
      */
     private static function validateOptions(array $options): array
     {
-        $engine = strtolower($options['engine'] ?? 'ocrspace');
+        $engine = strtolower($options['engine'] ?? self::ENGINES[0]);
         if (!in_array($engine, self::ENGINES, true)) {
             throw new CustomException("Unsupported engine: {$engine}. Supported: " . implode(', ', self::ENGINES));
         }
@@ -128,7 +128,7 @@ class ImageToText
             'source' => $options['source'] ?? null,
             'language' => (string)($options['language'] ?? 'eng'),
             'engine' => $engine,
-            'max_file_size' => $options['max_file_size'] ?? (2 * 1024 * 1024), // 2MB
+            'max_file_size' => $options['max_file_size'] ?? Tame()->sizeToBytes('2mb'), 
             'tmp_dir' => $options['tmp_dir'] ?? (\dirname(__DIR__) . '/storage/ocr'),
             'cleanup' => (bool)($options['cleanup'] ?? true),
             'preprocess' => $options['preprocess'] ?? true,
@@ -152,16 +152,17 @@ class ImageToText
     {
         File::makeDirectory($config['tmp_dir']);
         $tempFiles = [];
+        $maxFileSize = $config['max_file_size'];
 
         if (is_array($config['upload']) && isset($config['upload']['tmp_name'])) {
             // Validate uploaded file
-            if (!isset($config['upload']['error']) || (int)$config['upload']['error'] !== UPLOAD_ERR_OK) {
+            if (!isset($config['upload']['error']) || (int) $config['upload']['error'] !== UPLOAD_ERR_OK) {
                 throw new CustomException('Image upload failed.');
             }
 
             // Check file size
-            if ($config['max_file_size'] > 0 && $config['upload']['size'] > $config['max_file_size']) {
-                $maxMB = round($config['max_file_size'] / 1024 / 1024, 2);
+            if ($maxFileSize > 0 && $config['upload']['size'] > $maxFileSize) {
+                $maxMB = round($maxFileSize / 1024 / 1024, 2);
                 $actualMB = round($config['upload']['size'] / 1024 / 1024, 2);
                 throw new CustomException("File size exceeds {$maxMB} MB limit. Actual: {$actualMB} MB.");
             }
@@ -186,10 +187,10 @@ class ImageToText
             }
 
             // Check file size
-            if ($config['max_file_size'] > 0) {
+            if ($maxFileSize > 0) {
                 $fileSize = filesize($config['source']);
-                if ($fileSize > $config['max_file_size']) {
-                    $maxMB = round($config['max_file_size'] / 1024 / 1024, 2);
+                if ($fileSize > $maxFileSize) {
+                    $maxMB = round($maxFileSize / 1024 / 1024, 2);
                     $actualMB = round($fileSize / 1024 / 1024, 2);
                     throw new CustomException("File size exceeds {$maxMB} MB limit. Actual: {$actualMB} MB.");
                 }
@@ -234,8 +235,10 @@ class ImageToText
      */
     private static function autoEngine(string $imagePath, array $config, array $tempFiles): string
     {
-        $engines = ['ocrspace', 'tesseract', 'google', 'azure', 'freeocr'];
         $lastException = null;
+        $engines = self::ENGINES;
+
+        array_pop($engines);
 
         foreach ($engines as $engine) {
             try {
@@ -324,6 +327,7 @@ class ImageToText
     private static function tesseractEngine(string $imagePath, array $config): string
     {
         $exe = self::resolveTesseractPath($config['tesseract_path']);
+
         if ($exe === null) {
             throw new CustomException('Tesseract executable not found. Install it or use another engine.');
         }

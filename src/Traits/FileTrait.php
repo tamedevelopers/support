@@ -1,22 +1,40 @@
 <?php
 
+declare(strict_types=1);
+
+namespace Tamedevelopers\Support\Traits;
 
 
-class FilesCollection
+trait FileTrait
 {
-    protected $collection = [];
 
     /**
-     * Constructor of class.
+     * Get a specific file from the collection
      * 
-     * @param array|null $collection
-     * @return void
+     * @param string $fileName The form field name
+     * @return static
      */
-    public function __construct($collection = null) 
+    public static function collect($fileName): static
     {
-        if(!empty($collection)){
-            $this->collection = $collection;
+        if (!isset($_FILES[$fileName])) {
+            return new static([]);
         }
+
+        $files = $_FILES[$fileName];
+        $collect = [];
+
+        // Handle multiple files (works with both name="files" and name="files[]")
+        if (is_array($files['name'])) {
+            foreach ($files['name'] as $index => $name) {
+                $collect[] = self::createFileItem($files, $index);
+            }
+        }
+        // Handle single file
+        else {
+            $collect[] = self::createFileItem($files);
+        }
+
+        return new static($collect);
     }
 
     /**
@@ -65,35 +83,6 @@ class FilesCollection
     public function count()
     {
         return count($this->collection);
-    }
-
-    /**
-     * Get a specific file from the collection
-     * 
-     * @param string $fileName The form field name
-     * @return static
-     */
-    public static function file($fileName): static
-    {
-        if (!isset($_FILES[$fileName])) {
-            return new static([]);
-        }
-
-        $files = $_FILES[$fileName];
-        $collect = [];
-
-        // Handle multiple files (works with both name="files" and name="files[]")
-        if (is_array($files['name'])) {
-            foreach ($files['name'] as $index => $name) {
-                $collect[] = self::createFileItem($files, $index);
-            }
-        }
-        // Handle single file
-        else {
-            $collect[] = self::createFileItem($files);
-        }
-
-        return new static($collect);
     }
 
     /**
@@ -168,7 +157,7 @@ class FilesCollection
     }
 
     /**
-     * publish JavaScript code to automatically convert file inputs to support multiple files
+     * Publish JavaScript code to automatically convert file inputs to support multiple files
      * Call this method and echo the output in your HTML head or before file inputs
      * 
      * @return string JavaScript code
@@ -223,4 +212,5 @@ class FilesCollection
             'extension' => pathinfo($isArray ? $files['name'][$index] : $files['name'], PATHINFO_EXTENSION),
         ];
     }
+    
 }

@@ -1,10 +1,11 @@
 <?php
 
-use Tamedevelopers\Support\ImageToText;
 use Tamedevelopers\Support\Capsule\Artisan;
+use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\Capsule\FilesCollection;
+use Tamedevelopers\Support\ImageToText;
 
 require_once __DIR__ . '/../vendor/autoload.php';
-require_once __DIR__ . '/FilesCollection.php';
 
 // Simple example demonstrating ImageToText usage from CLI or Web.
 //
@@ -39,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
 
     // get uploaded file
-    $files = FilesCollection::file('image');
+    $files = File::collect('image');
 
     try {
         $text = ImageToText::run([
@@ -47,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'language'   => $lang,
             'psm'        => $psm,
             'preprocess' => $preprocess,
+            'tesseract_path' => 'C:\Program Files\Tesseract-OCR\tesseract.exe'
         ]);
 
         header('Content-Type: text/plain; charset=utf-8');
@@ -71,7 +73,7 @@ $error = $error ?? null;
     label { display: inline-block; width: 130px; }
     input[type="number"] { width: 100px; }
     </style>
-    <?= FilesCollection::publishJS();?>
+    <?= File::publishJS();?>
 </head>
 <body>
   <h1>ImageToText (Tesseract OCR) Demo</h1>
@@ -83,7 +85,7 @@ $error = $error ?? null;
       <legend>Upload an image</legend>
       <div class="row">
         <label for="image">Image</label>
-        <input id="image" type="file" name="image" accept="image/*" required multiple/>
+        <input id="image" type="file" name="image" accept="image/*" multiple/>
       </div>
       <div class="row">
         <label for="lang">Language</label>
