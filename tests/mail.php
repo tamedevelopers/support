@@ -43,7 +43,6 @@ $mailer = Mail::config([
 $mailer
         ->to('tamedevelopers@gmail.com')
         ->subject('New subject')
-        ->bcc('fredi.peterson2000@gmail.com')
         ->body('Hello this is a body text')
         ->altBody('fff')
         ->attach(
