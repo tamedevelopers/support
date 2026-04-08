@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Process;
 
+use Tamedevelopers\Support\Traits\ServerTrait;
+use Tamedevelopers\Support\Collections\Collection;
 use Tamedevelopers\Support\Env;
+use Tamedevelopers\Support\Process\Concerns\RequestInterface;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
-use Tamedevelopers\Support\Server;
-use Tamedevelopers\Support\Collections\Collection;
-use Tamedevelopers\Support\Process\Concerns\RequestInterface;
 
 /**
  * Native PHP request implementation for RequestInterface.
  */
 class HttpRequest implements RequestInterface
 {
+    use ServerTrait;
+
     /** @inheritDoc */
     public static function method(): string
     {
@@ -25,7 +27,12 @@ class HttpRequest implements RequestInterface
     /** @inheritDoc */
     public static function url() : string
     {
-        // Prefer APP_URL from environment without instantiating Env to avoid recursion
+        // If we are in the browser, the browser's URL is the "Truth"
+        if (!self::runningInConsole()) {
+            return self::full();
+        }
+
+        // Fallback to Env for CLI/Cron jobs where there is no browser request
         $url = Env::env('APP_URL') ?? self::full();
 
         return Str::trim($url, '\/');
@@ -40,12 +47,61 @@ class HttpRequest implements RequestInterface
     /** @inheritDoc */
     public static function path($path = null): string
     {
+        $basePath = self::localDomainPath();
+    
+        // Ensure base path is at least a /
+        $basePath = '/' . trim($basePath, '/');
+
         if (!empty($path)) {
             $path = ltrim($path, '/');
-            $path = self::replace($path);
+
+            // If we aren't at root, add a separator
+            $glue = $basePath === '/' ? '' : '/';
+
+            return $basePath . $glue . self::replace($path);
         }
         
-        return self::localDomainPath() . "{$path}";
+        return $basePath;
+    }
+
+    /** @inheritDoc */
+    public static function http(): string
+    {
+        // Check for standard HTTPS
+        if (isset($_SERVER['HTTPS']) && Str::lower($_SERVER['HTTPS']) !== 'off') {
+            return 'https://';
+        }
+
+        // Check for Proxy-forwarded SSL (Common in Nginx/Cloudflare/Heroku)
+        $forwarded = self::header('X-Forwarded-Proto');
+        if ($forwarded === 'https') {
+            return 'https://';
+        }
+        
+        return 'http://';
+    }
+
+    /** @inheritDoc */
+    public static function host(): string
+    {
+        //  Try Forwarded Host (Advanced/Proxy)
+        if ($host = self::header('X-Forwarded-Host')) {
+            return $host;
+        }
+
+        // Try Standard Host
+        return $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost';
+    }
+
+    /** @inheritDoc */
+    public static function full(): string
+    {
+        $path = self::path();
+
+        // Ensure we don't return "//" for root
+        $formattedPath = ($path === '/') ? '' : '/' . ltrim($path, '/');
+
+        return self::http() . self::host() . $formattedPath;
     }
 
     /** @inheritDoc */
@@ -169,25 +225,6 @@ class HttpRequest implements RequestInterface
         return $_SERVER['HTTP_REFERER'] ?? null;
     }
 
-    /** @inheritDoc */
-    public static function http(): string
-    {
-        return isset($_SERVER['HTTPS']) && Str::lower($_SERVER['HTTPS']) !== 'off' 
-            ? 'https://' : 'http://';
-    }
-
-    /** @inheritDoc */
-    public static function host(): string
-    {
-        return isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
-    }
-
-    /** @inheritDoc */
-    public static function full(): string
-    {
-        return self::http() . self::host() . self::path();
-    }
-
     /**
      * Get Host from URL
      * - Parse URL and reliably extract the host, sanitizing protocol typos.
@@ -301,21 +338,34 @@ class HttpRequest implements RequestInterface
     /**
      * Local Domain Path
      * 
-     * @return array
+     * @return string
      */
     private static function localDomainPath()
     {
-        $domainPath = str_replace(
-            $_SERVER['DOCUMENT_ROOT'], 
-            '', 
-            self::getServerPath()
-        );
+        $script = $_SERVER['SCRIPT_NAME'] ?? '';
+        $uri    = $_SERVER['REQUEST_URI'] ?? '';
 
-        if((new Tame)->isAppFramework() && self::isIpAccessedVia127Port()){
+        // 1. Get the physical directory of the script (Standard XAMPP/WAMP subdirectory)
+        // e.g. /inboxwhisper/index.php -> /inboxwhisper
+        $path = str_replace('\\', '/', dirname($script));
+        $path = trim($path, '/');
+
+        // 2. The "1% Fix": Verify the path actually exists in the URI
+        // If the URI is /blog/posts and path is /var/www/html, the path is invalid for the URL.
+        if (!empty($path) && strpos($uri, '/' . $path) !== 0) {
+            // If not found at the start of the URI, we might be in a root rewrite scenario.
+            // We try to see if the script name (minus index.php) matches the start of URI.
+            $path = ''; 
+        }
+
+        // 3. Fallback for Front Controllers (e.g., Laravel-style /public/index.php)
+        // If path is empty, we check if we are running in a known app framework structure
+        if (empty($path) && (new Tame)->isAppFramework()) {
+            // Logic to detect if we're inside a 'public' folder but accessed via root
             return '/';
         }
 
-        return $domainPath;
+        return empty($path) ? '/' : $path;
     }
 
     /**
@@ -326,7 +376,7 @@ class HttpRequest implements RequestInterface
      */
     private static function replace($path = null) 
     {
-        return Server::pathReplacer($path);
+        return self::pathReplacer($path);
     }
 
     /**
@@ -335,8 +385,8 @@ class HttpRequest implements RequestInterface
      */
     private static function getServerPath() 
     {
-        return Server::cleanServerPath(
-            Server::createAbsolutePath()
+        return self::cleanServerPath(
+            self::createAbsolutePath()
         );
     }
 }

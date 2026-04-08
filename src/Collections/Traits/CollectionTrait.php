@@ -116,6 +116,7 @@ trait CollectionTrait{
         return match (true) {
             $items instanceof Traversable => iterator_to_array($items),
             $items instanceof JsonSerializable => $items->jsonSerialize(),
+            $this->isValidJson($items) => json_decode($items, true),
             is_object($items) && method_exists($items, 'toArray')  => $items->toArray(),
             default => (array) $items,
         };

@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Traits;
 
-use Tamedevelopers\Support\Str;
-use Tamedevelopers\Support\Env;
-use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\Env;
+use Tamedevelopers\Support\Installer;
+use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\Str;
 
 /**
  * Utility for fetching, caching, and checking disposable email domains.
@@ -90,18 +91,59 @@ trait DisposableEmailUtilityTrait
      */
     public static function domains(bool $forceRefresh = false): array
     {
-        if (!$forceRefresh && is_array(self::$disposableDomains) && self::$disposableDomains !== []) {
+        // Check if we need to rebuild because the file changed or is missing
+        if (!$forceRefresh && self::isCustomFileNewerThanCache()) {
+            $forceRefresh = true;
+        }
+
+        // High-speed return if data is in memory and no changes detected
+        if (!$forceRefresh && !empty(self::$disposableDomains)) {
             return self::$disposableDomains;
         }
 
+        // Try Gzip cache unless we are forcing a refresh
         $data = $forceRefresh ? null : self::loadFromCache();
+        
+        // Rebuild if cache is stale or custom file triggered a refresh
         if ($data === null) {
             $data = self::fetchAndCache();
         }
 
         self::$disposableDomains = $data;
-        self::$domainsIndex = null; // reset index so it's rebuilt lazily
+        self::$domainsIndex = null; // Forces rebuild of the O(1) lookup index
+
         return self::$disposableDomains;
+    }
+
+    /**
+     * Check if custom domain file has newer changes than the existing cache.
+     */
+    private static function isCustomFileNewerThanCache(): bool
+    {
+        $cacheFile = self::cacheFile();
+        $customFile = self::customDomainsFile();
+
+        // Clear PHP stat cache for accuracy
+        if (function_exists('clearstatcache')) {
+            clearstatcache(true, $customFile);
+            clearstatcache(true, $cacheFile);
+        }
+
+        // Scenario 1: Custom file doesn't exist (triggers dummy creation)
+        if (!File::exists($customFile)) {
+            return true;
+        }
+
+        // Scenario 2: Main cache file doesn't exist
+        if (!File::exists($cacheFile)) {
+            return true;
+        }
+
+        // Scenario 3: Custom file was modified AFTER the cache was generated
+        $customTime = (int) File::lastModified($customFile);
+        $cacheTime  = (int) File::lastModified($cacheFile);
+
+        return $customTime > $cacheTime;
     }
 
     /**
@@ -134,27 +176,84 @@ trait DisposableEmailUtilityTrait
     // ========== Internals ==========
 
     /**
-     * Fetch domains.json, normalize, write cache (gzip), and return the list.
+     * Fetch from sources and merge.
      *
      * @return array<int,string>
      */
     private static function fetchAndCache(): array
     {
+        $allDomains = [];
+
+        // Fetch Remote List
         $url = Env::env('DISPOSABLE_DOMAINS_URL', self::$REMOTE_JSON_URL);
-        $json = File::get($url);
-
-        // Fallback to existing cache when fetch fails
-        if ($json === false || $json === '') {
-            return self::loadFromCache() ?? [];
+        $json = @File::get($url);
+        if ($json) {
+            $remoteData = json_decode($json, true);
+            if (is_array($remoteData)) {
+                $allDomains = $remoteData;
+            }
         }
 
-        $data = json_decode($json, true);
-        if (!is_array($data)) {
-            return self::loadFromCache() ?? [];
+        // Fetch from Local Custom TXT file
+        $localFile = self::customDomainsFile();
+
+        // Handle Custom File (Create from dummy if missing)
+        if (!File::exists($localFile)) {
+            $realPath = realpath(__DIR__ . '/../');
+            $installerRealPath = Installer::getPathsData($realPath);
+            $keyPath = $installerRealPath['disposable'];
+
+            dd(
+                $realPath,
+                $installerRealPath,
+                $keyPath
+            );
+
+            $dummyPath = "{$keyPath['path']}{$keyPath['dummy']}";
+            
+            if (File::exists($dummyPath)) {
+                File::copy($dummyPath, $localFile);
+            }
         }
 
-        $domains = self::normalizeDomainsArray($data);
-        self::writeCache($domains);
+        // Merge Local File
+        if (File::exists($localFile)) {
+            $content = (string) File::get($localFile);
+            $localDomains = array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $content)));
+            $allDomains = array_merge($allDomains, $localDomains);
+        }
+
+        // Normalize (this handles the unique and sorting)
+        $finalList = self::normalizeDomainsArray($allDomains);
+
+        // Save to Cache
+        self::writeCache($finalList);
+        
+        return $finalList;
+    }
+
+    /**
+     * Normalize domain array: lower-case, trim, unique, sorted.
+     *
+     * @param array<int,mixed> $data
+     * @return array<int,string>
+     */
+    private static function normalizeDomainsArray(array $data): array
+    {
+        $set = [];
+        foreach ($data as $d) {
+            if (!is_string($d)) {
+                continue;
+            }
+            $d = Str::lower($d);
+
+            // Basic validation: must have at least one dot and no spaces
+            if ($d !== '' && strpos($d, '.') !== false && !strpos($d, ' ')) {
+                $set[$d] = true;
+            }
+        }
+        $domains = array_keys($set);
+        sort($domains, SORT_STRING);
         return $domains;
     }
 
@@ -184,39 +283,9 @@ trait DisposableEmailUtilityTrait
 
         // Prefer gzip; fall back to plain JSON if not compressed
         $json = function_exists('gzdecode') ? @gzdecode($raw) : null;
-        if ($json === false || $json === null) {
-            $json = $raw; // assume plain JSON
-        }
-
         $data = json_decode((string) $json, true);
-        if (!is_array($data)) {
-            return null;
-        }
-
-        return self::normalizeDomainsArray($data);
-    }
-
-    /**
-     * Normalize domain array: lower-case, trim, unique, sorted.
-     *
-     * @param array<int,mixed> $data
-     * @return array<int,string>
-     */
-    private static function normalizeDomainsArray(array $data): array
-    {
-        $set = [];
-        foreach ($data as $d) {
-            if (!is_string($d)) {
-                continue;
-            }
-            $d = Str::lower($d);
-            if ($d !== '') {
-                $set[$d] = true;
-            }
-        }
-        $domains = array_keys($set);
-        sort($domains, SORT_STRING);
-        return $domains;
+        
+        return is_array($data) ? self::normalizeDomainsArray($data) : null;
     }
 
     /**
@@ -244,6 +313,14 @@ trait DisposableEmailUtilityTrait
     private static function cacheFile(): string
     {
         return rtrim(self::cacheDir(), '/') . '/disposable_domains.json.gz';
+    }
+
+    /**
+     * Path to the custom text file for manual entries.
+     */
+    private static function customDomainsFile(): string
+    {
+        return rtrim(self::cacheDir(), '/') . '/disposable_custom.txt';
     }
 
     private static function cacheTtlSeconds(): int

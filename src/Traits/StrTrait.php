@@ -199,7 +199,7 @@ trait StrTrait{
      */
     private static function replaceSubject($subject = null): mixed
     {
-        return is_null($subject) ? (string) $subject : $subject;
+        return is_null($subject) || is_numeric($subject) ? (string) $subject : $subject;
     }
 
     /**

@@ -246,8 +246,7 @@ Support Package For PHP, Laravel and PHP Frameworks
     * [config](#config)
     * [to](#to)
     * [from](#from)
-    * [driver](#driver)
-    * [provider](#provider)
+    * [transport](#transport)
     * [subject](#subject)
     * [altBody](#altBody)
     * [body](#body)
@@ -822,7 +821,7 @@ $even = (new Collection([1,2,3,4]))->filter(fn($v) => $v % 2 === 0)->all(); // [
 ## Mail
 - The Core Class/Wrapper For `PHPMailer`
     - It's helper class can be called, using -- `TameMail()`
-    - driver method now supports sending via `HTTP API Request`
+    - transport method now supports sending via `HTTP API Request`
 
 ```php
 Tamedevelopers\Support\Mail
@@ -835,14 +834,13 @@ Mail::to('email@example.com')
 
 ### config
 - Optional Configuration if not using `.env` to set Mailer
-    - If using `api driver` and the `api_url\|MAIL_API_URL` is not set. 
-    The system will automatically use their default api url path
+    - If using `api transport` and the `url \| MAIL_URL` is not set. 
+    The system will automatically use their default api-url path, tied to the transport
 
 
 ```php
 $mailer = Mail::config([
-    'driver' => 'api', //api|mail|smtp
-    'provider' => 'brevo',
+    'transport' => 'smtp',
     'host' => 'sandbox.smtp.mailtrap.io',
     'port' => 587,
     'username' => '',
@@ -850,10 +848,10 @@ $mailer = Mail::config([
     'encryption' => 'ssl',
     'from_email' => 'noreply@mailtrap.io',
     'from_name' => 'Email Name',
-    'api_url' => 'https://api.zeptomail.com/v1.1/email',
-    'api_token' => 'api_token_or_key',
-    'api_secret' => 'api_secret', 
-    'api_region' => 'api_region', //for amazon-ses
+    'url' => 'https://api.zeptomail.com/v1.1/email',
+    'token' => 'api_token_or_key',
+    'secret' => 'api_secret', 
+    'region' => 'api_region', //for amazon-ses
 ]);
 ```
 - or -- `.env`
@@ -867,18 +865,16 @@ MAIL_PASSWORD=""
 MAIL_ENCRYPTION=tls
 MAIL_FROM_ADDRESS="noreply@example.com"
 MAIL_FROM_NAME="Email Name"
-MAIL_DRIVER=""
-MAIL_PROVIDER=""
-MAIL_API_URL=""
-MAIL_API_TOKEN=""
-MAIL_API_SECRET=""
-MAIL_API_REGION=""
+MAIL_URL=""
+MAIL_TOKEN=""
+MAIL_SECRET=""
+MAIL_REGION=""
 ```
 
 ### to
 - Accepts multiple emails as `array|string`
-    - All other methods should be called after you've called the `->to() method`
-    As the method returned a new instance of class
+    - All other methods should be called after you've called the `->to() \| ->transport() method`
+    - As the method is used to configure a new instance of class
 
 ```php
 Mail::to('email@example.com')
@@ -899,32 +895,27 @@ Mail::to('email@example.com')
     ->from(['email' => 'example@example.com', 'name' => 'Mywebsite'])
 ```
 
-### driver
+### transport
 - Accepts mandatory `string` Default is: `smtp`
-    - Supported Values `smtp|mail|api`
 
-```php
-Mail::to('email@example.com')->driver('api')
-```
-
-### provider
-- Accepts mandatory `string` Default is: `zeptomail`
-
-| Drivers name  | Description                           |
+| Name          | Description                           |
 |---------------|---------------------------------------|
+| smtp          | 100% supported and working  Any SMTP Mailer                               |
 | zeptomail     | 100% supported and working  [ZeptoMail](https://zeptomail.zoho.com/)      |
 | sendgrid      | 100% supported and working  [Sendgrid](https://login.sendgrid.com/)       |
 | postmark      | 100% supported and working  [Postmark](https://postmarkapp.com/)          |
-| aws           | 100% supported and working but requires `AWS SDK - composer require aws/aws-sdk-php` and AWS-SES configuration |
+| ses           | 100% supported and working but requires `AWS SDK - composer require aws/aws-sdk-php` and AWS-SES configuration |
 | mailchimp     | 100% supported and working  [Mailchimp](https://mailchimp.com/)           |
 | elastic       | 100% supported and working  [Elastic Email](https://elasticemail.com)     |
-| brevo         | 100% supported and working  [Brevo Email](https://login.brevo.com/)     |
-| mailjet       | 50% `Undergoing Development`          |
+| brevo         | 100% supported and working  [Brevo Email](https://login.brevo.com/)       |
+| mailjet       | 50% `Undergoing Development`                                              |
 | socketlabs    | 50% `Undergoing Development`  [SocketLabs](https://www.socketlabs.com/)   |
-| mailgun       | 0% `Undergoing Development`           |
+| mailgun       | 0% `Undergoing Development`                                               |
 
 ```php
-Mail::to('email@example.com')->driver('api')->provider('sendgrid')
+Mail::to('email@example.com')->transport('sendgrid')
+or
+Mail::transport('sendgrid')->to('email@example.com')
 ```
 
 ### subject

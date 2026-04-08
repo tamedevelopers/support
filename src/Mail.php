@@ -66,9 +66,7 @@ class Mail{
      * Set manual configuration
      *
      * @param array $options Mailer configuration options
-     * - host | port | username | password | encryption
-     * - from_email | from_name | 
-     * - base\Base directory
+     * - (transport|host|port|username|password|encryption|from_email|from_name|url|token|secret|region)
      * 
      * @return $this
      */
@@ -95,10 +93,20 @@ class Mail{
             }
         }
 
-        return new self(
+        // new class instance
+        $instance = new self(
             $emails,
             self::getConfig()
         );
+
+        // automatically collecting the transport data if set or method 
+        // used before calling the to()
+        if(!empty(self::$staticTransport)){
+            $instance->transport    = self::$staticTransport;
+            self::$staticTransport  = null;
+        }
+
+        return $instance;
     }
 
     /**
@@ -184,31 +192,18 @@ class Mail{
     }
 
     /**
-     * Set the email driver.
+     * Set the email sending Transport.
      *
-     * @param string $driver
-     * - [optional] Default is smtp (mail, smtp, api)
+     * @param string $transport
+     * - [optional] Default is smtp (zeptomail, sendgrid, mailgun, mailjet, postmark, ses, mailchimp, socketlabs, elastic, brevo)
      * 
      * @return $this
      */
-    public function driver($driver = 'smtp')
+    public function transport($transport = 'smtp')
     {
-        $this->driver = $this->configureDriver($driver);
+        $this->transport = $transport;
 
-        return $this;
-    }
-
-    /**
-     * Set the email API Provider.
-     *
-     * @param string $provider
-     * - [optional] Default is zeptomail (sendgrid, mailgun, mailjet, postmark, aws, mailchimp, socketlabs, elastic, brevo)
-     * 
-     * @return $this
-     */
-    public function provider($provider = 'zeptomail')
-    {
-        $this->provider = $this->configureProvider($provider);
+        self::$staticTransport = $this->transport;
 
         return $this;
     }

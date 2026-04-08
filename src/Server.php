@@ -85,7 +85,7 @@ class Server{
             // Ignore and fall back to normal file-based config loading
         }
 
-        // If $key is an array => setter mode (Laravel-style)
+        // Setter Mode: Laravel-style config(['key' => 'value'])
         if (is_array($key)) {
             foreach ($key as $k => $v) {
                 // normalize and set using dot notation
@@ -94,17 +94,11 @@ class Server{
             return true;
         }
 
-        // If exact override exists, return it immediately
-        if (isset(self::$overrides[$key])) {
-            return self::$overrides[$key];
-        }
-
-        // split key into file and nested parts
+        // Resolve File and Nested Path
         $parts = explode('.', $key);
-        $file  = $parts[0] ?? '';
-        unset($parts[0]);
+        $file  = array_shift($parts);
 
-        // load file into memory if not loaded
+        // Lazy Load: Only load the file if we haven't touched it yet
         if (!isset(self::$loadedConfigs[$file])) {
             $filePath = self::formatWithBaseDirectory("{$base_folder}/{$file}.php");
 
@@ -115,44 +109,35 @@ class Server{
                 // ensure we have an array
                 self::$loadedConfigs[$file] = is_array($loaded) ? $loaded : [];
             } else {
+                // If the file doesn't exist, we still initialize it to allow on-the-fly sets
                 self::$loadedConfigs[$file] = [];
             }
         }
 
-        $config = self::$loadedConfigs[$file];
+        // Check for top-level overrides (exact key match)
+        if (isset(self::$overrides[$key])) {
+            return self::$overrides[$key];
+        }
+
+        // Traverse the nested structure
+        $cursor = self::$loadedConfigs[$file];
 
         // if no nested parts, return entire file (or merged default)
         if (empty($parts)) {
-            // if default is array and config is array, merge and return
-            if (is_array($config) && is_array($default) && !empty($default)) {
-                return array_merge($config, $default);
+            // Merge logic for entire file return
+            if (is_array($cursor) && is_array($default) && !empty($default)) {
+                return array_merge($cursor, $default);
             }
 
-            return $config ?: ($default ?? null);
+            return !empty($cursor) ? $cursor : $default;
         }
 
-        // reconstruct full dotted nested key string for override checks
-        $nestedKey = $file . '.' . implode('.', $parts);
-
-        // if override exists for nested key, return it
-        if (isset(self::$overrides[$nestedKey])) {
-            return self::$overrides[$nestedKey];
-        }
-
-        // traverse nested parts
-        $cursor = $config;
         foreach ($parts as $part) {
             if (is_array($cursor) && array_key_exists($part, $cursor)) {
                 $cursor = $cursor[$part];
             } else {
-                // not found => return default
                 return $default;
             }
-        }
-
-        // if cursor is array and default is array => merge (behaviour you had previously)
-        if (is_array($cursor) && is_array($default) && !empty($default)) {
-            return array_merge($cursor, $default);
         }
 
         return $cursor;
@@ -168,14 +153,14 @@ class Server{
      */
     protected static function arrayDotSet(string $key, $value, string $base_folder = 'config'): void
     {
-        // set override store (full key)
+        // Maintain the flat override map for fast "exact-key" lookups
         self::$overrides[$key] = $value;
-
+        
         // also merge into loadedConfigs so subsequent calls to config('file') reflect change
         $parts = explode('.', $key);
         $file  = array_shift($parts);
 
-        // ensure file loaded
+        // Ensure the base file is initialized in memory
         if (!isset(self::$loadedConfigs[$file])) {
             $filePath = self::formatWithBaseDirectory("{$base_folder}/{$file}.php");
             if (File::exists($filePath)) {
@@ -186,19 +171,19 @@ class Server{
             }
         }
 
-        // merge the nested value into loadedConfigs[$file]
+        // Navigate to the specific nest level using a pointer
         $cursor =& self::$loadedConfigs[$file];
 
-        while (count($parts) > 0) {
-            $segment = array_shift($parts);
+        foreach ($parts as $segment) {
             if (!isset($cursor[$segment]) || !is_array($cursor[$segment])) {
-                // if next level either not exist or not array, replace with array to allow merging
                 $cursor[$segment] = [];
             }
             $cursor =& $cursor[$segment];
         }
 
-        // if both cursor and value are arrays, merge, else set
+        // Update the value
+        // array_replace_recursive ensures that if $value is an array, 
+        // it doesn't wipe out existing sibling keys at that level.
         if (is_array($cursor) && is_array($value)) {
             $cursor = array_replace_recursive($cursor, $value);
         } else {

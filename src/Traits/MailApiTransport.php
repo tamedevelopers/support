@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 use Tamedevelopers\Support\Capsule\File;
-use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
 
 
@@ -16,7 +15,7 @@ trait MailApiTransport{
      */
     private function isAPI(): bool
     {
-        return $this->driver === 'isAPI';
+        return $this->transport !== 'smtp';
     }
     
     /**
@@ -24,7 +23,7 @@ trait MailApiTransport{
      */
     private function isAWS(): bool
     {
-        return $this->provider === 'aws';
+        return $this->transport === 'ses';
     }
     
     /**
@@ -32,7 +31,7 @@ trait MailApiTransport{
      */
     private function isPostmark(): bool
     {
-        return $this->provider === 'postmark';
+        return $this->transport === 'postmark';
     }
     
     /**
@@ -40,7 +39,7 @@ trait MailApiTransport{
      */
     private function isMailchimp(): bool
     {
-        return $this->provider === 'mailchimp';
+        return $this->transport === 'mailchimp';
     }
     
     /**
@@ -48,7 +47,7 @@ trait MailApiTransport{
      */
     private function isElastic(): bool
     {
-        return $this->provider === 'elastic';
+        return $this->transport === 'elastic';
     }
 
     /**
@@ -64,7 +63,7 @@ trait MailApiTransport{
             'name'    => $this->from['name']
         ];
 
-        return match($this->provider) {
+        return match($this->transport) {
             'sendgrid' => [
                 'personalizations' => [[ 'to' => [[ 'email' => $email ]] ]],
                 'from' => $fromData,
@@ -102,7 +101,7 @@ trait MailApiTransport{
                 'MessageStream'=> $this->smtpData['message_stream'] ?? 'outbound',
                 'Attachments' => [],
             ],
-            'aws' => [
+            'ses' => [
                 'Source' => $this->from['email'],
                 'Destination' => ['ToAddresses' => [$email]],
                 'Message' => [
@@ -111,7 +110,7 @@ trait MailApiTransport{
                 ]
             ],
             'mailchimp' => [
-                'key' => $this->smtpData['api_token'],
+                'key' => $this->smtpData['token'],
                 'message' => [
                     'from_email' => $this->from['email'],
                     'from_name'  => $this->from['name'],
@@ -126,7 +125,7 @@ trait MailApiTransport{
                 ]
             ],
             'socketlabs' => [
-                'ServerId' => (int) $this->smtpData['api_secret'],
+                'ServerId' => (int) $this->smtpData['secret'],
                 'Messages' => [
                     [
                         'From' => [
@@ -173,11 +172,11 @@ trait MailApiTransport{
      */
     private function getDefaultHeaders(): array
     {
-        $token      = $this->smtpData['api_token'] ?? '';
-        $secret     = $this->smtpData['api_secret'] ?? '';
+        $token      = $this->smtpData['token'] ?? '';
+        $secret     = $this->smtpData['secret'] ?? '';
         $headers    = [];
 
-        switch ($this->provider) {
+        switch ($this->transport) {
             case 'mailchimp': // Mandrill Transactional
             case 'sendgrid':
                 $headers = [
@@ -249,7 +248,7 @@ trait MailApiTransport{
         // Ensure AWS SDK exists
         if (!class_exists('\Aws\SesV2\SesV2Client')) {
             throw new \Exception(
-                "AWS SDK not installed. Run: composer require aws/aws-sdk-php",
+                "AWS-SES SDK not installed. Run: composer require aws/aws-sdk-php",
                 520
             );
         }
@@ -268,7 +267,7 @@ trait MailApiTransport{
     {
         $postFields = [];
 
-        switch($this->provider){
+        switch($this->transport){
             case 'sendgrid':
                 // Ensure 'from' is an object with 'email' and optional 'name'
                 $from = $payload['from'] ?? [];
@@ -319,7 +318,7 @@ trait MailApiTransport{
      */
     private function attachPostfieldMultiparts(&$postFields, $payload): void
     {
-        // Add CC, BCC, Reply-To if provider supports them
+        // Add CC, BCC, Reply-To if providers supports them
         if (!empty($payload['cc'])) {
             $postFields['cc'] = $payload['cc'];
         }
@@ -337,7 +336,7 @@ trait MailApiTransport{
             $attachments = [];
             foreach ($this->attachments as $path => $name) {
                 if (File::exists($path)) {
-                    $attachments[] = match($this->provider){
+                    $attachments[] = match($this->transport){
                         'sendgrid', 'mailjet' => [
                             'content' => Tame::imageToBase64($path, false, true),
                             'filename' => $name,
@@ -372,7 +371,7 @@ trait MailApiTransport{
             }
 
             if(!empty($attachments)){
-                $attachmentName = match($this->provider){
+                $attachmentName = match($this->transport){
                     'sendgrid', 'mailjet', 'postmark', 'socketlabs' => 'Attachments',
                     'brevo' => 'attachment',
                     default => 'attachments'
@@ -407,13 +406,17 @@ trait MailApiTransport{
             $sendEmails[] = function() use ($email, $callable) {
                 try {
 
-                    $apiUrl = $this->smtpData['api_url'];
-                    $apiToken = $this->smtpData['api_token'];
+                    $apiUrl = $this->smtpData['url'];
+                    $apiToken = $this->smtpData['token'];
 
                     // setup error or missing
                     if(empty($apiUrl) || empty($apiToken)){
                         throw new \Exception(
-                            sprintf("Missing Setup Data: MAIL_API_URL(%s) or MAIL_API_TOKEN(%s)", $apiUrl, $apiToken), 
+                            sprintf(
+                                "Missing Setup Data: MAIL_URL(%s) or MAIL_TOKEN(%s)", 
+                                empty($apiUrl)   ? 'value_is_empty' : $apiUrl,
+                                empty($apiToken) ? 'value_is_empty' : $apiToken
+                            ), 
                             508
                         );
                     }
@@ -487,10 +490,10 @@ trait MailApiTransport{
     {
         $client = new \Aws\SesV2\SesV2Client([
             'version'     => 'latest',
-            'region'      => $this->smtpData['api_region'],
+            'region'      => $this->smtpData['region'],
             'credentials' => [
-                'key'    => $this->smtpData['api_token'],
-                'secret' => $this->smtpData['api_secret'],
+                'key'    => $this->smtpData['token'],
+                'secret' => $this->smtpData['secret'],
             ],
         ]);
 
@@ -664,7 +667,7 @@ trait MailApiTransport{
 
             curl_setopt($curl, CURLOPT_POSTFIELDS, $jsonPayload);
             curl_setopt($curl, CURLOPT_HTTPHEADER, [
-                "X-Postmark-Server-Token: {$this->smtpData['api_token']}",
+                "X-Postmark-Server-Token: {$this->smtpData['token']}",
                 'Content-Type: application/json', 
             ]);
         } else {
@@ -688,7 +691,7 @@ trait MailApiTransport{
         if ($httpCode < 200 || $httpCode >= 300) {
             $responseText = (is_array($decodedResponse) ? json_encode($decodedResponse) : $decodedResponse);
             throw new \Exception(
-                sprintf("%s - API request failed with HTTP status %d: %s", $this->provider, $httpCode, $responseText),
+                sprintf("%s - API request failed with HTTP status %d: %s", $this->transport, $httpCode, $responseText),
                 $httpCode
             );
         }
@@ -696,7 +699,7 @@ trait MailApiTransport{
         if(is_callable($callable)){
             call_user_func($callable, (object)[
                 'status' => 200,
-                'message' => "Sent via API - {$this->provider}",
+                'message' => "Sent via API - {$this->transport}",
                 'mid' => null,
                 'to' => $email,
                 'response' => $response

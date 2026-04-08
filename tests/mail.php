@@ -11,8 +11,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // every method call have to come after you've called the ->to() method
 
 $mailer = Mail::config([
-    // 'driver' => 'api', //api|mail|smtp
-    // 'provider' => 'api', //zeptomail|sendgrid|mailgun|mailjet|postmark|aws|mailchimp|socketlabs|elastic|brevo
+    // 'transport' => 'smtp', //zeptomail|sendgrid|mailgun|mailjet|postmark|ses|mailchimp|socketlabs|elastic|brevo
     // 'host' => 'sandbox.smtp.mailtrap.io',
     // 'port' => 587,
     // 'username' => '',
@@ -20,10 +19,10 @@ $mailer = Mail::config([
     // 'encryption' => 'ssl',
     // 'from_email' => 'noreply@mailtrap.io',
     // 'from_name' => 'Tame Developers',
-    // 'api_url' => 'https://api.zeptomail.com/v1.1/email',
-    // 'api_token' => 'api_token_or_key',
-    // 'api_secret' => 'api_secret',
-    // 'api_region' => 'api_region', //for amazon-ses
+    // 'url' => 'https://api.zeptomail.com/v1.1/email',
+    // 'token' => 'api_token_or_key',
+    // 'secret' => 'api_secret',
+    // 'region' => 'api_region', //for amazon-ses
 ]);
 
 // env configuration
@@ -35,20 +34,16 @@ $mailer = Mail::config([
 // MAIL_ENCRYPTION=tls
 // MAIL_FROM_ADDRESS="noreply@example.com"
 // MAIL_FROM_NAME="Tame Developers"
-// MAIL_DRIVER=""
-// MAIL_PROVIDER=""
-// MAIL_API_URL=""
-// MAIL_API_TOKEN=""
-// MAIL_API_SECRET=""
-// MAIL_API_REGION=""
-
+// MAIL_URL=""
+// MAIL_TOKEN=""
+// MAIL_SECRET=""
+// MAIL_REGION=""
 
 
 $mailer
         ->to('tamedevelopers@gmail.com')
-        ->driver('api')
-        ->provider('brevo')
         ->subject('New subject')
+        ->bcc('fredi.peterson2000@gmail.com')
         ->body('Hello this is a body text')
         ->altBody('fff')
         ->attach(

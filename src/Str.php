@@ -602,46 +602,64 @@ class Str
      */
     public static function singular(string $value)
     {
+        if (strlen($value) <= 1) {
+            return $value;
+        }
+
         $rules = [
-            '/(matr|vert|ind)ices$/i' => '$1ix',
-            '/(quiz)zes$/i' => '$1',
-            '/(database)s$/i' => '$1',
-            '/(s)tatuses$/i' => '$1tatus',
-            '/(ox)en$/i' => '$1',
-            '/(alias|status|bus)es$/i' => '$1',
-            '/([m|l])ice$/i' => '$1ouse',
-            '/(x|ch|ss|sh)es$/i' => '$1',
-            '/([^aeiouy]|qu)ies$/i' => '$1y',
-            '/(s)eries$/i' => '$1eries',
-            '/(movie)s$/i' => '$1',
-            '/(hive)s$/i' => '$1',
-            '/(tive)s$/i' => '$1',
-            '/([lr])ves$/i' => '$1f',
-            '/(shea|lea|loa|thie)ves$/i' => '$1f',
-            '/(^analy)ses$/i' => '$1sis',
-            '/([ti])a$/i' => '$1um',
-            '/(tomat|potat|ech|her|vet)oes$/i' => '$1o',
-            '/(bu)ses$/i' => '$1s',
-            '/(octop|vir)i$/i' => '$1us',
-            '/(us)es$/i' => '$1',
-            '/(person)s$/i' => '$1',
-            '/(child)ren$/i' => '$1',
-            '/(man|woman)en$/i' => '$1',
-            '/(tooth)teeth$/i' => '$1',
-            '/(foot)feet$/i' => '$1',
-            '/(goose)geese$/i' => '$1',
-            '/(mouse)mice$/i' => '$1',
-            '/(deer)$/i' => '$1',
-            '/(sheep)$/i' => '$1',
+            // --- Uncountable / No Change ---
+            '/(advice|information|knowledge|furniture|equipment|series|species|news|rice|fish|deer|sheep)$/i' => '$1',
+
+            // --- Irregular Plurals (Full Overwrites) ---
+            '/people$/i'                => 'person',
+            '/geese$/i'                 => 'goose',
+            '/teeth$/i'                 => 'tooth',
+            '/feet$/i'                  => 'foot',
+            '/mice$/i'                  => 'mouse',
+            '/lice$/i'                  => 'louse',
+            '/(child)ren$/i'            => '$1',
+            '/(ox)en$/i'                => '$1',
+            '/^(men)$/i'                => 'man',
+            '/^(women)$/i'              => 'woman',
+            '/(wo|man)en$/i'            => '$1',
+
+            // --- Greek / Latin / Scientific (Reverse) ---
+            '/(database|status)es$/i'   => '$1',
+            '/(matr|vert|ind|append)ices$/i' => '$1ix',
+            '/(alumn|termin|stimul|bacill|nucle)i$/i' => '$1us',
+            '/(alumn|formul|vertebr)ae$/i' => '$1a',
+            '/(ax|test|diagnos|analys|parenthes|bas|emphas|thes)es$/i' => '$1is',
+            '/(crit|phenomen)era$/i'    => '$1erion',
+            '/(crit|phenomen)a$/i'      => '$1on',
+            '/([ti])a$/i'               => '$1um',
+
+            // --- Sibilants & "O" Rules ---
+            '/(quiz)zes$/i'             => '$1',
+            '/(tomat|potat|ech|her|vet|volcan|buffal|carg)oes$/i' => '$1o',
+            '/(alias|status|bus)es$/i'  => '$1',
+            '/(bu)ses$/i'               => '$1s',
+            '/(x|ch|ss|sh)es$/i'        => '$1',
+
+            // --- The "Y" Rule ---
+            '/([^aeiouy]|qu)ies$/i'     => '$1y',
+
+            // --- The "F/FE" Rule (ves -> f/fe) ---
+            '/(?:([^f])fe|([lr])f)$/i'  => '$1$2', // Handles leaf/leaves
+            '/(shea|lea|loa|thie|wi|li|hal|wol)ves$/i' => '$1f',
+            '/(hive|tive|movie)s$/i'    => '$1',
         ];
+
         foreach ($rules as $pattern => $replacement) {
             if (preg_match($pattern, $value)) {
                 return preg_replace($pattern, $replacement, $value);
             }
         }
-        if (substr($value, -1) === 's') {
+
+        // Default: If it ends in 's', strip it
+        if (strtolower(substr($value, -1)) === 's') {
             return substr($value, 0, -1);
         }
+
         return $value;
     }
 
@@ -649,56 +667,90 @@ class Str
      * Get the plural form of an English word.
      *
      * @param  string|null  $value
+     * @param  bool         $isPossessive  If true, returns "word's" or "words'"
      * @return string
      */
-    public static function pluralize($value = null)
+    public static function pluralize($value = null, bool $isPossessive = false)
     {
         $value = (string) $value;
         if (strlen($value) === 1) {
-            return $value;
+            return $isPossessive ? $value . "'s" : $value;
         }
 
-        // Pluralization rules for common cases
         $rules = [
-            '/(s)tatus$/i'                          => '$1tatuses',
-            '/(quiz)$/i'                            => '$1zes',
+            // --- Special Case: Uncountable / Same as Singular ---
+            '/(advice|information|knowledge|furniture|equipment|series|species|news|rice|fish|deer|sheep)$/i' => '$1',
+
+            // --- Pronouns & Irregulars ---
+            '/^i$/i'                                => 'we',
+            '/^me$/i'                               => 'us',
+            '/^he$|^she$|^it$/i'                    => 'they',
+            '/^(child)$/i'                          => '$1ren',
             '/^(ox)$/i'                             => '$1en',
+            '/^(person)$/i'                         => 'people',
             '/([m|l])ouse$/i'                       => '$1ice',
-            '/(matr|vert|ind)ix|ex$/i'              => '$1ices',
-            '/(x|ch|ss|sh)$/i'                      => '$1es',
-            '/([^aeiouy]|qu)y$/i'                   => '$1ies',
-            '/(hive)$/i'                            => '$1s',
-            '/(?:([^f])fe|([lr])f)$/i'              => '$1$2ves',
-            '/(shea|lea|loa|thie)f$/i'              => '$1ves',
-            '/sis$/i'                               => 'ses',
+            '/(tooth)$/i'                           => 'teeth',
+            '/(foot)$/i'                            => 'feet',
+            '/(goose)$/i'                           => 'geese',
+            '/(man|woman)$/i'                       => '$1en',
+
+            // --- Greek / Latin / Scientific ---
+            '/(database|status)$/i'                 => '$1es',
+            '/(quiz)$/i'                            => '$1zes',
+            '/(matr|vert|ind|append)ix|ex$/i'       => '$1ices',
+            '/(alumn|termin|stimul|bacill|nucle)us$/i' => '$1i',
+            '/(alumn|formul|vertebr)a$/i'           => '$1ae',
+            '/(ax|test|diagnos|analys|parenthes|bas|emphas|thes)is$/i' => '$1es',
+            '/(crit|phenomen)erion|on$/i'           => '$1era',
             '/([ti])um$/i'                          => '$1a',
-            '/(tomat|potat|echo|hero|vet)o$/i'      => '$1es',
-            '/(tomat|potat|ech|her|vet)o$/i'        => '$1oes',
+
+            // --- Sibilant Endings (s, x, ch, sh) ---
+            '/(x|ch|ss|sh)$/i'                      => '$1es',
             '/(bu)s$/i'                             => '$1ses',
             '/(alias)$/i'                           => '$1es',
-            '/(octop)us$/i'                         => '$1i',
-            '/(ax|test)is$/i'                       => '$1es',
             '/(us)$/i'                              => '$1es',
-            '/(person)$/i'                          => '$1s',
-            '/(child)$/i'                           => '$1ren',
-            '/(man)$/i'                             => '$1en',
-            '/(woman)$/i'                           => '$1en',
-            '/(tooth)$/i'                           => '$1teeth',
-            '/(foot)$/i'                            => '$1feet',
-            '/(goose)$/i'                           => '$1geese',
-            '/(mouse)$/i'                           => '$1mice',
-            '/(deer)$/i'                            => '$1',
-            '/(sheep)$/i'                           => '$1',
+
+            // --- The "Y" Rule ---
+            '/([^aeiouy]|qu)y$/i'                   => '$1ies',
+
+            // --- The "O" Rule (Potato/Tomato) ---
+            '/(tomat|potat|ech|her|vet|volcan|buffal|carg)o$/i' => '$1oes',
+
+            // --- The "F/FE" Rule (Leaf/Knife) ---
+            '/(?:([^f])fe|([lr])f)$/i'              => '$1$2ves',
+            '/(shea|lea|loa|thie|wi|li|hal|wol)f$/i' => '$1ves',
+            '/(hive)$/i'                            => '$1s',
         ];
+
+        $plural = $value;
+        $found = false;
 
         foreach ($rules as $pattern => $replacement) {
             if (preg_match($pattern, $value)) {
-                return preg_replace($pattern, $replacement, $value);
+                $plural = preg_replace($pattern, $replacement, $value);
+                $found = true;
+                break;
             }
         }
 
-        // Default case: append 's' to the word
-        return $value . 's';
+        // Only add 's' if no specific rule was found and we AREN'T doing a possessive proper name
+        if (!$found) {
+            $plural = ($isPossessive) ? $value : $value . 's';
+        }
+
+        // Handle Possessive logic
+        if ($isPossessive) {
+            // If it ends in 's', strip the 's' and replace with "'s"
+            // Example: James -> Jame's | Wolves -> Wolve's
+            if (strtolower(substr($plural, -1)) === 's') {
+                return substr($plural, 0, -1) . "'s";
+            }
+
+            // Otherwise just append 's (e.g., Isaiah -> Isaiah's)
+            return $plural . "'s";
+        }
+
+        return $plural;
     }
 
     /**

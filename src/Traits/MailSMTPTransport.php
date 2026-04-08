@@ -31,7 +31,7 @@ trait MailSMTPTransport{
                 try {
 
                     // Validate the recipient email
-                    if (!Tame()->emailValidator($email, true)) {
+                    if (!Tame()->emailValidator($email, false)) {
                         throw new \Exception("Invalid email address: {$email}", 509); 
                     }
 
@@ -39,7 +39,15 @@ trait MailSMTPTransport{
                     if (empty($this->body)) {
                         throw new \Exception("Email body cannot be empty.", 510);
                     }
-                    
+
+                    $fromEmail = $this->from['email'];
+
+                    if(!Tame()->emailValidator($fromEmail, false)){
+                        throw new \Exception("Invalid From-Email address: {$fromEmail}", 511);
+                    }
+                        
+                    $this->mailer->setFrom($fromEmail, $this->from['name']);
+
                     // email and name of receiver as name is optional
                     $this->mailer->addAddress($email);
                     
@@ -72,7 +80,12 @@ trait MailSMTPTransport{
                     $mid = $this->mailer->getLastMessageID();
         
                     // Clear previous addresses to avoid duplication
-                    $this->mailer->clearAddresses();
+                    $this->mailer->clearAllRecipients();
+                    $this->mailer->clearAttachments();
+                    $this->mailer->clearCustomHeaders();
+
+                    $this->recipients['cc'] = [];
+                    $this->recipients['bcc'] = [];
                     
                     // Close the SMTP session
                     $this->mailer->SMTPClose();

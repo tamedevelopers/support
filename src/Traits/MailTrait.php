@@ -5,26 +5,25 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 use PHPMailer\PHPMailer\Exception;
-use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Mail;
+use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Str;
 
 
 trait MailTrait{
 
     /**
-     * mailer
-     *
+     * The PHPMailer instance.
      * @var PHPMailer
      */
     private $mailer;
 
     /**
-     * recipients
-     *
-     * @var array
+     * List of message recipients.
+     * @var array{to: array, cc: mixed, bcc: mixed, reply_to: mixed}
      */
     private $recipients = [
         'to'  => [],
@@ -34,132 +33,113 @@ trait MailTrait{
     ];
 
     /**
-     * Options
-     *
+     * Custom mailer options.
      * @var array
      */
     private $options = [];
 
     /**
-     * smtpData
-     *
+     * Resolved SMTP configuration data.
      * @var array
      */
     private $smtpData = [];
 
     /**
-     * attachments
-     *
+     * Collection of attachments to be sent.
      * @var array
      */
     private $attachments = [];
 
     /**
-     * Delete Attachment
-     *
-     * @var array
+     * Whether to delete attachments from the server after sending.
+     * @var bool
      */
     private $deleteAttachment = false;
 
     /**
-     * Flush buffering
-     *
-     * @var array
+     * Whether to enable automatic output buffer flushing.
+     * @var bool
      */
     private $flushBuffering = false;
     
     /**
-     * from address
-     *
-     * @var array
+     * The resolved "from" address and name.
+     * @var array{email: string|null, name: string}
      */
     private $from = [];
     
     /**
-     * config
-     *
+     * The mail configuration settings.
      * @var array
      */
     private $config = [];
     
     /**
-     * driver
-     *
-     * @var string
+     * Static transport driver name.
+     * @var string|null
      */
-    private $driver = null;
+    private static $staticTransport = null;
     
     /**
-     * provider
-     *
-     * @var string
+     * The active mail transport driver.
+     * @var string|null
      */
-    private $provider = null;
+    private $transport = null;
     
     /**
-     * debug
-     *
+     * SMTP debug level (0, 1, or 2).
      * @var int
      */
     private $debug = 0;
     
     /**
-     * timeout
-     *
+     * Connection timeout in seconds.
      * @var int
      */
     private $timeout = 10;
     
     /**
-     * keepAlive
-     *
-     * @var int
+     * Whether to use persistent SMTP connections.
+     * @var bool
      */
     private $keepAlive = true;
     
     /**
-     * subject
-     *
+     * The email subject line.
      * @var string
      */
     private $subject;
     
     /**
-     * body
-     *
+     * The primary email body (HTML).
      * @var string
      */
     private $body;
     
     /**
-     * altbody
-     *
-     * @var string
+     * The plain-text alternative email body.
+     * @var string|bool
      */
     private $altbody = false;
     
     /**
-     * constantName
-     *
+     * The constant name used for static configuration.
      * @var string
      */
     private static $constantName = 'TAME_MAILER_CONFIG___';
     
     /**
-     * static
-     *
+     * Static data cache for Mail instances.
      * @var mixed
      */
     private static $staticData;
-    
 
     /**
-     * Convert input to an array of valid email addresses
+     * Convert input to an array of valid email addresses.
      *
-     * @param string|array|null $emails A string of comma-separated email addresses or an array of email addresses
-     * @param string|null $mode
-     *
-     * @return mixed
+     * @param  string|array|null  $emails
+     * @param  string|null  $mode  Optional return key (email|count).
+     * @return array|int
      */
     public function convert(string|array|null $emails, $mode = null)
     {
@@ -189,9 +169,9 @@ trait MailTrait{
     }
 
     /**
-     * Add Reply to recipients.
+     * Set the Reply-To address fluently.
      *
-     * @param string $emails
+     * @param  string  ...$emails
      * @return $this
      */
     public function __replyTo(...$emails)
@@ -217,20 +197,19 @@ trait MailTrait{
     }
     
     /**
-     * Add CC recipients.
-     * 
-     * @param array $payload
-     * @param bool $isAPI
+     * Attach CC recipients to the mailer or API payload.
+     * @param  array  $payload
+     * @param  bool  $isapi
      */
-    private function addCC(&$payload = [], $isAPI = false): void
+    private function addCC(&$payload = [], $isapi = false): void
     {
         if(!empty($this->recipients['cc'])){
             foreach($this->recipients['cc'] as $cc){
                 if(Tame()->emailValidator($cc, false)){
-                    if(!$isAPI){
+                    if(!$isapi){
                         $this->mailer->addCC($cc);
                     } else{
-                        switch($this->provider){
+                        switch($this->transport){
                             case 'sendgrid':
                                 $payload['personalizations'][0]['cc'][] = ['email' => $cc];
                                 break;
@@ -269,20 +248,20 @@ trait MailTrait{
     }
     
     /**
-     * Add BCC recipients.
+     * Attach BCC recipients to the mailer or API payload.
      * 
-     * @param array $payload
-     * @param bool $isAPI
+     * @param  array  $payload
+     * @param  bool  $isapi
      */
-    private function addBCC(&$payload = [], $isAPI = false): void
+    private function addBCC(&$payload = [], $isapi = false): void
     {
         if(!empty($this->recipients['bcc'])){
             foreach($this->recipients['bcc'] as $bcc){
                 if(Tame()->emailValidator($bcc, false)){
-                    if(!$isAPI){
+                    if(!$isapi){
                         $this->mailer->addBCC($bcc);
                     } else{
-                        switch($this->provider){
+                        switch($this->transport){
                             case 'sendgrid':
                                 $payload['personalizations'][0]['bcc'][] = ['email' => $bcc];
                                 break;
@@ -323,22 +302,21 @@ trait MailTrait{
     }
     
     /**
-     * Add Reply-To recipient.
-     * 
-     * @param array $payload
-     * @param bool $isAPI
+     * Attach Reply-To address to the mailer or API payload.
+     * @param  array  $payload
+     * @param  bool  $isapi
      */
-    private function addReplyTo(&$payload = [], $isAPI = false): void
+    private function addReplyTo(&$payload = [], $isapi = false): void
     {
         $replyTo    = $this->recipients['reply_to'];
         $address    = $replyTo[0] ?? null;
         $name       = $replyTo[1] ?? '';
 
         if(!empty($replyTo) && !empty($address)){
-            if(!$isAPI){
+            if(!$isapi){
                 $this->mailer->addReplyTo($address, $name);
             } else{
-                switch($this->provider){
+                switch($this->transport){
                     case 'sendgrid':
                         $payload['personalizations'][0]['reply_to'] = ['email' => $address, 'name' => $name];
                         break;
@@ -375,19 +353,18 @@ trait MailTrait{
     }
     
     /**
-     * Add AltBody to payload if supported by provider.
-     * 
-     * @param array $payload
-     * @param bool $isAPI
+     * Add AltBody to API payload if supported by transport.
+     * @param  array  $payload
+     * @param  bool  $isapi
      */
-    private function addAltBody(&$payload = [], $isAPI = false): void
+    private function addAltBody(&$payload = [], $isapi = false): void
     {
         // If support alternative message
         if(!empty($this->altbody)){
-            if(!$isAPI){
+            if(!$isapi){
                 $this->mailer->AltBody = $this->altbody; 
             } else{
-                switch($this->provider){
+                switch($this->transport){
                     case 'sendgrid':
                         $payload['content'][] = ['type' => 'text/plain', 'value' => $this->altbody];
                         break;
@@ -424,7 +401,7 @@ trait MailTrait{
     }
 
     /**
-     * Delete attachment
+     * Delete processed attachments from the local file system.
      */
     private function deleteAttachment(): void
     {
@@ -437,15 +414,13 @@ trait MailTrait{
     }
 
     /**
-     * SMTP Mailer Setup
-     * @param array $options
-     * 
-     * @return void
+     * Configure the PHPMailer instance for SMTP transport.
+     * @param  array|null  $options
      */
-    private function setupMailer(?array $options = [])
+    private function setupMailer(?array $options = []): void
     {
-        // mailer isSMTP | IsMail
-        $this->mailer->{$options['driver']}();
+        // mailer smtp
+        $this->mailer->isSMTP();
 
         // set to 1 or 2 to see the response from mail server
         $this->mailer->SMTPDebug = $options['debug']; 
@@ -487,125 +462,90 @@ trait MailTrait{
             ]
         ];
         
-        $this->mailer->SMTPAuth = $this->isSMTP();
+        $this->mailer->SMTPAuth = true;
         $this->mailer->CharSet  = 'UTF-8';
         $this->mailer->Username = $this->smtpData['username'];
         $this->mailer->Password = $this->smtpData['password'];
         $this->mailer->Host     = $this->smtpData['host'];
         $this->mailer->Port     = $this->smtpData['port']; 
-
-        if(Tame()->emailValidator($this->from['name'], false)){
-            $this->mailer->setFrom($this->from['email'], $this->from['name']);
-        }
-    }
-    
-    /**
-     * Checking if SMTP
-     */
-    private function isSMTP(): bool
-    {
-        return $this->driver === 'isSMTP';
     }
 
     /**
-     * Configure Driver to Method
+     * Resolve and validate the requested API transport driver.
      *
-     * @param string $driver
+     * @param  string  $transport
      * @return string
      */
-    private function configureDriver($driver)
+    private function configureTransport($transport)
     {
-        $driver = Str::lower($driver);
-
-        return match ($driver) {
-            'mail', 'ismail' => 'isMail',
-            'api', 'isapi' => 'isAPI',
-            default => 'isSMTP'
-        };
-    }
-
-    /**
-     * Configure API Providers
-     *
-     * @param string $provider
-     * @return string
-     */
-    private function configureProvider($provider)
-    {
-        $provider = Str::lower($provider);
+        $transport = Str::lower($transport);
             
-        return match ($provider) {
+        return match ($transport) {
             'sendgrid'   => 'sendgrid',
             'mailgun'    => 'mailgun',
             'mailjet'    => 'mailjet',
             'postmark'   => 'postmark',
-            'aws'        => 'aws',
+            'ses'        => 'ses',
             'mailchimp'  => 'mailchimp',
             'elastic'    => 'elastic',
             'brevo'      => 'brevo',
-            'socketlabs', 'socketlab'  => 'socketlabs',
-            default      => 'zeptomail',
+            'zeptomail'  => 'zeptomail',
+            'socketlabs' => 'socketlabs',
+            default      => 'smtp',
         };
     }
 
     /**
-     * Get default API endpoint for a provider.
+     * Get the default API endpoint for a specific provider.
      *
-     * @param string $provider
+     * @param  string  $transport
      * @return string
      */
-    private function getProviderApiUrl($provider)
+    private function getTransportApiUrl($transport)
     {
-        $provider = Str::lower($provider);
-
-        $hosts = explode('@', $this->from['email']);
-        $domain = $hosts[1] ?? '';
+        $transport  = Str::lower($transport);
+        $domain     = $this->resolveHostNameFromEmail();
 
         // mailgun requires domain in the API endpoint, 
         // so we replace the placeholder with the actual domain
-        $mailgun = Str::replace(
-            'YOUR_DOMAIN_NAME', 
+        $mailgunProtocol = Str::replace(
+            '[YOUR_DOMAIN_NAME]', 
             $domain, 
-            'https://api.mailgun.net/v3/YOUR_DOMAIN_NAME/messages'
+            'https://api.mailgun.net/v3/[YOUR_DOMAIN_NAME]/messages'
         );
 
-        return match ($provider) {
+        return match ($transport) {
             'sendgrid'   => 'https://api.sendgrid.com/v3/mail/send',
-            'mailgun'    => $mailgun,
+            'mailgun'    =>  $mailgunProtocol,
             'mailjet'    => 'https://api.mailjet.com/v3.1/send',
             'brevo'      => 'https://api.brevo.com/v3/smtp/email',
             'postmark'   => 'https://api.postmarkapp.com/email',
-            'aws'        => 'https://email.us-east-1.amazonaws.com',
+            'ses'        => 'https://email.us-east-1.amazonaws.com',
             'zeptomail'  => 'https://api.zeptomail.com/v1.1/email',
             'mailchimp'  => 'https://mandrillapp.com/api/1.0/messages/send.json',
             'elastic'    => 'https://api.elasticemail.com/v4/emails/transactional',
-            'socketlabs', 'socketlab'  => 'https://api.socketlabs.com/v1/email',
+            'socketlabs' => 'https://api.socketlabs.com/v1/email',
             default      => '', // return empty if unknown, user must provide
         };
     }
 
     /**
-     * Get SMTP Data
-     * 
-     * @param array $options
-     * @return array
+     * Retrieve the current SMTP configuration data.
      */
-    public function getSMTPData()
+    public function getSMTPData(): array
     {
         return $this->smtpData;
     }
 
     /**
-     * Get Default Options
-     * 
-     * @param array $options
+     * Resolve default mailer options, ensuring valid debug levels.
+     * @param  array|null  $options
      * @return array
      */
     private function getDefaultOption(?array $options = [])
     {
         $array = [
             'flush'         => $options['flush']        ?? $this->flushBuffering,
-            'driver'        => $options['driver']       ?? $this->driver, 
             'debug'         => $options['debug']        ?? $this->debug, 
             'keep_alive'    => $options['keep_alive']   ?? $this->keepAlive, 
             'timeout'       => $options['timeout']      ?? $this->timeout,
@@ -622,67 +562,95 @@ trait MailTrait{
     }
 
     /**
-     * Configure SMTP Data
-     * @param array $options
+     * Resolve the sender "from" address and name based on configuration priority.
+     * * Priority Order:
+     * 1. Fluent $this->from() method.
+     * 2. Inline options passed to the constructor/config.
+     * 3. Global Mail::config() runtime settings.
+     * 4. Static config/mail.php file defaults.
+     *
+     * @param  array  $mailConfig
+     * @param  array  $globalRuntime
+     * @param  array  $finalConfig
      */
-    private function configureSMTPData(?array $options = []): void
+    private function resolveFromAddress($mailConfig, $globalRuntime, $finalConfig): void
     {
+        // Priority: Fluent $this->from > config(['from_email']) > Mail::config > config/mail.php
+        $fromEmail = $this->from['email'] 
+            ?? $finalConfig['from_email'] 
+            ?? $globalRuntime['from_email'] 
+            ?? $mailConfig['from']['address'] 
+            ?? null;
+
+        $fromName = $this->from['name'] 
+            ?? $finalConfig['from_name'] 
+            ?? $globalRuntime['from_name'] 
+            ?? $mailConfig['from']['name'] 
+            ?? 'Mailer';
+
+        $this->from = [
+            'email' => $fromEmail,
+            'name'  => $fromName
+        ];
+    }
+
+    /**
+     * Extract the domain/hostname from the current "from" email address.
+     */
+    private function resolveHostNameFromEmail(): string
+    {
+        $hosts = explode('@', $this->from['email'] ?? '');
+        
+        return $hosts[1] ?? '';
+    }
+
+    /**
+     * Consolidate and resolve SMTP configuration data from all sources.
+     * 
+     * @param array|null $globalRuntime (Mail::config)
+     */
+    private function configureSMTPData(?array $globalRuntime = []): void
+    {
+        // Pull base defaults from config/mail.php
+        $mailConfig = Server::config('mail');
+
+        // Priority Logic: (Priority: Instance > Global Runtime > Config File)
+        // We treat 'this->transport' as the source of truth if it was set via fluent method
+        $this->transport = $this->configureTransport(
+            $this->transport ?? $globalRuntime['transport'] ?? $mailConfig['default']
+        );
+
+        // Get the specific mailer config (e.g., mail.mailers.smtp)
+        $mailerDefaults = $mailConfig['mailers'][$this->transport] ?? [];
+
+        // Merge data correctly
+        $finalConfig = array_merge($mailerDefaults, $globalRuntime);
+
+        // Map to internal smtpData property
         $this->smtpData = [
-            'provider'      => $options['provider']     ?? env('MAIL_PROVIDER', ''),
-            'driver'        => $options['driver']       ?? env('MAIL_DRIVER', ''),
-            'host'          => $options['host']         ?? env('MAIL_HOST', ''),
-            'port'          => $options['port']         ?? env('MAIL_PORT'),
-            'username'      => $options['username']     ?? env('MAIL_USERNAME'),
-            'password'      => $options['password']     ?? env('MAIL_PASSWORD'),
-            'encryption'    => $options['encryption']   ?? env('MAIL_ENCRYPTION'),
-            'from_email'    => $options['from_email']   ?? env('MAIL_FROM_ADDRESS'),
-            'from_name'     => $options['from_name']    ?? env('MAIL_FROM_NAME'),
-            'api_url'       => $options['api_url']      ?? env('MAIL_API_URL'),
-            'api_token'     => $options['api_token']    ?? env('MAIL_API_TOKEN'),
-            'api_secret'    => $options['api_secret']   ?? env('MAIL_API_SECRET'),
-            'api_region'    => $options['api_region']   ?? env('MAIL_API_REGION'),
+            'transport'  => $this->transport,
+            'host'       => $finalConfig['host'] ?? null,
+            'port'       => $finalConfig['port'] ?? 587,
+            'username'   => $finalConfig['username'] ?? null,
+            'password'   => $finalConfig['password'] ?? null,
+            'encryption' => $finalConfig['encryption'] ?? 'tls',
+            'url'        => $finalConfig['url'] ?? null,
+            'token'      => $finalConfig['token'] ?? null,
+            'secret'     => $finalConfig['secret'] ?? null,
+            'region'     => $finalConfig['region'] ?? null,
         ];
 
-        // from email is empty
-        if(empty($this->from['email'])){
-            $this->from['email'] = $this->smtpData['from_email'];
-        }
+        // Handle "From" Address Priority
+        $this->resolveFromAddress($mailConfig, $globalRuntime, $finalConfig);
 
-        // from name is empty
-        if(empty($this->from['name'])){
-            $this->from['name'] = $this->smtpData['from_name'];
-        }
-
-        // if driver is null
-        if(empty($this->driver)){
-            $this->driver = $this->configureDriver($this->smtpData['driver']);
-        } else{
-            if(empty($this->smtpData['driver'])){
-                $this->smtpData['driver'] = $this->driver;
-            }
-        }
-
-        // if provider is null
-        if(empty($this->provider) && $this->isAPI()){
-            $this->provider = $this->configureProvider($this->smtpData['provider']);
-        } else{
-            if(empty($this->smtpData['provider'])){
-                $this->smtpData['provider'] = $this->provider;
-            }
-        }
-
-        // if not APi and provider is set
-        if(!empty($this->provider) && !$this->isAPI()){
-            $this->provider = null;
-        } else{
-            if(empty($this->smtpData['api_url'])){
-                $this->smtpData['api_url'] = $this->getProviderApiUrl($this->provider);
-            }
+        // Configure url if an api and url is empty
+        if($this->isAPI() && empty($this->smtpData['url'])){
+            $this->smtpData['url'] = $this->getTransportApiUrl($this->transport);
         }
     }
 
     /**
-     * Get Config
+     * Retrieve static configuration from defined constants.
      */
     private static function getConfig(): array
     {
@@ -692,7 +660,7 @@ trait MailTrait{
     }
 
     /**
-     * isMailInstance
+     * Determine if static data is an instance of Mail.
      */
     private static function isMailInstance(): bool
     {
@@ -700,10 +668,10 @@ trait MailTrait{
     }
 
     /**
-     * Standardize attachments for the attach method.
+     * Standardize attachments into a structured associative array.
      *
-     * @param mixed $attachments A string, single array, or an array of attachments.
-     * @return array Associative array with file paths as keys and their names as values.
+     * @param  mixed  $attachments  Path string, single array, or collection array.
+     * @return array  Associative array with file paths as keys and formatted names as values.
      */
     private function formatAttachments($attachments)
     {
@@ -782,15 +750,10 @@ trait MailTrait{
         if (!headers_sent()) {
             @ini_set('zlib.output_compression', 'Off');
         }
-
-        // Turn on implicit flushing
-        ob_implicit_flush(true);
-
-        // ignore user abort
-        ignore_user_abort(true);
-
-        // Disable script timeout
-        set_time_limit(0);
+        
+        ob_implicit_flush(true); // Turn on implicit flushing
+        ignore_user_abort(true); // ignore user abort
+        set_time_limit(0); // Disable script timeout
 
         // turn on fast cgi
         if (function_exists('fastcgi_finish_request')) {
@@ -799,21 +762,15 @@ trait MailTrait{
 
         // Set the HTTP response code ... only available in > PHP 5.4.0
         http_response_code(200);
-
-        // Start output buffering
-        ob_start();
+        ob_start(); // Start output buffering
 
         // execute code block
         if(is_callable($callable)){
-            // flush before calling the callable();
-            $this->autoFlush($options);
-
-            // call the method needed
-            $callable();
+            $this->autoFlush($options); // flush before calling the callable();
+            $callable(); // call the method needed
         }
-        
-        // Disable implicit flushing
-        ob_implicit_flush(false);
+
+        ob_implicit_flush(false); // Disable implicit flushing
     }
 
     /**

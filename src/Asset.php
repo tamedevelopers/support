@@ -21,7 +21,7 @@ class Asset{
      */
     public static function asset($asset = null, $cache = null, $type = null): string
     {
-        // if coniguration has not been used in the global space
+        // if configuration has not been used in the global space
         // then we call to define paths for us
         if(!defined('ASSET_BASE_DIRECTORY')){
             self::config();
@@ -29,49 +29,45 @@ class Asset{
 
         // asset path
         $assetConfig = ASSET_BASE_DIRECTORY;
+        $cache = is_bool($cache) ? $cache : $assetConfig['cache'];
+        $type  = is_bool($type)  ? $type  : $assetConfig['type'];
 
-        // Only override global config, when <cache> it's not boolean
-        if(!is_bool($cache)){
-            $cache = $assetConfig['cache'];
-        }
+        // Build the internal path segment
+        // If $path is 'assets' and $asset is 'css/style.css', result is 'assets/css/style.css'
+        $subPath = Str::trim($assetConfig['path'], '/');
+        $asset   = Str::trim($asset, '/');
+        $fullPathSegment = Str::trim("{$subPath}/{$asset}", '/');
 
-        // Only override global config, when <type> it's not boolean
-        if(!is_bool($type)){
-            $type = $assetConfig['type'];
-        }
+        // Final URL and Server Path
+        $file_domain = $assetConfig['domain'] . '/' . $fullPathSegment;
+        $file_server = $assetConfig['server'] . '/' . $fullPathSegment;
 
-        $configPath = $assetConfig['path'];
-        if(!empty($configPath)){
-            $configPath = "/$configPath";
-        }
-
-        // trim
-        $asset = Str::trim($asset, '/');
-
-        $file_domain = "{$assetConfig['domain']}{$configPath}/{$asset}";
-
-        // file server path
-        $file_server = "{$assetConfig['server']}{$configPath}/{$asset}";
-
-        // append file update time
-        $cacheTimeAppend = null;
-
-        // cache allow from self method
-        if($cache && !empty($asset)){
-            $cacheTimeAppend = self::getFiletime($file_server) ?? null;
-        }
+        // Default to Absolute URL
+        $finalUrl = $file_domain;
         
-        // Using <relative path> when true
+        // Handle Relative Path conversion
         if($type === true){
-            // replace domain path
-            $domain = Str::replace($assetConfig['removeDomain'], '', $file_domain);
-            $domain = ltrim($domain, '/');
+            // Strip the protocol and host (e.g., http://localhost)
+            $relative = Str::replace($assetConfig['removeDomain'], '', $file_domain);
 
-            return "/{$domain}{$cacheTimeAppend}";
+            // if the replacement didn't actually happen.
+            $relative = '/' . ltrim($relative, '/');
+
+            // Check for "://" to see if the replacement failed (meaning the host is still there)
+            if (str_contains($relative, '://')) {
+                $finalUrl = $file_domain;
+            } else {
+                $finalUrl = $relative;
+            }
         }
+
+        // Always calculate and append Cache Time
+        $cacheTimeAppend = ($cache && !empty($asset)) 
+            ? self::getFiletime($file_server) 
+            : '';
 
         // Using <absolute path>
-        return "{$file_domain}{$cacheTimeAppend}";
+        return $finalUrl . $cacheTimeAppend;
     }
     
     /**
@@ -87,45 +83,21 @@ class Asset{
         // if not defined
         if(!defined('ASSET_BASE_DIRECTORY')){
 
-            // http
-            $http = HttpRequest::http();
-            $host = HttpRequest::host();
+            $url    = HttpRequest::url();
+            $http   = HttpRequest::http();
+            $host   = HttpRequest::host();
+            $baseProtocolHost = rtrim("{$http}{$host}", '/');
 
-            // url helper class
-            $url = HttpRequest::url();
-
-            // clean http from url
-            $urlFromhelper = Str::replace($http, '', $url);
-
-            // if base path is set
-            if(!empty($path)){
-                // - Trim forward slash from left and right
-                $path = Str::trim($path, '/');
-                $path = Str::trim($path, DIRECTORY_SEPARATOR);
-
-                // base for url path
-                $baseForUrlPath = $path;
-
-                // check if accessed from default ip:address
-                if(HttpRequest::isIpAccessedViaPrivateLanPort()){
-                    $baseForUrlPath = '';
-                }
-
-                // compile
-                $urlFromhelper = "{$urlFromhelper}/{$baseForUrlPath}";
-            }
-
-            $domain = rtrim(self::cleanServerPath("{$http}{$urlFromhelper}"), '/');
-            $domain = Str::replace($path, '', $domain);
-            $domain = rtrim($domain, '/');
+            // Clean the user-provided asset sub-path (e.g., 'public' or 'assets')
+            $path = !empty($path) ? Str::trim($path, '/\\') : '';
 
             define('ASSET_BASE_DIRECTORY', [
                 'cache'     => $cache,
                 'type'      => $type,
                 'path'      => $path,
                 'server'    => self::formatWithBaseDirectory(),
-                'domain'    => $domain,
-                'removeDomain' => "{$http}{$host}"
+                'domain'    => rtrim($url, '/'),
+                'removeDomain' => $baseProtocolHost
             ]);
         }
     }

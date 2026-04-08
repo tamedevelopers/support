@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 
-use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\Logger;
 
@@ -35,12 +34,14 @@ class Installer
         // dummy paths to be created 
         $paths = self::getPathsData(realpath(__DIR__));
 
+
         // only create when files are not present
         if(self::isDummyNotPresent($paths)){
             // create for [tame] 
             self::createTameBash($paths);
 
-            Logger::info("\n<b>[Tame-Artisan]</b> has been created automatically!\n\nUsage: \n   php tame <command> [:option] [arguments]\n\n");
+            // create for [database.php]
+            self::createTameMailer($paths);
         }
     }
 
@@ -49,12 +50,37 @@ class Installer
      */
     private static function createTameBash($paths) : void
     {
-        if(!File::exists($paths['path'])){
+        $tame = $paths['tame'];
+
+        if(!File::exists($tame['path'])){
             // Read the contents of the dummy file
-            $dummyContent = File::get($paths['dummy']);
+            $dummyContent = File::get($tame['dummy']);
 
             // Write the contents to the new file
-            File::put($paths['path'], $dummyContent);
+            File::put($tame['path'], $dummyContent);
+
+            Logger::info("\n<b>[Tame-Artisan]</b> has been created automatically!\n\nUsage: \n   php tame <command> [:option] [arguments]\n\n");
+        }
+    }
+
+    /**
+     * Create [database.php] file if not exist
+     */
+    private static function createTameMailer($paths) : void
+    {
+        $mail = $paths['mail'];
+
+        if(!File::exists($mail['path'])){
+
+            self::createConfigDirectory($paths);
+
+            // Read the contents of the dummy file
+            $dummyContent = File::get($mail['dummy']);
+
+            // Write the contents to the new file
+            File::put($mail['path'], $dummyContent);
+
+            Logger::info("\n<b>[Mail Config]</b> has been publised successfully!\n\n");
         }
     }
 
@@ -65,7 +91,27 @@ class Installer
      */
     private static function isDummyNotPresent($paths)
     {
-        return ! File::exists($paths['path']);
+        $present = [false];
+        
+        // create for tame
+        if(!File::exists($paths['tame']['path'])){
+            $present[] = true;
+        }
+        
+        // create for mail
+        if(!File::exists($paths['mail']['path'])){
+            $present[] = true;
+        }
+
+        // Check if all elements in $present are false
+        $allFalse = empty(array_filter($present));
+        
+        // All elements in $present are false
+        if ($allFalse) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -73,7 +119,7 @@ class Installer
      * 
      * @return array
      */
-    protected static function getPathsData($realPath = null)
+    public static function getPathsData($realPath = null)
     {
         $env        = new Env();
         $server     = Env::getServers('server');
@@ -81,9 +127,35 @@ class Installer
         $realPath   = rtrim($env->cleanServerPath( $realPath ), '/');
 
         return [
-            'path'  => "{$serverPath}tame",
-            'dummy' => "{$realPath}/Capsule/Dummy/dummyTame.dum",
+            'tame' => [
+                'path'  => "{$serverPath}tame",
+                'dummy' => "{$realPath}/Capsule/Dummy/dummyTame.dum",
+            ],
+            'mail' => [
+                'path'  => "{$serverPath}config/mail.php",
+                'dummy' => "{$realPath}/Capsule/Dummy/dummyMail.dum",
+            ],
+            'disposable' => [
+                'path'  => $realPath,
+                'dummy' => "/Capsule/Dummy/disposableEmails.dum",
+            ],
         ];
+    }
+
+    /**
+     * Create Configuration directory is not exists
+     */
+    protected static function createConfigDirectory($paths = null): void
+    {
+        // folder path
+        $configFolder = str_replace(
+            ['mail.php'], '', $paths['mail']['path']
+        );
+
+        // if config folder not found
+        if(!File::isDirectory($configFolder)){
+            File::makeDirectory($configFolder, 0777);
+        }
     }
 
 }

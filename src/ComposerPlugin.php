@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 use Composer\Composer;
+use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\IO\IOInterface;
 use Composer\Plugin\PluginInterface;
-use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\Script\ScriptEvents;
+use Composer\Script\Event;
+use Tamedevelopers\Support\Installer;
 
 final class ComposerPlugin implements PluginInterface, EventSubscriberInterface
 {
@@ -24,14 +26,22 @@ final class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         ];
     }
 
-    // Run package post-install logic
-    public function onPostInstall(): void
+    /**
+     * Handle post-install commands.
+     * @param Event $event
+     * @return void
+     */
+    public function onPostInstall(Event $event): void
     {
         Installer::install();
     }
 
-    // Run package post-update logic
-    public function onPostUpdate(): void
+    /**
+     * Handle post-update commands.
+     * @param Event $event
+     * @return void
+     */
+    public function onPostUpdate(Event $event): void
     {
         Installer::update();
     }
