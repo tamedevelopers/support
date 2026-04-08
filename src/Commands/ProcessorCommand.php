@@ -7,7 +7,7 @@ namespace Tamedevelopers\Support\Commands;
 use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\ImageToText;
-use Tamedevelopers\Support\NameToImage;
+use Tamedevelopers\Support\TextToImage;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\Logger;
 use Tamedevelopers\Support\Capsule\CommandHelper;
@@ -63,7 +63,7 @@ class ProcessorCommand extends CommandHelper
             $output = 'save';
         }
 
-        $path = Server::pathReplacer(NameToImage::run([
+        $path = Server::pathReplacer(TextToImage::run([
             'name' => $name,
             'bg_color' => $bgColor,
             'font_weight' => $fontWeight,

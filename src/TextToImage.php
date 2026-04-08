@@ -21,7 +21,7 @@ use Tamedevelopers\Support\Traits\TameTrait;
  * - Custom background and text color
  * - Output: save to file, stream to browser (inline or download), or return as data URI
  */
-class NameToImage
+class TextToImage
 {
     use TameTrait;
     
@@ -43,7 +43,7 @@ class NameToImage
      * - generate: boolean (default false). When true, appends a unique suffix to filename to avoid overwriting.
      *
      * @param array $options
-     * @return string|null  Returns destination path for 'save', data URI for 'data', null when streaming
+     * @return array Returns destination path for 'save', data URI for 'data', null when streaming
      * @throws Exception
      */
     public static function run(array $options = [])
@@ -55,7 +55,7 @@ class NameToImage
         $opts = array_merge([
             'name'        => '',
             'size'        => 256,
-            'type'        => '', // 'circle' | 'radius'
+            'type'        => '', // circle|radius|square
             'radius'      => null,     // default computed: size/6
             'bg_color'    => '',
             'text_color'  => '',
@@ -67,13 +67,12 @@ class NameToImage
             'generate'  => false,    // when true, append a unique suffix to filename
         ], $options);
 
-
         // set default data
         if(empty($opts['size'])){
             $opts['size'] = 256;
         }
         if(empty($opts['type'])){
-            $opts['type'] = 'circle';
+            $opts['type'] = 'square';
         }
         if(empty($opts['font_weight'])){
             $opts['font_weight'] = 'bold';
@@ -98,10 +97,10 @@ class NameToImage
 
 
         $size = max(32, (int)$opts['size']);
-        $radius = $opts['radius'] !== null ? (int)$opts['radius'] : max(4, (int)round($size / 6));
-        $type = strtolower((string)$opts['type']);
-        if (!in_array($type, ['circle', 'radius'], true)) {
-            $type = 'circle';
+        $radius = $opts['radius'] !== null ? (int) $opts['radius'] : max(4, (int)round($size / 6));
+        $type = strtolower((string) $opts['type']);
+        if (!in_array($type, ['circle', 'radius', 'square', 'gradient', 'diagonal'], true)) {
+            $type = 'square';
         }
 
         [$br, $bg, $bt] = [
@@ -135,11 +134,7 @@ class NameToImage
         $txCol = imagecolorallocate($img, $bt[0], $bt[1], $bt[2]);
 
         // Draw background shape
-        if ($type === 'circle') {
-            imagefilledellipse($img, (int)($size / 2), (int)($size / 2), $size, $size, $bgCol);
-        } else {
-            self::imageFilledRoundedRect($img, 0, 0, $size - 1, $size - 1, $radius, $bgCol);
-        }
+        self::drawBackground($img, $type, $size, $bgCol, $br, $radius);
 
         // Compute initials (supports all scripts: Latin, CJK, Arabic, etc.)
         $initials = self::computeInitials($name);
@@ -147,43 +142,50 @@ class NameToImage
         // Render text (TTF preferred); choose font that supports the script (e.g. CJK)
         $fontPath = self::resolveFontPath(
             $opts['font_path'],
-            (string)($opts['font_weight'] ?? 'bold'),
+            (string) ($opts['font_weight'] ?? 'bold'),
             $initials
         );
         $useTtf = $fontPath !== null && function_exists('imagettftext');
 
         if ($useTtf) {
-            // Auto-fit font size if not provided to fill with padding
             $len = max(1, mb_strlen($initials, 'UTF-8'));
             $fontSize = is_int($opts['font_size']) ? $opts['font_size'] : null;
+
             if ($fontSize === null) {
-                // Target area with padding (10% each side) for a fuller fit
-                $padding = (int)round($size * 0.10);
-                $targetW = $size - 2 * $padding;
-                $targetH = $size - 2 * $padding;
-                // Binary search a font size that fits both width and height
-                $low = 8; $high = (int)round($size * ($len === 1 ? 1.2 : 1.0));
+                // 1. Use a more generous padding (approx 30% on each side) 
+                // for circular safety. Target 65% of the total size.
+                $paddingFactor  = ($type === 'circle') ? 0.65 : 0.80;
+                $targetSize     = (int) round($size * $paddingFactor);
+                
+                $low = 8; 
+                $high = $size;
                 $best = $low;
+
+                // Binary search for the best fit within the target area
                 while ($low <= $high) {
                     $mid = (int)floor(($low + $high) / 2);
                     [$w, $h] = self::measureText($initials, $mid, $fontPath);
-                    if ($w <= $targetW && $h <= $targetH) {
+                    if ($w <= $targetSize && $h <= $targetSize) {
                         $best = $mid;
-                        $low = $mid + 1; // try larger
+                        $low = $mid + 1;
                     } else {
-                        $high = $mid - 1; // try smaller
+                        $high = $mid - 1;
                     }
                 }
-                $fontSize = max(8, $best);
+                $fontSize = $best;
             }
 
-            // Calculate bounding box to center text precisely (including negative offsets)
+            // 2. Precise Centering Calculation
             $bbox = imagettfbbox($fontSize, 0, $fontPath, $initials);
-            $textWidth  = abs($bbox[2] - $bbox[0]);
-            $textHeight = abs($bbox[7] - $bbox[1]);
-            // Centering with bbox offsets
-            $x = (int)round(($size - $textWidth) / 2 - min($bbox[0], $bbox[2]));
-            $y = (int)round(($size - $textHeight) / 2 + $textHeight - max($bbox[1], $bbox[7]));
+            
+            // The width and height of the rendered box
+            $textWidth  = $bbox[2] - $bbox[6];
+            $textHeight = $bbox[3] - $bbox[7];
+
+            // Calculate X and Y to place the center of the bounding box 
+            // exactly at the center of the image ($size / 2)
+            $x = (int)round(($size / 2) - ($textWidth / 2) - $bbox[6]);
+            $y = (int)round(($size / 2) - ($textHeight / 2) - $bbox[7]);
 
             imagettftext($img, $fontSize, 0, $x, $y, $txCol, $fontPath, $initials);
         } else {
@@ -197,7 +199,13 @@ class NameToImage
         }
 
         // Output handling
-        $output = strtolower((string)$opts['output']);
+        $output     = strtolower((string)$opts['output']);
+
+        $isGenerate = $opts['generate'] ?? false;
+        $suffix     = $isGenerate ? ('-' . substr(sha1(uniqid((string) mt_rand(), true)), 0, 15)) : '';
+        $fileName   = self::sanitizeFilename($name);
+        $fileName   = $isGenerate ? "{$fileName}{$suffix}.png" : "{$fileName}.png";
+
         switch ($output) {
             case 'view':
             case 'download':
@@ -205,46 +213,99 @@ class NameToImage
                 if (!headers_sent()) {
                     header('Content-Type: image/png');
                     if ($output === 'download') {
-                        $fname = self::sanitizeFilename($name) . '.png';
-                        header('Content-Disposition: attachment; filename="' . $fname . '"');
+                        header("Content-Disposition: attachment; filename={$fileName}");
                     } else {
                         header('Content-Disposition: inline');
                     }
                 }
                 imagepng($img);
                 unset($img);
-                return null;
 
+                return ['path' => null, 'url' => null, 'data' => null];
             case 'data':
                 ob_start();
                 imagepng($img);
                 $bin = ob_get_clean();
                 unset($img);
-                return 'data:image/png;base64,' . base64_encode($bin ?: '');
 
-            case 'save':
+                $data = 'data:image/png;base64,' . base64_encode($bin ?: '');
+
+                return ['path' => null, 'url' => null, 'data' => $data];
             default:
-                $dest = (string)($opts['destination'] ?? '');
-                $slug = self::sanitizeFilename($name);
-                // If destination is empty, or a directory, or ends without .png, build the final path
-                if ($dest === '' || is_dir($dest) || !preg_match('/\.png$/i', $dest)) {
-                    $baseDir = $dest !== '' ? rtrim($dest, "\\/") : (__DIR__ . '/../storage/avatars');
-                    // Append slug with optional generate suffix
-                    $suffix = !empty($opts['generate']) ? ('-' . substr(sha1(uniqid((string)mt_rand(), true)), 0, 8)) : '';
-                    $dest = $baseDir . '/' . $slug . $suffix . '.png';
-                } else {
-                    // If generate requested for a full file path, inject suffix before extension
-                    if (!empty($opts['generate'])) {
-                        $dest = preg_replace('/\.png$/i', '-' . substr(sha1(uniqid((string)mt_rand(), true)), 0, 8) . '.png', $dest);
-                    }
+                $destination = self::stringReplacer($opts['destination'] ?? 'storage/avatars');
+                if(!File::isDirectory($destination)){
+                    File::makeDirectory($destination);
                 }
+                
+                // get actual storage path
+                $storagePath = Str::replace(Server::getServers('server'), '', $destination);
 
-                // Ensure directory exists
-                File::makeDirectory(dirname($dest));
+                // local full path
+                $fullPath = self::stringReplacer("$destination/{$fileName}");
 
-                imagepng($img, $dest);
+                // domain full path
+                $domainPath = Server::formatWithDomainURI("{$storagePath}/{$fileName}");
+
+                imagepng($img, $fullPath);
                 unset($img);
-                return $dest;
+
+                return ['path' => $fullPath, 'url' => $domainPath, 'data' => null];
+        }
+    }
+
+    /**
+     * Draw the background shape or pattern onto the image.
+     * * @param resource $img   GD image resource
+     * @param string   $type  The shape/pattern type
+     * @param int      $size  Square dimension
+     * @param int      $color The allocated background color
+     * @param array    $rgb   The raw [r, g, b] array for pattern calculations
+     * @param int      $radius Corner radius for 'radius' type
+     * @return void
+     */
+    private static function drawBackground($img, string $type, int $size, int $color, array $rgb, int $radius): void
+    {
+        switch ($type) {
+            case 'circle':
+                imagefilledellipse($img, (int)($size / 2), (int)($size / 2), $size, $size, $color);
+                break;
+
+            case 'radius':
+                self::imageFilledRoundedRect($img, 0, 0, $size - 1, $size - 1, $radius, $color);
+                break;
+
+            case 'gradient':
+                // Vertical gradient: transitions from original color to 30% darker
+                for ($i = 0; $i < $size; $i++) {
+                    $factor = 1 - ($i / $size * 0.3);
+                    $lineCol = imagecolorallocate(
+                        $img, 
+                        (int)($rgb[0] * $factor), 
+                        (int)($rgb[1] * $factor), 
+                        (int)($rgb[2] * $factor)
+                    );
+                    imageline($img, 0, $i, $size, $i, $lineCol);
+                }
+                break;
+
+            case 'diagonal':
+                // Primary background
+                imagefilledrectangle($img, 0, 0, $size, $size, $color);
+                // Secondary color (15% lighter) for the diagonal split
+                $sCol = imagecolorallocate(
+                    $img,
+                    min(255, (int)($rgb[0] * 1.15)),
+                    min(255, (int)($rgb[1] * 1.15)),
+                    min(255, (int)($rgb[2] * 1.15))
+                );
+                $points = [0, $size, $size, $size, $size, 0];
+                imagefilledpolygon($img, $points, 3, $sCol);
+                break;
+
+            case 'square':
+            default:
+                imagefilledrectangle($img, 0, 0, $size, $size, $color);
+                break;
         }
     }
 
@@ -510,8 +571,10 @@ class NameToImage
     private static function measureText(string $text, int $fontSize, string $fontPath): array
     {
         $bbox = imagettfbbox($fontSize, 0, $fontPath, $text);
-        $width  = (int)abs($bbox[2] - $bbox[0]);
-        $height = (int)abs($bbox[7] - $bbox[1]);
+        if (!$bbox) return [0, 0];
+
+        $width  = abs($bbox[2] - $bbox[0]);
+        $height = abs($bbox[7] - $bbox[1]);
         return [$width, $height];
     }
 

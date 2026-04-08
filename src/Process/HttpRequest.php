@@ -342,12 +342,13 @@ class HttpRequest implements RequestInterface
      */
     private static function localDomainPath()
     {
-        $script = $_SERVER['SCRIPT_NAME'] ?? '';
-        $uri    = $_SERVER['REQUEST_URI'] ?? '';
 
-        // 1. Get the physical directory of the script (Standard XAMPP/WAMP subdirectory)
-        // e.g. /inboxwhisper/index.php -> /inboxwhisper
-        $path = str_replace('\\', '/', dirname($script));
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        $root = self::pathReplacer($_SERVER['DOCUMENT_ROOT']);
+        $absolutePath = self::pathReplacer(self::createAbsolutePath());
+
+        // Normalize and get the physical directory
+        $path = str_replace($root, '', $absolutePath);
         $path = trim($path, '/');
 
         // 2. The "1% Fix": Verify the path actually exists in the URI

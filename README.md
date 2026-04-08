@@ -90,6 +90,10 @@ Support Package For PHP, Laravel and PHP Frameworks
     * [hastag](#sanitize-hastag)
     * [sanitize](#sanitize)
     * [findPhoneWords](#findPhoneWords)
+* [TextToImage](#TextToImage)
+    * [Options](#TextToImage-options)
+    * [run](#run)
+* [ImageToText](#ImageToText)
 * [Utility](#Utility)
     * [Usage](#utility-usage)
     * [getText](#getText)
@@ -689,6 +693,56 @@ $sanitizer->sanitize($text);        // sanitize all in a go!
 //         'hastag' => '[hastag]',
 //     ]
 // );
+```
+
+
+## TextToImage
+- Generate initial-based avatar images similar to Google profile placeholders.
+- Supports all languages (Latin, CJK, Arabic, etc.) with automatic font resolution.
+- Precision alignment and various background patterns.
+
+### TextToImage Options
+- The `run()` method accepts an array of configuration options. 
+- Below is a detailed breakdown of every possible parameter you can pass to customize the output.
+
+| Option      | Type          | Default    | Description                                                                                                   |
+|-------------|---------------|------------|---------------------------------------------------------------------------------------------------------------|
+| name        | `string`      | `''`       | The string to extract initials from. Supports multiple words and Unicode characters                           |
+| size        | `int`         | `256`      | The width and height of the image in pixels                                                                   |
+| type        | `string`      | `'square'` | The background shape or pattern. Supports `circle`, `radius`, `square`, `gradient`, `diagonal`                |
+| radius      | `int\|null`   | `null`     | Corner radius for the `radius` type. Defaults to `size / 6` if null                                           |
+| bg_color    | `mixed`       | `''`       | Background color. Supports Hex, RGB string, or RGB Array. Default is `[147, 51, 234]`                         |
+| text_color  | `mixed`       | `''`       | Color of the initials. Supports Hex, RGB string, or RGB Array. Default is `#FFFFFF`                           |
+| font_path   | `string\|null`| `null`     | Absolute path to a custom `.ttf` font file                                                                    |
+| font_size   | `int\|null`   | `null`     | The font size in pts. Calculates the best fit automatically if null                                           |
+| font_weight | `string`      | `'normal'` | Font weight for auto-selecting system fonts. Supports `normal` or `bold`                                      |
+| output      | `string`      | `'save'`   | Method of return. Supports `save` (path), `view` (stream), `download` (stream), or `data` (base64)            |
+| destination | `string\|null`| `null`     | File path or directory to save the image. Defaults ('storage/avatars')                                         |
+| generate    | `bool`        | `false`    | When `true`, appends a unique random suffix to the filename to prevent overwriting                            |
+
+
+### run
+```php
+use Tamedevelopers\Support\TextToImage;
+
+// Basic usage - returns path to saved image
+$path = TextToImage::run([
+    'name' => 'John Doe'
+]);
+
+// Advanced configuration
+$dataUri = TextToImage::run([
+    'name'       => 'Tamedevelopers Support',
+    'size'       => 512,
+    'type'       => 'gradient', // circle, radius, square, gradient, diagonal
+    'bg_color'   => '#4A5568',
+    'text_color' => [255, 255, 255],
+    'output'     => 'data',    // save, view, download, data
+]);
+
+// $dataUri['path'], dataUri['url'], dataUri['data']
+
+echo "<img src='{$dataUri['url']}' alt='Avatar'>";
 ```
 
 ## Utility
