@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 use Exception;
-use Tamedevelopers\Support\Capsule\CustomException;
-use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Str;
-use Tamedevelopers\Support\Traits\TameTrait;
+use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\Traits\FontPathTrait;
+use Tamedevelopers\Support\Capsule\CustomException;
 
 /**
  * Generate initial-based avatar images similar to Google profile placeholders.
@@ -23,7 +23,7 @@ use Tamedevelopers\Support\Traits\TameTrait;
  */
 class TextToImage
 {
-    use TameTrait;
+    use FontPathTrait;
     
     /**
      * Create an avatar image based on a name or text.
@@ -221,7 +221,7 @@ class TextToImage
                 imagepng($img);
                 unset($img);
 
-                return ['path' => null, 'url' => null, 'data' => null];
+                return ['path' => null, 'url' => null, 'name' => null, 'storage' => null, 'data' => null];
             case 'data':
                 ob_start();
                 imagepng($img);
@@ -229,8 +229,8 @@ class TextToImage
                 unset($img);
 
                 $data = 'data:image/png;base64,' . base64_encode($bin ?: '');
-
-                return ['path' => null, 'url' => null, 'data' => $data];
+                
+                return ['path' => null, 'url' => null, 'name' => null, 'storage' => null, 'data' => $data];
             default:
                 $destination = self::stringReplacer($opts['destination'] ?? 'storage/avatars');
                 if(!File::isDirectory($destination)){
@@ -249,7 +249,13 @@ class TextToImage
                 imagepng($img, $fullPath);
                 unset($img);
 
-                return ['path' => $fullPath, 'url' => $domainPath, 'data' => null];
+                return [
+                    'path' => $fullPath, 
+                    'url' => $domainPath, 
+                    'name' => $fileName, 
+                    'storage' => $storagePath, 
+                    'data' => null
+                ];
         }
     }
 
@@ -354,30 +360,6 @@ class TextToImage
     }
 
     /**
-     * True if text contains any non-ASCII character (CJK, Arabic, etc.) and thus needs a Unicode font.
-     */
-    private static function needsUnicodeFont(string $text): bool
-    {
-        $len = mb_strlen($text, 'UTF-8');
-        for ($i = 0; $i < $len; $i++) {
-            $cp = self::mbOrd(mb_substr($text, $i, 1, 'UTF-8'));
-            if ($cp > 0x7F) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Get Unicode codepoint of a single UTF-8 character.
-     */
-    private static function mbOrd(string $char): int
-    {
-        $c = mb_convert_encoding($char, 'UCS-4BE', 'UTF-8');
-        return $c === false ? 0 : unpack('N', $c)[1];
-    }
-
-    /**
      * Convert color input to [r,g,b]. Accepts '#RRGGBB', '#RRGGBBAA', '#RGB', 'rgb(r,g,b)', 'rgba(r,g,b,a)', or [r,g,b].
      * Alpha is ignored (GD fill uses full opacity for shapes).
      * @param string|array $color
@@ -464,104 +446,6 @@ class TextToImage
         $n = preg_replace('/-+/', '-', (string)$n);
         $n = trim((string)$n, '-');
         return $n !== '' ? $n : 'avatar';
-    }
-
-    /**
-     * Try to resolve a readable TTF/TTC font path. Use provided path if valid; otherwise try system fonts.
-     * When $textForFont contains non-ASCII (CJK, Arabic, etc.), Unicode/CJK-capable fonts are tried first.
-     * Returns null if none found.
-     */
-    private static function resolveFontPath(?string $path, string $weight = 'bold', string $textForFont = ''): ?string
-    {
-        // If user provided a readable path, use it as-is
-        if (is_string($path) && $path !== '' && @is_readable($path)) {
-            return $path;
-        }
-        
-        // 2. Check if text contains CJK or other non-ASCII characters
-        $isUnicode = self::needsUnicodeFont($textForFont);
-        
-        // creating 
-        $path = self::stringReplacer( __DIR__  . DIRECTORY_SEPARATOR);
-
-        // Define your bundled paths
-        $bundledUnicode = "{$path}icons/fonts/" . ($weight === 'bold' ? 'NotoSansSC-Bold.ttf' : 'NotoSansSC-Medium.ttf');
-        $bundledLatin = "{$path}icons/fonts/" . ($weight === 'bold' ? 'Inter-Bold.ttf' : 'Inter-Medium.ttf');
-        
-        if ($isUnicode && file_exists($bundledUnicode)) {
-            return $bundledUnicode;
-        }
-
-        if (file_exists($bundledLatin)) {
-            return $bundledLatin;
-        }
-
-        $weight = strtolower($weight);
-        if (!in_array($weight, ['normal', 'bold'], true)) {
-            $weight = 'bold';
-        }
-
-        // Unicode/CJK-capable fonts (Windows, then Linux/macOS) – try first when text has non-ASCII
-        $unicodeFontsBold = [
-            'C:\\Windows\\Fonts\\msyhbd.ttf',   // Microsoft YaHei Bold
-            'C:\\Windows\\Fonts\\simhei.ttf',   // SimHei
-            'C:\\Windows\\Fonts\\simsun.ttc',   // SimSun (TTC; GD uses first font)
-            '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
-            '/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc',
-            '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
-            '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
-            '/Library/Fonts/PingFang.ttc',
-            '/System/Library/Fonts/PingFang.ttc',
-            '/Library/Fonts/Supplemental/Songti.ttc',
-        ];
-        $unicodeFontsRegular = [
-            'C:\\Windows\\Fonts\\msyh.ttf',     // Microsoft YaHei
-            'C:\\Windows\\Fonts\\simsun.ttc',
-            '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-            '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
-            '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
-            '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
-            '/Library/Fonts/PingFang.ttc',
-            '/System/Library/Fonts/PingFang.ttc',
-        ];
-
-        // Latin-only fonts (Arial, Segoe, DejaVu)
-        $winFontsBold = [
-            'C:\\Windows\\Fonts\\arialbd.ttf',
-            'C:\\Windows\\Fonts\\segoeuib.ttf',
-        ];
-        $winFontsRegular = [
-            'C:\\Windows\\Fonts\\arial.ttf',
-            'C:\\Windows\\Fonts\\segoeui.ttf',
-        ];
-        $unixFontsBold = [
-            '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-            '/Library/Fonts/Arial Bold.ttf',
-        ];
-        $unixFontsRegular = [
-            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-            '/Library/Fonts/Arial.ttf',
-        ];
-
-        $unicodeOrdered = $weight === 'normal'
-            ? array_merge($unicodeFontsRegular, $unicodeFontsBold)
-            : array_merge($unicodeFontsBold, $unicodeFontsRegular);
-
-        $latinOrdered = $weight === 'normal'
-            ? array_merge($winFontsRegular, $unixFontsRegular, $winFontsBold, $unixFontsBold)
-            : array_merge($winFontsBold, $unixFontsBold, $winFontsRegular, $unixFontsRegular);
-
-        // When text has CJK/Unicode, try Unicode fonts first so glyphs render; else Latin first
-        $ordered = $isUnicode
-            ? array_merge($unicodeOrdered, $latinOrdered)
-            : array_merge($latinOrdered, $unicodeOrdered);
-
-        foreach ($ordered as $cand) {
-            if (@is_readable($cand)) {
-                return $cand;
-            }
-        }
-        return null;
     }
 
     /**

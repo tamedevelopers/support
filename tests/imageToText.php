@@ -48,7 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'language'   => $lang,
             'psm'        => $psm,
             'preprocess' => $preprocess,
-            'tesseract_path' => 'C:\Program Files\Tesseract-OCR\tesseract.exe'
+            'engine'     => 'auto', // 'ocrspace', 'google', 'azure', 'freeocr', 'auto'
+            // 'tesseract_path' => 'C:\Program Files\Tesseract-OCR\tesseract.exe'
         ]);
 
         header('Content-Type: text/plain; charset=utf-8');
