@@ -83,6 +83,14 @@ final class CombinedPostProcessScript
         }
 
         if ($includeStability) {
+            $js .= "await " . PageStabilityScript::asSettleExpression($max, $leanStability) . ";";
+        }
+
+        if ($includeCookies) {
+            $js .= CookiePopupRemovalScript::asExpression() . ";";
+        }
+
+        if ($paint > 0) {
             $js .= "await new Promise(function (r) { setTimeout(r, {$paint}); });";
         }
 
