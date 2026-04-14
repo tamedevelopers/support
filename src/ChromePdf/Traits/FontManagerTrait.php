@@ -4,40 +4,51 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\ChromePdf\Traits;
 
-use Tamedevelopers\Support\ChromePdf\Exception\FontNotFoundException;
 use Tamedevelopers\Support\ChromePdf\Internal\FileUri;
 use Tamedevelopers\Support\Traits\FontPathTrait;
 
 /**
- * Builds @font-face CSS from resolved system/bundled fonts when content contains non-ASCII text.
+ * Builds @font-face CSS chunks keyed by script/range for client-side “smart” injection.
  */
 trait FontManagerTrait
 {
     use FontPathTrait;
 
     /**
-     * @throws FontNotFoundException
+     * Returns a map of CSS fragments (each: {@code @font-face} + scoped rules) keyed by script bucket.
+     * Keys: {@code cjk}, {@code arabic}, {@code cyrillic}. Omitted keys mean no suitable font file was found.
+     *
+     * @return array<string, string>
      */
-    protected function buildAutoFontFaceCss(string $content, bool $throwIfUnicodeMissingFont): string
+    protected function buildAutoFontFaceCssMap(): array
     {
-        if (!self::needsUnicodeFont($content)) {
-            return '';
-        }
+        /** @var array<string, string> $samples */
+        $samples = [
+            'cjk' => '字',
+            'arabic' => "\u{0627}",
+            'cyrillic' => "\u{0416}",
+        ];
 
-        $fontPath = self::resolveFontPath(null, 'normal', $content);
-        if ($fontPath === null) {
-            if ($throwIfUnicodeMissingFont) {
-                throw new FontNotFoundException(
-                    'No suitable font file found for non-ASCII content. Install Noto CJK, Microsoft YaHei, or bundle fonts under src/Traits/icons/fonts.'
-                );
+        $map = [];
+        foreach ($samples as $key => $sample) {
+            if (!self::needsUnicodeFont($sample)) {
+                continue;
             }
-
-            return '';
+            $fontPath = self::resolveFontPath(null, 'normal', $sample);
+            if ($fontPath === null) {
+                continue;
+            }
+            $family = 'SupportPdf_' . $key;
+            $map[$key] = $this->buildFontFaceCssChunk($fontPath, $family);
         }
 
+        return $map;
+    }
+
+    private function buildFontFaceCssChunk(string $fontPath, string $family): string
+    {
         $uri = FileUri::fromPath($fontPath);
         $escaped = self::escapeCssUrl($uri);
-        $family = 'SupportPdfUnicode';
 
         return <<<CSS
             @font-face {
@@ -45,9 +56,6 @@ trait FontManagerTrait
                 font-style: normal;
                 font-weight: 400;
                 src: url("{$escaped}") format("truetype");
-            }
-            html, body {
-                font-family: "{$family}", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
             }
         CSS;
     }

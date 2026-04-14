@@ -45,8 +45,8 @@ use Throwable;
  * element type so layout and {@code a} styling stay intact; PDF links are not clickable.
  *
  * Remote images: Chromium image loading is **off** by default (bitmap/CSS images from the network are skipped).
- * Call {@see loadRemoteImages(true)} when you need {@code http(s)://} in {@code img}/CSS. This does not block web fonts
- * or text; a short {@code document.fonts.ready} wait runs after every navigation for stable typography.
+ * Call {@see loadRemoteImages(true)} when you need {@code http(s)://} in {@code img}/CSS. Auto font {@code @font-face}
+ * maps are applied in-page only when {@code document.body} text matches CJK / Arabic / Cyrillic ranges (see {@see CombinedPostProcessScript}).
  */
 final class PdfGenerator
 {
@@ -133,9 +133,9 @@ final class PdfGenerator
 
     /**
      * Maps to BrowserFactory {@code enableImages} ({@code --blink-settings=imagesEnabled=false} when false).
-     * Default false — call {@see loadRemoteImages(true)} to load remote bitmap/CSS images.
+     * Default true — call {@see loadRemoteImages(true)} to load remote bitmap/CSS images.
      */
-    private bool $enableRemoteImageLoading = false;
+    private bool $enableRemoteImageLoading = true;
 
     private static ?Browser $sharedBrowser = null;
 
@@ -151,6 +151,9 @@ final class PdfGenerator
     private static array $fetchBlockCache = [];
 
     private const FETCH_BLOCK_CACHE_CAP = 4096;
+
+    /** Pre-compiled pattern for tracker URLs (hot path in {@see computeFetchShouldBlock()}). */
+    private const FETCH_TRACKER_URL_PATTERN = '/analytics|doubleclick|facebook|adsystem/i';
 
     /**
      * Theme/font CSS to apply inside {@see CombinedPostProcessScript} ({@code null} = derive from DOM after URL load).
@@ -549,10 +552,8 @@ final class PdfGenerator
                 'html' => $this->loadFromHtml($page),
             };
 
-            $this->executeCombinedPostProcessing(
-                $page,
-                $this->resolveInjectionCssForPostProcess($page)
-            );
+            [$themeCss, $fontMap] = $this->resolvePostProcessPayload();
+            $this->executeCombinedPostProcessing($page, $themeCss, $fontMap);
 
             if ($this->selector !== null) {
                 $this->isolateSelector($page, $this->selector);
@@ -752,20 +753,13 @@ final class PdfGenerator
         }
     }
 
-    /**
-     * @param string $utf8Sample HTML or plain text sample used only for Unicode/font heuristics
-     */
-    private function buildInjectionCssFromContent(string $utf8Sample): string
+    private function buildThemeCssOnly(): string
     {
-        $parts = [];
-        if ($this->styles !== null && !$this->styles->isEmpty()) {
-            $parts[] = $this->styles->toCssString();
-        }
-        if ($this->autoInjectFonts) {
-            $parts[] = $this->buildAutoFontFaceCss($utf8Sample, true);
+        if ($this->styles === null || $this->styles->isEmpty()) {
+            return '';
         }
 
-        return implode("\n\n", array_filter($parts, static fn (string $s): bool => $s !== ''));
+        return $this->styles->toCssString();
     }
 
     private function navigationLifecycleEvent(): string
@@ -834,7 +828,7 @@ final class PdfGenerator
 
     private function computeFetchShouldBlock(string $url, string $resourceType, bool $loadRemoteImages): bool
     {
-        if ($url !== '' && preg_match('/analytics|doubleclick|facebook|adsystem/i', $url) === 1) {
+        if ($url !== '' && preg_match(self::FETCH_TRACKER_URL_PATTERN, $url) === 1) {
             return true;
         }
         if ($resourceType === 'Media') {
@@ -881,36 +875,6 @@ final class PdfGenerator
         );
     }
 
-    /**
-     * Cheap text sample for CJK detection — avoids serializing the full DOM via outerHTML.
-     */
-    private function sampleDocumentTextForFonts(Page $page): string
-    {
-        $raw = $page->evaluate(
-            <<<'JS'
-                (function () {
-                    try {
-                        var chunks = [];
-                        var t = document.title;
-                        if (t) {
-                            chunks.push(t);
-                        }
-                        var root = document.body || document.documentElement;
-                        if (root && root.innerText) {
-                            chunks.push(root.innerText.substring(0, 5000));
-                        }
-                        var s = chunks.join("\n");
-                        return s.length > 6000 ? s.substring(0, 6000) : s;
-                    } catch (e) {
-                        return '';
-                    }
-                })()
-            JS
-        )->getReturnValue($this->evalTimeoutMs(4000, 1200));
-
-        return is_string($raw) ? $raw : '';
-    }
-
     private function loadFromFile(Page $page): void
     {
         $path = $this->sourceValue;
@@ -918,8 +882,7 @@ final class PdfGenerator
         if ($html === false) {
             throw new ConversionFailedException(sprintf('Could not read file: %s', $path));
         }
-        $fontSample = strlen($html) > 12000 ? substr($html, 0, 12000) : $html;
-        $this->injectionCssForPostProcess = $this->buildInjectionCssFromContent($fontSample);
+        $this->injectionCssForPostProcess = $this->buildThemeCssOnly();
         $navMs = min(1000, $this->effectiveNavigationTimeoutMs());
         $page->navigate(FileUri::fromPath($path))->waitForNavigation(
             Page::DOM_CONTENT_LOADED,
@@ -930,36 +893,41 @@ final class PdfGenerator
     private function loadFromHtml(Page $page): void
     {
         $html = $this->sourceValue;
-        $fontSample = strlen($html) > 12000 ? substr($html, 0, 12000) : $html;
-        $css = $this->buildInjectionCssFromContent($fontSample);
         $this->injectionCssForPostProcess = '';
-        $merged = self::mergeCssIntoHtmlDocument($html, $css, null);
+        $merged = self::mergeCssIntoHtmlDocument($html, $this->buildThemeCssOnly(), null);
         $page->setHtml($merged, 1000, Page::DOM_CONTENT_LOADED);
     }
 
-    private function resolveInjectionCssForPostProcess(Page $page): string
+    /**
+     * @return array{0: string, 1: array<string, string>}
+     */
+    private function resolvePostProcessPayload(): array
     {
+        $fontMap = $this->autoInjectFonts ? $this->buildAutoFontFaceCssMap() : [];
         if ($this->injectionCssForPostProcess !== null) {
-            return $this->injectionCssForPostProcess;
+            return [$this->injectionCssForPostProcess, $fontMap];
         }
 
-        return $this->buildInjectionCssFromContent($this->sampleDocumentTextForFonts($page));
+        return [$this->buildThemeCssOnly(), $fontMap];
     }
 
-    private function executeCombinedPostProcessing(Page $page, string $injectionCss): void
+    /**
+     * @param array<string, string> $fontFaceMap
+     */
+    private function executeCombinedPostProcessing(Page $page, string $themeCss, array $fontFaceMap): void
     {
         $includeStability = $this->shouldStabilizeAfterLoad();
         $includeCookies = $this->shouldStripCookiesAfterLoad();
         $isLocal = in_array($this->sourceMode, ['file', 'html'], true);
         $fontRaceMs = $isLocal ? 500 : 6000;
         $budget = $this->effectiveStabilityTimeoutMs();
-        $payload = $injectionCss !== '' ? $injectionCss : null;
         $expr = CombinedPostProcessScript::asExpression(
             $includeStability,
             $includeCookies,
             $budget,
             $fontRaceMs,
-            $payload
+            $themeCss,
+            $fontFaceMap
         );
         $timeoutMs = $this->combinedPostProcessEvalTimeoutMs($includeStability, $includeCookies, $isLocal);
         $page->evaluate($expr)->getReturnValue($timeoutMs);
@@ -967,13 +935,14 @@ final class PdfGenerator
 
     private function combinedPostProcessEvalTimeoutMs(bool $includeStability, bool $includeCookies, bool $isLocal): int
     {
-        $nav = $this->effectiveNavigationTimeoutMs();
-        $base = min(120000, max(5000, (int) ($nav * 2)));
-        $extra = ($includeStability ? 12000 : 0) + ($includeCookies ? 25000 : 0);
+        $extra = ($includeStability ? 8000 : 0) + ($includeCookies ? 18000 : 0);
 
-        return $isLocal
-            ? min(20000, max(2500, 2000 + $extra))
-            : min(120000, max(12000, $base + $extra));
+        if ($isLocal) {
+            return min(18000, max(2200, 1800 + $extra));
+        }
+
+        // Remote: tight ceiling so the combined evaluate() stays short relative to navigation + print.
+        return min(11000, max(4000, 2800 + min($extra, 6000)));
     }
 
     private function isolateSelector(Page $page, string $selector): void
