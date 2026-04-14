@@ -13,10 +13,9 @@ use Tamedevelopers\Support\ChromePdf\ColorScheme;
 use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
 use Tamedevelopers\Support\ChromePdf\Exception\FontNotFoundException;
 use Tamedevelopers\Support\ChromePdf\Exception\InvalidSelectorException;
-use Tamedevelopers\Support\ChromePdf\Internal\CookiePopupRemovalScript;
+use Tamedevelopers\Support\ChromePdf\Internal\CombinedPostProcessScript;
 use Tamedevelopers\Support\ChromePdf\Internal\FileUri;
 use Tamedevelopers\Support\ChromePdf\Internal\FlattenLinksScript;
-use Tamedevelopers\Support\ChromePdf\Internal\PageStabilityScript;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;
 use Tamedevelopers\Support\ChromePdf\Traits\FontManagerTrait;
 use Tamedevelopers\Support\Str;
@@ -33,6 +32,9 @@ use Throwable;
  * Use {@see maximumQuality()} for full images and longer navigation/stability budgets.
  *
  * A single Chromium process is reused across {@see generate()} calls (see {@see shutdown()} to release it).
+ * Post-navigation work (fonts, optional settle, CMP strip, optional injected CSS) runs in one {@code evaluate()} via
+ * {@see CombinedPostProcessScript} to cut WebSocket round-trips. Local {@see fromFile()}/{@see fromHtml()} use
+ * {@code DOMContentLoaded} and short budgets for navigation/setHtml.
  * Large remote pages are supported; URL captures use request filtering to avoid tracker-induced timeouts.
  * For trusted HTML you control, {@see withoutDefaultPostProcessing()} skips stabilize + cookie passes to cut wall time.
  *
@@ -145,6 +147,16 @@ final class PdfGenerator
     /** Avoids redundant {@code Emulation.*} CDP work on the same target session when the scheme is unchanged. */
     private static ?string $lastColorSchemeEmulationSignature = null;
 
+    /** @var array<string, bool> URL+resource decision cache for {@see handleFetchRequestPaused()}. */
+    private static array $fetchBlockCache = [];
+
+    private const FETCH_BLOCK_CACHE_CAP = 4096;
+
+    /**
+     * Theme/font CSS to apply inside {@see CombinedPostProcessScript} ({@code null} = derive from DOM after URL load).
+     */
+    private ?string $injectionCssForPostProcess = null;
+
     public static function create(): self
     {
         return new self();
@@ -165,6 +177,7 @@ final class PdfGenerator
             self::$sharedBrowserLaunchKey = null;
         }
         self::$lastColorSchemeEmulationSignature = null;
+        self::$fetchBlockCache = [];
     }
 
     private static function registerShutdownHandlerOnce(): void
@@ -524,6 +537,7 @@ final class PdfGenerator
 
         $browser = $this->acquireSharedBrowser();
         $page = null;
+        $this->injectionCssForPostProcess = null;
 
         try {
             $page = $browser->createPage();
@@ -535,15 +549,10 @@ final class PdfGenerator
                 'html' => $this->loadFromHtml($page),
             };
 
-            $this->waitForFontsReady($page);
-
-            if ($this->shouldStabilizeAfterLoad()) {
-                $this->stabilizePageBeforePdf($page);
-            }
-
-            if ($this->shouldStripCookiesAfterLoad()) {
-                $this->stripCookieConsentUi($page);
-            }
+            $this->executeCombinedPostProcessing(
+                $page,
+                $this->resolveInjectionCssForPostProcess($page)
+            );
 
             if ($this->selector !== null) {
                 $this->isolateSelector($page, $this->selector);
@@ -660,36 +669,6 @@ final class PdfGenerator
      * Runs even when {@see stabilizeBeforeCapture()} is skipped for local sources, so text is not intermittently
      * captured before fonts resolve.
      */
-    private function waitForFontsReady(Page $page): void
-    {
-        $isLocal = in_array($this->sourceMode, ['file', 'html'], true);
-        $raceMs = $isLocal ? 500 : 6000;
-        $timeoutMs = $isLocal
-            ? min(1200, max(400, (int) ($this->effectiveNavigationTimeoutMs() / 5)))
-            : $this->evalTimeoutMs(10000, 2500);
-        $page->evaluate(<<<JS
-            (async function () {
-                var raceMs = {$raceMs};
-                try {
-                    if (document.fonts && document.fonts.ready) {
-                        await Promise.race([
-                            document.fonts.ready,
-                            new Promise(function (r) { setTimeout(r, raceMs); })
-                        ]);
-                    }
-                } catch (e) {}
-                await new Promise(function (r) {
-                    requestAnimationFrame(function () {
-                        requestAnimationFrame(function () { r(); });
-                    });
-                });
-                await new Promise(function (r) { setTimeout(r, 50); });
-                return true;
-            })()
-            JS
-        )->getReturnValue($timeoutMs);
-    }
-
     private function effectiveNavigationTimeoutMs(): int
     {
         return $this->navigationTimeoutMs;
@@ -711,14 +690,6 @@ final class PdfGenerator
         return min($maxMs, max($minMs, $this->prioritizeSpeed ? min($base, 8000) : $base));
     }
 
-    private function stabilizePageBeforePdf(Page $page): void
-    {
-        $budget = $this->effectiveStabilityTimeoutMs();
-        // chrome-php: getReturnValue() timeout argument is in milliseconds of wall time for the CDP response.
-        $evalTimeout = min(15000, max(5000, $budget + 4000));
-        $page->evaluate(PageStabilityScript::asSettleExpression($budget))->getReturnValue($evalTimeout);
-    }
-
     private function flattenLinksForPrint(Page $page): void
     {
         $page->evaluate(FlattenLinksScript::asExpression())->getReturnValue(
@@ -730,6 +701,7 @@ final class PdfGenerator
     {
         $this->sourceMode = null;
         $this->sourceValue = null;
+        $this->injectionCssForPostProcess = null;
     }
 
     /**
@@ -845,50 +817,56 @@ final class PdfGenerator
         }
         $url = $params['request']['url'] ?? '';
         $resourceType = $params['resourceType'] ?? '';
-        $lower = strtolower($url);
+        $cacheKey = $url . "\0" . $resourceType . "\0" . ($loadRemoteImages ? '1' : '0');
+        if (isset(self::$fetchBlockCache[$cacheKey])) {
+            $this->respondToFetchPausedAsync($session, $requestId, self::$fetchBlockCache[$cacheKey]);
 
-        foreach (['analytics', 'doubleclick', 'facebook', 'adsystem'] as $needle) {
-            if (str_contains($lower, $needle)) {
-                $this->respondToFetchPaused($session, $requestId, true);
+            return;
+        }
 
-                return;
-            }
+        $block = $this->computeFetchShouldBlock($url, $resourceType, $loadRemoteImages);
+        if (count(self::$fetchBlockCache) >= self::FETCH_BLOCK_CACHE_CAP) {
+            self::$fetchBlockCache = array_slice(self::$fetchBlockCache, -2048, null, true);
+        }
+        self::$fetchBlockCache[$cacheKey] = $block;
+        $this->respondToFetchPausedAsync($session, $requestId, $block);
+    }
+
+    private function computeFetchShouldBlock(string $url, string $resourceType, bool $loadRemoteImages): bool
+    {
+        if ($url !== '' && preg_match('/analytics|doubleclick|facebook|adsystem/i', $url) === 1) {
+            return true;
         }
         if ($resourceType === 'Media') {
-            $this->respondToFetchPaused($session, $requestId, true);
-
-            return;
+            return true;
         }
         if ($resourceType === 'Image' && !$loadRemoteImages) {
-            $this->respondToFetchPaused($session, $requestId, true);
-
-            return;
+            return true;
         }
         if ($resourceType === 'Font') {
             if ($url === '' || str_starts_with($url, 'file:') || str_starts_with($url, 'data:') || str_starts_with($url, 'blob:')) {
-                $this->respondToFetchPaused($session, $requestId, false);
-
-                return;
+                return false;
             }
             if (preg_match('#^https?://#i', $url) === 1) {
-                $this->respondToFetchPaused($session, $requestId, true);
-
-                return;
+                return true;
             }
         }
 
-        $this->respondToFetchPaused($session, $requestId, false);
+        return false;
     }
 
-    private function respondToFetchPaused(Session $session, string $requestId, bool $block): void
+    /**
+     * Non-blocking CDP send so the Fetch event loop is not stalled by synchronous round-trips.
+     */
+    private function respondToFetchPausedAsync(Session $session, string $requestId, bool $block): void
     {
         if ($block) {
-            $session->sendMessageSync(new Message('Fetch.failRequest', [
+            $session->sendMessage(new Message('Fetch.failRequest', [
                 'requestId' => $requestId,
                 'errorReason' => 'BlockedByClient',
             ]));
         } else {
-            $session->sendMessageSync(new Message('Fetch.continueRequest', [
+            $session->sendMessage(new Message('Fetch.continueRequest', [
                 'requestId' => $requestId,
             ]));
         }
@@ -896,15 +874,11 @@ final class PdfGenerator
 
     private function loadFromUrl(Page $page): void
     {
+        $this->injectionCssForPostProcess = null;
         $page->navigate($this->sourceValue)->waitForNavigation(
             $this->navigationLifecycleEvent(),
             $this->effectiveNavigationTimeoutMs()
         );
-        $sample = $this->sampleDocumentTextForFonts($page);
-        $css = $this->buildInjectionCssFromContent($sample);
-        if ($css !== '') {
-            $this->injectStyleTag($page, $css);
-        }
     }
 
     /**
@@ -945,15 +919,12 @@ final class PdfGenerator
             throw new ConversionFailedException(sprintf('Could not read file: %s', $path));
         }
         $fontSample = strlen($html) > 12000 ? substr($html, 0, 12000) : $html;
-        $css = $this->buildInjectionCssFromContent($fontSample);
-        $navMs = min(12000, $this->effectiveNavigationTimeoutMs());
+        $this->injectionCssForPostProcess = $this->buildInjectionCssFromContent($fontSample);
+        $navMs = min(1000, $this->effectiveNavigationTimeoutMs());
         $page->navigate(FileUri::fromPath($path))->waitForNavigation(
-            $this->navigationLifecycleEvent(),
+            Page::DOM_CONTENT_LOADED,
             $navMs
         );
-        if ($css !== '') {
-            $this->injectStyleTag($page, $css);
-        }
     }
 
     private function loadFromHtml(Page $page): void
@@ -961,34 +932,48 @@ final class PdfGenerator
         $html = $this->sourceValue;
         $fontSample = strlen($html) > 12000 ? substr($html, 0, 12000) : $html;
         $css = $this->buildInjectionCssFromContent($fontSample);
+        $this->injectionCssForPostProcess = '';
         $merged = self::mergeCssIntoHtmlDocument($html, $css, null);
-        $settleMs = min(60000, max(4000, $this->effectiveNavigationTimeoutMs()));
-        $page->setHtml($merged, $settleMs, $this->navigationLifecycleEvent());
+        $page->setHtml($merged, 1000, Page::DOM_CONTENT_LOADED);
     }
 
-    private function stripCookieConsentUi(Page $page): void
+    private function resolveInjectionCssForPostProcess(Page $page): string
+    {
+        if ($this->injectionCssForPostProcess !== null) {
+            return $this->injectionCssForPostProcess;
+        }
+
+        return $this->buildInjectionCssFromContent($this->sampleDocumentTextForFonts($page));
+    }
+
+    private function executeCombinedPostProcessing(Page $page, string $injectionCss): void
+    {
+        $includeStability = $this->shouldStabilizeAfterLoad();
+        $includeCookies = $this->shouldStripCookiesAfterLoad();
+        $isLocal = in_array($this->sourceMode, ['file', 'html'], true);
+        $fontRaceMs = $isLocal ? 500 : 6000;
+        $budget = $this->effectiveStabilityTimeoutMs();
+        $payload = $injectionCss !== '' ? $injectionCss : null;
+        $expr = CombinedPostProcessScript::asExpression(
+            $includeStability,
+            $includeCookies,
+            $budget,
+            $fontRaceMs,
+            $payload
+        );
+        $timeoutMs = $this->combinedPostProcessEvalTimeoutMs($includeStability, $includeCookies, $isLocal);
+        $page->evaluate($expr)->getReturnValue($timeoutMs);
+    }
+
+    private function combinedPostProcessEvalTimeoutMs(bool $includeStability, bool $includeCookies, bool $isLocal): int
     {
         $nav = $this->effectiveNavigationTimeoutMs();
-        // Large DOMs need a generous CDP wait; values are milliseconds passed to chrome-php.
-        $cookieEvalMs = $this->prioritizeSpeed
-            ? min(35000, max(7000, (int) ($nav * 2 / 3)))
-            : min(120000, max(15000, (int) ($nav / 2)));
-        $page->evaluate(CookiePopupRemovalScript::asExpression())->getReturnValue($cookieEvalMs);
-    }
+        $base = min(120000, max(5000, (int) ($nav * 2)));
+        $extra = ($includeStability ? 12000 : 0) + ($includeCookies ? 25000 : 0);
 
-    private function injectStyleTag(Page $page, string $css): void
-    {
-        $page->callFunction(
-            'function(css) {
-                var el = document.createElement("style");
-                el.setAttribute("type", "text/css");
-                el.setAttribute("data-support-chrome-pdf", "1");
-                el.appendChild(document.createTextNode(css));
-                var head = document.head || document.getElementsByTagName("head")[0] || document.documentElement;
-                head.appendChild(el);
-            }',
-            [$css]
-        )->getReturnValue($this->evalTimeoutMs(5000, 1500));
+        return $isLocal
+            ? min(20000, max(2500, 2000 + $extra))
+            : min(120000, max(12000, $base + $extra));
     }
 
     private function isolateSelector(Page $page, string $selector): void
