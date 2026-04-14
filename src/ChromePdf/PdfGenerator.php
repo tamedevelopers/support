@@ -502,6 +502,7 @@ final class PdfGenerator
                 'html' => $this->loadFromHtml($page),
             };
 
+            $this->finalizeDesktopViewportForUrlIfNeeded($page);
             $this->runImmediatePreloaderStripIfApplicable($page);
 
             [$themeCss, $fontMap] = $this->resolvePostProcessPayload();
@@ -581,9 +582,14 @@ final class PdfGenerator
         $opts = [
             'landscape' => $this->landscape,
             'printBackground' => $this->printBackground,
-            'paperWidth' => $this->paper->widthInches(),
-            'paperHeight' => $this->paper->heightInches(),
         ];
+
+        if ($this->sourceMode === 'url') {
+            $opts['preferCSSPageSize'] = true;
+        } else {
+            $opts['paperWidth'] = $this->paper->widthInches();
+            $opts['paperHeight'] = $this->paper->heightInches();
+        }
 
         $inch = match ($this->pdfMarginMode) {
             'omit' => null,
@@ -696,7 +702,7 @@ final class PdfGenerator
      */
     private function runImmediatePreloaderStripIfApplicable(Page $page): void
     {
-        if (!$this->shouldRunImmediatePreloaderStrip()) {
+        if ($this->sourceMode !== 'url' || !$this->shouldRunImmediatePreloaderStrip()) {
             return;
         }
         try {
@@ -803,14 +809,22 @@ final class PdfGenerator
 
     private function buildThemeCssOnly(): string
     {
-        $floatingElem = new FloatingElementRemovalScript();
-        
-        if ($this->styles === null || $this->styles->isEmpty()) {
-            return $floatingElem->buildDefaultPrintHideCss();
+        $baseCss = '';
+        if ($this->sourceMode === 'url') {
+            $baseCss = FloatingElementRemovalScript::buildDefaultPrintHideCss()
+                . "\n\n"
+                . $this->buildDesktopUrlLayoutCss();
         }
 
-        return $floatingElem->buildDefaultPrintHideCss() 
-            . "\n\n" . $this->styles->toCssString();
+        if ($this->styles === null || $this->styles->isEmpty()) {
+            return $baseCss;
+        }
+
+        if ($baseCss === '') {
+            return $this->styles->toCssString();
+        }
+
+        return $baseCss . "\n\n" . $this->styles->toCssString();
     }
 
     private function navigationLifecycleEvent(): string
@@ -828,7 +842,15 @@ final class PdfGenerator
         }
 
         try {
-            $page->setViewport($this->desktopViewportWidth, $this->desktopViewportHeight);
+            $page->setDeviceMetricsOverride([
+                'width' => $this->desktopViewportWidth,
+                'height' => $this->desktopViewportHeight,
+                'deviceScaleFactor' => 1,
+                'mobile' => false,
+                'screenWidth' => $this->desktopViewportWidth,
+                'screenHeight' => $this->desktopViewportHeight,
+                'dontSetVisibleSize' => false,
+            ]);
         } catch (Throwable) {
         }
 
@@ -837,6 +859,54 @@ final class PdfGenerator
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                 . '(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
             );
+        } catch (Throwable) {
+        }
+
+        try {
+            $page->getSession()->sendMessageSync(new Message('Emulation.setEmulatedMedia', [
+                'media' => 'screen',
+                'features' => [],
+            ]));
+        } catch (Throwable) {
+        }
+
+        try {
+            $page->getSession()->sendMessageSync(new Message('Emulation.setTouchEmulationEnabled', [
+                'enabled' => false,
+            ]));
+        } catch (Throwable) {
+        }
+    }
+
+    /**
+     * Re-applies desktop width after navigation and neutralizes narrow mobile viewport meta tags before print.
+     */
+    private function finalizeDesktopViewportForUrlIfNeeded(Page $page): void
+    {
+        if ($this->sourceMode !== 'url') {
+            return;
+        }
+
+        $this->applyDesktopViewportForUrlIfNeeded($page);
+
+        try {
+            $page->evaluate(
+                '(function(width) {
+                    try {
+                        var meta = document.querySelector(\'meta[name="viewport"]\');
+                        if (meta) {
+                            meta.setAttribute(\'content\', \'width=\' + width + \', initial-scale=1\');
+                        }
+                        if (document.documentElement) {
+                            document.documentElement.style.minWidth = width + "px";
+                        }
+                        if (document.body) {
+                            document.body.style.minWidth = width + "px";
+                        }
+                    } catch (e) {}
+                    return true;
+                })(' . $this->desktopViewportWidth . ')'
+            )->getReturnValue(1200);
         } catch (Throwable) {
         }
     }
@@ -992,7 +1062,8 @@ final class PdfGenerator
     private function executeCombinedPostProcessing(Page $page, string $themeCss, array $fontFaceMap): void
     {
         $includeStability = $this->shouldStabilizeAfterLoad();
-        $includeCookies = $this->shouldStripCookiesAfterLoad();
+        $includeCookies = $this->sourceMode === 'url' && $this->shouldStripCookiesAfterLoad();
+        $includeFloating = $this->sourceMode === 'url';
         $isLocal = in_array($this->sourceMode, ['file', 'html'], true);
         $speed = $this->prioritizeSpeed;
         $fontRaceMs = $isLocal ? ($speed ? 400 : 500) : ($speed ? 1400 : 2000);
@@ -1010,6 +1081,7 @@ final class PdfGenerator
             $fontFaceMap,
             $speed,
             $speed ? 12 : 50,
+            $includeFloating,
             $waitForImages,
             $imageWaitMs
         );
@@ -1116,6 +1188,7 @@ final class PdfGenerator
         array $fontFaceMap,
         bool $leanStability,
         int $paintSettleMs,
+        bool $includeFloating,
         bool $waitForImages,
         int $imageWaitMs
     ): string {
@@ -1130,6 +1203,7 @@ final class PdfGenerator
             'fonts' => hash('sha256', json_encode($fontFaceMap) ?: ''),
             'lean' => $leanStability,
             'paint' => $paintSettleMs,
+            'floating' => $includeFloating,
             'waitImages' => $waitForImages,
             'imageWait' => $imageWaitMs,
         ];
@@ -1155,6 +1229,7 @@ final class PdfGenerator
             $fontFaceMap,
             $leanStability,
             $paintSettleMs,
+            $includeFloating,
             $waitForImages,
             $imageWaitMs
         );
@@ -1262,6 +1337,26 @@ final class PdfGenerator
         }
 
         return implode(':', $parts);
+    }
+
+    private function buildDesktopUrlLayoutCss(): string
+    {
+        $width = max(1200, $this->desktopViewportWidth);
+
+        return <<<CSS
+            @media screen, print {
+                html {
+                    min-width: {$width}px !important;
+                    width: 100% !important;
+                }
+                body {
+                    min-width: {$width}px !important;
+                    width: 100% !important;
+                    max-width: none !important;
+                    overflow-x: visible !important;
+                }
+            }
+        CSS;
     }
 
     

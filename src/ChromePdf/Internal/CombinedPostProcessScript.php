@@ -13,6 +13,7 @@ final class CombinedPostProcessScript
      * @param array<string, string> $fontFaceMap Keyed by {@code cjk}, {@code arabic}, {@code cyrillic}
      * @param bool $leanStability forwarded to {@see PageStabilityScript::asSettleExpression()} when stability runs
      * @param int $paintSettleMs extra delay after font / rAF paint (0–80); lower for {@code prioritizeSpeed}
+     * @param bool $includeFloating removes chats / floating buttons / back-to-top controls
      * @param bool $waitForImages when true, polls {@code document.images} for completeness (local file/html sources)
      * @param int $imageWaitMs cap for image-readiness poll
      */
@@ -25,6 +26,7 @@ final class CombinedPostProcessScript
         array $fontFaceMap,
         bool $leanStability = false,
         int $paintSettleMs = 50,
+        bool $includeFloating = false,
         bool $waitForImages = false,
         int $imageWaitMs = 2000
     ): string {
@@ -86,15 +88,17 @@ final class CombinedPostProcessScript
             $js .= "await " . PageStabilityScript::asSettleExpression($max, $leanStability) . ";";
         }
 
-        $js .= FloatingElementRemovalScript::asExpression() . ";";
+        if ($includeFloating) {
+            $js .= FloatingElementRemovalScript::asExpression() . ";";
+        }
 
         if ($includeCookies) {
             $js .= "var __maybeCookieBanner = false;"
                 . "try {"
                 .     "var __cookieQuick = (document.body && document.body.innerText) ? document.body.innerText.slice(0, 3000).toLowerCase() : '';"
                 .     "__maybeCookieBanner = "
-                .         "/cookie|consent|gdpr|privacy|before you continue|accept all|reject all/.test(__cookieQuick)"
-                .         " || !!document.querySelector('form[action*=\"consent.google\"], c-wiz, [id*=\"cookie\" i], [class*=\"cookie\" i], [id*=\"consent\" i], [class*=\"consent\" i], #onetrust-banner-sdk, #qc-cmp2-ui, #didomi-host, #usercentrics-root');"
+                .         "/cookie|consent|gdpr|privacy|before you continue|accept all|reject all|使用條款|私隱政策|我接受|接受|同意/.test(__cookieQuick)"
+                .         " || !!document.querySelector('form[action*=\"consent.google\"], c-wiz, [id*=\"cookie\" i], [class*=\"cookie\" i], [id*=\"consent\" i], [class*=\"consent\" i], [aria-label*=\"cookie\" i], [aria-label*=\"privacy\" i], #onetrust-banner-sdk, #qc-cmp2-ui, #didomi-host, #usercentrics-root');"
                 . "} catch (eCookieQuick) {}"
                 . "if (__maybeCookieBanner) {"
                 .     CookiePopupRemovalScript::asExpression()
