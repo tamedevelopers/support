@@ -93,16 +93,9 @@ final class CombinedPostProcessScript
         }
 
         if ($includeCookies) {
-            $js .= "var __maybeCookieBanner = false;"
-                . "try {"
-                .     "var __cookieQuick = (document.body && document.body.innerText) ? document.body.innerText.slice(0, 3000).toLowerCase() : '';"
-                .     "__maybeCookieBanner = "
-                .         "/cookie|consent|gdpr|privacy|before you continue|accept all|reject all|使用條款|私隱政策|我接受|接受|同意/.test(__cookieQuick)"
-                .         " || !!document.querySelector('form[action*=\"consent.google\"], c-wiz, [id*=\"cookie\" i], [class*=\"cookie\" i], [id*=\"consent\" i], [class*=\"consent\" i], [aria-label*=\"cookie\" i], [aria-label*=\"privacy\" i], #onetrust-banner-sdk, #qc-cmp2-ui, #didomi-host, #usercentrics-root');"
-                . "} catch (eCookieQuick) {}"
-                . "if (__maybeCookieBanner) {"
-                .     CookiePopupRemovalScript::asExpression()
-                . ";}";
+            $js .= CookiePopupRemovalScript::asExpression() . ";";
+            $js .= "await new Promise(function (r) { setTimeout(r, 450); });";
+            $js .= CookiePopupRemovalScript::asExpression() . ";";
         }
 
         if ($paint > 0) {

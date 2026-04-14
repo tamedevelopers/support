@@ -502,7 +502,6 @@ final class PdfGenerator
                 'html' => $this->loadFromHtml($page),
             };
 
-            $this->finalizeDesktopViewportForUrlIfNeeded($page);
             $this->runImmediatePreloaderStripIfApplicable($page);
 
             [$themeCss, $fontMap] = $this->resolvePostProcessPayload();
@@ -582,14 +581,9 @@ final class PdfGenerator
         $opts = [
             'landscape' => $this->landscape,
             'printBackground' => $this->printBackground,
+            'paperWidth' => $this->paper->widthInches(),
+            'paperHeight' => $this->paper->heightInches(),
         ];
-
-        if ($this->sourceMode === 'url') {
-            $opts['preferCSSPageSize'] = true;
-        } else {
-            $opts['paperWidth'] = $this->paper->widthInches();
-            $opts['paperHeight'] = $this->paper->heightInches();
-        }
 
         $inch = match ($this->pdfMarginMode) {
             'omit' => null,
@@ -836,28 +830,34 @@ final class PdfGenerator
         }
 
         try {
-            $page->setDeviceMetricsOverride([
+            $page->setViewport($this->desktopViewportWidth, $this->desktopViewportHeight);
+        } catch (Throwable) {
+        }
+
+        $session = $page->getSession();
+
+        try {
+            $session->sendMessageSync(new Message('Emulation.setDeviceMetricsOverride', [
                 'width' => $this->desktopViewportWidth,
                 'height' => $this->desktopViewportHeight,
                 'deviceScaleFactor' => 1,
                 'mobile' => false,
-                'screenWidth' => $this->desktopViewportWidth,
-                'screenHeight' => $this->desktopViewportHeight,
-                'dontSetVisibleSize' => false,
-            ]);
+            ]));
         } catch (Throwable) {
         }
 
         try {
-            $page->setUserAgent(
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                . '(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
-            );
+            $session->sendMessageSync(new Message('Network.setUserAgentOverride', [
+                'userAgent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                    . '(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                'acceptLanguage' => 'en-US,en;q=0.9,zh-HK;q=0.8,zh;q=0.7',
+                'platform' => 'Windows',
+            ]));
         } catch (Throwable) {
         }
 
         try {
-            $page->getSession()->sendMessageSync(new Message('Emulation.setEmulatedMedia', [
+            $session->sendMessageSync(new Message('Emulation.setEmulatedMedia', [
                 'media' => 'screen',
                 'features' => [],
             ]));
@@ -865,36 +865,9 @@ final class PdfGenerator
         }
 
         try {
-            $page->getSession()->sendMessageSync(new Message('Emulation.setTouchEmulationEnabled', [
+            $session->sendMessageSync(new Message('Emulation.setTouchEmulationEnabled', [
                 'enabled' => false,
             ]));
-        } catch (Throwable) {
-        }
-    }
-
-    /**
-     * Re-applies desktop width after navigation and neutralizes narrow mobile viewport meta tags before print.
-     */
-    private function finalizeDesktopViewportForUrlIfNeeded(Page $page): void
-    {
-        if ($this->sourceMode !== 'url') {
-            return;
-        }
-
-        $this->applyDesktopViewportForUrlIfNeeded($page);
-
-        try {
-            $page->evaluate(
-                '(function(width) {
-                    try {
-                        var meta = document.querySelector(\'meta[name="viewport"]\');
-                        if (meta) {
-                            meta.setAttribute(\'content\', \'width=\' + width + \', initial-scale=1\');
-                        }
-                    } catch (e) {}
-                    return true;
-                })(' . $this->desktopViewportWidth . ')'
-            )->getReturnValue(1200);
         } catch (Throwable) {
         }
     }
@@ -1074,7 +1047,14 @@ final class PdfGenerator
             $imageWaitMs
         );
 
-        $timeoutMs = $speed ? 4000 : 8000;
+        // Cookie/floating cleanup on URL pages can exceed a flat 4s on heavier DOMs.
+        if ($isLocal) {
+            $timeoutMs = $speed ? 4000 : 7000;
+        } elseif ($includeCookies || $includeFloating) {
+            $timeoutMs = $speed ? 10000 : 14000;
+        } else {
+            $timeoutMs = $speed ? 5000 : 9000;
+        }
         $page->evaluate($expr)->getReturnValue($timeoutMs);
     }
 

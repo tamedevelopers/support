@@ -53,22 +53,35 @@ final class CookiePopupRemovalScript
                 } catch (eK) {}
 
                 try {
-                    var consentRe = /cookie|consent|gdpr|privacy|we use cookies|before you continue|accept all|reject all/i;
+                    document.querySelectorAll('button, a, div[role="button"], span[role="button"]').forEach(function (el) {
+                        try {
+                            var label = (el.innerText || el.textContent || '').trim().slice(0, 80);
+                            if (/^accept all$|^reject all$|^i accept$|^accept$|^agree$|^got it$|^我接受$|^接受$|^同意$/.test(label.toLowerCase ? label.toLowerCase() : label)) {
+                                if (typeof el.click === 'function') {
+                                    el.click();
+                                }
+                            }
+                        } catch (eBtn) {}
+                    });
+                } catch (eClick) {}
+
+                try {
+                    var consentRe = /cookie|consent|gdpr|privacy|we use cookies|before you continue|accept all|reject all|使用條款|私隱政策|我接受|接受|同意/i;
                     var vw = window.innerWidth;
                     var vh = window.innerHeight;
-                    document.querySelectorAll('div,section,aside,dialog,form,c-wiz').forEach(function (el) {
+                    document.querySelectorAll('div,section,aside,dialog,form,c-wiz,footer').forEach(function (el) {
                         try {
                             var st = window.getComputedStyle(el);
                             var pos = st.position;
                             if (pos !== 'fixed' && pos !== 'sticky') return;
                             var z = parseInt(st.zIndex, 10);
-                            if (!(isFinite(z) && z >= 40)) return;
                             var r = el.getBoundingClientRect();
-                            if (r.width < vw * 0.3 || r.height < 60) return;
+                            if (r.width < vw * 0.25 || r.height < 40) return;
                             var id = (el.id || '');
                             var cl = typeof el.className === 'string' ? el.className : '';
-                            var txt = (el.innerText || '').slice(0, 400);
-                            if (consentRe.test(id + ' ' + cl) || consentRe.test(txt)) {
+                            var txt = (el.innerText || '').slice(0, 600);
+                            var isBottomBar = r.bottom >= vh - 10 && r.height <= vh * 0.35 && r.width >= vw * 0.55;
+                            if ((isFinite(z) && z >= 20 && consentRe.test(id + ' ' + cl)) || consentRe.test(txt) || isBottomBar && consentRe.test(txt)) {
                                 el.remove();
                             }
                         } catch (eEl) {}
