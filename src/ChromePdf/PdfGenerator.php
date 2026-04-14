@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\ChromePdf;
 
-use HeadlessChromium\Page;
 use HeadlessChromium\Browser;
 use HeadlessChromium\BrowserFactory;
 use HeadlessChromium\Communication\Message;
 use HeadlessChromium\Communication\Session;
+use HeadlessChromium\Page;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\ChromePdf\ColorScheme;
 use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
@@ -17,6 +17,7 @@ use Tamedevelopers\Support\ChromePdf\Exception\InvalidSelectorException;
 use Tamedevelopers\Support\ChromePdf\Internal\CombinedPostProcessScript;
 use Tamedevelopers\Support\ChromePdf\Internal\FileUri;
 use Tamedevelopers\Support\ChromePdf\Internal\FlattenLinksScript;
+use Tamedevelopers\Support\ChromePdf\Internal\FloatingElementRemovalScript;
 use Tamedevelopers\Support\ChromePdf\Internal\PreloaderRemovalScript;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;
 use Tamedevelopers\Support\ChromePdf\Traits\FontManagerTrait;
@@ -142,6 +143,10 @@ final class PdfGenerator
      * Default true — call {@see loadRemoteImages(true)} to load remote bitmap/CSS images.
      */
     private bool $enableRemoteImageLoading = true;
+
+    private int $desktopViewportWidth = 1440;
+
+    private int $desktopViewportHeight = 2200;
 
     private static ?Browser $sharedBrowser = null;
 
@@ -489,6 +494,7 @@ final class PdfGenerator
         try {
             $page = $browser->createPage();
             $this->applyColorSchemeToPage($page);
+            $this->applyDesktopViewportForUrlIfNeeded($page);
 
             match ($this->sourceMode) {
                 'url' => $this->loadFromUrlWithBlocking($page),
@@ -797,16 +803,42 @@ final class PdfGenerator
 
     private function buildThemeCssOnly(): string
     {
+        $floatingElem = new FloatingElementRemovalScript();
+        
         if ($this->styles === null || $this->styles->isEmpty()) {
-            return '';
+            return $floatingElem->buildDefaultPrintHideCss();
         }
 
-        return $this->styles->toCssString();
+        return $floatingElem->buildDefaultPrintHideCss() 
+            . "\n\n" . $this->styles->toCssString();
     }
 
     private function navigationLifecycleEvent(): string
     {
         return $this->waitForWindowLoadEvent ? Page::LOAD : Page::DOM_CONTENT_LOADED;
+    }
+
+    /**
+     * Forces desktop layout for URL captures so responsive sites do not choose a narrow/mobile breakpoint by default.
+     */
+    private function applyDesktopViewportForUrlIfNeeded(Page $page): void
+    {
+        if ($this->sourceMode !== 'url') {
+            return;
+        }
+
+        try {
+            $page->setViewport($this->desktopViewportWidth, $this->desktopViewportHeight);
+        } catch (Throwable) {
+        }
+
+        try {
+            $page->setUserAgent(
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                . '(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+            );
+        } catch (Throwable) {
+        }
     }
 
     private function loadFromUrlWithBlocking(Page $page): void
@@ -1231,4 +1263,6 @@ final class PdfGenerator
 
         return implode(':', $parts);
     }
+
+    
 }
