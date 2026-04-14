@@ -59,16 +59,26 @@ final class CombinedPostProcessScript
         $js .= "if(/[\\u0600-\\u06ff]/.test(txt) && __fonts.arabic) appendStyle(__fonts.arabic, 'pdf-font-arabic');";
 
         if ($waitForImages) {
-            $js .= "var __imgEnd = Date.now() + {$imgCap};"
-                . "function __imgsReady() {"
-                .     "var imgs = document.images;"
-                .     "for (var i = 0; i < imgs.length; i++) {"
-                .         "if (!imgs[i].complete) return false;"
-                .     "}"
-                .     "return true;"
-                . "}"
-                . "while (!__imgsReady() && Date.now() < __imgEnd) {"
-                .     "await new Promise(function (r) { setTimeout(r, 60); });"
+            $js .= "var __pendingImgs = Array.prototype.filter.call(document.images || [], function (img) {"
+                .     "return img && !img.complete;"
+                . "});"
+                . "if (__pendingImgs.length) {"
+                .     "await Promise.race(["
+                .         "Promise.all(__pendingImgs.map(function (img) {"
+                .             "return new Promise(function (resolve) {"
+                .                 "var done = false;"
+                .                 "function finish() {"
+                .                     "if (done) return;"
+                .                     "done = true;"
+                .                     "resolve();"
+                .                 "}"
+                .                 "if (img.complete) { finish(); return; }"
+                .                 "try { img.addEventListener('load', finish, { once: true }); } catch (e1) {}"
+                .                 "try { img.addEventListener('error', finish, { once: true }); } catch (e2) {}"
+                .             "});"
+                .         "})),"
+                .         "new Promise(function (resolve) { setTimeout(resolve, {$imgCap}); })"
+                .     "]);"
                 . "}";
         }
 

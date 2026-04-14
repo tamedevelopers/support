@@ -913,12 +913,13 @@ final class PdfGenerator
         if ($html === false) {
             throw new ConversionFailedException(sprintf('Could not read file: %s', $path));
         }
-        $this->injectionCssForPostProcess = $this->buildThemeCssOnly();
-        $navMs = min(3000, $this->effectiveNavigationTimeoutMs());
-        $page->navigate(FileUri::fromPath($path))->waitForNavigation(
-            Page::LOAD,
-            $navMs
+        $this->injectionCssForPostProcess = '';
+        $merged = self::mergeCssIntoHtmlDocument(
+            $html,
+            $this->buildThemeCssOnly(),
+            self::baseHrefForLocalHtmlFile($path)
         );
+        $page->setHtml($merged, 900, Page::DOM_CONTENT_LOADED);
     }
 
     private function loadFromHtml(Page $page): void
@@ -926,7 +927,7 @@ final class PdfGenerator
         $html = $this->sourceValue;
         $this->injectionCssForPostProcess = '';
         $merged = self::mergeCssIntoHtmlDocument($html, $this->buildThemeCssOnly(), null);
-        $page->setHtml($merged, 2000, Page::LOAD);
+        $page->setHtml($merged, 900, Page::DOM_CONTENT_LOADED);
     }
 
     /**
@@ -955,7 +956,7 @@ final class PdfGenerator
         $budget = $this->effectiveStabilityTimeoutMs();
 
         $waitForImages = $isLocal;
-        $imageWaitMs = $speed ? 2000 : 4000;
+        $imageWaitMs = $speed ? 900 : 1800;
 
         $expr = CombinedPostProcessScript::asExpression(
             $includeStability,
@@ -1021,5 +1022,13 @@ final class PdfGenerator
         }
 
         return '<!DOCTYPE html><html><head>' . $injection . '</head><body>' . $html . '</body></html>';
+    }
+
+    private static function baseHrefForLocalHtmlFile(string $path): string
+    {
+        $dir = dirname($path);
+        $href = FileUri::fromPath($dir);
+
+        return str_ends_with($href, '/') ? $href : ($href . '/');
     }
 }
