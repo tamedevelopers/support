@@ -13,10 +13,15 @@ final class PageStabilityScript
 {
     /**
      * @param int $maxWaitMs soft upper bound for the whole async IIFE (phases are capped below this)
+     * @param bool $lean when true (e.g. {@code prioritizeSpeed}), spend less wall time polling for {@code complete} / aria-busy
      */
-    public static function asSettleExpression(int $maxWaitMs): string
+    public static function asSettleExpression(int $maxWaitMs, bool $lean = false): string
     {
         $max = max(400, min(20000, $maxWaitMs));
+        $completeTop = $lean ? 900 : 2800;
+        $busy1Top = $lean ? 500 : 1200;
+        $busy2Top = $lean ? 350 : 800;
+        $finalSleepTop = $lean ? 35 : 80;
 
         return <<<JS
             (async function () {
@@ -25,18 +30,18 @@ final class PageStabilityScript
                 function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
                 function elapsed() { return Date.now() - t0; }
 
-                var completeCap = Math.min(2800, maxWait);
+                var completeCap = Math.min({$completeTop}, maxWait);
                 while (document.readyState !== 'complete' && elapsed() < completeCap) {
                     await sleep(Math.min(80, Math.max(5, completeCap - elapsed())));
                 }
 
-                var busyBudget = Math.min(1200, Math.max(0, maxWait - elapsed()));
+                var busyBudget = Math.min({$busy1Top}, Math.max(0, maxWait - elapsed()));
                 var busyEnd = Date.now() + busyBudget;
                 while (document.documentElement.getAttribute('aria-busy') === 'true' && Date.now() < busyEnd) {
                     await sleep(50);
                 }
                 if (document.body && document.body.getAttribute('aria-busy') === 'true') {
-                    busyEnd = Date.now() + Math.min(800, Math.max(0, maxWait - elapsed()));
+                    busyEnd = Date.now() + Math.min({$busy2Top}, Math.max(0, maxWait - elapsed()));
                     while (document.body.getAttribute('aria-busy') === 'true' && Date.now() < busyEnd) {
                         await sleep(50);
                     }
@@ -132,7 +137,7 @@ final class PageStabilityScript
                         });
                     });
                 });
-                await sleep(Math.min(80, Math.max(5, maxWait - elapsed())));
+                await sleep(Math.min({$finalSleepTop}, Math.max(5, maxWait - elapsed())));
 
                 return true;
             })()

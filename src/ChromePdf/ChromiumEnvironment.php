@@ -40,6 +40,9 @@ final class ChromiumEnvironment
                 '--no-first-run',
                 '--disable-extensions',
                 '--mute-audio',
+                '--disable-background-timer-throttling',
+                '--disable-renderer-backgrounding',
+                '--disable-backgrounding-occluded-windows',
             ],
         ];
 

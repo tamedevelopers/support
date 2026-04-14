@@ -11,6 +11,8 @@ final class CombinedPostProcessScript
 {
     /**
      * @param array<string, string> $fontFaceMap Keyed by {@code cjk}, {@code arabic}, {@code cyrillic}
+     * @param bool $leanStability forwarded to {@see PageStabilityScript::asSettleExpression()} when stability runs
+     * @param int $paintSettleMs extra delay after font / rAF paint (0–80); lower for {@code prioritizeSpeed}
      */
     public static function asExpression(
         bool $includeStability,
@@ -18,10 +20,13 @@ final class CombinedPostProcessScript
         int $stabilityBudgetMs,
         int $fontRaceMs,
         string $themeCss,
-        array $fontFaceMap
+        array $fontFaceMap,
+        bool $leanStability = false,
+        int $paintSettleMs = 50
     ): string {
         $max = max(400, min(20000, $stabilityBudgetMs));
         $race = max(50, min(30000, $fontRaceMs));
+        $paint = max(0, min(80, $paintSettleMs));
 
         $payload = [
             'theme' => $themeCss,
@@ -31,7 +36,7 @@ final class CombinedPostProcessScript
 
         $stabilityAwait = '';
         if ($includeStability) {
-            $stabilityAwait = 'await ' . PageStabilityScript::asSettleExpression($max) . ";\n";
+            $stabilityAwait = 'await ' . PageStabilityScript::asSettleExpression($max, $leanStability) . ";\n";
         }
 
         $cookieBlock = '';
@@ -100,7 +105,7 @@ final class CombinedPostProcessScript
                         requestAnimationFrame(function () { r(); });
                     });
                 });
-                await new Promise(function (r) { setTimeout(r, 50); });
+                await new Promise(function (r) { setTimeout(r, {$paint}); });
                 {$stabilityAwait}{$cookieBlock}
                 return true;
             })()

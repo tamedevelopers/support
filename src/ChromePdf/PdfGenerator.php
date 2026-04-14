@@ -35,7 +35,8 @@ use Throwable;
  * Post-navigation work (fonts, optional settle, CMP strip, optional injected CSS) runs in one {@code evaluate()} via
  * {@see CombinedPostProcessScript} to cut WebSocket round-trips. Local {@see fromFile()}/{@see fromHtml()} use
  * {@code DOMContentLoaded} and short budgets for navigation/setHtml.
- * Large remote pages are supported; URL captures use request filtering to avoid tracker-induced timeouts.
+ * Large remote pages are supported; URL captures use request filtering to avoid tracker-induced timeouts (pattern
+ * blocks common tag managers / analytics so the main document can reach {@code DOMContentLoaded} sooner).
  * For trusted HTML you control, {@see withoutDefaultPostProcessing()} skips stabilize + cookie passes to cut wall time.
  *
  * {@see fromFile()} / {@see fromHtml()} skip stabilize + cookie by default for fast local conversion; call
@@ -153,7 +154,7 @@ final class PdfGenerator
     private const FETCH_BLOCK_CACHE_CAP = 4096;
 
     /** Pre-compiled pattern for tracker URLs (hot path in {@see computeFetchShouldBlock()}). */
-    private const FETCH_TRACKER_URL_PATTERN = '/analytics|doubleclick|facebook|adsystem/i';
+    private const FETCH_TRACKER_URL_PATTERN = '/analytics|doubleclick|googlesyndication|googletagmanager|google-analytics|gtag\\/|facebook\\.com\\/tr|hotjar|segment\\.(io|com)|fullstory|clarity\\.ms|mixpanel|sentry\\.io|intercom|zendesk|newrelic|pardot|hs-scripts|hs-analytics|adsystem|quantserve|taboola|outbrain|moatads|criteo/i';
 
     /**
      * Theme/font CSS to apply inside {@see CombinedPostProcessScript} ({@code null} = derive from DOM after URL load).
@@ -678,7 +679,7 @@ final class PdfGenerator
     private function effectiveStabilityTimeoutMs(): int
     {
         if ($this->prioritizeSpeed) {
-            return min($this->stabilityTimeoutMs, 2000);
+            return min($this->stabilityTimeoutMs, 1400);
         }
 
         return min($this->stabilityTimeoutMs, 8000);
@@ -883,7 +884,7 @@ final class PdfGenerator
             throw new ConversionFailedException(sprintf('Could not read file: %s', $path));
         }
         $this->injectionCssForPostProcess = $this->buildThemeCssOnly();
-        $navMs = min(1000, $this->effectiveNavigationTimeoutMs());
+        $navMs = min(800, $this->effectiveNavigationTimeoutMs());
         $page->navigate(FileUri::fromPath($path))->waitForNavigation(
             Page::DOM_CONTENT_LOADED,
             $navMs
@@ -895,7 +896,7 @@ final class PdfGenerator
         $html = $this->sourceValue;
         $this->injectionCssForPostProcess = '';
         $merged = self::mergeCssIntoHtmlDocument($html, $this->buildThemeCssOnly(), null);
-        $page->setHtml($merged, 1000, Page::DOM_CONTENT_LOADED);
+        $page->setHtml($merged, 800, Page::DOM_CONTENT_LOADED);
     }
 
     /**
@@ -919,7 +920,12 @@ final class PdfGenerator
         $includeStability = $this->shouldStabilizeAfterLoad();
         $includeCookies = $this->shouldStripCookiesAfterLoad();
         $isLocal = in_array($this->sourceMode, ['file', 'html'], true);
-        $fontRaceMs = $isLocal ? 500 : 6000;
+        $speed = $this->prioritizeSpeed;
+        if ($isLocal) {
+            $fontRaceMs = $speed ? 400 : 500;
+        } else {
+            $fontRaceMs = $speed ? 1400 : 6000;
+        }
         $budget = $this->effectiveStabilityTimeoutMs();
         $expr = CombinedPostProcessScript::asExpression(
             $includeStability,
@@ -927,7 +933,9 @@ final class PdfGenerator
             $budget,
             $fontRaceMs,
             $themeCss,
-            $fontFaceMap
+            $fontFaceMap,
+            $speed,
+            $speed ? 12 : 50
         );
         $timeoutMs = $this->combinedPostProcessEvalTimeoutMs($includeStability, $includeCookies, $isLocal);
         $page->evaluate($expr)->getReturnValue($timeoutMs);
@@ -935,13 +943,24 @@ final class PdfGenerator
 
     private function combinedPostProcessEvalTimeoutMs(bool $includeStability, bool $includeCookies, bool $isLocal): int
     {
-        $extra = ($includeStability ? 8000 : 0) + ($includeCookies ? 18000 : 0);
+        if ($this->prioritizeSpeed) {
+            $extra = ($includeStability ? 4200 : 0) + ($includeCookies ? 9000 : 0);
+        } else {
+            $extra = ($includeStability ? 8000 : 0) + ($includeCookies ? 18000 : 0);
+        }
 
         if ($isLocal) {
-            return min(18000, max(2200, 1800 + $extra));
+            $cap = $this->prioritizeSpeed ? 12000 : 18000;
+            $floor = $this->prioritizeSpeed ? 1800 : 2200;
+
+            return min($cap, max($floor, 1600 + $extra));
         }
 
         // Remote: tight ceiling so the combined evaluate() stays short relative to navigation + print.
+        if ($this->prioritizeSpeed) {
+            return min(8200, max(3000, 2400 + min($extra, 4000)));
+        }
+
         return min(11000, max(4000, 2800 + min($extra, 6000)));
     }
 
