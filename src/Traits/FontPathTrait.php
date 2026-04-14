@@ -126,7 +126,7 @@ trait FontPathTrait{
      * @param string|null $text 
      * @return bool
      */
-    private static function needsUnicodeFont($text = null)
+    protected static function needsUnicodeFont($text = null)
     {
         $text = Str::trim($text);
         $len = mb_strlen($text, 'UTF-8');

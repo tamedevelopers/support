@@ -1,0 +1,896 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tamedevelopers\Support\ChromePdf;
+
+use HeadlessChromium\BrowserFactory;
+use HeadlessChromium\Communication\Message;
+use HeadlessChromium\Page;
+use Tamedevelopers\Support\ChromePdf\ColorScheme;
+use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
+use Tamedevelopers\Support\ChromePdf\Exception\FontNotFoundException;
+use Tamedevelopers\Support\ChromePdf\Exception\InvalidSelectorException;
+use Tamedevelopers\Support\ChromePdf\Internal\CookiePopupRemovalScript;
+use Tamedevelopers\Support\ChromePdf\Internal\FileUri;
+use Tamedevelopers\Support\ChromePdf\Internal\FlattenLinksScript;
+use Tamedevelopers\Support\ChromePdf\Internal\PageStabilityScript;
+use Tamedevelopers\Support\ChromePdf\PdfOutput;
+use Tamedevelopers\Support\ChromePdf\Traits\FontManagerTrait;
+use Tamedevelopers\Support\Str;
+use Throwable;
+
+/**
+ * Fluent builder for HTML → PDF via headless Chromium (chrome-php/chrome).
+ *
+ * Defaults: {@see prioritizeSpeed()} (no images), {@see waitForWindowLoadEvent()} false (DOMContentLoaded — avoids
+ * hanging on pages where {@code load} is delayed by analytics or long-lived requests), and {@see stabilizeBeforeCapture()}.
+ * Raise {@see navigationTimeoutMs()} if a site is legitimately slow; {@see waitForWindowLoadEvent(true)} when you need
+ * every subresource before capture. Cold Chromium startup is often 1–3s on its own.
+ *
+ * Use {@see maximumQuality()} for full images and longer navigation/stability budgets.
+ *
+ * Large remote pages (e.g. long blogs) are supported; slowness is usually one new Chromium process per
+ * {@see generate()} plus print work. For trusted HTML you control, {@see withoutDefaultPostProcessing()} skips
+ * stabilize + cookie passes to cut wall time.
+ *
+ * {@see fromFile()} / {@see fromHtml()} skip stabilize + cookie by default for fast local conversion; call
+ * {@see postProcessLocalSources(true)} if you saved remote HTML and still need those passes.
+ *
+ * {@see clickableLinks(false)} strips {@code href} (and {@code ping}/{@code target}/etc.) from anchors only — same
+ * element type so layout and {@code a} styling stay intact; PDF links are not clickable.
+ *
+ * Remote images: Chromium image loading is **off** by default (bitmap/CSS images from the network are skipped).
+ * Call {@see loadRemoteImages(true)} when you need {@code http(s)://} in {@code img}/CSS. This does not block web fonts
+ * or text; a short {@code document.fonts.ready} wait runs after every navigation for stable typography.
+ */
+final class PdfGenerator
+{
+    use FontManagerTrait;
+
+    private ?string $sourceMode = null;
+
+    private ?string $sourceValue = null;
+
+    private ?string $selector = null;
+
+    private PaperFormat $paper = PaperFormat::A4;
+
+    private bool $landscape = false;
+
+    /**
+     * PDF print margins: {@code omit} = let Chromium defaults apply; {@code default} = ~1 cm all sides;
+     * {@code none} = 0; {@code uniform} = {@see $pdfMarginUniformInches} on all sides.
+     */
+    private string $pdfMarginMode = 'omit';
+
+    /** Inches, used when {@see $pdfMarginMode} is {@code uniform}. */
+    private float $pdfMarginUniformInches = 0.0;
+
+    /** @var Theme|null merged CSS from {@see theme()}, {@see css()}, and {@see cssFile()} */
+    private ?Theme $styles = null;
+
+    private ?string $chromiumBinary = null;
+
+    private bool $autoInjectFonts = true;
+
+    private bool $printBackground = true;
+
+    /**
+     * Max time to wait for the initial navigation (ms). Not aggressively capped — short values cause false timeouts
+     * on sites where the {@code load} event or network is slow in headless mode.
+     */
+    private int $navigationTimeoutMs = 30000;
+
+    /**
+     * When true (default): no image download; stability budgets stay tighter than {@see maximumQuality()}.
+     */
+    private bool $prioritizeSpeed = true;
+
+    private ColorScheme $colorScheme = ColorScheme::NoPreference;
+
+    /**
+     * When true, waits for the window {@code load} event (can hang or timeout if trackers never finish).
+     * Default false uses DOMContentLoaded, which matches most fast real-world loads; use {@see stabilizeBeforeCapture()}.
+     */
+    private bool $waitForWindowLoadEvent = false;
+
+    /**
+     * When true (default), runs an async settle step (document complete, strip common loaders, paint) before PDF.
+     */
+    private bool $stabilizeBeforeCapture = true;
+
+    /**
+     * Budget for {@see stabilizeBeforeCapture()} (ms); capped lower when {@see prioritizeSpeed()} is on.
+     */
+    private int $stabilityTimeoutMs = 2200;
+
+    /**
+     * When true, Chromium ignores TLS certificate errors (useful for intranet HTTPS during development).
+     */
+    private bool $ignoreCertificateErrors = false;
+
+    /**
+     * When true (default), runs client-side removal of common cookie/consent banners before PDF capture.
+     * Does not change HTTP cookies — only strips DOM overlays (known CMPs + a small fixed-position heuristic).
+     */
+    private bool $stripCookiePopupsBeforePdf = true;
+
+    /**
+     * When false, navigation attributes are stripped from anchors — see {@see clickableLinks()}.
+     */
+    private bool $clickableLinks = true;
+
+    /**
+     * When true, {@see stabilizeBeforeCapture()} and {@see removeCookiePopups()} also run for {@see fromFile()} /
+     * {@see fromHtml()}. Default false keeps local PDF conversion fast (no remote-style DOM walks).
+     */
+    private bool $postProcessLocalSources = false;
+
+    /**
+     * Maps to BrowserFactory {@code enableImages} ({@code --blink-settings=imagesEnabled=false} when false).
+     * Default false — call {@see loadRemoteImages(true)} to load remote bitmap/CSS images.
+     */
+    private bool $enableRemoteImageLoading = false;
+
+    public static function create(): self
+    {
+        return new self();
+    }
+
+    public function fromUrl(string $url): self
+    {
+        $this->resetSource();
+        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+            throw new ConversionFailedException(sprintf('Invalid URL: %s', $url));
+        }
+        $this->sourceMode = 'url';
+        $this->sourceValue = $url;
+
+        return $this;
+    }
+
+    public function fromHtml(string $html): self
+    {
+        $this->resetSource();
+        $this->sourceMode = 'html';
+        $this->sourceValue = $html;
+
+        return $this;
+    }
+
+    public function fromFile(string $path): self
+    {
+        $this->resetSource();
+        $real = realpath($path);
+        if ($real === false || !is_readable($real)) {
+            throw new ConversionFailedException(sprintf('HTML file is not readable: %s', $path));
+        }
+        $this->sourceMode = 'file';
+        $this->sourceValue = $real;
+
+        return $this;
+    }
+
+    /**
+     * When set, only the first matching element is kept in the document body before PDF capture.
+     */
+    public function selectElement(?string $cssSelector): self
+    {
+        $this->selector = ($cssSelector !== null && $cssSelector !== '') ? $cssSelector : null;
+
+        return $this;
+    }
+
+    /**
+     * @param PaperFormat|string $format Named size ({@code A4}, {@code letter}, {@code Legal}, etc.) or a {@see PaperFormat} case
+     */
+    public function paper(PaperFormat|string $format): self
+    {
+        $this->paper = $format instanceof PaperFormat ? $format : PaperFormat::parse($format);
+
+        return $this;
+    }
+
+    public function landscape(bool $landscape = true): self
+    {
+        $this->landscape = $landscape;
+
+        return $this;
+    }
+
+    /**
+     * Controls the white space around the printed page (Chromium {@code Page.printToPDF} margins, in inches).
+     *
+     * - {@code null}: use Chromium’s built-in default margins (omit explicit margin options).
+     * - {@code true}: apply the package default (~1 cm on each side).
+     * - {@code false}: no margins (0 on all sides; content can extend to the physical page edge).
+     * - {@code int} or {@code string}: uniform margin on all sides. Bare numbers and {@code Npx} are treated as CSS px
+     *   (96 px = 1 in). Also accepts {@code Ncm}, {@code Nmm}, {@code Nin}.
+     */
+    public function margins(bool|int|string|null $value = null): self
+    {
+        if ($value === null) {
+            $this->pdfMarginMode = 'omit';
+
+            return $this;
+        }
+        if ($value === true) {
+            $this->pdfMarginMode = 'default';
+
+            return $this;
+        }
+        if ($value === false) {
+            $this->pdfMarginMode = 'none';
+
+            return $this;
+        }
+        $this->pdfMarginMode = 'uniform';
+        $this->pdfMarginUniformInches = self::parseMarginToInches($value);
+
+        return $this;
+    }
+
+    /**
+     * @throws ConversionFailedException
+     */
+    private static function parseMarginToInches(int|string $value): float
+    {
+        if (is_int($value)) {
+            return max(0.0, (float) $value) / 96.0;
+        }
+
+        $s = Str::trim($value);
+        if ($s === '') {
+            throw new ConversionFailedException('Empty margin value.');
+        }
+
+        if (preg_match('/^([\d.]+)\s*px$/i', $s, $m) === 1) {
+            return max(0.0, (float) $m[1]) / 96.0;
+        }
+        if (preg_match('/^([\d.]+)\s*cm$/i', $s, $m) === 1) {
+            return max(0.0, (float) $m[1]) / 2.54;
+        }
+        if (preg_match('/^([\d.]+)\s*mm$/i', $s, $m) === 1) {
+            return max(0.0, (float) $m[1]) / 25.4;
+        }
+        if (preg_match('/^([\d.]+)\s*in$/i', $s, $m) === 1) {
+            return max(0.0, (float) $m[1]);
+        }
+        if (preg_match('/^([\d.]+)$/', $s, $m) === 1) {
+            return max(0.0, (float) $m[1]) / 96.0;
+        }
+
+        throw new ConversionFailedException(sprintf('Unrecognized margin format: %s', $s));
+    }
+
+    private function buildPdfPrintOptions(): array
+    {
+        $opts = [
+            'landscape' => $this->landscape,
+            'printBackground' => $this->printBackground,
+            'paperWidth' => $this->paper->widthInches(),
+            'paperHeight' => $this->paper->heightInches(),
+        ];
+
+        $inch = match ($this->pdfMarginMode) {
+            'omit' => null,
+            'default' => 1.0 / 2.54,
+            'none' => 0.0,
+            'uniform' => $this->pdfMarginUniformInches,
+            default => null,
+        };
+
+        if ($inch !== null) {
+            $opts['marginTop'] = $inch;
+            $opts['marginBottom'] = $inch;
+            $opts['marginLeft'] = $inch;
+            $opts['marginRight'] = $inch;
+        }
+
+        return $opts;
+    }
+
+    /**
+     * Replace injected style bucket with a pre-built {@see Theme} (from {@see Theme::create()}).
+     */
+    public function theme(Theme $theme): self
+    {
+        $this->styles = $theme;
+
+        return $this;
+    }
+
+    /**
+     * Append inline CSS (same backing store as {@see Theme::addCssString()}).
+     */
+    public function css(string $css): self
+    {
+        $this->styles ??= Theme::create();
+        $this->styles->addCssString($css);
+
+        return $this;
+    }
+
+    /**
+     * Append CSS from a readable file path.
+     */
+    public function cssFile(string $path): self
+    {
+        $this->styles ??= Theme::create();
+        $this->styles->addCssFile($path);
+
+        return $this;
+    }
+
+    public function chromiumBinary(?string $absolutePath): self
+    {
+        $this->chromiumBinary = $absolutePath;
+
+        return $this;
+    }
+
+    public function autoInjectUnicodeFonts(bool $enabled = true): self
+    {
+        $this->autoInjectFonts = $enabled;
+
+        return $this;
+    }
+
+    public function printBackground(bool $enabled = true): self
+    {
+        $this->printBackground = $enabled;
+
+        return $this;
+    }
+
+    public function navigationTimeoutMs(int $milliseconds): self
+    {
+        $this->navigationTimeoutMs = max(500, $milliseconds);
+
+        return $this;
+    }
+
+    public function prioritizeSpeed(bool $enable = true): self
+    {
+        $this->prioritizeSpeed = $enable;
+
+        return $this;
+    }
+
+    /**
+     * Controls whether Chromium loads images (required for {@code http(s)://} in {@code img src} and CSS background images).
+     * Default is {@code false}; pass {@code true} to opt in. Web fonts and document text are not gated by this flag.
+     */
+    public function loadRemoteImages(bool $enable = true): self
+    {
+        $this->enableRemoteImageLoading = $enable;
+
+        return $this;
+    }
+
+    /**
+     * Alias for {@see loadRemoteImages()}.
+     */
+    public function absoluteImageLinks(bool $enable = true): self
+    {
+        return $this->loadRemoteImages($enable);
+    }
+
+    /**
+     * Full images and uncapped navigation timeout (within your {@see navigationTimeoutMs()}).
+     */
+    public function maximumQuality(bool $enable = true): self
+    {
+        $this->prioritizeSpeed = !$enable;
+
+        return $this;
+    }
+
+    /**
+     * {@code prefers-color-scheme} emulation. Pass {@see ColorScheme} or a string: {@code light}, {@code dark},
+     * {@code no-preference} (aliases: none, system, default, auto). Unknown strings use {@see ColorScheme::NoPreference}.
+     */
+    public function colorScheme(ColorScheme|string $scheme): self
+    {
+        $this->colorScheme = $scheme instanceof ColorScheme ? $scheme : ColorScheme::parse($scheme);
+
+        return $this;
+    }
+
+    public function waitForWindowLoadEvent(bool $enable = true): self
+    {
+        $this->waitForWindowLoadEvent = $enable;
+
+        return $this;
+    }
+
+    public function stabilizeBeforeCapture(bool $enable = true): self
+    {
+        $this->stabilizeBeforeCapture = $enable;
+
+        return $this;
+    }
+
+    public function stabilityTimeoutMs(int $milliseconds): self
+    {
+        $this->stabilityTimeoutMs = max(100, $milliseconds);
+
+        return $this;
+    }
+
+    public function ignoreCertificateErrors(bool $enable = true): self
+    {
+        $this->ignoreCertificateErrors = $enable;
+
+        return $this;
+    }
+
+    /**
+     * Enable or disable stripping cookie / consent UI from the document before printing.
+     * When enabled, uses known consent-manager selectors plus a conservative overlay heuristic.
+     */
+    public function removeCookiePopups(bool $enable = true): self
+    {
+        $this->stripCookiePopupsBeforePdf = $enable;
+
+        return $this;
+    }
+
+    /**
+     * When {@code false}, removes {@code href}, {@code ping}, {@code target}, {@code download}, and
+     * {@code referrerpolicy} from {@code <a>} / {@code <area>} only — elements stay as {@code <a>} so CSS is unchanged;
+     * PDF output has no clickable links.
+     */
+    public function clickableLinks(bool $enable = true): self
+    {
+        $this->clickableLinks = $enable;
+
+        return $this;
+    }
+
+    public function postProcessLocalSources(bool $enable = true): self
+    {
+        $this->postProcessLocalSources = $enable;
+
+        return $this;
+    }
+
+    /**
+     * Skips stabilize + cookie stripping for fastest capture. Use only for trusted URLs/HTML you control
+     * (no CMP, no client-only loaders you rely on this pass to remove).
+     */
+    public function withoutDefaultPostProcessing(bool $skip = true): self
+    {
+        if ($skip) {
+            $this->stabilizeBeforeCapture = false;
+            $this->stripCookiePopupsBeforePdf = false;
+            $this->postProcessLocalSources = false;
+        } else {
+            $this->stabilizeBeforeCapture = true;
+            $this->stripCookiePopupsBeforePdf = true;
+        }
+
+        return $this;
+    }
+
+    public function generate(): PdfOutput
+    {
+        if ($this->sourceMode === null || $this->sourceValue === null) {
+            throw new ConversionFailedException(
+                'No input configured. Call fromUrl(), fromHtml(), or fromFile() before generate().'
+            );
+        }
+
+        $env = new ChromiumEnvironment();
+        $binary = $this->chromiumBinary ?? $env->resolveChromeBinary();
+        $launch = $env->getLaunchOptions();
+        if ($this->ignoreCertificateErrors) {
+            $launch['ignoreCertificateErrors'] = true;
+        }
+        $launch['enableImages'] = $this->shouldEnableChromiumImages();
+
+        $browser = null;
+        $tempHtml = null;
+        $page = null;
+
+        try {
+            $factory = new BrowserFactory($binary);
+            $browser = $factory->createBrowser($launch);
+
+            $page = $browser->createPage();
+            $this->applyColorSchemeMedia($page);
+            $this->applyColorSchemeClientHints($page);
+
+            match ($this->sourceMode) {
+                'url' => $this->loadFromUrl($page),
+                'file' => $tempHtml = $this->loadFromFile($page),
+                'html' => $tempHtml = $this->loadFromHtml($page),
+            };
+
+            $this->waitForFontsReady($page);
+
+            if ($this->shouldStabilizeAfterLoad()) {
+                $this->stabilizePageBeforePdf($page);
+            }
+
+            if ($this->shouldStripCookiesAfterLoad()) {
+                $this->stripCookieConsentUi($page);
+            }
+
+            if ($this->selector !== null) {
+                $this->isolateSelector($page, $this->selector);
+            }
+
+            if (!$this->clickableLinks) {
+                $this->flattenLinksForPrint($page);
+            }
+
+            $pdf = $page->pdf($this->buildPdfPrintOptions());
+
+            $navCap = $this->effectiveNavigationTimeoutMs();
+            // printToPDF can take a long time on heavy pages; default wait scales with navigation budget.
+            $pdfWait = $this->prioritizeSpeed
+                ? min(90000, max(12000, $navCap * 2))
+                : min(180000, max(35000, $navCap * 3));
+            $data = $pdf->getBase64($pdfWait);
+            $raw = base64_decode($data, true);
+            if ($raw === false || $raw === '') {
+                throw new ConversionFailedException('Chromium returned an empty or invalid PDF payload.');
+            }
+
+            return new PdfOutput($raw);
+        } catch (InvalidSelectorException | FontNotFoundException $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            throw new ConversionFailedException($e->getMessage(), (int) $e->getCode(), $e);
+        } finally {
+            if ($browser !== null) {
+                try {
+                    $browser->close();
+                } catch (Throwable) {
+                }
+            }
+            if ($tempHtml !== null && is_file($tempHtml)) {
+                @unlink($tempHtml);
+            }
+        }
+    }
+
+    private function shouldStabilizeAfterLoad(): bool
+    {
+        if (!$this->stabilizeBeforeCapture) {
+            return false;
+        }
+
+        return $this->sourceMode === 'url' || $this->postProcessLocalSources;
+    }
+
+    private function shouldStripCookiesAfterLoad(): bool
+    {
+        if (!$this->stripCookiePopupsBeforePdf) {
+            return false;
+        }
+
+        return $this->sourceMode === 'url' || $this->postProcessLocalSources;
+    }
+
+    private function shouldEnableChromiumImages(): bool
+    {
+        return $this->enableRemoteImageLoading;
+    }
+
+    /**
+     * Waits for web fonts (when {@code document.fonts} is available) and a paint frame before PDF capture.
+     * Runs even when {@see stabilizeBeforeCapture()} is skipped for local sources, so text is not intermittently
+     * captured before fonts resolve.
+     */
+    private function waitForFontsReady(Page $page): void
+    {
+        $timeoutMs = $this->evalTimeoutMs(10000, 2500);
+        $page->evaluate(<<<'JS'
+            (async function () {
+                try {
+                    if (document.fonts && document.fonts.ready) {
+                        await Promise.race([
+                            document.fonts.ready,
+                            new Promise(function (r) { setTimeout(r, 6000); })
+                        ]);
+                    }
+                } catch (e) {}
+                await new Promise(function (r) {
+                    requestAnimationFrame(function () {
+                        requestAnimationFrame(function () { r(); });
+                    });
+                });
+                await new Promise(function (r) { setTimeout(r, 50); });
+                return true;
+            })()
+        JS)->getReturnValue($timeoutMs);
+    }
+
+    private function effectiveNavigationTimeoutMs(): int
+    {
+        return $this->navigationTimeoutMs;
+    }
+
+    private function effectiveStabilityTimeoutMs(): int
+    {
+        if ($this->prioritizeSpeed) {
+            return min($this->stabilityTimeoutMs, 2000);
+        }
+
+        return min($this->stabilityTimeoutMs, 8000);
+    }
+
+    private function evalTimeoutMs(int $maxMs, int $minMs): int
+    {
+        $base = (int) ($this->effectiveNavigationTimeoutMs() / 2);
+
+        return min($maxMs, max($minMs, $this->prioritizeSpeed ? min($base, 8000) : $base));
+    }
+
+    private function stabilizePageBeforePdf(Page $page): void
+    {
+        $budget = $this->effectiveStabilityTimeoutMs();
+        // chrome-php: getReturnValue() timeout argument is in milliseconds of wall time for the CDP response.
+        $evalTimeout = min(15000, max(5000, $budget + 4000));
+        $page->evaluate(PageStabilityScript::asSettleExpression($budget))->getReturnValue($evalTimeout);
+    }
+
+    private function flattenLinksForPrint(Page $page): void
+    {
+        $page->evaluate(FlattenLinksScript::asExpression())->getReturnValue(
+            min(15000, max(2500, (int) ($this->effectiveNavigationTimeoutMs() / 4)))
+        );
+    }
+
+    private function resetSource(): void
+    {
+        $this->sourceMode = null;
+        $this->sourceValue = null;
+    }
+
+    private function applyColorSchemeMedia(Page $page): void
+    {
+        if ($this->colorScheme === ColorScheme::NoPreference) {
+            $page->getSession()->sendMessageSync(new Message('Emulation.setEmulatedMedia', [
+                'media' => '',
+                'features' => [],
+            ]));
+
+            return;
+        }
+
+        $page->getSession()->sendMessageSync(new Message('Emulation.setEmulatedMedia', [
+            'media' => '',
+            'features' => [
+                ['name' => 'prefers-color-scheme', 'value' => $this->colorScheme->value],
+            ],
+        ]));
+
+        if ($this->colorScheme === ColorScheme::Light) {
+            try {
+                $page->getSession()->sendMessageSync(new Message('Emulation.setAutoDarkModeOverride', [
+                    'enabled' => false,
+                ]));
+            } catch (Throwable) {
+            }
+        }
+    }
+
+    /**
+     * Many sites (including Google) branch on the Sec-CH-Prefers-Color-Scheme hint; emulation alone is not always enough.
+     */
+    private function applyColorSchemeClientHints(Page $page): void
+    {
+        if ($this->colorScheme === ColorScheme::NoPreference) {
+            return;
+        }
+
+        try {
+            $page->setExtraHTTPHeaders([
+                'Sec-CH-Prefers-Color-Scheme' => $this->colorScheme->value,
+            ]);
+        } catch (Throwable) {
+        }
+    }
+
+    /**
+     * @param string $utf8Sample HTML or plain text sample used only for Unicode/font heuristics
+     */
+    private function buildInjectionCssFromContent(string $utf8Sample): string
+    {
+        $parts = [];
+        if ($this->styles !== null && !$this->styles->isEmpty()) {
+            $parts[] = $this->styles->toCssString();
+        }
+        if ($this->autoInjectFonts) {
+            $parts[] = $this->buildAutoFontFaceCss($utf8Sample, true);
+        }
+
+        return implode("\n\n", array_filter($parts, static fn (string $s): bool => $s !== ''));
+    }
+
+    private function navigationLifecycleEvent(): string
+    {
+        return $this->waitForWindowLoadEvent ? Page::LOAD : Page::DOM_CONTENT_LOADED;
+    }
+
+    private function loadFromUrl(Page $page): void
+    {
+        $page->navigate($this->sourceValue)->waitForNavigation(
+            $this->navigationLifecycleEvent(),
+            $this->effectiveNavigationTimeoutMs()
+        );
+        $this->applyColorSchemeMedia($page);
+        $sample = $this->sampleDocumentTextForFonts($page);
+        $css = $this->buildInjectionCssFromContent($sample);
+        if ($css !== '') {
+            $this->injectStyleTag($page, $css);
+        }
+    }
+
+    /**
+     * Cheap text sample for CJK detection — avoids serializing the full DOM via outerHTML.
+     */
+    private function sampleDocumentTextForFonts(Page $page): string
+    {
+        $raw = $page->evaluate(
+            <<<'JS'
+                (function () {
+                    try {
+                        var chunks = [];
+                        var t = document.title;
+                        if (t) {
+                            chunks.push(t);
+                        }
+                        var root = document.body || document.documentElement;
+                        if (root && root.innerText) {
+                            chunks.push(root.innerText.substring(0, 5000));
+                        }
+                        var s = chunks.join("\n");
+                        return s.length > 6000 ? s.substring(0, 6000) : s;
+                    } catch (e) {
+                        return '';
+                    }
+                })()
+            JS
+        )->getReturnValue($this->evalTimeoutMs(4000, 1200));
+
+        return is_string($raw) ? $raw : '';
+    }
+
+    /**
+     * @return string Temporary HTML path for cleanup
+     */
+    private function loadFromFile(Page $page): string
+    {
+        $path = $this->sourceValue;
+        $html = file_get_contents($path);
+        if ($html === false) {
+            throw new ConversionFailedException(sprintf('Could not read file: %s', $path));
+        }
+        $fontSample = strlen($html) > 12000 ? substr($html, 0, 12000) : $html;
+        $css = $this->buildInjectionCssFromContent($fontSample);
+        $baseHref = FileUri::fromPath(dirname((string) $path)) . '/';
+        $merged = self::mergeCssIntoHtmlDocument($html, $css, $baseHref);
+        $tmp = $this->writeTempHtmlFile($merged);
+        $this->openFileUrl($page, $tmp);
+
+        return $tmp;
+    }
+
+    /**
+     * @return string Temporary HTML path for cleanup
+     */
+    private function loadFromHtml(Page $page): string
+    {
+        $html = $this->sourceValue;
+        $fontSample = strlen($html) > 12000 ? substr($html, 0, 12000) : $html;
+        $css = $this->buildInjectionCssFromContent($fontSample);
+        $merged = self::mergeCssIntoHtmlDocument($html, $css, null);
+        $tmp = $this->writeTempHtmlFile($merged);
+        $this->openFileUrl($page, $tmp);
+
+        return $tmp;
+    }
+
+    private function openFileUrl(Page $page, string $absolutePath): void
+    {
+        $navMs = min(12000, $this->effectiveNavigationTimeoutMs());
+        $page->navigate(FileUri::fromPath($absolutePath))->waitForNavigation(
+            $this->navigationLifecycleEvent(),
+            $navMs
+        );
+    }
+
+    private function writeTempHtmlFile(string $html): string
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'support-chrome-pdf-');
+        if ($tmp === false) {
+            throw new ConversionFailedException('Could not create a temporary file for HTML.');
+        }
+        @unlink($tmp);
+        $path = $tmp . '.html';
+        if (file_put_contents($path, $html) === false) {
+            throw new ConversionFailedException('Could not write temporary HTML.');
+        }
+
+        return $path;
+    }
+
+    private function stripCookieConsentUi(Page $page): void
+    {
+        $nav = $this->effectiveNavigationTimeoutMs();
+        // Large DOMs need a generous CDP wait; values are milliseconds passed to chrome-php.
+        $cookieEvalMs = $this->prioritizeSpeed
+            ? min(35000, max(7000, (int) ($nav * 2 / 3)))
+            : min(120000, max(15000, (int) ($nav / 2)));
+        $page->evaluate(CookiePopupRemovalScript::asExpression())->getReturnValue($cookieEvalMs);
+    }
+
+    private function injectStyleTag(Page $page, string $css): void
+    {
+        $page->callFunction(
+            'function(css) {
+                var el = document.createElement("style");
+                el.setAttribute("type", "text/css");
+                el.setAttribute("data-support-chrome-pdf", "1");
+                el.appendChild(document.createTextNode(css));
+                var head = document.head || document.getElementsByTagName("head")[0] || document.documentElement;
+                head.appendChild(el);
+            }',
+            [$css]
+        )->getReturnValue($this->evalTimeoutMs(5000, 1500));
+    }
+
+    private function isolateSelector(Page $page, string $selector): void
+    {
+        $ok = $page->callFunction(
+            'function(sel) {
+                var el = document.querySelector(sel);
+                if (!el) { return false; }
+                var clone = el.cloneNode(true);
+                while (document.body.firstChild) {
+                    document.body.removeChild(document.body.firstChild);
+                }
+                document.body.appendChild(clone);
+                try { clone.scrollIntoView({ block: "start", inline: "nearest" }); } catch (e) {}
+                return true;
+            }',
+            [$selector]
+        )->getReturnValue($this->evalTimeoutMs(8000, 2500));
+
+        if ($ok !== true) {
+            throw new InvalidSelectorException(
+                sprintf('No element matched the selector, or the node could not be isolated: %s', $selector)
+            );
+        }
+    }
+
+    private static function mergeCssIntoHtmlDocument(string $html, string $css, ?string $baseHref): string
+    {
+        $injectParts = [];
+        if ($baseHref !== null && $baseHref !== '') {
+            $injectParts[] = '<base href="' . htmlspecialchars($baseHref, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '">';
+        }
+        if ($css !== '') {
+            $injectParts[] = '<style type="text/css" data-support-chrome-pdf="1">' . $css . '</style>';
+        }
+        $injection = implode('', $injectParts);
+        if ($injection === '') {
+            return $html;
+        }
+
+        if (preg_match('/<\/head>/i', $html) === 1) {
+            return (string) preg_replace('/<\/head>/i', $injection . '</head>', $html, 1);
+        }
+
+        if (preg_match('/<head\b[^>]*>/i', $html) === 1) {
+            return (string) preg_replace('/<head\b[^>]*>/i', '$0' . $injection, $html, 1);
+        }
+
+        return '<!DOCTYPE html><html><head>' . $injection . '</head><body>' . $html . '</body></html>';
+    }
+}

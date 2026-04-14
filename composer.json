@@ -11,19 +11,21 @@
         }
     ],
     "require": {
-        "php": ">=8.0",
+        "php": ">=8.1",
         "ext-ctype": "*",
         "ext-mbstring": "*",
-        "symfony/var-dumper": "*",
-        "symfony/console": "^6.0",
-        "symfony/http-foundation": "^6.0",
+        "symfony/var-dumper": "^6.0 || ^7.0",
+        "symfony/console": "^6.0 || ^7.0",
+        "symfony/http-foundation": "^6.0 || ^7.0",
         "cocur/slugify": "^4.2.0",
         "vlucas/phpdotenv": "^5.4.1",
         "phpmailer/phpmailer": "^6.9",
         "filp/whoops": "^2.15",
         "ezyang/htmlpurifier": "^4.13",
         "composer-plugin-api": "^2.0",
-        "aws/aws-sdk-php": "^3.371"
+        "ext-sockets": "*",
+        "chrome-php/wrench": "^1.7",
+        "chrome-php/chrome": "^1.11"
     },
     "extra": {
         "class": "Tamedevelopers\\Support\\ComposerPlugin"
@@ -37,7 +39,9 @@
         ]
     },
     "suggest": {
-        "dompdf/dompdf": "Required to use the `PDF` class and helper (^3.0)"
+        "aws/aws-sdk-php": "Required to use the `AWS` class and helper (^3.371) For AWS S3 and other AWS services",
+        "dompdf/dompdf": "Required to use the `PDF` class and helper (^3.0)",
+        "ext-sockets": "Required by chrome-php/chrome for headless Chromium IPC"
     },
     "autoload": {
         "files": [
