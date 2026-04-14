@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\ChromePdf;
 
+use HeadlessChromium\Browser;
 use HeadlessChromium\BrowserFactory;
 use HeadlessChromium\Communication\Message;
+use HeadlessChromium\Communication\Session;
 use HeadlessChromium\Page;
 use Tamedevelopers\Support\ChromePdf\ColorScheme;
 use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
@@ -30,9 +32,9 @@ use Throwable;
  *
  * Use {@see maximumQuality()} for full images and longer navigation/stability budgets.
  *
- * Large remote pages (e.g. long blogs) are supported; slowness is usually one new Chromium process per
- * {@see generate()} plus print work. For trusted HTML you control, {@see withoutDefaultPostProcessing()} skips
- * stabilize + cookie passes to cut wall time.
+ * A single Chromium process is reused across {@see generate()} calls (see {@see shutdown()} to release it).
+ * Large remote pages are supported; URL captures use request filtering to avoid tracker-induced timeouts.
+ * For trusted HTML you control, {@see withoutDefaultPostProcessing()} skips stabilize + cookie passes to cut wall time.
  *
  * {@see fromFile()} / {@see fromHtml()} skip stabilize + cookie by default for fast local conversion; call
  * {@see postProcessLocalSources(true)} if you saved remote HTML and still need those passes.
@@ -133,9 +135,47 @@ final class PdfGenerator
      */
     private bool $enableRemoteImageLoading = false;
 
+    private static ?Browser $sharedBrowser = null;
+
+    /** @see browserLaunchKey() */
+    private static ?string $sharedBrowserLaunchKey = null;
+
+    private static bool $shutdownHandlerRegistered = false;
+
+    /** Avoids redundant {@code Emulation.*} CDP work on the same target session when the scheme is unchanged. */
+    private static ?string $lastColorSchemeEmulationSignature = null;
+
     public static function create(): self
     {
         return new self();
+    }
+
+    /**
+     * Closes the shared Chromium process started by {@see generate()}. Call on long-running workers when PDF
+     * generation is finished, or rely on the registered PHP shutdown handler.
+     */
+    public static function shutdown(): void
+    {
+        if (self::$sharedBrowser !== null) {
+            try {
+                self::$sharedBrowser->close();
+            } catch (Throwable) {
+            }
+            self::$sharedBrowser = null;
+            self::$sharedBrowserLaunchKey = null;
+        }
+        self::$lastColorSchemeEmulationSignature = null;
+    }
+
+    private static function registerShutdownHandlerOnce(): void
+    {
+        if (self::$shutdownHandlerRegistered) {
+            return;
+        }
+        register_shutdown_function(static function (): void {
+            PdfGenerator::shutdown();
+        });
+        self::$shutdownHandlerRegistered = true;
     }
 
     public function fromUrl(string $url): self
@@ -482,30 +522,17 @@ final class PdfGenerator
             );
         }
 
-        $env = new ChromiumEnvironment();
-        $binary = $this->chromiumBinary ?? $env->resolveChromeBinary();
-        $launch = $env->getLaunchOptions();
-        if ($this->ignoreCertificateErrors) {
-            $launch['ignoreCertificateErrors'] = true;
-        }
-        $launch['enableImages'] = $this->shouldEnableChromiumImages();
-
-        $browser = null;
-        $tempHtml = null;
+        $browser = $this->acquireSharedBrowser();
         $page = null;
 
         try {
-            $factory = new BrowserFactory($binary);
-            $browser = $factory->createBrowser($launch);
-
             $page = $browser->createPage();
-            $this->applyColorSchemeMedia($page);
-            $this->applyColorSchemeClientHints($page);
+            $this->applyColorSchemeToPage($page);
 
             match ($this->sourceMode) {
-                'url' => $this->loadFromUrl($page),
-                'file' => $tempHtml = $this->loadFromFile($page),
-                'html' => $tempHtml = $this->loadFromHtml($page),
+                'url' => $this->loadFromUrlWithBlocking($page),
+                'file' => $this->loadFromFile($page),
+                'html' => $this->loadFromHtml($page),
             };
 
             $this->waitForFontsReady($page);
@@ -545,16 +572,64 @@ final class PdfGenerator
         } catch (Throwable $e) {
             throw new ConversionFailedException($e->getMessage(), (int) $e->getCode(), $e);
         } finally {
-            if ($browser !== null) {
+            if ($page !== null) {
                 try {
-                    $browser->close();
+                    $page->close();
                 } catch (Throwable) {
                 }
             }
-            if ($tempHtml !== null && is_file($tempHtml)) {
-                @unlink($tempHtml);
-            }
         }
+    }
+
+    /**
+     * @return array{0: string, 1: array<string, mixed>}
+     */
+    private function buildBrowserLaunchConfig(): array
+    {
+        $env = new ChromiumEnvironment();
+        $binary = $this->chromiumBinary ?? $env->resolveChromeBinary();
+        $launch = $env->getLaunchOptions();
+        if ($this->ignoreCertificateErrors) {
+            $launch['ignoreCertificateErrors'] = true;
+        }
+        $launch['enableImages'] = $this->shouldEnableChromiumImages();
+        $launch['keepAlive'] = true;
+
+        return [$binary, $launch];
+    }
+
+    private function browserLaunchKey(): string
+    {
+        [$binary, $launch] = $this->buildBrowserLaunchConfig();
+
+        return implode("\0", [
+            (string) $binary,
+            ($launch['enableImages'] ?? true) ? '1' : '0',
+            ($launch['ignoreCertificateErrors'] ?? false) ? '1' : '0',
+        ]);
+    }
+
+    private function acquireSharedBrowser(): Browser
+    {
+        self::registerShutdownHandlerOnce();
+        $key = $this->browserLaunchKey();
+        if (self::$sharedBrowser !== null && self::$sharedBrowserLaunchKey === $key) {
+            return self::$sharedBrowser;
+        }
+        if (self::$sharedBrowser !== null) {
+            try {
+                self::$sharedBrowser->close();
+            } catch (Throwable) {
+            }
+            self::$sharedBrowser = null;
+            self::$sharedBrowserLaunchKey = null;
+        }
+        [$binary, $launch] = $this->buildBrowserLaunchConfig();
+        $factory = new BrowserFactory($binary);
+        self::$sharedBrowser = $factory->createBrowser($launch);
+        self::$sharedBrowserLaunchKey = $key;
+
+        return self::$sharedBrowser;
     }
 
     private function shouldStabilizeAfterLoad(): bool
@@ -587,14 +662,19 @@ final class PdfGenerator
      */
     private function waitForFontsReady(Page $page): void
     {
-        $timeoutMs = $this->evalTimeoutMs(10000, 2500);
-        $page->evaluate(<<<'JS'
+        $isLocal = in_array($this->sourceMode, ['file', 'html'], true);
+        $raceMs = $isLocal ? 500 : 6000;
+        $timeoutMs = $isLocal
+            ? min(1200, max(400, (int) ($this->effectiveNavigationTimeoutMs() / 5)))
+            : $this->evalTimeoutMs(10000, 2500);
+        $page->evaluate(<<<JS
             (async function () {
+                var raceMs = {$raceMs};
                 try {
                     if (document.fonts && document.fonts.ready) {
                         await Promise.race([
                             document.fonts.ready,
-                            new Promise(function (r) { setTimeout(r, 6000); })
+                            new Promise(function (r) { setTimeout(r, raceMs); })
                         ]);
                     }
                 } catch (e) {}
@@ -606,7 +686,8 @@ final class PdfGenerator
                 await new Promise(function (r) { setTimeout(r, 50); });
                 return true;
             })()
-        JS)->getReturnValue($timeoutMs);
+            JS
+        )->getReturnValue($timeoutMs);
     }
 
     private function effectiveNavigationTimeoutMs(): int
@@ -651,47 +732,50 @@ final class PdfGenerator
         $this->sourceValue = null;
     }
 
-    private function applyColorSchemeMedia(Page $page): void
+    /**
+     * Batches prefers-color-scheme emulation, optional auto-dark override, and client hints in one pass.
+     * Skips duplicate CDP work when the target session already has the same scheme applied.
+     */
+    private function applyColorSchemeToPage(Page $page): void
     {
+        $session = $page->getSession();
+        $signature = $session->getSessionId() . "\0" . $this->colorScheme->value;
+        if (self::$lastColorSchemeEmulationSignature === $signature) {
+            return;
+        }
+        self::$lastColorSchemeEmulationSignature = $signature;
+
         if ($this->colorScheme === ColorScheme::NoPreference) {
-            $page->getSession()->sendMessageSync(new Message('Emulation.setEmulatedMedia', [
+            $session->sendMessageSync(new Message('Emulation.setEmulatedMedia', [
                 'media' => '',
                 'features' => [],
             ]));
+        } else {
+            $session->sendMessageSync(new Message('Emulation.setEmulatedMedia', [
+                'media' => '',
+                'features' => [
+                    ['name' => 'prefers-color-scheme', 'value' => $this->colorScheme->value],
+                ],
+            ]));
 
-            return;
-        }
-
-        $page->getSession()->sendMessageSync(new Message('Emulation.setEmulatedMedia', [
-            'media' => '',
-            'features' => [
-                ['name' => 'prefers-color-scheme', 'value' => $this->colorScheme->value],
-            ],
-        ]));
-
-        if ($this->colorScheme === ColorScheme::Light) {
-            try {
-                $page->getSession()->sendMessageSync(new Message('Emulation.setAutoDarkModeOverride', [
-                    'enabled' => false,
-                ]));
-            } catch (Throwable) {
+            if ($this->colorScheme === ColorScheme::Light) {
+                try {
+                    $session->sendMessageSync(new Message('Emulation.setAutoDarkModeOverride', [
+                        'enabled' => false,
+                    ]));
+                } catch (Throwable) {
+                }
             }
-        }
-    }
-
-    /**
-     * Many sites (including Google) branch on the Sec-CH-Prefers-Color-Scheme hint; emulation alone is not always enough.
-     */
-    private function applyColorSchemeClientHints(Page $page): void
-    {
-        if ($this->colorScheme === ColorScheme::NoPreference) {
-            return;
         }
 
         try {
-            $page->setExtraHTTPHeaders([
-                'Sec-CH-Prefers-Color-Scheme' => $this->colorScheme->value,
-            ]);
+            if ($this->colorScheme === ColorScheme::NoPreference) {
+                $page->setExtraHTTPHeaders([]);
+            } else {
+                $page->setExtraHTTPHeaders([
+                    'Sec-CH-Prefers-Color-Scheme' => $this->colorScheme->value,
+                ]);
+            }
         } catch (Throwable) {
         }
     }
@@ -717,13 +801,105 @@ final class PdfGenerator
         return $this->waitForWindowLoadEvent ? Page::LOAD : Page::DOM_CONTENT_LOADED;
     }
 
+    private function loadFromUrlWithBlocking(Page $page): void
+    {
+        $teardown = $this->enableUrlRequestBlocking($page);
+        try {
+            $this->loadFromUrl($page);
+        } finally {
+            $teardown();
+        }
+    }
+
+    /**
+     * @return callable Invoked to disable interception (Fetch.disable) and detach the listener.
+     */
+    private function enableUrlRequestBlocking(Page $page): callable
+    {
+        $session = $page->getSession();
+        $loadRemoteImages = $this->shouldEnableChromiumImages();
+        $handler = function (array $params) use ($session, $loadRemoteImages): void {
+            $this->handleFetchRequestPaused($session, $params, $loadRemoteImages);
+        };
+        $session->on('method:Fetch.requestPaused', $handler);
+        $session->sendMessageSync(new Message('Fetch.enable', [
+            'patterns' => [
+                ['urlPattern' => '*', 'requestStage' => 'Request'],
+            ],
+        ]));
+
+        return function () use ($session, $handler): void {
+            try {
+                $session->sendMessageSync(new Message('Fetch.disable'));
+            } catch (Throwable) {
+            }
+            $session->removeListener('method:Fetch.requestPaused', $handler);
+        };
+    }
+
+    private function handleFetchRequestPaused(Session $session, array $params, bool $loadRemoteImages): void
+    {
+        $requestId = $params['requestId'] ?? '';
+        if ($requestId === '') {
+            return;
+        }
+        $url = $params['request']['url'] ?? '';
+        $resourceType = $params['resourceType'] ?? '';
+        $lower = strtolower($url);
+
+        foreach (['analytics', 'doubleclick', 'facebook', 'adsystem'] as $needle) {
+            if (str_contains($lower, $needle)) {
+                $this->respondToFetchPaused($session, $requestId, true);
+
+                return;
+            }
+        }
+        if ($resourceType === 'Media') {
+            $this->respondToFetchPaused($session, $requestId, true);
+
+            return;
+        }
+        if ($resourceType === 'Image' && !$loadRemoteImages) {
+            $this->respondToFetchPaused($session, $requestId, true);
+
+            return;
+        }
+        if ($resourceType === 'Font') {
+            if ($url === '' || str_starts_with($url, 'file:') || str_starts_with($url, 'data:') || str_starts_with($url, 'blob:')) {
+                $this->respondToFetchPaused($session, $requestId, false);
+
+                return;
+            }
+            if (preg_match('#^https?://#i', $url) === 1) {
+                $this->respondToFetchPaused($session, $requestId, true);
+
+                return;
+            }
+        }
+
+        $this->respondToFetchPaused($session, $requestId, false);
+    }
+
+    private function respondToFetchPaused(Session $session, string $requestId, bool $block): void
+    {
+        if ($block) {
+            $session->sendMessageSync(new Message('Fetch.failRequest', [
+                'requestId' => $requestId,
+                'errorReason' => 'BlockedByClient',
+            ]));
+        } else {
+            $session->sendMessageSync(new Message('Fetch.continueRequest', [
+                'requestId' => $requestId,
+            ]));
+        }
+    }
+
     private function loadFromUrl(Page $page): void
     {
         $page->navigate($this->sourceValue)->waitForNavigation(
             $this->navigationLifecycleEvent(),
             $this->effectiveNavigationTimeoutMs()
         );
-        $this->applyColorSchemeMedia($page);
         $sample = $this->sampleDocumentTextForFonts($page);
         $css = $this->buildInjectionCssFromContent($sample);
         if ($css !== '') {
@@ -761,10 +937,7 @@ final class PdfGenerator
         return is_string($raw) ? $raw : '';
     }
 
-    /**
-     * @return string Temporary HTML path for cleanup
-     */
-    private function loadFromFile(Page $page): string
+    private function loadFromFile(Page $page): void
     {
         $path = $this->sourceValue;
         $html = file_get_contents($path);
@@ -773,51 +946,24 @@ final class PdfGenerator
         }
         $fontSample = strlen($html) > 12000 ? substr($html, 0, 12000) : $html;
         $css = $this->buildInjectionCssFromContent($fontSample);
-        $baseHref = FileUri::fromPath(dirname((string) $path)) . '/';
-        $merged = self::mergeCssIntoHtmlDocument($html, $css, $baseHref);
-        $tmp = $this->writeTempHtmlFile($merged);
-        $this->openFileUrl($page, $tmp);
-
-        return $tmp;
+        $navMs = min(12000, $this->effectiveNavigationTimeoutMs());
+        $page->navigate(FileUri::fromPath($path))->waitForNavigation(
+            $this->navigationLifecycleEvent(),
+            $navMs
+        );
+        if ($css !== '') {
+            $this->injectStyleTag($page, $css);
+        }
     }
 
-    /**
-     * @return string Temporary HTML path for cleanup
-     */
-    private function loadFromHtml(Page $page): string
+    private function loadFromHtml(Page $page): void
     {
         $html = $this->sourceValue;
         $fontSample = strlen($html) > 12000 ? substr($html, 0, 12000) : $html;
         $css = $this->buildInjectionCssFromContent($fontSample);
         $merged = self::mergeCssIntoHtmlDocument($html, $css, null);
-        $tmp = $this->writeTempHtmlFile($merged);
-        $this->openFileUrl($page, $tmp);
-
-        return $tmp;
-    }
-
-    private function openFileUrl(Page $page, string $absolutePath): void
-    {
-        $navMs = min(12000, $this->effectiveNavigationTimeoutMs());
-        $page->navigate(FileUri::fromPath($absolutePath))->waitForNavigation(
-            $this->navigationLifecycleEvent(),
-            $navMs
-        );
-    }
-
-    private function writeTempHtmlFile(string $html): string
-    {
-        $tmp = tempnam(sys_get_temp_dir(), 'support-chrome-pdf-');
-        if ($tmp === false) {
-            throw new ConversionFailedException('Could not create a temporary file for HTML.');
-        }
-        @unlink($tmp);
-        $path = $tmp . '.html';
-        if (file_put_contents($path, $html) === false) {
-            throw new ConversionFailedException('Could not write temporary HTML.');
-        }
-
-        return $path;
+        $settleMs = min(60000, max(4000, $this->effectiveNavigationTimeoutMs()));
+        $page->setHtml($merged, $settleMs, $this->navigationLifecycleEvent());
     }
 
     private function stripCookieConsentUi(Page $page): void
