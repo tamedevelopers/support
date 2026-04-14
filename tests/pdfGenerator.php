@@ -20,7 +20,7 @@ $output = PdfGenerator::create()
     // ->fromUrl('https://www.noahimports.com/')
     ->fromUrl('https://lhkexpress.com/login')
     // ->fromUrl('https://lhkexpress.com/blog/Olive-Young-Easter-FREE-shopping-event')
-    ->paper('A4') // A4, A3, Letter, Legal, Tabloid
+    ->paper('A4') // 
     // ->css('body { font-size: 28px; font-weight: bold; }')
     // ->colorScheme('dark')
     // ->selectElement('.body')

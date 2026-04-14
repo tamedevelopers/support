@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\ChromePdf;
 
+use HeadlessChromium\Page;
 use HeadlessChromium\Browser;
 use HeadlessChromium\BrowserFactory;
 use HeadlessChromium\Communication\Message;
 use HeadlessChromium\Communication\Session;
-use HeadlessChromium\Page;
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\ChromePdf\ColorScheme;
 use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
 use Tamedevelopers\Support\ChromePdf\Exception\FontNotFoundException;
@@ -19,6 +20,7 @@ use Tamedevelopers\Support\ChromePdf\Internal\FlattenLinksScript;
 use Tamedevelopers\Support\ChromePdf\Internal\PreloaderRemovalScript;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;
 use Tamedevelopers\Support\ChromePdf\Traits\FontManagerTrait;
+use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Str;
 use Throwable;
 
@@ -154,7 +156,14 @@ final class PdfGenerator
     /** @var array<string, bool> URL+resource decision cache for {@see handleFetchRequestPaused()}. */
     private static array $fetchBlockCache = [];
 
+    /** @var array<string, string> In-memory cache for built combined evaluate() scripts. */
+    private static array $combinedExpressionCache = [];
+
+    /** @var array<string, string>|null */
+    private static ?array $cachedAutoFontFaceMap = null;
+
     private const FETCH_BLOCK_CACHE_CAP = 4096;
+    private const PDF_CACHE_VERSION = 'pdf-cache-v1';
 
     /** Pre-compiled pattern for tracker URLs (hot path in {@see computeFetchShouldBlock()}). */
     private const FETCH_TRACKER_URL_PATTERN = '/analytics|doubleclick|googlesyndication|googletagmanager|google-analytics|gtag\\/|facebook\\.com\\/tr|hotjar|segment\\.(io|com)|fullstory|clarity\\.ms|mixpanel|sentry\\.io|intercom|zendesk|newrelic|pardot|hs-scripts|hs-analytics|adsystem|quantserve|taboola|outbrain|moatads|criteo/i';
@@ -185,6 +194,8 @@ final class PdfGenerator
         }
         self::$lastColorSchemeEmulationSignature = null;
         self::$fetchBlockCache = [];
+        self::$combinedExpressionCache = [];
+        self::$cachedAutoFontFaceMap = null;
     }
 
     public function fromUrl(string $url): self
@@ -935,7 +946,7 @@ final class PdfGenerator
      */
     private function resolvePostProcessPayload(): array
     {
-        $fontMap = $this->autoInjectFonts ? $this->buildAutoFontFaceCssMap() : [];
+        $fontMap = $this->autoInjectFonts ? $this->cachedAutoFontFaceCssMap() : [];
         if ($this->injectionCssForPostProcess !== null) {
             return [$this->injectionCssForPostProcess, $fontMap];
         }
@@ -958,7 +969,7 @@ final class PdfGenerator
         $waitForImages = $isLocal;
         $imageWaitMs = $speed ? 900 : 1800;
 
-        $expr = CombinedPostProcessScript::asExpression(
+        $expr = $this->cachedCombinedPostProcessExpression(
             $includeStability,
             $includeCookies,
             $budget,
@@ -1030,5 +1041,193 @@ final class PdfGenerator
         $href = FileUri::fromPath($dir);
 
         return str_ends_with($href, '/') ? $href : ($href . '/');
+    }
+
+    /**
+     * Cache auto font-face map across requests; font discovery is environment-wide, not document-specific.
+     *
+     * @return array<string, string>
+     */
+    private function cachedAutoFontFaceCssMap(): array
+    {
+        if (self::$cachedAutoFontFaceMap !== null) {
+            return self::$cachedAutoFontFaceMap;
+        }
+
+        $cacheKey = self::PDF_CACHE_VERSION . '-font-map';
+        $cached = self::readPdfCacheJson('font-map', $cacheKey);
+        if (is_array($cached)) {
+            /** @var array<string, string> $map */
+            $map = array_filter($cached, static fn ($v): bool => is_string($v));
+            self::$cachedAutoFontFaceMap = $map;
+
+            return self::$cachedAutoFontFaceMap;
+        }
+
+        self::$cachedAutoFontFaceMap = $this->buildAutoFontFaceCssMap();
+        self::writePdfCacheJson('font-map', $cacheKey, self::$cachedAutoFontFaceMap);
+
+        return self::$cachedAutoFontFaceMap;
+    }
+
+    /**
+     * Reuses the compiled evaluate() expression across requests for identical flags/theme/font payload.
+     *
+     * @param array<string, string> $fontFaceMap
+     */
+    private function cachedCombinedPostProcessExpression(
+        bool $includeStability,
+        bool $includeCookies,
+        int $stabilityBudgetMs,
+        int $fontRaceMs,
+        string $themeCss,
+        array $fontFaceMap,
+        bool $leanStability,
+        int $paintSettleMs,
+        bool $waitForImages,
+        int $imageWaitMs
+    ): string {
+        $keyPayload = [
+            'v' => self::PDF_CACHE_VERSION,
+            'sig' => self::combinedScriptCacheSignature(),
+            'stability' => $includeStability,
+            'cookies' => $includeCookies,
+            'budget' => $stabilityBudgetMs,
+            'fontRace' => $fontRaceMs,
+            'theme' => hash('sha256', $themeCss),
+            'fonts' => hash('sha256', json_encode($fontFaceMap) ?: ''),
+            'lean' => $leanStability,
+            'paint' => $paintSettleMs,
+            'waitImages' => $waitForImages,
+            'imageWait' => $imageWaitMs,
+        ];
+        $cacheKey = hash('sha256', json_encode($keyPayload) ?: serialize($keyPayload));
+
+        if (isset(self::$combinedExpressionCache[$cacheKey])) {
+            return self::$combinedExpressionCache[$cacheKey];
+        }
+
+        $cached = self::readPdfCacheText('combined', $cacheKey);
+        if (is_string($cached) && $cached !== '') {
+            self::$combinedExpressionCache[$cacheKey] = $cached;
+
+            return $cached;
+        }
+
+        $expr = CombinedPostProcessScript::asExpression(
+            $includeStability,
+            $includeCookies,
+            $stabilityBudgetMs,
+            $fontRaceMs,
+            $themeCss,
+            $fontFaceMap,
+            $leanStability,
+            $paintSettleMs,
+            $waitForImages,
+            $imageWaitMs
+        );
+
+        self::$combinedExpressionCache[$cacheKey] = $expr;
+        self::writePdfCacheText('combined', $cacheKey, $expr);
+
+        return $expr;
+    }
+
+    private static function pdfCacheDir(string $segment = ''): string
+    {
+        $base = rtrim(Server::formatWithBaseDirectory('storage/pdf'), '/\\');
+        if ($segment === '') {
+            return $base;
+        }
+
+        return $base . DIRECTORY_SEPARATOR . trim($segment, '/\\');
+    }
+
+    private static function ensurePdfCacheDir(string $segment = ''): bool
+    {
+        $dir = self::pdfCacheDir($segment);
+        File::makeDirectory($dir);
+
+        return File::isDirectory($dir);
+    }
+
+    private static function readPdfCacheJson(string $segment, string $key): ?array
+    {
+        $raw = self::readPdfCacheRaw($segment, $key, '.json.gz');
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        $json = function_exists('gzdecode') ? @gzdecode($raw) : false;
+        $payload = ($json !== false && $json !== null) ? $json : $raw;
+        $decoded = json_decode((string) $payload, true);
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    private static function writePdfCacheJson(string $segment, string $key, array $payload): void
+    {
+        $json = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if (!is_string($json)) {
+            return;
+        }
+
+        $raw = function_exists('gzencode') ? gzencode($json, 6) : $json;
+        self::writePdfCacheRaw($segment, $key, '.json.gz', (string) $raw);
+    }
+
+    private static function readPdfCacheText(string $segment, string $key): ?string
+    {
+        $raw = self::readPdfCacheRaw($segment, $key, '.txt.gz');
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        $text = function_exists('gzdecode') ? @gzdecode($raw) : false;
+
+        return ($text !== false && $text !== null) ? (string) $text : (string) $raw;
+    }
+
+    private static function writePdfCacheText(string $segment, string $key, string $payload): void
+    {
+        $raw = function_exists('gzencode') ? gzencode($payload, 6) : $payload;
+        self::writePdfCacheRaw($segment, $key, '.txt.gz', (string) $raw);
+    }
+
+    private static function readPdfCacheRaw(string $segment, string $key, string $suffix): ?string
+    {
+        $path = self::pdfCacheDir($segment) . DIRECTORY_SEPARATOR . $key . $suffix;
+        if (!File::exists($path)) {
+            return null;
+        }
+
+        $raw = File::get($path);
+
+        return is_string($raw) && $raw !== '' ? $raw : null;
+    }
+
+    private static function writePdfCacheRaw(string $segment, string $key, string $suffix, string $payload): void
+    {
+        if (!self::ensurePdfCacheDir($segment)) {
+            return;
+        }
+
+        File::put(self::pdfCacheDir($segment) . DIRECTORY_SEPARATOR . $key . $suffix, $payload);
+    }
+
+    private static function combinedScriptCacheSignature(): string
+    {
+        $files = [
+            __DIR__ . DIRECTORY_SEPARATOR . 'Internal' . DIRECTORY_SEPARATOR . 'CombinedPostProcessScript.php',
+            __DIR__ . DIRECTORY_SEPARATOR . 'Internal' . DIRECTORY_SEPARATOR . 'PageStabilityScript.php',
+            __DIR__ . DIRECTORY_SEPARATOR . 'Internal' . DIRECTORY_SEPARATOR . 'CookiePopupRemovalScript.php',
+        ];
+
+        $parts = [];
+        foreach ($files as $file) {
+            $parts[] = is_file($file) ? (string) @filemtime($file) : '0';
+        }
+
+        return implode(':', $parts);
     }
 }
