@@ -70,10 +70,10 @@ final class PdfGenerator
     private bool $landscape = false;
 
     /**
-     * PDF print margins: {@code omit} = let Chromium defaults apply; {@code default} = ~1 cm all sides;
-     * {@code none} = 0; {@code uniform} = {@see $pdfMarginUniformInches} on all sides.
+     * PDF print margins: {@code none} = 0; {@code default} = ~1 cm all sides;
+     * {@code uniform} = {@see $pdfMarginUniformInches} on all sides.
      */
-    private string $pdfMarginMode = 'omit';
+    private string $pdfMarginMode = 'none';
 
     /** Inches, used when {@see $pdfMarginMode} is {@code uniform}. */
     private float $pdfMarginUniformInches = 0.0;
@@ -144,9 +144,9 @@ final class PdfGenerator
      */
     private bool $enableRemoteImageLoading = true;
 
-    private int $desktopViewportWidth = 1440;
+    private int $desktopViewportWidth = 1920;
 
-    private int $desktopViewportHeight = 2200;
+    private int $desktopViewportHeight = 3000;
 
     private static ?Browser $sharedBrowser = null;
 
@@ -267,7 +267,7 @@ final class PdfGenerator
     /**
      * Controls the white space around the printed page (Chromium {@code Page.printToPDF} margins, in inches).
      *
-     * - {@code null}: use Chromium’s built-in default margins (omit explicit margin options).
+     * - {@code null}: reset to package default (no margins / 0 on all sides).
      * - {@code true}: apply the package default (~1 cm on each side).
      * - {@code false}: no margins (0 on all sides; content can extend to the physical page edge).
      * - {@code int} or {@code string}: uniform margin on all sides. Bare numbers and {@code Npx} are treated as CSS px
@@ -276,7 +276,7 @@ final class PdfGenerator
     public function margins(bool|int|string|null $value = null): self
     {
         if ($value === null) {
-            $this->pdfMarginMode = 'omit';
+            $this->pdfMarginMode = 'none';
 
             return $this;
         }
@@ -501,6 +501,7 @@ final class PdfGenerator
                 'file' => $this->loadFromFile($page),
                 'html' => $this->loadFromHtml($page),
             };
+            $this->applyDesktopViewportForUrlIfNeeded($page);
 
             $this->runImmediatePreloaderStripIfApplicable($page);
 
@@ -829,33 +830,45 @@ final class PdfGenerator
             return;
         }
 
+        // Use the library's documented APIs and wait for completion to avoid race conditions.
         try {
-            $page->setViewport($this->desktopViewportWidth, $this->desktopViewportHeight);
+            $page->setUserAgent(
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                . '(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+            )->await(2000);
         } catch (Throwable) {
         }
 
-        $session = $page->getSession();
-
         try {
-            $session->sendMessageSync(new Message('Emulation.setDeviceMetricsOverride', [
+            $page->setDeviceMetricsOverride([
                 'width' => $this->desktopViewportWidth,
                 'height' => $this->desktopViewportHeight,
                 'deviceScaleFactor' => 1,
                 'mobile' => false,
-            ]));
+            ])->await(2000);
         } catch (Throwable) {
         }
 
+        $session = $page->getSession();
         try {
             $session->sendMessageSync(new Message('Network.setUserAgentOverride', [
                 'userAgent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                     . '(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                'acceptLanguage' => 'en-US,en;q=0.9,zh-HK;q=0.8,zh;q=0.7',
+                'acceptLanguage' => 'en-US,en;q=0.9',
                 'platform' => 'Windows',
+                'userAgentMetadata' => [
+                    'platform' => 'Windows',
+                    'mobile' => false,
+                ],
             ]));
         } catch (Throwable) {
         }
-
+        try {
+            $session->sendMessageSync(new Message('Emulation.setTouchEmulationEnabled', [
+                'enabled' => false,
+            ]));
+        } catch (Throwable) {
+        }
         try {
             $session->sendMessageSync(new Message('Emulation.setEmulatedMedia', [
                 'media' => 'screen',
@@ -863,10 +876,12 @@ final class PdfGenerator
             ]));
         } catch (Throwable) {
         }
-
         try {
-            $session->sendMessageSync(new Message('Emulation.setTouchEmulationEnabled', [
-                'enabled' => false,
+            $session->sendMessageSync(new Message('Network.setExtraHTTPHeaders', [
+                'headers' => [
+                    'Sec-CH-UA-Mobile' => '?0',
+                    'Viewport-Width' => (string) $this->desktopViewportWidth,
+                ],
             ]));
         } catch (Throwable) {
         }
