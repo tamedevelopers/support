@@ -810,12 +810,6 @@ final class PdfGenerator
     private function buildThemeCssOnly(): string
     {
         $baseCss = '';
-        if ($this->sourceMode === 'url') {
-            $baseCss = FloatingElementRemovalScript::buildDefaultPrintHideCss()
-                . "\n\n"
-                . $this->buildDesktopUrlLayoutCss();
-        }
-
         if ($this->styles === null || $this->styles->isEmpty()) {
             return $baseCss;
         }
@@ -896,12 +890,6 @@ final class PdfGenerator
                         var meta = document.querySelector(\'meta[name="viewport"]\');
                         if (meta) {
                             meta.setAttribute(\'content\', \'width=\' + width + \', initial-scale=1\');
-                        }
-                        if (document.documentElement) {
-                            document.documentElement.style.minWidth = width + "px";
-                        }
-                        if (document.body) {
-                            document.body.style.minWidth = width + "px";
                         }
                     } catch (e) {}
                     return true;
@@ -1339,25 +1327,4 @@ final class PdfGenerator
         return implode(':', $parts);
     }
 
-    private function buildDesktopUrlLayoutCss(): string
-    {
-        $width = max(1200, $this->desktopViewportWidth);
-
-        return <<<CSS
-            @media screen, print {
-                html {
-                    min-width: {$width}px !important;
-                    width: 100% !important;
-                }
-                body {
-                    min-width: {$width}px !important;
-                    width: 100% !important;
-                    max-width: none !important;
-                    overflow-x: visible !important;
-                }
-            }
-        CSS;
-    }
-
-    
 }
