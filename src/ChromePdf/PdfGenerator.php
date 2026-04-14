@@ -16,6 +16,7 @@ use Tamedevelopers\Support\ChromePdf\Exception\InvalidSelectorException;
 use Tamedevelopers\Support\ChromePdf\Internal\CombinedPostProcessScript;
 use Tamedevelopers\Support\ChromePdf\Internal\FileUri;
 use Tamedevelopers\Support\ChromePdf\Internal\FlattenLinksScript;
+use Tamedevelopers\Support\ChromePdf\Internal\PreloaderRemovalScript;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;
 use Tamedevelopers\Support\ChromePdf\Traits\FontManagerTrait;
 use Tamedevelopers\Support\Str;
@@ -37,6 +38,8 @@ use Throwable;
  * {@code DOMContentLoaded} and short budgets for navigation/setHtml.
  * Large remote pages are supported; URL captures use request filtering to avoid tracker-induced timeouts (pattern
  * blocks common tag managers / analytics so the main document can reach {@code DOMContentLoaded} sooner).
+ * Common full-page preloaders get one fast {@code evaluate()} pass right after {@code DOMContentLoaded} (no
+ * {@code load} wait; no in-page {@code MutationObserver} during hydration — that pattern was far too expensive).
  * For trusted HTML you control, {@see withoutDefaultPostProcessing()} skips stabilize + cookie passes to cut wall time.
  *
  * {@see fromFile()} / {@see fromHtml()} skip stabilize + cookie by default for fast local conversion; call
@@ -184,17 +187,6 @@ final class PdfGenerator
         self::$fetchBlockCache = [];
     }
 
-    private static function registerShutdownHandlerOnce(): void
-    {
-        if (self::$shutdownHandlerRegistered) {
-            return;
-        }
-        register_shutdown_function(static function (): void {
-            PdfGenerator::shutdown();
-        });
-        self::$shutdownHandlerRegistered = true;
-    }
-
     public function fromUrl(string $url): self
     {
         $this->resetSource();
@@ -286,66 +278,6 @@ final class PdfGenerator
         $this->pdfMarginUniformInches = self::parseMarginToInches($value);
 
         return $this;
-    }
-
-    /**
-     * @throws ConversionFailedException
-     */
-    private static function parseMarginToInches(int|string $value): float
-    {
-        if (is_int($value)) {
-            return max(0.0, (float) $value) / 96.0;
-        }
-
-        $s = Str::trim($value);
-        if ($s === '') {
-            throw new ConversionFailedException('Empty margin value.');
-        }
-
-        if (preg_match('/^([\d.]+)\s*px$/i', $s, $m) === 1) {
-            return max(0.0, (float) $m[1]) / 96.0;
-        }
-        if (preg_match('/^([\d.]+)\s*cm$/i', $s, $m) === 1) {
-            return max(0.0, (float) $m[1]) / 2.54;
-        }
-        if (preg_match('/^([\d.]+)\s*mm$/i', $s, $m) === 1) {
-            return max(0.0, (float) $m[1]) / 25.4;
-        }
-        if (preg_match('/^([\d.]+)\s*in$/i', $s, $m) === 1) {
-            return max(0.0, (float) $m[1]);
-        }
-        if (preg_match('/^([\d.]+)$/', $s, $m) === 1) {
-            return max(0.0, (float) $m[1]) / 96.0;
-        }
-
-        throw new ConversionFailedException(sprintf('Unrecognized margin format: %s', $s));
-    }
-
-    private function buildPdfPrintOptions(): array
-    {
-        $opts = [
-            'landscape' => $this->landscape,
-            'printBackground' => $this->printBackground,
-            'paperWidth' => $this->paper->widthInches(),
-            'paperHeight' => $this->paper->heightInches(),
-        ];
-
-        $inch = match ($this->pdfMarginMode) {
-            'omit' => null,
-            'default' => 1.0 / 2.54,
-            'none' => 0.0,
-            'uniform' => $this->pdfMarginUniformInches,
-            default => null,
-        };
-
-        if ($inch !== null) {
-            $opts['marginTop'] = $inch;
-            $opts['marginBottom'] = $inch;
-            $opts['marginLeft'] = $inch;
-            $opts['marginRight'] = $inch;
-        }
-
-        return $opts;
     }
 
     /**
@@ -553,6 +485,8 @@ final class PdfGenerator
                 'html' => $this->loadFromHtml($page),
             };
 
+            $this->runImmediatePreloaderStripIfApplicable($page);
+
             [$themeCss, $fontMap] = $this->resolvePostProcessPayload();
             $this->executeCombinedPostProcessing($page, $themeCss, $fontMap);
 
@@ -593,6 +527,66 @@ final class PdfGenerator
     }
 
     /**
+     * @throws ConversionFailedException
+     */
+    private static function parseMarginToInches(int|string $value): float
+    {
+        if (is_int($value)) {
+            return max(0.0, (float) $value) / 96.0;
+        }
+
+        $s = Str::trim($value);
+        if ($s === '') {
+            throw new ConversionFailedException('Empty margin value.');
+        }
+
+        if (preg_match('/^([\d.]+)\s*px$/i', $s, $m) === 1) {
+            return max(0.0, (float) $m[1]) / 96.0;
+        }
+        if (preg_match('/^([\d.]+)\s*cm$/i', $s, $m) === 1) {
+            return max(0.0, (float) $m[1]) / 2.54;
+        }
+        if (preg_match('/^([\d.]+)\s*mm$/i', $s, $m) === 1) {
+            return max(0.0, (float) $m[1]) / 25.4;
+        }
+        if (preg_match('/^([\d.]+)\s*in$/i', $s, $m) === 1) {
+            return max(0.0, (float) $m[1]);
+        }
+        if (preg_match('/^([\d.]+)$/', $s, $m) === 1) {
+            return max(0.0, (float) $m[1]) / 96.0;
+        }
+
+        throw new ConversionFailedException(sprintf('Unrecognized margin format: %s', $s));
+    }
+
+    private function buildPdfPrintOptions(): array
+    {
+        $opts = [
+            'landscape' => $this->landscape,
+            'printBackground' => $this->printBackground,
+            'paperWidth' => $this->paper->widthInches(),
+            'paperHeight' => $this->paper->heightInches(),
+        ];
+
+        $inch = match ($this->pdfMarginMode) {
+            'omit' => null,
+            'default' => 1.0 / 2.54,
+            'none' => 0.0,
+            'uniform' => $this->pdfMarginUniformInches,
+            default => null,
+        };
+
+        if ($inch !== null) {
+            $opts['marginTop'] = $inch;
+            $opts['marginBottom'] = $inch;
+            $opts['marginLeft'] = $inch;
+            $opts['marginRight'] = $inch;
+        }
+
+        return $opts;
+    }
+
+    /**
      * @return array{0: string, 1: array<string, mixed>}
      */
     private function buildBrowserLaunchConfig(): array
@@ -618,6 +612,17 @@ final class PdfGenerator
             ($launch['enableImages'] ?? true) ? '1' : '0',
             ($launch['ignoreCertificateErrors'] ?? false) ? '1' : '0',
         ]);
+    }
+
+    private static function registerShutdownHandlerOnce(): void
+    {
+        if (self::$shutdownHandlerRegistered) {
+            return;
+        }
+        register_shutdown_function(static function (): void {
+            PdfGenerator::shutdown();
+        });
+        self::$shutdownHandlerRegistered = true;
     }
 
     private function acquireSharedBrowser(): Browser
@@ -659,6 +664,31 @@ final class PdfGenerator
         }
 
         return $this->sourceMode === 'url' || $this->postProcessLocalSources;
+    }
+
+    /**
+     * One-shot preloader strip for remote captures and “saved HTML” locals — skipped for default file/html.
+     */
+    private function shouldRunImmediatePreloaderStrip(): bool
+    {
+        return $this->sourceMode === 'url' || $this->postProcessLocalSources;
+    }
+
+    /**
+     * One synchronous pass right after {@code DOMContentLoaded} / {@code setHtml} (no {@code load} wait).
+     */
+    private function runImmediatePreloaderStripIfApplicable(Page $page): void
+    {
+        if (!$this->shouldRunImmediatePreloaderStrip()) {
+            return;
+        }
+        try {
+            $page->evaluate(PreloaderRemovalScript::asImmediateStripExpression())
+            ->getReturnValue(
+                min(1500, max(400, $this->prioritizeSpeed ? 800 : 1200))
+            );
+        } catch (Throwable) {
+        }
     }
 
     private function shouldEnableChromiumImages(): bool
@@ -884,9 +914,9 @@ final class PdfGenerator
             throw new ConversionFailedException(sprintf('Could not read file: %s', $path));
         }
         $this->injectionCssForPostProcess = $this->buildThemeCssOnly();
-        $navMs = min(800, $this->effectiveNavigationTimeoutMs());
+        $navMs = min(3000, $this->effectiveNavigationTimeoutMs());
         $page->navigate(FileUri::fromPath($path))->waitForNavigation(
-            Page::DOM_CONTENT_LOADED,
+            Page::LOAD,
             $navMs
         );
     }
@@ -896,7 +926,7 @@ final class PdfGenerator
         $html = $this->sourceValue;
         $this->injectionCssForPostProcess = '';
         $merged = self::mergeCssIntoHtmlDocument($html, $this->buildThemeCssOnly(), null);
-        $page->setHtml($merged, 800, Page::DOM_CONTENT_LOADED);
+        $page->setHtml($merged, 2000, Page::LOAD);
     }
 
     /**
@@ -921,12 +951,12 @@ final class PdfGenerator
         $includeCookies = $this->shouldStripCookiesAfterLoad();
         $isLocal = in_array($this->sourceMode, ['file', 'html'], true);
         $speed = $this->prioritizeSpeed;
-        if ($isLocal) {
-            $fontRaceMs = $speed ? 400 : 500;
-        } else {
-            $fontRaceMs = $speed ? 1400 : 6000;
-        }
+        $fontRaceMs = $isLocal ? ($speed ? 400 : 500) : ($speed ? 1400 : 2000);
         $budget = $this->effectiveStabilityTimeoutMs();
+
+        $waitForImages = $isLocal;
+        $imageWaitMs = $speed ? 2000 : 4000;
+
         $expr = CombinedPostProcessScript::asExpression(
             $includeStability,
             $includeCookies,
@@ -935,33 +965,13 @@ final class PdfGenerator
             $themeCss,
             $fontFaceMap,
             $speed,
-            $speed ? 12 : 50
+            $speed ? 12 : 50,
+            $waitForImages,
+            $imageWaitMs
         );
-        $timeoutMs = $this->combinedPostProcessEvalTimeoutMs($includeStability, $includeCookies, $isLocal);
+
+        $timeoutMs = $speed ? 4000 : 8000;
         $page->evaluate($expr)->getReturnValue($timeoutMs);
-    }
-
-    private function combinedPostProcessEvalTimeoutMs(bool $includeStability, bool $includeCookies, bool $isLocal): int
-    {
-        if ($this->prioritizeSpeed) {
-            $extra = ($includeStability ? 4200 : 0) + ($includeCookies ? 9000 : 0);
-        } else {
-            $extra = ($includeStability ? 8000 : 0) + ($includeCookies ? 18000 : 0);
-        }
-
-        if ($isLocal) {
-            $cap = $this->prioritizeSpeed ? 12000 : 18000;
-            $floor = $this->prioritizeSpeed ? 1800 : 2200;
-
-            return min($cap, max($floor, 1600 + $extra));
-        }
-
-        // Remote: tight ceiling so the combined evaluate() stays short relative to navigation + print.
-        if ($this->prioritizeSpeed) {
-            return min(8200, max(3000, 2400 + min($extra, 4000)));
-        }
-
-        return min(11000, max(4000, 2800 + min($extra, 6000)));
     }
 
     private function isolateSelector(Page $page, string $selector): void

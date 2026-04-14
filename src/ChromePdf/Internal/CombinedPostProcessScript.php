@@ -13,6 +13,8 @@ final class CombinedPostProcessScript
      * @param array<string, string> $fontFaceMap Keyed by {@code cjk}, {@code arabic}, {@code cyrillic}
      * @param bool $leanStability forwarded to {@see PageStabilityScript::asSettleExpression()} when stability runs
      * @param int $paintSettleMs extra delay after font / rAF paint (0–80); lower for {@code prioritizeSpeed}
+     * @param bool $waitForImages when true, polls {@code document.images} for completeness (local file/html sources)
+     * @param int $imageWaitMs cap for image-readiness poll
      */
     public static function asExpression(
         bool $includeStability,
@@ -22,11 +24,14 @@ final class CombinedPostProcessScript
         string $themeCss,
         array $fontFaceMap,
         bool $leanStability = false,
-        int $paintSettleMs = 50
+        int $paintSettleMs = 50,
+        bool $waitForImages = false,
+        int $imageWaitMs = 2000
     ): string {
         $max = max(400, min(20000, $stabilityBudgetMs));
         $race = max(50, min(30000, $fontRaceMs));
         $paint = max(0, min(80, $paintSettleMs));
+        $imgCap = max(200, min(8000, $imageWaitMs));
 
         $payload = [
             'theme' => $themeCss,
@@ -34,82 +39,46 @@ final class CombinedPostProcessScript
         ];
         $payloadExpr = self::encodePayloadForEvaluate($payload);
 
-        $stabilityAwait = '';
+        $js = "(async function () {";
+        $js .= "var __payload = {$payloadExpr};";
+        $js .= "var __theme = __payload.theme || '';";
+        $js .= "var __fonts = __payload.fonts || {};";
+
+        $js .= "function appendStyle(css, id) {"
+            . "if(!css) return;"
+            . "var s = document.createElement('style');"
+            . "s.id = id;"
+            . "s.textContent = css;"
+            . "document.head.appendChild(s);"
+            . "}";
+
+        $js .= "appendStyle(__theme, 'pdf-theme');";
+
+        $js .= "var txt = (document.body && document.body.innerText) ? document.body.innerText.substring(0, 10000) : '';";
+        $js .= "if(/[\\u3040-\\u9fff]/.test(txt) && __fonts.cjk) appendStyle(__fonts.cjk, 'pdf-font-cjk');";
+        $js .= "if(/[\\u0600-\\u06ff]/.test(txt) && __fonts.arabic) appendStyle(__fonts.arabic, 'pdf-font-arabic');";
+
+        if ($waitForImages) {
+            $js .= "var __imgEnd = Date.now() + {$imgCap};"
+                . "function __imgsReady() {"
+                .     "var imgs = document.images;"
+                .     "for (var i = 0; i < imgs.length; i++) {"
+                .         "if (!imgs[i].complete) return false;"
+                .     "}"
+                .     "return true;"
+                . "}"
+                . "while (!__imgsReady() && Date.now() < __imgEnd) {"
+                .     "await new Promise(function (r) { setTimeout(r, 60); });"
+                . "}";
+        }
+
         if ($includeStability) {
-            $stabilityAwait = 'await ' . PageStabilityScript::asSettleExpression($max, $leanStability) . ";\n";
+            $js .= "await new Promise(function (r) { setTimeout(r, {$paint}); });";
         }
 
-        $cookieBlock = '';
-        if ($includeCookies) {
-            $cookieBlock = CookiePopupRemovalScript::asExpression() . ";\n";
-        }
+        $js .= "return true; })();";
 
-        return <<<JS
-            (async function () {
-                var __payload = {$payloadExpr};
-                var __theme = (typeof __payload.theme === 'string') ? __payload.theme : '';
-                var __fonts = __payload.fonts || {};
-                function __appendStyle(css, attr) {
-                    if (!css || !css.length) return;
-                    try {
-                        var el = document.createElement('style');
-                        el.setAttribute('type', 'text/css');
-                        el.setAttribute('data-support-chrome-pdf', attr || '1');
-                        el.appendChild(document.createTextNode(css));
-                        var head = document.head || document.getElementsByTagName('head')[0] || document.documentElement;
-                        head.appendChild(el);
-                    } catch (e) {}
-                }
-                if (__theme.length) {
-                    __appendStyle(__theme, 'theme');
-                }
-                function __sampleText() {
-                    try {
-                        var b = document.body;
-                        if (b && b.innerText) return b.innerText.substring(0, 50000);
-                        var r = document.documentElement;
-                        return (r && r.innerText) ? r.innerText.substring(0, 50000) : '';
-                    } catch (e) { return ''; }
-                }
-                function __hasCJK(s) { return /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/.test(s); }
-                function __hasArabic(s) { return /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]/.test(s); }
-                function __hasCyrillic(s) { return /[\u0400-\u04ff]/.test(s); }
-                var __t = __sampleText();
-                var __order = ['cjk', 'arabic', 'cyrillic'];
-                var __checks = { cjk: __hasCJK, arabic: __hasArabic, cyrillic: __hasCyrillic };
-                var __faceParts = [];
-                var __fam = [];
-                for (var __i = 0; __i < __order.length; __i++) {
-                    var __k = __order[__i];
-                    var __css = __fonts[__k];
-                    if (!__css || !__css.length) continue;
-                    if (!__checks[__k] || !__checks[__k](__t)) continue;
-                    __faceParts.push(__css);
-                    __fam.push('"SupportPdf_' + __k + '"');
-                }
-                if (__faceParts.length) {
-                    var __bundle = __faceParts.join('\\n') + '\\nhtml, body { font-family: ' + __fam.join(', ') + ', "PingFang SC", "Microsoft YaHei", sans-serif !important; }';
-                    __appendStyle(__bundle, 'fonts');
-                }
-                var raceMs = {$race};
-                try {
-                    if (document.fonts && document.fonts.ready) {
-                        await Promise.race([
-                            document.fonts.ready,
-                            new Promise(function (r) { setTimeout(r, raceMs); })
-                        ]);
-                    }
-                } catch (__eFont) {}
-                await new Promise(function (r) {
-                    requestAnimationFrame(function () {
-                        requestAnimationFrame(function () { r(); });
-                    });
-                });
-                await new Promise(function (r) { setTimeout(r, {$paint}); });
-                {$stabilityAwait}{$cookieBlock}
-                return true;
-            })()
-            JS;
+        return $js;
     }
 
     /**
@@ -126,13 +95,13 @@ final class CombinedPostProcessScript
 
         try {
             $inner = json_encode($payload, $flags | JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
+        } catch (\JsonException $e) {
             $inner = '{"theme":"","fonts":{}}';
         }
 
         try {
             return 'JSON.parse(' . json_encode($inner, $flags | JSON_THROW_ON_ERROR) . ')';
-        } catch (\JsonException) {
+        } catch (\JsonException $e) {
             return 'JSON.parse(' . json_encode('{"theme":"","fonts":{}}', $flags | JSON_THROW_ON_ERROR) . ')';
         }
     }
