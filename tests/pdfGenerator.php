@@ -24,7 +24,7 @@ $output = PdfGenerator::create()
     // ->css('body { font-size: 28px; font-weight: bold; }')
     // ->colorScheme('dark')
     // ->selectElement('.body')
-    // ->margins(false)
+    ->margins(20)
     ->clickableLinks(false)
     ->generate();
 

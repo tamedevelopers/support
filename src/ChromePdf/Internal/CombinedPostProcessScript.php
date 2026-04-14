@@ -86,8 +86,19 @@ final class CombinedPostProcessScript
             $js .= "await " . PageStabilityScript::asSettleExpression($max, $leanStability) . ";";
         }
 
+        $js .= FloatingElementRemovalScript::asExpression() . ";";
+
         if ($includeCookies) {
-            $js .= CookiePopupRemovalScript::asExpression() . ";";
+            $js .= "var __maybeCookieBanner = false;"
+                . "try {"
+                .     "var __cookieQuick = (document.body && document.body.innerText) ? document.body.innerText.slice(0, 3000).toLowerCase() : '';"
+                .     "__maybeCookieBanner = "
+                .         "/cookie|consent|gdpr|privacy|before you continue|accept all|reject all/.test(__cookieQuick)"
+                .         " || !!document.querySelector('form[action*=\"consent.google\"], c-wiz, [id*=\"cookie\" i], [class*=\"cookie\" i], [id*=\"consent\" i], [class*=\"consent\" i], #onetrust-banner-sdk, #qc-cmp2-ui, #didomi-host, #usercentrics-root');"
+                . "} catch (eCookieQuick) {}"
+                . "if (__maybeCookieBanner) {"
+                .     CookiePopupRemovalScript::asExpression()
+                . ";}";
         }
 
         if ($paint > 0) {
