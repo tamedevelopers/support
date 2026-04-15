@@ -173,15 +173,21 @@ Choose the correct binary for your platform.
 ## Installation on Linux (Terminal)
 
 ```bash
-sudo apt update
-sudo apt install chromium-browser # Or chromium
 
-or
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install -y ./google-chrome-stable_current_amd64.deb
 
-/usr/bin/google-chrome, 
-/usr/bin/chromium, 
-/usr/bin/chromium-browser
+
+Verify the installation
+google-chrome-stable --version
+
+
+Check path
+which google-chrome-stable
+
+
+
+/usr/bin/google-chrome-stable, 
 ```
 
 ## Example Folder Structure

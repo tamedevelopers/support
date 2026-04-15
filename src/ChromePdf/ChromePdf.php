@@ -10,6 +10,7 @@ use HeadlessChromium\Communication\Message;
 use HeadlessChromium\Communication\Session;
 use HeadlessChromium\Page;
 use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\ChromePdf\ChromiumEnvironment;
 use Tamedevelopers\Support\ChromePdf\ColorScheme;
 use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
 use Tamedevelopers\Support\ChromePdf\Exception\FontNotFoundException;
@@ -641,6 +642,8 @@ final class ChromePdf
     {
         [$binary, $launch] = $this->buildBrowserLaunchConfig();
 
+        $this->headlessRestrictEnv($launch);
+
         return implode("\0", [
             (string) $binary,
             ($launch['enableImages'] ?? true) ? '1' : '0',
@@ -665,10 +668,13 @@ final class ChromePdf
     private function acquireSharedBrowser(): Browser
     {
         self::registerShutdownHandlerOnce();
+
         $key = $this->browserLaunchKey();
+
         if (self::$sharedBrowser !== null && self::$sharedBrowserLaunchKey === $key) {
             return self::$sharedBrowser;
         }
+
         if (self::$sharedBrowser !== null) {
             try {
                 self::$sharedBrowser->close();
@@ -677,12 +683,41 @@ final class ChromePdf
             self::$sharedBrowser = null;
             self::$sharedBrowserLaunchKey = null;
         }
+
         [$binary, $launch] = $this->buildBrowserLaunchConfig();
+
+        $this->headlessRestrictEnv($launch);
+        
         $factory = new BrowserFactory($binary);
         self::$sharedBrowser = $factory->createBrowser($launch);
         self::$sharedBrowserLaunchKey = $key;
 
         return self::$sharedBrowser;
+    }
+
+    private function headlessRestrictEnv(&$launch): void
+    {
+        if($launch){
+            // REQUIRED permissions for headless restricted environments
+            $launch['args'] = array_merge($launch['args'] ?? [], [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+
+                // REQUIRED for namespace-restricted systems
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--no-zygote',
+                '--single-process',
+                '--disable-software-rasterizer',
+
+                // bypass crashpad noise
+                '--disable-crash-reporter',
+                '--crash-dumps-dir=/tmp',
+            ]);
+    
+            $launch['ignoreCertificateErrors'] = $this->ignoreCertificateErrors;
+            $launch['keepAlive'] = true; 
+        }
     }
 
     private function shouldStabilizeAfterLoad(): bool
