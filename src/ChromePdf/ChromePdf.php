@@ -695,29 +695,29 @@ final class ChromePdf
         return self::$sharedBrowser;
     }
 
-    private function headlessRestrictEnv(&$launch): void
+    /**
+     * chrome-php only forwards {@code noSandbox} and {@code customFlags} to Chromium — an {@code args} key is ignored
+     * (see {@code HeadlessChromium\Browser\BrowserProcess::getArgsFromOptions()}).
+     */
+    private function headlessRestrictEnv(array &$launch): void
     {
-        if($launch){
-            // REQUIRED permissions for headless restricted environments
-            $launch['args'] = array_merge($launch['args'] ?? [], [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-
-                // REQUIRED for namespace-restricted systems
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--no-zygote',
-                '--single-process',
-                '--disable-software-rasterizer',
-
-                // bypass crashpad noise
-                '--disable-crash-reporter',
-                '--crash-dumps-dir=/tmp',
-            ]);
-    
-            $launch['ignoreCertificateErrors'] = $this->ignoreCertificateErrors;
-            $launch['keepAlive'] = true; 
+        if ($launch === []) {
+            return;
         }
+
+        $launch['noSandbox'] = true;
+
+        $launch['customFlags'] = array_values(array_merge($launch['customFlags'] ?? [], [
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--no-zygote',
+            '--disable-software-rasterizer',
+            '--disable-crash-reporter',
+            '--crash-dumps-dir=/tmp',
+        ]));
+
+        $launch['ignoreCertificateErrors'] = $this->ignoreCertificateErrors;
+        $launch['keepAlive'] = true;
     }
 
     private function shouldStabilizeAfterLoad(): bool
