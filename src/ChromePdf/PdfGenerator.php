@@ -994,7 +994,7 @@ final class PdfGenerator
         $budget = $this->effectiveStabilityTimeoutMs();
 
         $waitForImages = $isLocal;
-        $imageWaitMs = $speed ? 900 : 1800;
+        $imageWaitMs = $speed ? 3500 : 7000;
 
         $expr = $this->cachedCombinedPostProcessExpression(
             $includeStability,
