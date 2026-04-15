@@ -125,12 +125,16 @@ class File {
      * Write the contents to a file.
      *
      * @param string $path
-     * @param string $contents
+     * @param string|null $contents
      * @param int $flags
      * @return bool|int
      */
-    public static function put(string $path, string $contents, int $flags = 0): bool|int
+    public static function put(string $path, string $contents = null, int $flags = 0): bool|int
     {
+        if(is_null($contents)){
+            return false;
+        }
+
         return file_put_contents($path, $contents, $flags);
     }
 

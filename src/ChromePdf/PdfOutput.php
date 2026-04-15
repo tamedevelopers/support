@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\ChromePdf;
 
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
+use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Tame;
 
 /**
  * Raw PDF bytes with delivery helpers.
@@ -31,9 +34,24 @@ final class PdfOutput
      *
      * @throws ConversionFailedException
      */
-    public function save(string $path): void
+    public function save(string $path): array
     {
+        $path = Tame::stringReplacer($path);
+
         self::writeBinaryToPath($path, $this->binary);
+
+        // get actual storage path
+        $storagePath = Str::replace(Server::getServers('server'), '', $path);
+
+        // domain full path
+        $domainPath = Server::formatWithDomainURI($storagePath);
+
+        return [
+            'path' => $path,
+            'url' => $domainPath, 
+            'name' => File::name($path), 
+            'storage' => $storagePath, 
+        ];
     }
 
     /**
@@ -125,11 +143,12 @@ final class PdfOutput
     private static function writeBinaryToPath(string $path, string $binary): void
     {
         $dir = dirname($path);
-        if ($dir !== '' && $dir !== '.' && !is_dir($dir) && !@mkdir($dir, 0777, true) && !is_dir($dir)) {
-            throw new ConversionFailedException(sprintf('Could not create directory: %s', $dir));
+
+        if(!File::isDirectory($dir)){
+            File::makeDirectory($dir, 0755, true);
         }
 
-        if (file_put_contents($path, $binary) === false) {
+        if (!File::put($path, $binary)) {
             throw new ConversionFailedException(sprintf('Could not write PDF file: %s', $path));
         }
     }

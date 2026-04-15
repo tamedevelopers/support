@@ -13,7 +13,7 @@ final class ChromiumEnvironment
 {
     public function isDocker(): bool
     {
-        if (@is_file('/.dockerenv')) {
+        if (@is_file(base_path('.dockerenv'))) {
             return true;
         }
 
@@ -24,6 +24,26 @@ final class ChromiumEnvironment
         $cgroup = @file_get_contents('/proc/self/cgroup');
 
         return is_string($cgroup) && str_contains($cgroup, 'docker');
+    }
+
+    public function isWindows(): bool
+    {
+        return PHP_OS_FAMILY === 'Windows';
+    }
+
+    public function isLinux(): bool
+    {
+        return PHP_OS_FAMILY === 'Linux';
+    }
+
+    public function isDarwin(): bool
+    {
+        return PHP_OS_FAMILY === 'Darwin';
+    }
+
+    public function isWindowAndNotDocker(): bool
+    {
+        return $this->isWindows() && !$this->isDocker();
     }
 
     /**
@@ -76,14 +96,14 @@ final class ChromiumEnvironment
                 '/usr/bin/google-chrome',
                 '/usr/bin/google-chrome-stable',
             ];
-        } elseif (PHP_OS_FAMILY === 'Windows') {
+        } elseif ($this->isWindows()) {
             $candidates = [
                 getenv('ProgramFiles') . '\\Google\\Chrome\\Application\\chrome.exe',
                 getenv('ProgramFiles(x86)') . '\\Google\\Chrome\\Application\\chrome.exe',
                 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
                 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
             ];
-        } elseif (PHP_OS_FAMILY === 'Darwin') {
+        } elseif ($this->isDarwin()) {
             $candidates = [
                 '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
                 '/Applications/Chromium.app/Contents/MacOS/Chromium',

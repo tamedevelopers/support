@@ -40,9 +40,11 @@
         ]
     },
     "suggest": {
-        "aws/aws-sdk-php": "Required to use the `AWS` class and helper (^3.371) For AWS S3 and other AWS services",
+        "aws/aws-sdk-php": "Required to use the `AWS` class and helper (^3.371)",
         "dompdf/dompdf": "Required to use the `PDF` class and helper (^3.0)",
-        "ext-sockets": "Required by chrome-php/chrome for headless Chromium IPC"
+        "chrome-php/chrome": "Required for high-performance Chrome PDF generation (^1.11)",
+        "chrome-php/wrench": "Required for WebSocket communication with Chrome (^1.7)",
+        "ext-sockets": "PHP extension required by chrome-php for headless Chromium IPC"
     },
     "autoload": {
         "files": [

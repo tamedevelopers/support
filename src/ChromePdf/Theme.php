@@ -8,7 +8,7 @@ use InvalidArgumentException;
 
 /**
  * Collects custom CSS to inject into the headless document before PDF capture.
- * For typical use, prefer {@see PdfGenerator::css()} and {@see PdfGenerator::cssFile()}; use this class when building a reusable style bundle.
+ * For typical use, prefer {@see ChromePdf::css()} and {@see ChromePdf::cssFile()}; use this class when building a reusable style bundle.
  */
 final class Theme
 {

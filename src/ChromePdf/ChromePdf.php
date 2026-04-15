@@ -53,7 +53,7 @@ use Throwable;
  * Call {@see loadRemoteImages(true)} when you need {@code http(s)://} in {@code img}/CSS. Auto font {@code @font-face}
  * maps are applied in-page only when {@code document.body} text matches CJK / Arabic / Cyrillic ranges (see {@see CombinedPostProcessScript}).
  */
-final class PdfGenerator
+final class ChromePdf
 {
     use FontManagerTrait;
 
@@ -228,8 +228,9 @@ final class PdfGenerator
     public function fromFile(string $path): self
     {
         $this->resetSource();
-        $real = realpath($path);
-        if ($real === false || !is_readable($real)) {
+        $real = self::stringReplacer($path);
+
+        if (!is_readable($real)) {
             throw new ConversionFailedException(sprintf('HTML file is not readable: %s', $path));
         }
         $this->sourceMode = 'file';
@@ -323,6 +324,8 @@ final class PdfGenerator
      */
     public function cssFile(string $path): self
     {
+        $path = self::stringReplacer($path);
+
         $this->styles ??= Theme::create();
         $this->styles->addCssFile($path);
 
@@ -331,11 +334,15 @@ final class PdfGenerator
 
     public function chromiumBinary(?string $absolutePath): self
     {
+        $env = new ChromiumEnvironment();
+        if($env->isWindowAndNotDocker()) {
+            $absolutePath = self::stringReplacer($absolutePath);
+        }
+        
         $this->chromiumBinary = $absolutePath;
 
         return $this;
     }
-
     public function autoInjectUnicodeFonts(bool $enabled = true): self
     {
         $this->autoInjectFonts = $enabled;
@@ -650,7 +657,7 @@ final class PdfGenerator
             return;
         }
         register_shutdown_function(static function (): void {
-            PdfGenerator::shutdown();
+            self::shutdown();
         });
         self::$shutdownHandlerRegistered = true;
     }
@@ -944,17 +951,12 @@ final class PdfGenerator
     private function loadFromFile(Page $page): void
     {
         $path = $this->sourceValue;
-        $html = file_get_contents($path);
-        if ($html === false) {
-            throw new ConversionFailedException(sprintf('Could not read file: %s', $path));
-        }
-        $this->injectionCssForPostProcess = '';
-        $merged = self::mergeCssIntoHtmlDocument(
-            $html,
-            $this->buildThemeCssOnly(),
-            self::baseHrefForLocalHtmlFile($path)
+        $fileUri = FileUri::fromPath($path);
+        $this->injectionCssForPostProcess = null;
+        $page->navigate($fileUri)->waitForNavigation(
+            Page::DOM_CONTENT_LOADED,
+            min(10000, max(1200, $this->effectiveNavigationTimeoutMs()))
         );
-        $page->setHtml($merged, 900, Page::DOM_CONTENT_LOADED);
     }
 
     private function loadFromHtml(Page $page): void
@@ -1067,14 +1069,6 @@ final class PdfGenerator
         }
 
         return '<!DOCTYPE html><html><head>' . $injection . '</head><body>' . $html . '</body></html>';
-    }
-
-    private static function baseHrefForLocalHtmlFile(string $path): string
-    {
-        $dir = dirname($path);
-        $href = FileUri::fromPath($dir);
-
-        return str_ends_with($href, '/') ? $href : ($href . '/');
     }
 
     /**

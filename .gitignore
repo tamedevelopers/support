@@ -1,12 +1,15 @@
 /vendor
 /storage
+/upload
+/config
+/lang
+/zimage
 /.idea
 /.vscode
 /.github
 /.env
 /.env.example
 /.zencoder
-/lang
 /bin
 /.htaccess
 /domains.json

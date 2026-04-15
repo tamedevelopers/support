@@ -1255,10 +1255,10 @@ class Tame extends TameHelper{
             $path = rtrim($path, '/') . '.' . $extension;
         }
 
-        $folderPath = dirname($path);
+        $dir = dirname($path);
 
-        if(!File::isDirectory($folderPath)){
-            File::makeDirectory($folderPath, 0755, true);
+        if(!File::isDirectory($dir)){
+            File::makeDirectory($dir, 0755, true);
         }
 
         // 4. Save using your File wrapper
@@ -1353,10 +1353,10 @@ class Tame extends TameHelper{
                         : trim($filePath, '/') . "/{$fileName}.svg";
             
             $saveAs = self::stringReplacer($fullPath);
-            $folderPath = dirname($saveAs);
+            $dir = dirname($saveAs);
 
-            if(!File::isDirectory($folderPath)){
-                File::makeDirectory($folderPath, 0755, true);
+            if(!File::isDirectory($dir)){
+                File::makeDirectory($dir, 0755, true);
             }
 
             if(File::put($saveAs, $svg)){
