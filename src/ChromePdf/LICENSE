@@ -1,0 +1,43 @@
+Custom License (Source-Available)
+
+Copyright (c) 2026 Tamedevelopers Support
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to use
+the Software without restriction for personal, educational, and internal
+commercial purposes, including without limitation the rights to install,
+use, copy, modify, and integrate the Software into private systems, subject
+to the following conditions:
+
+RESTRICTIONS:
+
+1. Redistribution is not permitted.
+   You may NOT publish, share, sublicense, or distribute the Software or any
+   modified version of it in source or binary form, including but not limited
+   to public repositories (GitHub, GitLab, Bitbucket) or package registries.
+
+2. Resale is not permitted.
+   You may NOT sell the Software, or any modified version of it, as a standalone
+   product or as part of a competing library.
+
+3. SaaS restriction.
+   You may NOT offer the Software as a standalone service where the primary
+   value is direct access to this library (e.g., "PDF generation API service").
+
+4. Internal and application use is allowed.
+   You MAY use the Software in private applications, internal systems, and
+   commercial products where the Software is not the primary value delivered.
+
+5. Modification is allowed for private use only.
+   Modified versions must remain private and are subject to the same restrictions.
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
