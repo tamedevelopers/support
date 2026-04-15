@@ -43,6 +43,8 @@ final class ChromiumEnvironment
                 '--disable-background-timer-throttling',
                 '--disable-renderer-backgrounding',
                 '--disable-backgrounding-occluded-windows',
+                // Allow file:// assets referenced by local HTML rendered via setHtml()+<base href="file://...">.
+                '--allow-file-access-from-files',
             ],
         ];
 

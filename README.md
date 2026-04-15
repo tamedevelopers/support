@@ -25,6 +25,7 @@ Support Package For PHP, Laravel and PHP Frameworks
     * [unlink](#unlink)
     * [mask](#mask)
     * [imageToBase64](#imageToBase64)
+    * [base64ToImage](#base64ToImage)
     * [platformIcon](#platformIcon)
     * [paymentIcon](#paymentIcon)
     * [calPercentageBetweenNumbers](#calPercentageBetweenNumbers)
@@ -530,6 +531,13 @@ Tame()->imageToBase64(base_path('path/to/image.jpg'));
 
 Tame()->imageToBase64('https://example.com/image.png', true);
 // Output: "data:image/png;base64,..." (Base64 string for the URL image)
+```
+
+### base64ToImage
+- Converts a Base64 string to an image file.
+
+```php
+Tame()->base64ToImage('data:image/jpg;base64,...', base_path('path/to/image.jpg'), 'extension');
 ```
 
 ### platformIcon  

@@ -13,11 +13,9 @@ use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\ChromePdf\ColorScheme;
 use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
 use Tamedevelopers\Support\ChromePdf\Exception\FontNotFoundException;
-use Tamedevelopers\Support\ChromePdf\Exception\InvalidSelectorException;
 use Tamedevelopers\Support\ChromePdf\Internal\CombinedPostProcessScript;
 use Tamedevelopers\Support\ChromePdf\Internal\FileUri;
 use Tamedevelopers\Support\ChromePdf\Internal\FlattenLinksScript;
-use Tamedevelopers\Support\ChromePdf\Internal\FloatingElementRemovalScript;
 use Tamedevelopers\Support\ChromePdf\Internal\PreloaderRemovalScript;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;
 use Tamedevelopers\Support\ChromePdf\Traits\FontManagerTrait;
@@ -531,7 +529,7 @@ final class PdfGenerator
             }
 
             return new PdfOutput($raw);
-        } catch (InvalidSelectorException | FontNotFoundException $e) {
+        } catch (FontNotFoundException $e) {
             throw $e;
         } catch (Throwable $e) {
             throw new ConversionFailedException($e->getMessage(), (int) $e->getCode(), $e);
@@ -1010,9 +1008,16 @@ final class PdfGenerator
             $imageWaitMs
         );
 
-        // Cookie/floating cleanup on URL pages can exceed a flat 4s on heavier DOMs.
+        // Derive timeout from enabled work so local image waits do not exceed the eval timeout budget.
         if ($isLocal) {
-            $timeoutMs = $speed ? 4000 : 7000;
+            $expectedLocalWorkMs = ($waitForImages ? $imageWaitMs : 0)
+                + $fontRaceMs
+                + ($includeStability ? $budget : 0)
+                + ($speed ? 600 : 1200);
+            $timeoutMs = min(
+                $speed ? 12000 : 18000,
+                max($speed ? 5000 : 8000, $expectedLocalWorkMs)
+            );
         } elseif ($includeCookies || $includeFloating) {
             $timeoutMs = $speed ? 10000 : 14000;
         } else {
@@ -1037,12 +1042,6 @@ final class PdfGenerator
             }',
             [$selector]
         )->getReturnValue($this->evalTimeoutMs(8000, 2500));
-
-        if ($ok !== true) {
-            throw new InvalidSelectorException(
-                sprintf('No element matched the selector, or the node could not be isolated: %s', $selector)
-            );
-        }
     }
 
     private static function mergeCssIntoHtmlDocument(string $html, string $css, ?string $baseHref): string

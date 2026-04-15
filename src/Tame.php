@@ -1219,6 +1219,57 @@ class Tame extends TameHelper{
     }
 
     /**
+     * Convert Base64 string back to an actual image file
+     *
+     * @param string|null $base64Data - The base64 string (with or without data URI prefix)
+     * @param string|null $saveAs - The file path where the image should be saved
+     * @param string $extension - Default extension if none can be detected from the header
+     * @return null|string - Returns the saved file path on success, or null on failure
+     */
+    public static function base64ToImage($base64Data = null, $saveAs = null, $extension = null) 
+    {
+        if (!$base64Data || !$saveAs) {
+            return null;
+        }
+
+        // 1. Detect extension and strip the prefix if it exists (e.g., data:image/png;base64,)
+        if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $type)) {
+            if(empty($extension)){
+                $extension = Str::lower($type[1]);
+            }
+
+            $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
+        }
+
+        // 2. Decode the data
+        $decodedData = base64_decode($base64Data);
+        if (!$decodedData) {
+            return null;
+        }
+
+        // 3. Prepare the path
+        $path = self::stringReplacer($saveAs);
+
+        // Ensure the path has an extension if it's just a directory or a name without one
+        if (!pathinfo($path, PATHINFO_EXTENSION)) {
+            $path = rtrim($path, '/') . '.' . $extension;
+        }
+
+        $folderPath = dirname($path);
+
+        if(!File::isDirectory($folderPath)){
+            File::makeDirectory($folderPath, 0755, true);
+        }
+
+        // 4. Save using your File wrapper
+        if (File::put($path, $decodedData)) {
+            return $path;
+        }
+
+        return null;
+    }
+
+    /**
      * Convert image or SVG content into an SVG wrapper
      *
      * @param string|null $path (File path | URL | SVG content)
@@ -1302,6 +1353,11 @@ class Tame extends TameHelper{
                         : trim($filePath, '/') . "/{$fileName}.svg";
             
             $saveAs = self::stringReplacer($fullPath);
+            $folderPath = dirname($saveAs);
+
+            if(!File::isDirectory($folderPath)){
+                File::makeDirectory($folderPath, 0755, true);
+            }
 
             if(File::put($saveAs, $svg)){
                 return $saveAs;

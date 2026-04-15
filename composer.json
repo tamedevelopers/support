@@ -25,7 +25,8 @@
         "composer-plugin-api": "^2.0",
         "ext-sockets": "*",
         "chrome-php/wrench": "^1.7",
-        "chrome-php/chrome": "^1.11"
+        "chrome-php/chrome": "^1.11",
+        "dompdf/dompdf": "^3.1"
     },
     "extra": {
         "class": "Tamedevelopers\\Support\\ComposerPlugin"

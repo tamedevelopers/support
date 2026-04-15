@@ -98,8 +98,8 @@ class PDF{
             dirname($destination)
         );
 
-        // Get the HTML content
-        $content = self::$options['content'];
+        // Automatically sanitize content to prevent common Dompdf Table Row fatal errors
+        $content = self::sanitizeHtml(self::$options['content']);
 
         // if title is empty, then use the file name as title
         if(empty(self::$options['title'])){
@@ -159,6 +159,48 @@ class PDF{
     public static function read(string $path)
     {
         Tame::readPDFToBrowser($path);
+    }
+
+    /**
+     * Sanitizes HTML to prevent Dompdf layout crashes
+     * @param string $html
+     * @return string
+     */
+    private static function sanitizeHtml(string $html)
+    {
+        // 1. Remove MSO (Outlook) conditional comments
+        $html = preg_replace('//is', '', $html);
+
+        // 2. Remove problematic responsive media queries (Min/Max width fix)
+        $html = preg_replace('/@media[^{]*\{[^}]*display\s*:\s*(?:block|inline-block|table-cell)[^}]*\}/is', '', $html);
+
+        // 3. Fix "Frame not found in cellmap" by stripping height:100% and min-height 
+        // Dompdf crashes when nested tables try to inherit 100% height from a parent that isn't defined
+        $html = preg_replace('/height\s*:\s*100\s*%;?/i', '', $html);
+        $html = preg_replace('/min-height\s*:\s*[^;"]+;?/i', '', $html);
+
+        // 4. Force table-layout fixed and prevent page-break crashes inside nested tables
+        // "Frame not found" often happens when a nested table cell doesn't know where it starts 
+        // after a page break.
+        $search = [
+            'display: inline-table', 
+            'display:inline-table',
+            '<table',
+            'class="nl-container"'
+        ];
+        $replace = [
+            'display: table', 
+            'display: table',
+            '<table style="table-layout:fixed; page-break-inside:auto;"',
+            'class="nl-container" style="table-layout: fixed;"'
+        ];
+        $html = str_replace($search, $replace, $html);
+
+        // 5. Clean up any remaining display: inline-block on tables/rows/cells
+        // These are strictly illegal in Dompdf's table engine
+        $html = preg_replace('/<table[^>]+style="[^"]*display\s*:\s*inline-block[^"]*"[^>]*>/i', '<table style="display:table">', $html);
+
+        return $html;
     }
 
     /**

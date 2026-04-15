@@ -41,12 +41,13 @@ $factory = new BrowserFactory();
 $files = [
     '1' => base_path('template.html'),
     '2' => base_path('template2.html'),
+    '3' => base_path('template3.html'),
 ];
+
 
 $output = PdfGenerator::create()
     // ->fromHtml('<html><body><p>你好世界</p></body></html>')
-    // ->fromFile($files['1'])
-    ->fromFile($files['2'])
+    ->fromFile($files['3'])
     // ->fromUrl('https://www.google.com/')
     // ->fromUrl('https://www.noahimports.com/')
     // ->fromUrl('https://lhkexpress.com/login')
@@ -54,7 +55,7 @@ $output = PdfGenerator::create()
     ->paper('A4') // A4, letter, Legal, Ledger
     // ->css('body { font-size: 28px; font-weight: bold; }')
     // ->colorScheme('dark')
-    // ->selectElement('.body')
+    ->selectElement('.body')
     ->margins(20)
     ->clickableLinks(false)
     ->generate();
