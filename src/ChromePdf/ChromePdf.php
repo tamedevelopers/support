@@ -229,7 +229,7 @@ final class ChromePdf
     {
         $this->resetSource();
         $real = self::stringReplacer($path);
-
+        
         if (!is_readable($real)) {
             throw new ConversionFailedException(sprintf('HTML file is not readable: %s', $path));
         }

@@ -26,24 +26,36 @@ $path2 = TextToImage::run([
     'font_weight' => 'normal',
     'bg_color' => [147, 51, 234],
     'text_color' => '#ffffff',
-    'type' => 'diagonal',
+    'type' => 'square',
 ]);
 
+$path3 = $ntoimage->run([
+    'name' => 'Tamedevelopers Peterson Moore',
+    'font_weight' => 'bold',
+    'type' => 'radius',
+    'text_color' => '#26012b',
+]);
 
-dd(
-    '',
-    domain(),
-    tasset(''),
-    $ntoimage->run([
-        'name' => 'Tamedevelopers Peterson Moore',
-        'font_weight' => 'bold',
-        'type' => 'radius',
-    ]),
+$path4 = $ntoimage->run([
+    'name' => 'Facebook',
+    'font_weight' => 'bold',
+    'bg_color' => '#063903ff',
+    'text_color' => '#cae6ff',
+    'type' => 'gradient',
+]);
 
-    $ntoimage->run([
-        'name' => 'Oluchi Grace',
-        'font_weight' => 'bold',
-        'bg_color' => '#063903ff',
-        'type' => 'gradient',
-    ]),
-);
+$path5 = $ntoimage->run([
+    'name' => 'GitHub Microsoft',
+    'font_weight' => 'bold',
+    'bg_color' => '#000000',
+    'text_color' => '#4A5568',
+    'type' => 'circle',
+]);
+
+?>
+
+<img src="<?php echo $path1['url']; ?>" alt="Text to Image">
+<img src="<?php echo $path2['url']; ?>" alt="Text to Image">
+<img src="<?php echo $path3['url']; ?>" alt="Text to Image">
+<img src="<?php echo $path4['url']; ?>" alt="Text to Image">
+<img src="<?php echo $path5['url']; ?>" alt="Text to Image">

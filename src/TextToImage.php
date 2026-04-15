@@ -152,10 +152,17 @@ class TextToImage
             $fontSize = is_int($opts['font_size']) ? $opts['font_size'] : null;
 
             if ($fontSize === null) {
-                // 1. Use a more generous padding (approx 30% on each side) 
-                // for circular safety. Target 65% of the total size.
-                $paddingFactor  = ($type === 'circle') ? 0.65 : 0.80;
-                $targetSize     = (int) round($size * $paddingFactor);
+                // Circle/rounded shapes need stronger all-side padding due to curved corners.
+                if (in_array($type, ['circle', 'radius'], true)) {
+                    $contentFactorX = ($type === 'circle') ? 0.62 : 0.68;
+                    $contentFactorY = ($type === 'circle') ? 0.62 : 0.68;
+                } else {
+                    // For square/gradient/diagonal: keep mostly full height, add light side padding only.
+                    $contentFactorX = 0.70;
+                    $contentFactorY = 0.70;
+                }
+                $targetWidth = max(8, (int) round($size * $contentFactorX) - 2);
+                $targetHeight = max(8, (int) round($size * $contentFactorY) - 2);
                 
                 $low = 8; 
                 $high = $size;
@@ -165,7 +172,7 @@ class TextToImage
                 while ($low <= $high) {
                     $mid = (int)floor(($low + $high) / 2);
                     [$w, $h] = self::measureText($initials, $mid, $fontPath);
-                    if ($w <= $targetSize && $h <= $targetSize) {
+                    if ($w <= $targetWidth && $h <= $targetHeight) {
                         $best = $mid;
                         $low = $mid + 1;
                     } else {
@@ -177,15 +184,15 @@ class TextToImage
 
             // 2. Precise Centering Calculation
             $bbox = imagettfbbox($fontSize, 0, $fontPath, $initials);
-            
-            // The width and height of the rendered box
-            $textWidth  = $bbox[2] - $bbox[6];
-            $textHeight = $bbox[3] - $bbox[7];
+            if (!$bbox) {
+                throw new CustomException('Unable to measure text bounding box.');
+            }
+            [$textWidth, $textHeight, $minX, $minY] = self::measureBbox($bbox);
 
             // Calculate X and Y to place the center of the bounding box 
             // exactly at the center of the image ($size / 2)
-            $x = (int)round(($size / 2) - ($textWidth / 2) - $bbox[6]);
-            $y = (int)round(($size / 2) - ($textHeight / 2) - $bbox[7]);
+            $x = (int) round((($size - $textWidth) / 2) - $minX);
+            $y = (int) round((($size - $textHeight) / 2) - $minY);
 
             imagettftext($img, $fontSize, 0, $x, $y, $txCol, $fontPath, $initials);
         } else {
@@ -457,9 +464,26 @@ class TextToImage
         $bbox = imagettfbbox($fontSize, 0, $fontPath, $text);
         if (!$bbox) return [0, 0];
 
-        $width  = abs($bbox[2] - $bbox[0]);
-        $height = abs($bbox[7] - $bbox[1]);
+        [$width, $height] = self::measureBbox($bbox);
         return [$width, $height];
+    }
+
+    /**
+     * Normalize imagettfbbox() into width/height and top-left offset.
+     *
+     * @param array<int, int|float> $bbox
+     * @return array{0:int,1:int,2:int,3:int}
+     */
+    private static function measureBbox(array $bbox): array
+    {
+        $xValues = [(int) $bbox[0], (int) $bbox[2], (int) $bbox[4], (int) $bbox[6]];
+        $yValues = [(int) $bbox[1], (int) $bbox[3], (int) $bbox[5], (int) $bbox[7]];
+        $minX = min($xValues);
+        $maxX = max($xValues);
+        $minY = min($yValues);
+        $maxY = max($yValues);
+
+        return [max(0, $maxX - $minX), max(0, $maxY - $minY), $minX, $minY];
     }
 
     /**

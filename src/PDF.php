@@ -12,6 +12,7 @@ use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Capsule\CustomException;
+use Tamedevelopers\Support\Traits\TameTrait;
 
 /**
  * DOM PDF Wrapper
@@ -20,6 +21,8 @@ use Tamedevelopers\Support\Capsule\CustomException;
  * @link https://github.com/dompdf/dompdf
  */ 
 class PDF{
+
+    use TameTrait;
 
     /**
      * dompdf
@@ -91,12 +94,14 @@ class PDF{
         self::init();
 
         // Get the destination path
-        $destination = Tame()->stringReplacer(self::$options['destination']);
+        $destination = self::stringReplacer(self::$options['destination']);
 
-        // Make directory
-        File::makeDirectory(
-            dirname($destination)
-        );
+
+        $dir = dirname($destination);
+
+        if(!File::isDirectory($dir)){
+            File::makeDirectory($dir, 0755, true);
+        }
 
         // Automatically sanitize content to prevent common Dompdf Table Row fatal errors
         $content = self::sanitizeHtml(self::$options['content']);
