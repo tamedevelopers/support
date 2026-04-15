@@ -27,8 +27,6 @@ $output = ChromePdf::create()
     ->clickableLinks(false)
     ->generate();
 
-// ;
-
 $output->inline();
 
 // $output->view();

@@ -1,9 +1,30 @@
 # ChromePdf
 
-High-performance **HTML → PDF generator for PHP** powered by **Headless Chromium** using `chrome-php/chrome`.
+ChromePdf is a high-performance HTML → PDF generator for PHP powered by a real headless Chromium browser via `chrome-php/chrome`.
 
-ChromePdf allows you to convert **URLs, HTML strings, or local HTML files** into PDFs using a fluent and developer-friendly API while preserving real browser rendering.
+The goal of this library is to convert URLs, HTML strings, and local HTML files into **accurate, production-ready PDF documents** that preserve real browser rendering exactly as seen in Google Chrome.
 
+Unlike screenshot-based or DOM-parsing PDF tools, ChromePdf renders content using an actual Chromium engine. This ensures full support for modern web standards including Flexbox, Grid, JavaScript execution, remote assets, and complex layouts.
+
+ChromePdf is designed to be:
+
+- Simple to install and use across Windows, Linux, and macOS
+- Auto-detecting of Chromium/Chrome binaries in most environments
+- Compatible with VPS, shared hosting, and local development setups
+- Fast through persistent Chromium process reuse
+- Flexible for both lightweight and enterprise-grade document generation
+
+### Core Objective
+
+To provide a single, fluent PHP API that:
+
+- Accepts multiple input sources (URL, HTML, file)
+- Uses real browser rendering for maximum fidelity
+- Produces consistent PDFs across environments
+- Minimizes configuration overhead for developers
+- Supports external/internal assets and modern CSS layouts
+
+In essence, ChromePdf bridges the gap between **web rendering** and **document generation**, allowing PHP applications to produce high-quality PDFs that match real browser output.
 ---
 
 ## Documentation
@@ -174,6 +195,7 @@ Choose the correct binary for your platform.
 ```bash
 
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt update
 sudo apt install -y ./google-chrome-stable_current_amd64.deb
 
 
@@ -539,5 +561,5 @@ ChromePdf::shutdown();
 ---
 
 # License
-
-MIT License
+Custom License (Source-Available)
+Copyright (c) 2026 Tamedevelopers
