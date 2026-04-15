@@ -161,9 +161,8 @@ You only need to download and configure a Chromium binary when:
 ## Download Chromium For Windows
 
 You can download Chromium from:
-- https://download-chromium.appspot.com/
-- https://chromium.woolyss.com/download/
-- https://github.com/macchrome/winchrome/releases
+- https://download-chromium.appspot.com/ (Click downloadchromium)
+- https://chromium.woolyss.com/download/ (Download the Zip and not .exe file)
 
 Choose the correct binary for your platform.
 ```
