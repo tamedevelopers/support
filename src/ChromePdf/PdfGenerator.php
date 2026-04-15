@@ -146,7 +146,10 @@ final class PdfGenerator
 
     private int $desktopViewportWidth = 1920;
 
-    private int $desktopViewportHeight = 3000;
+    private int $desktopViewportHeight = 1080;
+
+    private const DESKTOP_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+        . '(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
 
     private static ?Browser $sharedBrowser = null;
 
@@ -494,14 +497,12 @@ final class PdfGenerator
         try {
             $page = $browser->createPage();
             $this->applyColorSchemeToPage($page);
-            $this->applyDesktopViewportForUrlIfNeeded($page);
 
             match ($this->sourceMode) {
                 'url' => $this->loadFromUrlWithBlocking($page),
                 'file' => $this->loadFromFile($page),
                 'html' => $this->loadFromHtml($page),
             };
-            $this->applyDesktopViewportForUrlIfNeeded($page);
 
             $this->runImmediatePreloaderStripIfApplicable($page);
 
@@ -622,6 +623,11 @@ final class PdfGenerator
         }
         $launch['enableImages'] = $this->shouldEnableChromiumImages();
         $launch['keepAlive'] = true;
+        if ($this->sourceMode === 'url') {
+            // Set desktop hints at browser startup to reduce per-page emulation overhead.
+            $launch['windowSize'] = [$this->desktopViewportWidth, $this->desktopViewportHeight];
+            $launch['userAgent'] = self::DESKTOP_USER_AGENT;
+        }
 
         return [$binary, $launch];
     }
@@ -634,6 +640,9 @@ final class PdfGenerator
             (string) $binary,
             ($launch['enableImages'] ?? true) ? '1' : '0',
             ($launch['ignoreCertificateErrors'] ?? false) ? '1' : '0',
+            (string) ($launch['userAgent'] ?? ''),
+            (string) ($launch['windowSize'][0] ?? ''),
+            (string) ($launch['windowSize'][1] ?? ''),
         ]);
     }
 
@@ -824,72 +833,6 @@ final class PdfGenerator
     private function navigationLifecycleEvent(): string
     {
         return $this->waitForWindowLoadEvent ? Page::LOAD : Page::DOM_CONTENT_LOADED;
-    }
-
-    /**
-     * Forces desktop layout for URL captures so responsive sites do not choose a narrow/mobile breakpoint by default.
-     */
-    private function applyDesktopViewportForUrlIfNeeded(Page $page): void
-    {
-        if ($this->sourceMode !== 'url') {
-            return;
-        }
-
-        // Use the library's documented APIs and wait for completion to avoid race conditions.
-        try {
-            $page->setUserAgent(
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                . '(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
-            )->await(2000);
-        } catch (Throwable) {
-        }
-
-        try {
-            $page->setDeviceMetricsOverride([
-                'width' => $this->desktopViewportWidth,
-                'height' => $this->desktopViewportHeight,
-                'deviceScaleFactor' => 1,
-                'mobile' => false,
-            ])->await(2000);
-        } catch (Throwable) {
-        }
-
-        $session = $page->getSession();
-        try {
-            $session->sendMessageSync(new Message('Network.setUserAgentOverride', [
-                'userAgent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-                    . '(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                'acceptLanguage' => 'en-US,en;q=0.9',
-                'platform' => 'Windows',
-                'userAgentMetadata' => [
-                    'platform' => 'Windows',
-                    'mobile' => false,
-                ],
-            ]));
-        } catch (Throwable) {
-        }
-        try {
-            $session->sendMessageSync(new Message('Emulation.setTouchEmulationEnabled', [
-                'enabled' => false,
-            ]));
-        } catch (Throwable) {
-        }
-        try {
-            $session->sendMessageSync(new Message('Emulation.setEmulatedMedia', [
-                'media' => 'screen',
-                'features' => [],
-            ]));
-        } catch (Throwable) {
-        }
-        try {
-            $session->sendMessageSync(new Message('Network.setExtraHTTPHeaders', [
-                'headers' => [
-                    'Sec-CH-UA-Mobile' => '?0',
-                    'Viewport-Width' => (string) $this->desktopViewportWidth,
-                ],
-            ]));
-        } catch (Throwable) {
-        }
     }
 
     private function loadFromUrlWithBlocking(Page $page): void
