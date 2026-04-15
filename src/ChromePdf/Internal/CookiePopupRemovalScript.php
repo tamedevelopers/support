@@ -20,7 +20,7 @@ final class CookiePopupRemovalScript
                         '#CybotCookiebotDialog','#CybotCookiebotDialogBodyUnderlay','#CookiebotDialog',
                         '#qc-cmp2-ui','#qc-cmp2-container','.qc-cmp2-container',
                         '#sp-cc','#TrustArc','#truste-consent-track','.trustarc-banner',
-                        '.cc-window','.cc-banner',
+                        '.cc-window','.cc-banner', '.grt-cookie',
                         '#cookiescript_injected','#cookiescript_injected_wrapper',
                         '#cookie-law-info-bar','.cli-bar-container','#cliSettingsPopup',
                         '#tarteaucitronRoot','#joomla-cookie-banner','#cookiesdirective',

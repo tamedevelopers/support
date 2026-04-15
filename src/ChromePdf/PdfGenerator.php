@@ -169,6 +169,7 @@ final class PdfGenerator
 
     private const FETCH_BLOCK_CACHE_CAP = 4096;
     private const PDF_CACHE_VERSION = 'pdf-cache-v1';
+
     /** Pre-compiled pattern for tracker URLs (hot path in {@see computeFetchShouldBlock()}). */
     private const FETCH_TRACKER_URL_PATTERN = '/analytics|doubleclick|googlesyndication|googletagmanager|google-analytics|gtag\\/|facebook\\.com\\/tr|hotjar|segment\\.(io|com)|fullstory|clarity\\.ms|mixpanel|sentry\\.io|intercom|zendesk|newrelic|pardot|hs-scripts|hs-analytics|adsystem|quantserve|taboola|outbrain|moatads|criteo/i';
 
@@ -584,9 +585,8 @@ final class PdfGenerator
         ];
 
         if ($this->sourceMode === 'url') {
-            // For URLs, always use the library-defined Letter paper size.
-            $opts['paperWidth'] = PaperFormat::Letter->widthInches();
-            $opts['paperHeight'] = PaperFormat::Letter->heightInches();
+            $opts['paperWidth'] = PaperFormat::Legal->widthInches();
+            $opts['paperHeight'] = PaperFormat::Legal->heightInches();
         } else {
             $opts['paperWidth'] = $this->paper->widthInches();
             $opts['paperHeight'] = $this->paper->heightInches();

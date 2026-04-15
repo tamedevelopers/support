@@ -94,8 +94,23 @@ final class CombinedPostProcessScript
 
         if ($includeCookies) {
             $js .= CookiePopupRemovalScript::asExpression() . ";";
-            $js .= "await new Promise(function (r) { setTimeout(r, 450); });";
-            $js .= CookiePopupRemovalScript::asExpression() . ";";
+            $js .= "var __cookieStillPresent = (function () {"
+                . "try {"
+                .     "var re = /cookie|consent|gdpr|privacy|we use cookies|accept all|reject all|我接受|接受|同意/i;"
+                .     "var nodes = document.querySelectorAll('div,section,aside,dialog,form,footer,c-wiz');"
+                .     "for (var i = 0; i < nodes.length && i < 220; i++) {"
+                .         "var el = nodes[i];"
+                .         "var id = el && el.id ? el.id : '';"
+                .         "var cl = (el && typeof el.className === 'string') ? el.className : '';"
+                .         "if (re.test(id + ' ' + cl)) return true;"
+                .     "}"
+                .     "return false;"
+                . "} catch (e) { return false; }"
+            . "})();";
+            $js .= "if (__cookieStillPresent) {"
+                . "await new Promise(function (r) { setTimeout(r, 120); });"
+                . CookiePopupRemovalScript::asExpression() . ";"
+            . "}";
         }
 
         if ($paint > 0) {
