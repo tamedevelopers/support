@@ -111,7 +111,6 @@ Therefore the **sockets extension must be enabled**.
 ```
 
 Change to:
-
 ```
 extension=sockets
 ```
@@ -144,7 +143,6 @@ C:\Program Files (x86)\Google\Chrome\Application\chrome.exe
 ```
 
 **Linux**
-
 ```
 /usr/bin/google-chrome
 /usr/bin/google-chrome-stable
@@ -153,7 +151,6 @@ C:\Program Files (x86)\Google\Chrome\Application\chrome.exe
 ```
 
 **macOS**
-
 ```
 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
 /Applications/Chromium.app/Contents/MacOS/Chromium
@@ -166,7 +163,6 @@ You only need to download and configure a Chromium binary when:
 - Chrome is **not installed**
 - You are running on **shared hosting**
 - You want to use a **custom Chromium build**
-
 ---
 
 # Installing Chromium Binary (If Chrome Is Not Installed)
