@@ -217,9 +217,10 @@ trait ChromePdfDocumentTrait
         float $opacity = 0.18,
         ?float $widthMm = null,
     ): self {
-        $this->pdfDocWatermarkImagePath = ($absoluteOrProjectPath !== null && $absoluteOrProjectPath !== '')
-            ? $absoluteOrProjectPath
-            : null;
+
+        $path = Tame::stringReplacer($absoluteOrProjectPath);
+
+        $this->pdfDocWatermarkImagePath = !empty($path)? $path: null;
         $this->pdfDocWatermarkImageOpacity = max(0.02, min(1.0, $opacity));
         $this->pdfDocWatermarkImageWidthMm = $widthMm;
 

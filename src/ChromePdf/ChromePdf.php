@@ -68,7 +68,9 @@ final class ChromePdf
     private ?string $sourceValue = null;
 
     private ?string $selector = null;
-    private ?string $hideSelectors = null;
+
+    /** @var list<string>|null Non-empty CSS selectors whose matching elements are removed from the DOM before capture. */
+    private ?array $hideSelectors = null;
 
     private PaperFormat $paper = PaperFormat::A4;
 
@@ -254,14 +256,17 @@ final class ChromePdf
     /**
      * When set, only the first matching element is kept in the document body before PDF capture.
      */
-    public function selectElement(?string $cssSelector): self
+    public function printFromElement(?string $cssSelector): self
     {
         $this->selector = !empty($cssSelector) ? $cssSelector : null;
 
         return $this;
     }
 
-    
+
+    /**
+     * Remove every element that matches any of the given CSS selectors from the live document before PDF capture.
+     */
     public function hideElements(...$cssSelectors): self
     {
         $this->hideSelectors = !empty($cssSelectors) ? Str::flatten($cssSelectors) : null;
@@ -544,6 +549,10 @@ final class ChromePdf
 
             [$themeCss, $fontMap] = $this->resolvePostProcessPayload();
             $this->executeCombinedPostProcessing($page, $themeCss, $fontMap);
+
+            if ($this->hideSelectors !== null) {
+                $this->removeElementsMatchingSelectors($page, $this->hideSelectors);
+            }
 
             if ($this->selector !== null) {
                 $this->isolateSelector($page, $this->selector);
@@ -862,6 +871,7 @@ final class ChromePdf
         $this->sourceMode = null;
         $this->sourceValue = null;
         $this->injectionCssForPostProcess = null;
+        $this->hideSelectors = null;
     }
 
     /**
@@ -1113,6 +1123,32 @@ final class ChromePdf
             $timeoutMs = $speed ? 5000 : 9000;
         }
         $page->evaluate($expr)->getReturnValue($timeoutMs);
+    }
+
+    /**
+     * Removes all nodes matching each selector (unlike {@see isolateSelector()} which keeps one subtree).
+     */
+    private function removeElementsMatchingSelectors(Page $page, array $selectors): void
+    {
+        $page->callFunction(
+            'function(selectors) {
+                if (!selectors || !selectors.length) { return; }
+                for (var i = 0; i < selectors.length; i++) {
+                    var sel = selectors[i];
+                    if (typeof sel !== "string" || !sel) { continue; }
+                    try {
+                        var nodes = document.querySelectorAll(sel);
+                        for (var j = nodes.length - 1; j >= 0; j--) {
+                            var node = nodes[j];
+                            if (node && node.parentNode) {
+                                node.parentNode.removeChild(node);
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }',
+            [$selectors]
+        )->getReturnValue($this->evalTimeoutMs(8000, 2500));
     }
 
     private function isolateSelector(Page $page, string $selector): void

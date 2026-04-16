@@ -52,7 +52,7 @@ In essence, ChromePdf bridges the gap between **web rendering** and **document g
     * [loadRemoteImages](#loadremoteimages)
     * [waitForWindowLoadEvent](#waitforwindowloadevent)
 * [DOM Processing](#dom-processing)
-    * [selectElement](#selectelement)
+    * [printFromElement](#printFromElement)
     * [removeCookiePopups](#removecookiepopups)
     * [clickableLinks](#clickablelinks)
 * [Styling](#styling)
@@ -254,7 +254,7 @@ $output = ChromePdf::create()
     // ->fromHtml('<html><body><p>你好世界</p></body></html>')
     ->fromFile('invoice/template.html')
     ->paper('A4')
-    ->selectElement('.body')
+    ->printFromElement('.body')
     ->margins(20)
     ->clickableLinks(false)
     ->generate();
@@ -422,13 +422,13 @@ ChromePdf::create()
 
 # DOM Processing
 
-## selectElement
+## printFromElement
 
 Render only a specific element.
 
 ```php
 ChromePdf::create()
-    ->selectElement('#invoice');
+    ->printFromElement('#invoice');
 ```
 
 ---

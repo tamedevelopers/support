@@ -19,24 +19,6 @@ require_once __DIR__ . '/../vendor/autoload.php';
 const PDF_CHROME_RUN_PIPELINE_DEMOS = false;
 
 
-
-// $browserFactory = new BrowserFactory();
-// $browser = $browserFactory->createBrowser();
-
-// try {
-//     $page = $browser->createPage();
-//     $page->navigate('https://lhkexpress.com')->waitForNavigation();
-
-//     dd(
-//         $page->getHtml(),
-//     );
-//     $page->screenshot()->saveToFile('screenshot.png');
-// } finally {
-//     $browser->close();
-// }
-
-// exit;
-
 $files = [
     '1' => 'upload/template.html',
     '2' => base_path('upload/template2.html'),
@@ -53,13 +35,13 @@ $output = ChromePdf::create()
     // ->fromUrl('https://www.google.com')
     ->paper('A4') // A4, letter, Legal, Ledger
     ->colorScheme('dark')
-    ->selectElement('.body')
-    ->hideElements('.header', '.footer', ['#scrolltop'])
+    ->printFromElement('.body')
+    ->hideElements('.row-content::nth-child(1)', '.footer')
     // ->margin(20)
     // Native Chromium header/footer (HTML templates; classes: date, title, url, pageNumber, totalPages)
     // ->headerHtml()
     ->footerHtml()
-    ->landscape()
+    // ->landscape()
     // ->headerFooterColor('white', 'white')
     ->headerFooterBackground('transparent')
     // ->headerRight()
@@ -67,7 +49,7 @@ $output = ChromePdf::create()
     // ->footerHtml('<div style="font-size:9px;width:100%;text-align:center;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>')
     // Text / image watermark (applied after print via FPDI + TCPDF when those packages are installed)
     ->textWatermark('DRAFT', opacity: 0.14, angleDegrees: 35.0, fontSizePt: 42.0)
-    // ->imageWatermark(base_path('upload/logo.png'), opacity: 0.15, widthMm: 40.0)
+    ->imageWatermark('upload/zimage/logo.png', opacity: 0.15, widthMm: 40.0)
     // Document metadata (rewritten on TCPDF pass when fpdi+tcpdf present)
     // ->documentMetadata(title: 'Invoice', author: 'Acme', subject: 'Q1', keywords: 'invoice,demo')
     // Passwords + permission **blocks** (TCPDF: list permissions to disallow—e.g. disallow copy but allow print)
