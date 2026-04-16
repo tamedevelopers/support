@@ -201,6 +201,10 @@ trait ChromePdfDocumentTrait
         return $this;
     }
 
+    /**
+     * Stamps text via FPDI/TCPDF after Chromium prints. That rebuild usually drops PDF link annotations from the
+     * file; {@see ChromePdf::clickableLinks()} only affects the HTML phase before print.
+     */
     public function textWatermark(
         ?string $text,
         float $opacity = 0.14,
@@ -228,6 +232,9 @@ trait ChromePdfDocumentTrait
         return $this;
     }
 
+    /**
+     * Like {@see textWatermark()}, uses FPDI/TCPDF and typically removes PDF link annotations from the final file.
+     */
     public function imageWatermark(
         ?string $absoluteOrProjectPath,
         float $opacity = 0.16,

@@ -48,8 +48,10 @@ use Throwable;
  * {@see fromFile()} / {@see fromHtml()} skip stabilize + cookie by default for fast local conversion; call
  * {@see postProcessLocalSources(true)} if you saved remote HTML and still need those passes.
  *
- * {@see clickableLinks(false)} strips {@code href} (and {@code ping}/{@code target}/etc.) from anchors only — same
- * element type so layout and {@code a} styling stay intact; PDF links are not clickable.
+ * By default {@code <a href>} / {@code <area href>} are left on the live DOM for Chromium’s PDF so links can be
+ * clickable. Only {@see clickableLinks(false)} strips navigation attributes before capture (same tag name, layout
+ * unchanged). Note: an FPDI/TCPDF rebuild (watermark, encrypt, PDF/A, document metadata) re-embeds page pixels and
+ * typically drops PDF link annotations from that pass — that is separate from {@see clickableLinks()}.
  *
  * Remote images: Chromium image loading is **off** by default (bitmap/CSS images from the network are skipped).
  * Call {@see loadRemoteImages(true)} when you need {@code http(s)://} in {@code img}/CSS. Auto font {@code @font-face}
