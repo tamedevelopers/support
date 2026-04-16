@@ -29,7 +29,6 @@ final class PdfRebuildOptions
         public readonly ?array $encryptBlockedPermissions = null,
         public readonly int $encryptAlgorithm = 3,
         public readonly bool|int $pdfA = false,
-        public readonly bool $linearize = false,
         public readonly ?string $metaTitle = null,
         public readonly ?string $metaAuthor = null,
         public readonly ?string $metaSubject = null,

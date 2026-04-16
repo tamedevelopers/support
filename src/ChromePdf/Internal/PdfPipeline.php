@@ -116,6 +116,9 @@ final class PdfPipeline
                 $size = $pdf->getTemplateSize($tpl);
                 $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
                 $pdf->useTemplate($tpl);
+                // Move TCPDF's page mark to after the imported Chromium page so watermarks are not spliced "under"
+                // earlier content (see {@see \TCPDF::setPageMark()}).
+                $pdf->setPageMark();
 
                 if ($options->textWatermark !== null && $options->textWatermark !== '') {
                     self::stampTextWatermark($pdf, $options);
@@ -272,13 +275,23 @@ final class PdfPipeline
             ],
         };
 
-        $pdf->StartTransform();
-        $pdf->SetAlpha(max(0.02, min(1.0, $options->textWatermarkOpacity)));
-        $pdf->Rotate($options->textWatermarkAngleDeg, $rx, $ry);
-        $pdf->SetTextColor(128, 128, 128);
-        $pdf->Text($xText, $yText, $options->textWatermark);
-        $pdf->StopTransform();
-        $pdf->SetAlpha(1.0);
+        $opacity = max(0.02, min(1.0, $options->textWatermarkOpacity));
+        $angle = $options->textWatermarkAngleDeg;
+        if (abs($angle) < 0.0001) {
+            $pdf->setAlpha($opacity, 'Normal');
+            $pdf->SetTextColor(128, 128, 128);
+            $pdf->Text($xText, $yText, $options->textWatermark);
+            $pdf->setAlpha(1.0, 'Normal');
+        } else {
+            $pdf->StartTransform();
+            $pdf->setAlpha($opacity, 'Normal');
+            $pdf->Rotate($angle, $rx, $ry);
+            $pdf->SetTextColor(128, 128, 128);
+            $pdf->Text($xText, $yText, $options->textWatermark);
+            $pdf->StopTransform();
+            $pdf->setAlpha(1.0, 'Normal');
+        }
+        $pdf->setPageMark();
     }
 
     private static function stampImageWatermark(Fpdi $pdf, PdfRebuildOptions $options): void
@@ -321,82 +334,10 @@ final class PdfPipeline
             WatermarkPosition::BottomRight => [max($pad, $w - $pad - $targetW), max($pad, $h - $pad - $targetH)],
         };
 
-        $pdf->StartTransform();
-        $pdf->SetAlpha(max(0.02, min(1.0, $options->imageWatermarkOpacity)));
+        $pdf->setAlpha(max(0.02, min(1.0, $options->imageWatermarkOpacity)), 'Normal');
         $pdf->Image($path, $x, $y, $targetW, 0, '', '', '', false, 300, '', false, false, 0);
-        $pdf->StopTransform();
-        $pdf->SetAlpha(1.0);
+        $pdf->setAlpha(1.0, 'Normal');
+        $pdf->setPageMark();
     }
 
-    /**
-     * @throws ConversionFailedException
-     */
-    private static function linearizeWithQpdf(string $binary): string
-    {
-        $qpdf = self::resolveQpdfBinary();
-        if ($qpdf === null) {
-            throw new ConversionFailedException(
-                'linearize() requires the `qpdf` CLI (https://qpdf.sourceforge.io/) on PATH, or set QPDF_BINARY to the executable.'
-            );
-        }
-
-        $in = tempnam(sys_get_temp_dir(), 'spdfin');
-        $out = tempnam(sys_get_temp_dir(), 'spdfout');
-        if ($in === false || $out === false) {
-            throw new ConversionFailedException('Could not create temporary files for qpdf linearization.');
-        }
-
-        try {
-            if (@file_put_contents($in, $binary) === false) {
-                throw new ConversionFailedException('Could not write temporary PDF for qpdf.');
-            }
-
-            $cmd = sprintf(
-                '%s --linearize %s %s',
-                escapeshellarg($qpdf),
-                escapeshellarg($in),
-                escapeshellarg($out)
-            );
-
-            $code = 0;
-            $output = [];
-            @exec($cmd . ' 2>&1', $output, $code);
-            $mergedOut = @file_get_contents($out);
-            if ($code !== 0 || !is_string($mergedOut) || $mergedOut === '') {
-                $detail = $output !== [] ? implode("\n", $output) : 'no output';
-                throw new ConversionFailedException('qpdf linearization failed (exit ' . $code . '): ' . $detail);
-            }
-
-            return $mergedOut;
-        } finally {
-            @unlink($in);
-            @unlink($out);
-        }
-    }
-
-    private static function resolveQpdfBinary(): ?string
-    {
-        $env = getenv('QPDF_BINARY');
-        if (is_string($env) && $env !== '') {
-            $env = str_replace('/', DIRECTORY_SEPARATOR, $env);
-            if (is_file($env) || @is_executable($env)) {
-                return $env;
-            }
-        }
-
-        $o = [];
-        if (PHP_OS_FAMILY === 'Windows') {
-            @exec('where qpdf 2>nul', $o);
-        } else {
-            @exec('command -v qpdf 2>/dev/null', $o);
-        }
-        if ($o !== [] && isset($o[0])) {
-            $path = trim((string) $o[0]);
-            if ($path !== '' && (is_file($path) || @is_executable($path))) {
-                return $path;
-            }
-        }
-
-        return null;
-    }
 }

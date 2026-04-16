@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Chrome PDF smoke / demo script.
  *
  * Optional demos at the bottom need Composer dev deps: setasign/fpdi, tecnickcom/tcpdf.
- * linearize() needs the qpdf CLI (or QPDF_BINARY). encrypt()/pdfA() are shown commented—enable with care.
+ *
  */
 
 use Tamedevelopers\Support\ChromePdf\ChromePdf;
@@ -45,17 +45,14 @@ $output = ChromePdf::create()
     // ->headerFooterColor('white', 'white')
     ->headerFooterBackground('transparent')
     // Text / image watermark (applied after print via FPDI + TCPDF when those packages are installed)
-    ->textWatermark('CONFIDENTIAL', opacity: 0.14, angleDegrees: 35.0, fontSizePt: 42.0)
-    // ->textWatermarkPosition('Center Right')
-    // ->imageWatermark('upload/zimage/logo.png', opacity: 0.15, widthMm: 40.0)
+    // ->textWatermark('CONFIDENTIAL')
+    // ->imageWatermark('upload/zimage/header.png')
     // Document metadata (rewritten on TCPDF pass when fpdi+tcpdf present)
     // ->documentMetadata(title: 'Invoice', author: 'Acme', subject: 'Q1', keywords: 'invoice,demo')
     // Passwords + permission **blocks** (TCPDF: list permissions to disallow—e.g. disallow copy but allow print)
     // ->encrypt(userPassword: 'user', ownerPassword: 'owner', blockedPermissions: ['copy'], algorithm: 3)
     // PDF/A (1 or 3); cannot combine with encrypt()
     // ->pdfA(1)
-    // Fast Web View (needs qpdf on PATH or QPDF_BINARY)
-    // ->linearize(true)
     // ->chromiumBinary('upload/chrome-win/chrome.exe')
     ->clickableLinks(false)
     ->generate();

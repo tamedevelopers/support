@@ -74,8 +74,6 @@ trait ChromePdfDocumentTrait
 
     private bool|int $pdfDocPdfA = false;
 
-    private bool $pdfDocLinearize = false;
-
     private ?string $pdfDocMetaTitle = null;
 
     private ?string $pdfDocMetaAuthor = null;
@@ -205,9 +203,9 @@ trait ChromePdfDocumentTrait
 
     public function textWatermark(
         ?string $text,
-        float $opacity = 0.12,
-        float $angleDegrees = 45.0,
-        float $fontSizePt = 44.0,
+        float $opacity = 0.14,
+        float $angleDegrees = 35.0,
+        float $fontSizePt = 42.0,
     ): self {
         $this->pdfDocWatermarkText = !empty($text) ? $text : null;
         $this->pdfDocWatermarkTextOpacity = max(0.02, min(1.0, $opacity));
@@ -232,7 +230,7 @@ trait ChromePdfDocumentTrait
 
     public function imageWatermark(
         ?string $absoluteOrProjectPath,
-        float $opacity = 0.18,
+        float $opacity = 0.16,
         ?float $widthMm = null,
     ): self {
 
@@ -288,16 +286,6 @@ trait ChromePdfDocumentTrait
     public function pdfA(bool|int $level): self
     {
         $this->pdfDocPdfA = $level;
-
-        return $this;
-    }
-
-    /**
-     * Fast Web View via external {@code qpdf --linearize}. Requires {@code qpdf} on PATH or {@code QPDF_BINARY}.
-     */
-    public function linearize(bool $enable = true): self
-    {
-        $this->pdfDocLinearize = $enable;
 
         return $this;
     }
@@ -645,7 +633,6 @@ trait ChromePdfDocumentTrait
             encryptBlockedPermissions: $this->pdfDocEncryptBlockedPermissions,
             encryptAlgorithm: $this->pdfDocEncryptAlgorithm,
             pdfA: $this->pdfDocPdfA,
-            linearize: $this->pdfDocLinearize,
             metaTitle: $this->pdfDocMetaTitle,
             metaAuthor: $this->pdfDocMetaAuthor,
             metaSubject: $this->pdfDocMetaSubject,
