@@ -7,7 +7,7 @@ namespace Tamedevelopers\Support\ChromePdf;
 use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
 
 /**
- * Placement of text or image watermarks on each PDF page (FPDI/TCPDF pass).
+ * Placement of text or image watermarks (Chromium DOM overlay and/or optional FPDI/TCPDF pass).
  *
  * {@see self::parse()} accepts fluent spellings such as {@code top_left}, {@code top left}, {@code top-left}
  * (case-insensitive).

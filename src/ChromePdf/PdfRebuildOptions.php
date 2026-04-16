@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\ChromePdf;
 
 /**
- * Options for {@see Internal\PdfPipeline::rebuild()} (FPDI + TCPDF round-trip).
+ * Options for {@see Internal\PdfPipeline::rebuild()}: structural work uses FPDI + TCPDF; metadata-only updates use an
+ * incremental {@code Info} dictionary append when no watermark/encryption/PDF/A pass is required.
  */
 final class PdfRebuildOptions
 {
@@ -36,7 +37,10 @@ final class PdfRebuildOptions
     ) {
     }
 
-    public function needsTcpdfPass(): bool
+    /**
+     * Full FPDI + TCPDF re-import (watermarks, encryption, PDF/A) — Chromium link annotations are not preserved.
+     */
+    public function needsStructuralRebuild(): bool
     {
         if ($this->textWatermark !== null && $this->textWatermark !== '') {
             return true;
@@ -47,9 +51,6 @@ final class PdfRebuildOptions
         if ($this->pdfA !== false) {
             return true;
         }
-        if ($this->metaTitle !== null || $this->metaAuthor !== null || $this->metaSubject !== null || $this->metaKeywords !== null) {
-            return true;
-        }
         if ($this->encryptUserPassword !== null && $this->encryptUserPassword !== '') {
             return true;
         }
@@ -58,5 +59,18 @@ final class PdfRebuildOptions
         }
 
         return false;
+    }
+
+    public function needsDocumentMetadataChange(): bool
+    {
+        return $this->metaTitle !== null
+            || $this->metaAuthor !== null
+            || $this->metaSubject !== null
+            || $this->metaKeywords !== null;
+    }
+
+    public function needsTcpdfPass(): bool
+    {
+        return $this->needsStructuralRebuild() || $this->needsDocumentMetadataChange();
     }
 }

@@ -97,6 +97,12 @@ final class PdfPipeline
             return new PdfOutput($binary);
         }
 
+        if (!$options->needsStructuralRebuild()) {
+            self::assertDependenciesAvailable();
+
+            return new PdfOutput(PdfInfoIncrementalUpdate::apply($binary, $options));
+        }
+
         self::assertDependenciesAvailable();
 
         try {

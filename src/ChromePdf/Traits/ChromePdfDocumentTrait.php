@@ -18,6 +18,12 @@ use Throwable;
  * Optional PDF document features for {@see \Tamedevelopers\Support\ChromePdf\ChromePdf}: native Chromium header/footer
  * templates, merge, watermark, encryption, PDF/A, and metadata.
  *
+ * Until encryption or PDF/A is used, {@see \Tamedevelopers\Support\ChromePdf\ChromePdf::generate()} keeps Chromium’s
+ * link annotations: text/image watermarks are painted in the browser before print, and {@see documentMetadata()} updates
+ * the PDF {@code Info} dictionary incrementally (no page re-import). {@see \Tamedevelopers\Support\ChromePdf\ChromePdf::clickableLinks()}
+ * with {@code false} still strips {@code href} from the DOM before capture. {@see encrypt()} forces a TCPDF rebuild that
+ * drops those annotations.
+ *
  * {@see \setasign\Fpdi\Tcpdf\Fpdi} is optional and needs **both** {@code setasign/fpdi} and {@code tecnickcom/tcpdf}
  * (see composer {@code suggest}; do not use the abandoned {@code setasign/fpdi-tcpdf} meta package). When missing,
  * merge / post-process throw {@see ConversionFailedException} with an install hint.
@@ -201,10 +207,6 @@ trait ChromePdfDocumentTrait
         return $this;
     }
 
-    /**
-     * Stamps text via FPDI/TCPDF after Chromium prints. That rebuild usually drops PDF link annotations from the
-     * file; {@see ChromePdf::clickableLinks()} only affects the HTML phase before print.
-     */
     public function textWatermark(
         ?string $text,
         float $opacity = 0.14,
@@ -232,9 +234,6 @@ trait ChromePdfDocumentTrait
         return $this;
     }
 
-    /**
-     * Like {@see textWatermark()}, uses FPDI/TCPDF and typically removes PDF link annotations from the final file.
-     */
     public function imageWatermark(
         ?string $absoluteOrProjectPath,
         float $opacity = 0.16,
@@ -352,7 +351,7 @@ trait ChromePdfDocumentTrait
         }
 
         try {
-            return PdfPipeline::rebuild($binary, $this->pdfDocBuildRebuildOptions());
+            return PdfPipeline::rebuild($binary, $this->pdfDocBuildRebuildOptions(includeTcpdfRasterWatermarks: true));
         } catch (ConversionFailedException $e) {
             throw $e;
         } catch (Throwable $e) {
@@ -613,7 +612,10 @@ trait ChromePdfDocumentTrait
         }
 
         try {
-            $options = $this->pdfDocBuildRebuildOptions();
+            $options = $this->pdfDocBuildRebuildOptions(includeTcpdfRasterWatermarks: false);
+            if (!$options->needsTcpdfPass()) {
+                return new PdfOutput($rawPdf);
+            }
 
             return PdfPipeline::rebuild($rawPdf, $options);
         } catch (ConversionFailedException $e) {
@@ -623,15 +625,31 @@ trait ChromePdfDocumentTrait
         }
     }
 
-    private function pdfDocBuildRebuildOptions(): PdfRebuildOptions
+    /**
+     * @param bool $includeTcpdfRasterWatermarks When {@code false} (after {@see \Tamedevelopers\Support\ChromePdf\ChromePdf::generate()}),
+     *        raster watermarks are omitted here because they were painted in Chromium. When {@code true} (e.g. {@see reprocessPdf()}),
+     *        TCPDF stamps them again.
+     */
+    private function pdfDocBuildRebuildOptions(bool $includeTcpdfRasterWatermarks = false): PdfRebuildOptions
     {
+        $textForTcpdf = null;
+        $imageForTcpdf = null;
+        if ($includeTcpdfRasterWatermarks) {
+            $textForTcpdf = ($this->pdfDocWatermarkText !== null && $this->pdfDocWatermarkText !== '')
+                ? $this->pdfDocWatermarkText
+                : null;
+            $imageForTcpdf = ($this->pdfDocWatermarkImagePath !== null && $this->pdfDocWatermarkImagePath !== '')
+                ? $this->pdfDocWatermarkImagePath
+                : null;
+        }
+
         return new PdfRebuildOptions(
-            textWatermark: $this->pdfDocWatermarkText,
+            textWatermark: $textForTcpdf,
             textWatermarkOpacity: $this->pdfDocWatermarkTextOpacity,
             textWatermarkAngleDeg: $this->pdfDocWatermarkTextAngleDeg,
             textWatermarkFontSizePt: $this->pdfDocWatermarkTextFontSizePt,
             textWatermarkPosition: $this->pdfDocWatermarkTextPosition,
-            imageWatermarkPath: $this->pdfDocWatermarkImagePath,
+            imageWatermarkPath: $imageForTcpdf,
             imageWatermarkOpacity: $this->pdfDocWatermarkImageOpacity,
             imageWatermarkWidthMm: $this->pdfDocWatermarkImageWidthMm,
             imageWatermarkPosition: $this->pdfDocWatermarkImagePosition,
@@ -645,5 +663,60 @@ trait ChromePdfDocumentTrait
             metaSubject: $this->pdfDocMetaSubject,
             metaKeywords: $this->pdfDocMetaKeywords,
         );
+    }
+
+    /**
+     * Payload for {@see \Tamedevelopers\Support\ChromePdf\Internal\ChromePdfDomWatermark} (null if no watermark configured).
+     *
+     * @return array{text?: array{s: string, o: float, a: float, fs: float, p: string}, image?: array{src: string, o: float, p: string, wPx: int}}|null
+     */
+    protected function chromePdfDomWatermarkPayload(): ?array
+    {
+        $out = [];
+
+        if ($this->pdfDocWatermarkText !== null && $this->pdfDocWatermarkText !== '') {
+            $out['text'] = [
+                's' => $this->pdfDocWatermarkText,
+                'o' => max(0.02, min(1.0, $this->pdfDocWatermarkTextOpacity)),
+                'a' => $this->pdfDocWatermarkTextAngleDeg,
+                'fs' => max(6.0, $this->pdfDocWatermarkTextFontSizePt),
+                'p' => $this->pdfDocWatermarkTextPosition->value,
+            ];
+        }
+
+        $rawPath = $this->pdfDocWatermarkImagePath;
+        if ($rawPath !== null && $rawPath !== '') {
+            $path = Tame::stringReplacer($rawPath);
+            if ($path !== '' && is_readable($path)) {
+                $data = @file_get_contents($path);
+                if (is_string($data) && $data !== '') {
+                    if (strlen($data) > 12 * 1024 * 1024) {
+                        throw new ConversionFailedException(
+                            'Image watermark exceeds 12 MiB inline limit for browser watermarks; use a smaller file.'
+                        );
+                    }
+                    $mime = 'image/png';
+                    if (function_exists('mime_content_type')) {
+                        $mt = @mime_content_type($path);
+                        if (is_string($mt) && str_starts_with($mt, 'image/')) {
+                            $mime = $mt;
+                        }
+                    }
+                    $wMm = $this->pdfDocWatermarkImageWidthMm;
+                    if ($wMm === null) {
+                        $wMm = $this->paper->widthMm() * 0.45;
+                    }
+                    $wPx = max(1.0, $wMm * (96.0 / 25.4));
+                    $out['image'] = [
+                        'src' => 'data:' . $mime . ';base64,' . base64_encode($data),
+                        'o' => max(0.02, min(1.0, $this->pdfDocWatermarkImageOpacity)),
+                        'p' => $this->pdfDocWatermarkImagePosition->value,
+                        'wPx' => (int) round($wPx),
+                    ];
+                }
+            }
+        }
+
+        return $out === [] ? null : $out;
     }
 }

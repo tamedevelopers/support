@@ -14,6 +14,7 @@ use Tamedevelopers\Support\ChromePdf\ChromiumEnvironment;
 use Tamedevelopers\Support\ChromePdf\ColorScheme;
 use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
 use Tamedevelopers\Support\ChromePdf\Exception\FontNotFoundException;
+use Tamedevelopers\Support\ChromePdf\Internal\ChromePdfDomWatermark;
 use Tamedevelopers\Support\ChromePdf\Internal\CombinedPostProcessScript;
 use Tamedevelopers\Support\ChromePdf\Internal\FileUri;
 use Tamedevelopers\Support\ChromePdf\Internal\FlattenLinksScript;
@@ -560,6 +561,8 @@ final class ChromePdf
                 $this->isolateSelector($page, $this->selector);
             }
 
+            $this->installDomWatermarksBeforePrint($page);
+
             if (!$this->clickableLinks) {
                 $this->flattenLinksForPrint($page);
             }
@@ -865,6 +868,21 @@ final class ChromePdf
     {
         $page->evaluate(FlattenLinksScript::asExpression())->getReturnValue(
             min(15000, max(2500, (int) ($this->effectiveNavigationTimeoutMs() / 4)))
+        );
+    }
+
+    /**
+     * Paints trait-configured watermarks in the live DOM so {@see generate()} can skip the TCPDF re-import for them
+     * (preserves Chromium link annotations when no encryption / PDF/A pass is required).
+     */
+    private function installDomWatermarksBeforePrint(Page $page): void
+    {
+        $payload = $this->chromePdfDomWatermarkPayload();
+        if ($payload === null) {
+            return;
+        }
+        $page->callFunction(ChromePdfDomWatermark::installFunction(), [$payload])->getReturnValue(
+            $this->evalTimeoutMs(8000, 2500)
         );
     }
 
