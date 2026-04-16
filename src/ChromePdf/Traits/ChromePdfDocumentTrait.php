@@ -21,7 +21,6 @@ use Throwable;
  * Text/image watermarks can be painted in the browser before print; {@see documentMetadata()} can update the PDF
  * {@code Info} incrementally (no page re-import). {@see encrypt()} and {@see pdfA()} use FPDI/TCPDF and re-embed pages,
  * which removes Chromium’s link annotations from the output PDF (expected limitation).
- * {@see preserveChromiumPdfLinks(true)} refuses those structural passes so you keep links for watermark + metadata flows.
  * {@see \Tamedevelopers\Support\ChromePdf\ChromePdf::clickableLinks()} with {@code false} strips {@code href} in the DOM before capture.
  *
  * {@see \setasign\Fpdi\Tcpdf\Fpdi} is optional and needs **both** {@code setasign/fpdi} and {@code tecnickcom/tcpdf}
@@ -87,12 +86,6 @@ trait ChromePdfDocumentTrait
     private ?string $pdfDocMetaSubject = null;
 
     private ?string $pdfDocMetaKeywords = null;
-
-    /**
-     * When true, {@see generate()} only runs link-safe post-processing (incremental metadata). Structural work
-     * ({@see encrypt()}, {@see pdfA()}, TCPDF raster watermarks) must use {@see preserveChromiumPdfLinks(false)}.
-     */
-    private bool $pdfDocPreserveChromiumLinks = false;
 
     /**
      * Chromium {@code Page.printToPDF} header template (HTML). Implies {@code displayHeaderFooter}.
@@ -284,19 +277,6 @@ trait ChromePdfDocumentTrait
     }
 
     /**
-     * Control post-{@see \Tamedevelopers\Support\ChromePdf\ChromePdf::generate()} handling of the raw Chromium PDF.
-     *
-     * {@code true}: only link-safe post-processing (incremental metadata); {@see encrypt()}, {@see pdfA()}, and TCPDF raster watermarks throw.
-     * {@code false} (default): full {@see PdfPipeline::rebuild()} when needed.
-     */
-    public function preserveChromiumPdfLinks(bool $enable = true): self
-    {
-        $this->pdfDocPreserveChromiumLinks = $enable;
-
-        return $this;
-    }
-
-    /**
      * Password protection and permission flags (FPDI + TCPDF). At least one password must be non-empty.
      * Re-embeds the PDF and clears Chromium link annotations; use only when you accept that trade-off.
      *
@@ -322,7 +302,7 @@ trait ChromePdfDocumentTrait
 
     /**
      * PDF/A output via TCPDF when rebuilding ({@code 1} = PDF/A-1b style, {@code 3} = PDF/A-3). Cannot be combined
-     * with {@see encrypt()}. Requires {@see preserveChromiumPdfLinks(false)} when link preservation mode is on.
+     * with {@see encrypt()}.
      */
     public function pdfA(bool|int $level): self
     {
@@ -647,51 +627,17 @@ trait ChromePdfDocumentTrait
         }
 
         try {
-            return $this->pdfDocPreserveChromiumLinks
-                ? $this->chromePdfDocumentPostProcessPreserveLinks($rawPdf)
-                : $this->chromePdfDocumentPostProcessAllowRebuild($rawPdf);
+            $options = $this->pdfDocBuildRebuildOptions(includeTcpdfRasterWatermarks: false);
+            if (!$options->needsTcpdfPass()) {
+                return new PdfOutput($rawPdf);
+            }
+
+            return PdfPipeline::rebuild($rawPdf, $options);
         } catch (ConversionFailedException $e) {
             throw $e;
         } catch (Throwable $e) {
             throw new ConversionFailedException('PDF post-processing failed: ' . $e->getMessage(), (int) $e->getCode(), $e);
         }
-    }
-
-    /**
-     * Link-safe path: DOM watermarks are already in the bytes; only incremental metadata may run.
-     *
-     * @throws ConversionFailedException
-     */
-    private function chromePdfDocumentPostProcessPreserveLinks(string $rawPdf): PdfOutput
-    {
-        $options = $this->pdfDocBuildRebuildOptions(includeTcpdfRasterWatermarks: false);
-        if ($options->needsStructuralRebuild()) {
-            throw new ConversionFailedException(
-                'preserveChromiumPdfLinks(true): encrypt(), pdfA(), or TCPDF raster watermarks require a full rebuild '
-                . 'and drop link annotations. Call preserveChromiumPdfLinks(false) before those options, or remove them.'
-            );
-        }
-
-        if (!$options->needsTcpdfPass()) {
-            return new PdfOutput($rawPdf);
-        }
-
-        return PdfPipeline::rebuild($rawPdf, $options);
-    }
-
-    /**
-     * Default path: allow full {@see PdfPipeline::rebuild()} when options require it.
-     *
-     * @throws ConversionFailedException
-     */
-    private function chromePdfDocumentPostProcessAllowRebuild(string $rawPdf): PdfOutput
-    {
-        $options = $this->pdfDocBuildRebuildOptions(includeTcpdfRasterWatermarks: false);
-        if (!$options->needsTcpdfPass()) {
-            return new PdfOutput($rawPdf);
-        }
-
-        return PdfPipeline::rebuild($rawPdf, $options);
     }
 
     /**

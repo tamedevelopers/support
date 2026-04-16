@@ -45,7 +45,7 @@ $output = ChromePdf::create()
     // ->headerFooterColor('white', 'white')
     ->headerFooterBackground('transparent')
     ->textWatermark('CONFIDENTIAL')
-    // ->imageWatermark('upload/zimage/header.png')
+    // ->imageWatermark('upload/zimage/header.png')user
     // ->watermarkPositions('Center Right')
     // Document metadata (incremental Info update when fpdi present; keeps Chromium link annotations)
     // ->documentMetadata(title: 'Invoice', author: 'Acme', subject: 'Q1', keywords: 'invoice,demo')
@@ -58,7 +58,7 @@ $output = ChromePdf::create()
     // PDF/A (1 or 3); cannot combine with encrypt()
     // ->pdfA(1)
     // ->chromiumBinary('upload/chrome-win/chrome.exe')
-    // ->clickableLinks(false)
+    // ->clickableLinks(true)
     ->generate();
 
 // -------------------------------------------------------------------------
