@@ -68,6 +68,7 @@ final class ChromePdf
     private ?string $sourceValue = null;
 
     private ?string $selector = null;
+    private ?string $hideSelectors = null;
 
     private PaperFormat $paper = PaperFormat::A4;
 
@@ -255,7 +256,15 @@ final class ChromePdf
      */
     public function selectElement(?string $cssSelector): self
     {
-        $this->selector = ($cssSelector !== null && $cssSelector !== '') ? $cssSelector : null;
+        $this->selector = !empty($cssSelector) ? $cssSelector : null;
+
+        return $this;
+    }
+
+    
+    public function hideElements(...$cssSelectors): self
+    {
+        $this->hideSelectors = !empty($cssSelectors) ? Str::flatten($cssSelectors) : null;
 
         return $this;
     }
@@ -545,8 +554,8 @@ final class ChromePdf
             }
 
             $pdf = $page->pdf($this->buildPdfPrintOptions());
-
             $navCap = $this->effectiveNavigationTimeoutMs();
+
             // printToPDF can take a long time on heavy pages; default wait scales with navigation budget.
             $pdfWait = $this->prioritizeSpeed
                 ? min(90000, max(12000, $navCap * 2))
@@ -740,6 +749,27 @@ final class ChromePdf
             '--disable-software-rasterizer',
             '--disable-crash-reporter',
             '--crash-dumps-dir=/tmp',
+            '--max_old_space_size=512', // Reduce memory usage
+
+            // Speed optimizations
+            '--disable-gpu', // Disable GPU (faster in headless)
+            '--disable-extensions',
+            '--disable-plugins',
+            '--disable-default-apps',
+            '--disable-sync',
+            '--disable-translate',
+            '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+            '--disable-component-extensions-with-background-pages',
+            '--disable-client-side-phishing-detection',
+            '--disable-popup-blocking',
+            '--disable-prompt-on-repost',
+            '--disable-hang-monitor',
+            '--disable-ipc-flooding-protection',
+            '--disable-throttle-iframe-legacy',
+            '--disable-accelerated-2d-canvas',
+            '--disable-accelerated-jpeg-decoding',
+            '--disable-accelerated-mjpeg-decode',
+            '--disable-accelerated-video-decode',
         ]));
 
         $launch['ignoreCertificateErrors'] = $this->ignoreCertificateErrors;
@@ -1011,13 +1041,9 @@ final class ChromePdf
 
     private function loadFromFile(Page $page): void
     {
-        $path = $this->sourceValue;
-        $fileUri = FileUri::fromPath($path);
-        $this->injectionCssForPostProcess = null;
-        $page->navigate($fileUri)->waitForNavigation(
-            Page::DOM_CONTENT_LOADED,
-            min(10000, max(1200, $this->effectiveNavigationTimeoutMs()))
-        );
+        $this->sourceValue = File::get($this->sourceValue);
+
+        $this->loadFromHtml($page);
     }
 
     private function loadFromHtml(Page $page): void
@@ -1025,7 +1051,7 @@ final class ChromePdf
         $html = $this->sourceValue;
         $this->injectionCssForPostProcess = '';
         $merged = self::mergeCssIntoHtmlDocument($html, $this->buildThemeCssOnly(), null);
-        $page->setHtml($merged, 900, Page::DOM_CONTENT_LOADED);
+        $page->setHtml($merged, 500, Page::DOM_CONTENT_LOADED);
     }
 
     /**

@@ -106,52 +106,10 @@ trait ChromePdfDocumentTrait
     public function footerHtml(?string $html = null): self
     {
         if (empty($html)) {
-            $html = '<span class="pageNumber"></span> / <span class="totalPages"></span>';
+            $html = 'Page <span class="pageNumber"></span> / <span class="totalPages"></span>';
         }
 
         $this->pdfDocFooterHtml = $html;
-
-        return $this;
-    }
-
-    /**
-     * Force a printable background color in the header template area.
-     * Pass null/empty to keep it transparent.
-     */
-    public function headerBackground(?string $cssColor = null): self
-    {
-        $this->pdfDocHeaderBackgroundColor = !empty($cssColor) ? trim($cssColor) : null;
-
-        return $this;
-    }
-
-    /**
-     * Set header text color (e.g. #fff, rgb(...), var(...)). Null resets to default.
-     */
-    public function headerColor(?string $cssColor = null): self
-    {
-        $this->pdfDocHeaderTextColor = !empty($cssColor) ? trim($cssColor) : null;
-
-        return $this;
-    }
-
-    /**
-     * Force a printable background color in the footer template area.
-     * Pass null/empty to keep it transparent.
-     */
-    public function footerBackground(?string $cssColor = null): self
-    {
-        $this->pdfDocFooterBackgroundColor = !empty($cssColor) ? trim($cssColor) : null;
-
-        return $this;
-    }
-
-    /**
-     * Set footer text color (e.g. #fff, rgb(...), var(...)). Null resets to default.
-     */
-    public function footerColor(?string $cssColor = null): self
-    {
-        $this->pdfDocFooterTextColor = !empty($cssColor) ? trim($cssColor) : null;
 
         return $this;
     }
@@ -185,21 +143,45 @@ trait ChromePdfDocumentTrait
     }
 
     /**
-     * Space after header block before body content (px).
+     * Set both header and footer block background color in one call.
      */
-    public function headerSpacing(int $pixels = 0): self
+    public function headerFooterBackground(string $headerBackground = null, string $footerBackground = null): self
     {
-        $this->pdfDocHeaderGapPx = max(0, $pixels);
+        $this->pdfDocHeaderBackgroundColor = $headerBackground;
+        $this->pdfDocFooterBackgroundColor = $footerBackground;
 
         return $this;
     }
 
     /**
-     * Space before footer block after body content (px).
+     * Set both header and footer block text color in one call.
      */
-    public function footerSpacing(int $pixels = 0): self
+    public function headerFooterColor(string $headerColor = null, string $footerColor = null): self
     {
-        $this->pdfDocFooterGapPx = max(0, $pixels);
+        $this->pdfDocHeaderTextColor = $headerColor;
+        $this->pdfDocFooterTextColor = $footerColor;
+
+        return $this;
+    }
+
+    /**
+     * Set both header and footer block spacing `body content (px)` in one call.
+     */
+    public function headerFooterSpacing(int $headerGapPx = 0, int $footerGapPx = 0): self
+    {
+        $this->pdfDocHeaderGapPx = max(0, $headerGapPx);
+        $this->pdfDocFooterGapPx = max(0, $footerGapPx);
+
+        return $this;
+    }
+
+    /**
+     * Set both header and footer block heights (px) in one call.
+     */
+    public function headerFooterHeight(int $headerPx = 40, int $footerPx = 30): self
+    {
+        $this->pdfDocHeaderHeightPx = max(1, $headerPx);
+        $this->pdfDocFooterHeightPx = max(1, $footerPx);
 
         return $this;
     }
@@ -376,13 +358,15 @@ trait ChromePdfDocumentTrait
             $this->pdfDocHeaderFooterRightInsetPx = max(0.0, $baseRightInches * 96.0);
 
             $opts['displayHeaderFooter'] = true;
+            $emptyTemplate = $this->chromePdfEmptyTemplate();
+
             // Chromium requires templates when displayHeaderFooter is enabled.
             $opts['headerTemplate'] = $hasHeader
                 ? $this->chromePdfNormalizeTemplate((string) $header, true)
-                : $this->chromePdfEmptyTemplate();
+                : $emptyTemplate;
             $opts['footerTemplate'] = $hasFooter
                 ? $this->chromePdfNormalizeTemplate((string) $footer, false)
-                : $this->chromePdfEmptyTemplate();
+                : $emptyTemplate;
 
             // Ensure body content is pushed away from fixed-size header/footer blocks.
             // User-defined ->margin()/->margins() remain effective by being additive.
@@ -421,7 +405,11 @@ trait ChromePdfDocumentTrait
             ? $this->pdfDocHeaderTextColor
             : $this->pdfDocFooterTextColor;
 
-        $backgroundCss = !empty($background) ? $background : 'inherit';
+        if(empty($background)) {
+            $background = $this->chromePdfExtractBodyBackgroundColor($this->sourceValue);
+        }
+
+        $backgroundCss = $background;
         $textColorCss = !empty($textColor) ? $textColor : '#111';
 
         $justify = match ($textAlign) {
@@ -443,7 +431,9 @@ trait ChromePdfDocumentTrait
             . $edgeInset
             . 'display:flex;align-items:center;justify-content:' . $justify . ';'
             . 'text-align:' . $textAlign . ';color:' . $textColorCss . ';'
-            . 'width:auto;min-width:0;height:' . $heightPx . 'px;box-sizing:border-box;font-size:12px;line-height:1.35;';
+            . 'width:auto;min-width:0;height:' . $heightPx . 'px;box-sizing:border-box;'
+            . 'font-size:12px;line-height:1.35;background-clip:padding-box;'
+            . 'white-space:pre-wrap;';
 
         return '<div style="' . $slotStyle . '">' . $content . '</div>';
     }
@@ -451,6 +441,32 @@ trait ChromePdfDocumentTrait
     private function chromePdfEmptyTemplate(): string
     {
         return '<span></span>';
+    }
+
+    /**
+     * Extract background color from body element in HTML
+     * 
+     * @param string $html HTML content
+     * @return string|null Returns color or null if not found
+     */
+    private function chromePdfExtractBodyBackgroundColor(string $html): ?string
+    {
+        // Find body tag and get its style attribute
+        if (preg_match('/<body[^>]*style=["\']([^"\']*background-color\s*:\s*([^;]+)[^"\']*)["\']/i', $html, $matches)) {
+            return trim($matches[2]);
+        }
+        
+        // Find body tag with bgcolor attribute
+        if (preg_match('/<body[^>]*bgcolor=["\']([^"\']+)["\']/i', $html, $matches)) {
+            return trim($matches[1]);
+        }
+        
+        // Look for body CSS in style tags
+        if (preg_match('/<style[^>]*>.*?body\s*{[^}]*background-color\s*:\s*([^;]+).*?<\/style>/is', $html, $matches)) {
+            return trim($matches[1]);
+        }
+        
+        return '#ffffff';
     }
 
     private function chromePdfResolveDefaultHeaderText(): string

@@ -11,11 +11,31 @@ declare(strict_types=1);
 
 use Tamedevelopers\Support\ChromePdf\ChromePdf;
 use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
+use HeadlessChromium\BrowserFactory;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
 /** Set true to run merge + reprocessPdf demos after the main PDF (writes under upload/). */
 const PDF_CHROME_RUN_PIPELINE_DEMOS = false;
+
+
+
+// $browserFactory = new BrowserFactory();
+// $browser = $browserFactory->createBrowser();
+
+// try {
+//     $page = $browser->createPage();
+//     $page->navigate('https://lhkexpress.com')->waitForNavigation();
+
+//     dd(
+//         $page->getHtml(),
+//     );
+//     $page->screenshot()->saveToFile('screenshot.png');
+// } finally {
+//     $browser->close();
+// }
+
+// exit;
 
 $files = [
     '1' => 'upload/template.html',
@@ -29,20 +49,20 @@ $files = [
 
 $output = ChromePdf::create()
     // ->fromHtml('<html><body><p>你好世界</p></body></html>')
-    ->fromFile($files['1'])
+    ->fromFile($files['2'])
     // ->fromUrl('https://www.google.com')
     ->paper('A4') // A4, letter, Legal, Ledger
     ->colorScheme('dark')
     ->selectElement('.body')
+    ->hideElements('.header', '.footer', ['#scrolltop'])
     // ->margin(20)
     // Native Chromium header/footer (HTML templates; classes: date, title, url, pageNumber, totalPages)
-    ->headerHtml()
-    // ->headerRight()
-    // ->headerColor('white')
-    // ->headerBackground('green')
+    // ->headerHtml()
     ->footerHtml()
-    // ->footerBackground('red')
-    // ->footerColor('white')
+    ->landscape()
+    // ->headerFooterColor('white', 'white')
+    ->headerFooterBackground('transparent')
+    // ->headerRight()
     // ->footerLeft()
     // ->footerHtml('<div style="font-size:9px;width:100%;text-align:center;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>')
     // Text / image watermark (applied after print via FPDI + TCPDF when those packages are installed)
