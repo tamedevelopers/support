@@ -42,19 +42,19 @@ final class PdfRebuildOptions
      */
     public function needsStructuralRebuild(): bool
     {
-        if ($this->textWatermark !== null && $this->textWatermark !== '') {
-            return true;
+        if (!empty($this->textWatermark)) {
+            return true;    
         }
-        if ($this->imageWatermarkPath !== null && $this->imageWatermarkPath !== '') {
+        if (!empty($this->imageWatermarkPath)) {
             return true;
         }
         if ($this->pdfA !== false) {
             return true;
         }
-        if ($this->encryptUserPassword !== null && $this->encryptUserPassword !== '') {
+        if (!empty($this->encryptUserPassword)) {
             return true;
         }
-        if ($this->encryptOwnerPassword !== null && $this->encryptOwnerPassword !== '') {
+        if (!empty($this->encryptOwnerPassword)) {
             return true;
         }
 

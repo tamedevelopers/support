@@ -19,9 +19,9 @@ use Throwable;
  * templates, merge, watermark, encryption, PDF/A, and metadata.
  *
  * Text/image watermarks can be painted in the browser before print; {@see documentMetadata()} can update the PDF
- * {@code Info} incrementally (no page re-import). Call {@see preserveChromiumPdfLinks(true)} so {@see generate()} refuses
- * any post-step that would require an FPDI/TCPDF re-import (e.g. {@see encrypt()}, {@see pdfA()}). Leave the default
- * {@code false} to allow those features via TCPDF (link annotations are usually lost on that pass).
+ * {@code Info} incrementally (no page re-import). {@see encrypt()} and {@see pdfA()} use FPDI/TCPDF and re-embed pages,
+ * which removes Chromium’s link annotations from the output PDF (expected limitation).
+ * {@see preserveChromiumPdfLinks(true)} refuses those structural passes so you keep links for watermark + metadata flows.
  * {@see \Tamedevelopers\Support\ChromePdf\ChromePdf::clickableLinks()} with {@code false} strips {@code href} in the DOM before capture.
  *
  * {@see \setasign\Fpdi\Tcpdf\Fpdi} is optional and needs **both** {@code setasign/fpdi} and {@code tecnickcom/tcpdf}
@@ -286,9 +286,8 @@ trait ChromePdfDocumentTrait
     /**
      * Control post-{@see \Tamedevelopers\Support\ChromePdf\ChromePdf::generate()} handling of the raw Chromium PDF.
      *
-     * {@code true}: only incremental {@see documentMetadata()} is allowed; {@see encrypt()}, {@see pdfA()}, and TCPDF-only
-     * raster watermarks throw — use this when every feature you enable must keep link annotations.
-     * {@code false} (default): full {@see PdfPipeline::rebuild()} when needed (encryption, PDF/A, offline TCPDF watermarks).
+     * {@code true}: only link-safe post-processing (incremental metadata); {@see encrypt()}, {@see pdfA()}, and TCPDF raster watermarks throw.
+     * {@code false} (default): full {@see PdfPipeline::rebuild()} when needed.
      */
     public function preserveChromiumPdfLinks(bool $enable = true): self
     {
@@ -299,7 +298,7 @@ trait ChromePdfDocumentTrait
 
     /**
      * Password protection and permission flags (FPDI + TCPDF). At least one password must be non-empty.
-     * Requires {@see preserveChromiumPdfLinks(false)} when {@see preserveChromiumPdfLinks(true)} is set.
+     * Re-embeds the PDF and clears Chromium link annotations; use only when you accept that trade-off.
      *
      * @param list<string>|null $blockedPermissions Names of permissions to **block** (TCPDF convention — same as
      *        {@see TCPDF::setProtection()}): {@code print}, {@code modify}, {@code copy}, {@code annot-forms},
@@ -668,8 +667,8 @@ trait ChromePdfDocumentTrait
         $options = $this->pdfDocBuildRebuildOptions(includeTcpdfRasterWatermarks: false);
         if ($options->needsStructuralRebuild()) {
             throw new ConversionFailedException(
-                'preserveChromiumPdfLinks(true): encrypt(), pdfA(), or TCPDF raster watermarks require a full rebuild. '
-                . 'Call preserveChromiumPdfLinks(false) before those options, or remove them.'
+                'preserveChromiumPdfLinks(true): encrypt(), pdfA(), or TCPDF raster watermarks require a full rebuild '
+                . 'and drop link annotations. Call preserveChromiumPdfLinks(false) before those options, or remove them.'
             );
         }
 
