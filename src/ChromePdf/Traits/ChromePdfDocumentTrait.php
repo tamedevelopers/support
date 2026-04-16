@@ -268,7 +268,7 @@ trait ChromePdfDocumentTrait
     public function encrypt(
         ?string $userPassword = null,
         ?string $ownerPassword = null,
-        ?array $blockedPermissions = null,
+        ?array $blockedPermissions = [],
         int $algorithm = 3,
     ): self {
         $this->pdfDocEncryptUserPassword = $userPassword;
