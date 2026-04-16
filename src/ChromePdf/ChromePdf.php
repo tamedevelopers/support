@@ -75,12 +75,17 @@ final class ChromePdf
 
     /**
      * PDF print margins: {@code none} = 0; {@code default} = ~1 cm all sides;
-     * {@code uniform} = {@see $pdfMarginUniformInches} on all sides.
+     * {@code uniform} = {@see $pdfMarginUniformInches} on all sides;
+     * {@code sides} = explicit per-side values.
      */
     private string $pdfMarginMode = 'none';
 
     /** Inches, used when {@see $pdfMarginMode} is {@code uniform}. */
     private float $pdfMarginUniformInches = 0.0;
+    private float $pdfMarginTopInches = 0.0;
+    private float $pdfMarginRightInches = 0.0;
+    private float $pdfMarginBottomInches = 0.0;
+    private float $pdfMarginLeftInches = 0.0;
 
     /** @var Theme|null merged CSS from {@see theme()}, {@see css()}, and {@see cssFile()} */
     private ?Theme $styles = null;
@@ -273,17 +278,17 @@ final class ChromePdf
     }
 
     /**
-     * Controls the white space around the printed page (Chromium {@code Page.printToPDF} margins, in inches).
+     * Uniform page margin shorthand (all sides).
      *
      * - {@code null}: reset to package default (no margins / 0 on all sides).
-     * - {@code true}: apply the package default (~1 cm on each side).
-     * - {@code false}: no margins (0 on all sides; content can extend to the physical page edge).
+     * - {@code true}: apply package default (~1 cm on each side).
+     * - {@code false}: no margins (0 on all sides).
      * - {@code int} or {@code string}: uniform margin on all sides. Bare numbers and {@code Npx} are treated as CSS px
      *   (96 px = 1 in). Also accepts {@code Ncm}, {@code Nmm}, {@code Nin}.
      */
-    public function margins(bool|int|string|null $value = null): self
+    public function margin(bool|int|string|null $value = null): self
     {
-        if ($value === null) {
+        if ($value === null || $value === false) {
             $this->pdfMarginMode = 'none';
 
             return $this;
@@ -293,13 +298,24 @@ final class ChromePdf
 
             return $this;
         }
-        if ($value === false) {
-            $this->pdfMarginMode = 'none';
-
-            return $this;
-        }
+        
         $this->pdfMarginMode = 'uniform';
         $this->pdfMarginUniformInches = self::parseMarginToInches($value);
+
+        return $this;
+    }
+
+    /**
+     * Explicit per-side margins in print units (px/cm/mm/in or int px).
+     * Defaults are 0 so callers can provide only the sides they need.
+     */
+    public function margins(int|string $top = 0, int|string $right = 0, int|string $bottom = 0, int|string $left = 0): self
+    {
+        $this->pdfMarginMode = 'sides';
+        $this->pdfMarginTopInches = self::parseMarginToInches($top);
+        $this->pdfMarginRightInches = self::parseMarginToInches($right);
+        $this->pdfMarginBottomInches = self::parseMarginToInches($bottom);
+        $this->pdfMarginLeftInches = self::parseMarginToInches($left);
 
         return $this;
     }
@@ -616,6 +632,11 @@ final class ChromePdf
             $opts['marginBottom'] = $inch;
             $opts['marginLeft'] = $inch;
             $opts['marginRight'] = $inch;
+        } elseif ($this->pdfMarginMode === 'sides') {
+            $opts['marginTop'] = $this->pdfMarginTopInches;
+            $opts['marginRight'] = $this->pdfMarginRightInches;
+            $opts['marginBottom'] = $this->pdfMarginBottomInches;
+            $opts['marginLeft'] = $this->pdfMarginLeftInches;
         }
 
         return $this->chromePdfDocumentMergePrintOptions($opts);

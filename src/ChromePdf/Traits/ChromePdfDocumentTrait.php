@@ -254,7 +254,7 @@ trait ChromePdfDocumentTrait
                 : $this->chromePdfEmptyTemplate();
             
             if ($hasHeader) {
-                $opts['marginTop'] = max((float) ($opts['marginTop'] ?? 0.0), 0.45);
+                $opts['marginTop'] = max((float) ($opts['marginTop'] ?? 0.0), 0.65);
             }
             if ($hasFooter) {
                 $opts['marginBottom'] = max((float) ($opts['marginBottom'] ?? 0.0), 0.35);
@@ -273,10 +273,13 @@ trait ChromePdfDocumentTrait
 
         $containsHtml = preg_match('/<[^>]+>/', $trimmed) === 1;
         $content = $containsHtml ? $trimmed : htmlspecialchars($trimmed, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $offsetPx = $isHeader ? '-10px' : '18px';
-        $wrapStyle = 'margin:0;padding:0;border:none;outline:0;background:transparent;'
+        
+        $offsetPx = $isHeader ? '-10px' : '16px';
+
+        $wrapStyle = 'margin:0;padding:0;border:none;outline:0;background:#000000;'
             . 'width:100%;height:28px;display:flex;align-items:center;justify-content:center;';
-        $slotStyle = 'margin:0;padding:0 2px;border:none;outline:0;background:transparent;'
+
+        $slotStyle = 'margin:0;padding:0 2px;border:none;outline:0;'
             . 'width:100%;text-align:center;color:#111;font-size:12px;line-height:1.35;'
             . 'transform:translateY(' . $offsetPx . ');';
 
