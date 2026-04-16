@@ -16,7 +16,6 @@ use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
 use Tamedevelopers\Support\ChromePdf\Exception\FontNotFoundException;
 use Tamedevelopers\Support\ChromePdf\Internal\ChromePdfDomWatermark;
 use Tamedevelopers\Support\ChromePdf\Internal\CombinedPostProcessScript;
-use Tamedevelopers\Support\ChromePdf\Internal\FileUri;
 use Tamedevelopers\Support\ChromePdf\Internal\FlattenLinksScript;
 use Tamedevelopers\Support\ChromePdf\Internal\PreloaderRemovalScript;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;

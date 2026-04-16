@@ -43,7 +43,7 @@ final class PdfRebuildOptions
     public function needsStructuralRebuild(): bool
     {
         if (!empty($this->textWatermark)) {
-            return true;    
+            return true;
         }
         if (!empty($this->imageWatermarkPath)) {
             return true;

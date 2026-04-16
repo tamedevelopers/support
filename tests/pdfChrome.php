@@ -43,18 +43,18 @@ $output = ChromePdf::create()
     ->footerHtml()
     // ->landscape()
     // ->headerFooterColor('white', 'white')
-    ->headerFooterBackground('transparent')
+    // ->headerFooterBackground('transparent')
     ->textWatermark('CONFIDENTIAL')
-    // ->imageWatermark('upload/zimage/header.png')user
+    // ->imageWatermark('upload/zimage/header.png')
     // ->watermarkPositions('Center Right')
     // Document metadata (incremental Info update when fpdi present; keeps Chromium link annotations)
     // ->documentMetadata(title: 'Invoice', author: 'Acme', subject: 'Q1', keywords: 'invoice,demo')
     // Passwords + permission **blocks** (TCPDF: list permissions to disallow—e.g. disallow copy but allow print)
-    ->encrypt(
-        userPassword: 'user', 
-        ownerPassword: 'owner', 
-        blockedPermissions: ['copy', 'print'],
-    )
+    // ->encrypt(
+    //     userPassword: 'user', 
+    //     ownerPassword: 'owner', 
+    //     blockedPermissions: ['copy', 'print'],
+    // )
     // PDF/A (1 or 3); cannot combine with encrypt()
     // ->pdfA(1)
     // ->chromiumBinary('upload/chrome-win/chrome.exe')

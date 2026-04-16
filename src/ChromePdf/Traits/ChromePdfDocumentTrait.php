@@ -19,8 +19,8 @@ use Throwable;
  * templates, merge, watermark, encryption, PDF/A, and metadata.
  *
  * Text/image watermarks can be painted in the browser before print; {@see documentMetadata()} can update the PDF
- * {@code Info} incrementally (no page re-import). {@see encrypt()} and {@see pdfA()} use FPDI/TCPDF and re-embed pages,
- * which removes Chromium’s link annotations from the output PDF (expected limitation).
+ * {@code Info} incrementally (no page re-import). {@see encrypt()} and {@see pdfA()} re-embed via TCPDF and drop
+ * Chromium link annotations.
  * {@see \Tamedevelopers\Support\ChromePdf\ChromePdf::clickableLinks()} with {@code false} strips {@code href} in the DOM before capture.
  *
  * {@see \setasign\Fpdi\Tcpdf\Fpdi} is optional and needs **both** {@code setasign/fpdi} and {@code tecnickcom/tcpdf}
@@ -277,8 +277,7 @@ trait ChromePdfDocumentTrait
     }
 
     /**
-     * Password protection and permission flags (FPDI + TCPDF). At least one password must be non-empty.
-     * Re-embeds the PDF and clears Chromium link annotations; use only when you accept that trade-off.
+     * Password protection (FPDI + TCPDF). Re-embeds the PDF; link annotations from Chromium are not preserved.
      *
      * @param list<string>|null $blockedPermissions Names of permissions to **block** (TCPDF convention — same as
      *        {@see TCPDF::setProtection()}): {@code print}, {@code modify}, {@code copy}, {@code annot-forms},
