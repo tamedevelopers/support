@@ -58,7 +58,7 @@ $output = ChromePdf::create()
     // PDF/A (1 or 3); cannot combine with encrypt()
     // ->pdfA(1)
     // ->chromiumBinary('upload/chrome-win/chrome.exe')
-    // ->clickableLinks(true)
+    // ->clickableLinks(false)
     ->generate();
 
 // -------------------------------------------------------------------------

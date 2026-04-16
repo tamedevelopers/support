@@ -18,11 +18,11 @@ use Throwable;
  * Optional PDF document features for {@see \Tamedevelopers\Support\ChromePdf\ChromePdf}: native Chromium header/footer
  * templates, merge, watermark, encryption, PDF/A, and metadata.
  *
- * Until encryption or PDF/A is used, {@see \Tamedevelopers\Support\ChromePdf\ChromePdf::generate()} keeps Chromium’s
- * link annotations: text/image watermarks are painted in the browser before print, and {@see documentMetadata()} updates
- * the PDF {@code Info} dictionary incrementally (no page re-import). {@see \Tamedevelopers\Support\ChromePdf\ChromePdf::clickableLinks()}
- * with {@code false} still strips {@code href} from the DOM before capture. {@see encrypt()} forces a TCPDF rebuild that
- * drops those annotations.
+ * Text/image watermarks can be painted in the browser before print; {@see documentMetadata()} can update the PDF
+ * {@code Info} incrementally (no page re-import). Call {@see preserveChromiumPdfLinks(true)} so {@see generate()} refuses
+ * any post-step that would require an FPDI/TCPDF re-import (e.g. {@see encrypt()}, {@see pdfA()}). Leave the default
+ * {@code false} to allow those features via TCPDF (link annotations are usually lost on that pass).
+ * {@see \Tamedevelopers\Support\ChromePdf\ChromePdf::clickableLinks()} with {@code false} strips {@code href} in the DOM before capture.
  *
  * {@see \setasign\Fpdi\Tcpdf\Fpdi} is optional and needs **both** {@code setasign/fpdi} and {@code tecnickcom/tcpdf}
  * (see composer {@code suggest}; do not use the abandoned {@code setasign/fpdi-tcpdf} meta package). When missing,
@@ -87,6 +87,12 @@ trait ChromePdfDocumentTrait
     private ?string $pdfDocMetaSubject = null;
 
     private ?string $pdfDocMetaKeywords = null;
+
+    /**
+     * When true, {@see generate()} only runs link-safe post-processing (incremental metadata). Structural work
+     * ({@see encrypt()}, {@see pdfA()}, TCPDF raster watermarks) must use {@see preserveChromiumPdfLinks(false)}.
+     */
+    private bool $pdfDocPreserveChromiumLinks = false;
 
     /**
      * Chromium {@code Page.printToPDF} header template (HTML). Implies {@code displayHeaderFooter}.
@@ -278,7 +284,22 @@ trait ChromePdfDocumentTrait
     }
 
     /**
-     * Password protection and permission flags (requires FPDI + TCPDF). At least one password must be non-empty.
+     * Control post-{@see \Tamedevelopers\Support\ChromePdf\ChromePdf::generate()} handling of the raw Chromium PDF.
+     *
+     * {@code true}: only incremental {@see documentMetadata()} is allowed; {@see encrypt()}, {@see pdfA()}, and TCPDF-only
+     * raster watermarks throw — use this when every feature you enable must keep link annotations.
+     * {@code false} (default): full {@see PdfPipeline::rebuild()} when needed (encryption, PDF/A, offline TCPDF watermarks).
+     */
+    public function preserveChromiumPdfLinks(bool $enable = true): self
+    {
+        $this->pdfDocPreserveChromiumLinks = $enable;
+
+        return $this;
+    }
+
+    /**
+     * Password protection and permission flags (FPDI + TCPDF). At least one password must be non-empty.
+     * Requires {@see preserveChromiumPdfLinks(false)} when {@see preserveChromiumPdfLinks(true)} is set.
      *
      * @param list<string>|null $blockedPermissions Names of permissions to **block** (TCPDF convention — same as
      *        {@see TCPDF::setProtection()}): {@code print}, {@code modify}, {@code copy}, {@code annot-forms},
@@ -302,7 +323,7 @@ trait ChromePdfDocumentTrait
 
     /**
      * PDF/A output via TCPDF when rebuilding ({@code 1} = PDF/A-1b style, {@code 3} = PDF/A-3). Cannot be combined
-     * with {@see encrypt()}.
+     * with {@see encrypt()}. Requires {@see preserveChromiumPdfLinks(false)} when link preservation mode is on.
      */
     public function pdfA(bool|int $level): self
     {
@@ -627,17 +648,51 @@ trait ChromePdfDocumentTrait
         }
 
         try {
-            $options = $this->pdfDocBuildRebuildOptions(includeTcpdfRasterWatermarks: false);
-            if (!$options->needsTcpdfPass()) {
-                return new PdfOutput($rawPdf);
-            }
-
-            return PdfPipeline::rebuild($rawPdf, $options);
+            return $this->pdfDocPreserveChromiumLinks
+                ? $this->chromePdfDocumentPostProcessPreserveLinks($rawPdf)
+                : $this->chromePdfDocumentPostProcessAllowRebuild($rawPdf);
         } catch (ConversionFailedException $e) {
             throw $e;
         } catch (Throwable $e) {
             throw new ConversionFailedException('PDF post-processing failed: ' . $e->getMessage(), (int) $e->getCode(), $e);
         }
+    }
+
+    /**
+     * Link-safe path: DOM watermarks are already in the bytes; only incremental metadata may run.
+     *
+     * @throws ConversionFailedException
+     */
+    private function chromePdfDocumentPostProcessPreserveLinks(string $rawPdf): PdfOutput
+    {
+        $options = $this->pdfDocBuildRebuildOptions(includeTcpdfRasterWatermarks: false);
+        if ($options->needsStructuralRebuild()) {
+            throw new ConversionFailedException(
+                'preserveChromiumPdfLinks(true): encrypt(), pdfA(), or TCPDF raster watermarks require a full rebuild. '
+                . 'Call preserveChromiumPdfLinks(false) before those options, or remove them.'
+            );
+        }
+
+        if (!$options->needsTcpdfPass()) {
+            return new PdfOutput($rawPdf);
+        }
+
+        return PdfPipeline::rebuild($rawPdf, $options);
+    }
+
+    /**
+     * Default path: allow full {@see PdfPipeline::rebuild()} when options require it.
+     *
+     * @throws ConversionFailedException
+     */
+    private function chromePdfDocumentPostProcessAllowRebuild(string $rawPdf): PdfOutput
+    {
+        $options = $this->pdfDocBuildRebuildOptions(includeTcpdfRasterWatermarks: false);
+        if (!$options->needsTcpdfPass()) {
+            return new PdfOutput($rawPdf);
+        }
+
+        return PdfPipeline::rebuild($rawPdf, $options);
     }
 
     /**
@@ -650,10 +705,10 @@ trait ChromePdfDocumentTrait
         $textForTcpdf = null;
         $imageForTcpdf = null;
         if ($includeTcpdfRasterWatermarks) {
-            $textForTcpdf = ($this->pdfDocWatermarkText !== null && $this->pdfDocWatermarkText !== '')
+            $textForTcpdf = !empty($this->pdfDocWatermarkText)
                 ? $this->pdfDocWatermarkText
                 : null;
-            $imageForTcpdf = ($this->pdfDocWatermarkImagePath !== null && $this->pdfDocWatermarkImagePath !== '')
+            $imageForTcpdf = !empty($this->pdfDocWatermarkImagePath)
                 ? $this->pdfDocWatermarkImagePath
                 : null;
         }

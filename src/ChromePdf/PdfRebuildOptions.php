@@ -38,7 +38,7 @@ final class PdfRebuildOptions
     }
 
     /**
-     * Full FPDI + TCPDF re-import (watermarks, encryption, PDF/A) — Chromium link annotations are not preserved.
+     * Whether options request FPDI/TCPDF page re-import (watermarks, encryption, PDF/A).
      */
     public function needsStructuralRebuild(): bool
     {
