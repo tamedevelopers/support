@@ -421,7 +421,7 @@ trait ChromePdfDocumentTrait
             ? $this->pdfDocHeaderTextColor
             : $this->pdfDocFooterTextColor;
 
-        $backgroundCss = !empty($background) ? $background : 'transparent';
+        $backgroundCss = !empty($background) ? $background : 'inherit';
         $textColorCss = !empty($textColor) ? $textColor : '#111';
 
         $justify = match ($textAlign) {
