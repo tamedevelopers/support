@@ -34,6 +34,14 @@ trait ChromePdfDocumentTrait
     private string $pdfDocFooterTextAlign = 'center';
     private ?string $pdfDocHeaderTextColor = null;
     private ?string $pdfDocFooterTextColor = null;
+    private int $pdfDocHeaderHeightPx = 40;
+    private int $pdfDocFooterHeightPx = 30;
+    private int $pdfDocHeaderGapPx = 0;
+    private int $pdfDocFooterGapPx = 0;
+    private float $pdfDocHeaderTopInsetPx = 0.0;
+    private float $pdfDocFooterBottomInsetPx = 0.0;
+    private float $pdfDocHeaderFooterLeftInsetPx = 0.0;
+    private float $pdfDocHeaderFooterRightInsetPx = 0.0;
 
     private ?string $pdfDocWatermarkText = null;
 
@@ -171,6 +179,26 @@ trait ChromePdfDocumentTrait
     public function footerRight(): self
     {
         $this->pdfDocFooterTextAlign = 'right';
+
+        return $this;
+    }
+
+    /**
+     * Space after header block before body content (px).
+     */
+    public function headerSpacing(int $pixels = 0): self
+    {
+        $this->pdfDocHeaderGapPx = max(0, $pixels);
+
+        return $this;
+    }
+
+    /**
+     * Space before footer block after body content (px).
+     */
+    public function footerSpacing(int $pixels = 0): self
+    {
+        $this->pdfDocFooterGapPx = max(0, $pixels);
 
         return $this;
     }
@@ -323,6 +351,17 @@ trait ChromePdfDocumentTrait
         $hasFooter = !empty($footer);
 
         if ($hasHeader || $hasFooter) {
+            // Capture user/base print margins so fixed header/footer honor the same inset.
+            $baseTopInches = (float) ($opts['marginTop'] ?? 0.0);
+            $baseBottomInches = (float) ($opts['marginBottom'] ?? 0.0);
+            $baseLeftInches = (float) ($opts['marginLeft'] ?? 0.0);
+            $baseRightInches = (float) ($opts['marginRight'] ?? 0.0);
+
+            $this->pdfDocHeaderTopInsetPx = max(0.0, $baseTopInches * 96.0);
+            $this->pdfDocFooterBottomInsetPx = max(0.0, $baseBottomInches * 96.0);
+            $this->pdfDocHeaderFooterLeftInsetPx = max(0.0, $baseLeftInches * 96.0);
+            $this->pdfDocHeaderFooterRightInsetPx = max(0.0, $baseRightInches * 96.0);
+
             $opts['displayHeaderFooter'] = true;
             // Chromium requires templates when displayHeaderFooter is enabled.
             $opts['headerTemplate'] = $hasHeader
@@ -331,6 +370,17 @@ trait ChromePdfDocumentTrait
             $opts['footerTemplate'] = $hasFooter
                 ? $this->chromePdfNormalizeTemplate((string) $footer, false)
                 : $this->chromePdfEmptyTemplate();
+
+            // Ensure body content is pushed away from fixed-size header/footer blocks.
+            // User-defined ->margin()/->margins() remain effective by being additive.
+            if ($hasHeader) {
+                $minTopInches = ($this->pdfDocHeaderHeightPx + $this->pdfDocHeaderGapPx) / 96.0;
+                $opts['marginTop'] = (float) ($opts['marginTop'] ?? 0.0) + $minTopInches;
+            }
+            if ($hasFooter) {
+                $minBottomInches = ($this->pdfDocFooterHeightPx + $this->pdfDocFooterGapPx) / 96.0;
+                $opts['marginBottom'] = (float) ($opts['marginBottom'] ?? 0.0) + $minBottomInches;
+            }
         }
 
         return $opts;
@@ -367,15 +417,19 @@ trait ChromePdfDocumentTrait
             default => 'center',
         };
 
-        $edgeDock = $isHeader ? 'top:0;' : 'bottom: -1px;';
-        $height = $isHeader ? '40px' : '30px';
+        $heightPx = $isHeader ? $this->pdfDocHeaderHeightPx : $this->pdfDocFooterHeightPx;
+        $edgeInset = $isHeader
+            ? ('top:' . $this->chromePdfPx($this->pdfDocHeaderTopInsetPx) . ';')
+            : ('bottom:' . $this->chromePdfPx($this->pdfDocFooterBottomInsetPx) . ';');
 
         $slotStyle = 'margin:0;padding:0 10px;border:none;outline:0;background:' . $backgroundCss . ';'
             . '-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;'
-            . 'position:fixed;left:0;right:0;' . $edgeDock
+            . 'position:fixed;left:' . $this->chromePdfPx($this->pdfDocHeaderFooterLeftInsetPx) . ';'
+            . 'right:' . $this->chromePdfPx($this->pdfDocHeaderFooterRightInsetPx) . ';'
+            . $edgeInset
             . 'display:flex;align-items:center;justify-content:' . $justify . ';'
             . 'text-align:' . $textAlign . ';color:' . $textColorCss . ';'
-            . 'width:100%;height:' . $height . ';box-sizing:border-box;font-size:12px;line-height:1.35;';
+            . 'width:100%;height:' . $heightPx . 'px;box-sizing:border-box;font-size:12px;line-height:1.35;';
 
         return '<div style="' . $slotStyle . '">' . $content . '</div>';
     }
@@ -456,6 +510,11 @@ trait ChromePdfDocumentTrait
         $decoded = trim($decoded);
 
         return $decoded !== '' ? $decoded : null;
+    }
+
+    private function chromePdfPx(float $value): string
+    {
+        return rtrim(rtrim(sprintf('%.2f', max(0.0, $value)), '0'), '.') . 'px';
     }
 
     protected function chromePdfDocumentAfterGenerate(string $rawPdf): PdfOutput
