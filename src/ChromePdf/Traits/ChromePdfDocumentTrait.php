@@ -27,6 +27,8 @@ trait ChromePdfDocumentTrait
     private ?string $pdfDocHeaderHtml = null;
 
     private ?string $pdfDocFooterHtml = null;
+    private ?string $pdfDocHeaderBackgroundColor = null;
+    private ?string $pdfDocFooterBackgroundColor = null;
 
     private ?string $pdfDocWatermarkText = null;
 
@@ -73,10 +75,12 @@ trait ChromePdfDocumentTrait
      */
     public function headerHtml(?string $html = null): self
     {
-        if(empty($html)){
-            $html = '<span class="title"></span>';
+        if (empty($html)) {
+            // Chromium's .title placeholder can be empty when the source document has no title.
+            // Use a deterministic literal default so headerHtml() without args always renders.
+            $html = $this->chromePdfResolveDefaultHeaderText();
         }
-        
+
         $this->pdfDocHeaderHtml = $html;
 
         return $this;
@@ -87,11 +91,33 @@ trait ChromePdfDocumentTrait
      */
     public function footerHtml(?string $html = null): self
     {
-        if(empty($html)){
+        if (empty($html)) {
             $html = '<span class="pageNumber"></span> / <span class="totalPages"></span>';
         }
 
         $this->pdfDocFooterHtml = $html;
+
+        return $this;
+    }
+
+    /**
+     * Force a printable background color in the header template area.
+     * Pass null/empty to keep it transparent.
+     */
+    public function headerBackground(?string $cssColor = null): self
+    {
+        $this->pdfDocHeaderBackgroundColor = !empty($cssColor) ? trim($cssColor) : null;
+
+        return $this;
+    }
+
+    /**
+     * Force a printable background color in the footer template area.
+     * Pass null/empty to keep it transparent.
+     */
+    public function footerBackground(?string $cssColor = null): self
+    {
+        $this->pdfDocFooterBackgroundColor = !empty($cssColor) ? trim($cssColor) : null;
 
         return $this;
     }
@@ -102,7 +128,7 @@ trait ChromePdfDocumentTrait
         float $angleDegrees = 45.0,
         float $fontSizePt = 44.0,
     ): self {
-        $this->pdfDocWatermarkText = ($text !== null && $text !== '') ? $text : null;
+        $this->pdfDocWatermarkText = !empty($text) ? $text : null;
         $this->pdfDocWatermarkTextOpacity = max(0.02, min(1.0, $opacity));
         $this->pdfDocWatermarkTextAngleDeg = $angleDegrees;
         $this->pdfDocWatermarkTextFontSizePt = max(6.0, $fontSizePt);
@@ -272,16 +298,22 @@ trait ChromePdfDocumentTrait
         }
 
         $containsHtml = preg_match('/<[^>]+>/', $trimmed) === 1;
-        $content = $containsHtml ? $trimmed : htmlspecialchars($trimmed, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        
-        $offsetPx = $isHeader ? '-10px' : '16px';
+        $content = $containsHtml 
+            ? $trimmed 
+            : htmlspecialchars($trimmed, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-        $wrapStyle = 'margin:0;padding:0;border:none;outline:0;background:#000000;'
+        $background = $isHeader 
+            ? $this->pdfDocHeaderBackgroundColor 
+            : $this->pdfDocFooterBackgroundColor;
+
+        $backgroundCss =  !empty($background) ? $background : 'transparent';
+        
+        $wrapStyle = 'margin:0;padding:0;border:none;outline:0;background-color:' . $backgroundCss . ';'
+            . '-webkit-print-color-adjust:exact;print-color-adjust:exact;'
             . 'width:100%;height:28px;display:flex;align-items:center;justify-content:center;';
 
-        $slotStyle = 'margin:0;padding:0 2px;border:none;outline:0;'
-            . 'width:100%;text-align:center;color:#111;font-size:12px;line-height:1.35;'
-            . 'transform:translateY(' . $offsetPx . ');';
+        $slotStyle = 'margin:0;padding:0 2px;border:none;outline:0;background-color:transparent;'
+            . 'width:100%;text-align:center;color:#111;font-size:12px;line-height:1.35;';
 
         return '<div style="' . $wrapStyle . '"><div style="' . $slotStyle . '">' . $content . '</div></div>';
     }
@@ -290,6 +322,32 @@ trait ChromePdfDocumentTrait
     {
         return '<div style="margin:0;padding:0;border:none;outline:0;background:transparent;'
             . 'width:100%;height:0;font-size:0;line-height:0;"></div>';
+    }
+
+    private function chromePdfResolveDefaultHeaderText(): string
+    {
+        if (property_exists($this, 'sourceMode') && property_exists($this, 'sourceValue')) {
+            /** @var mixed $mode */
+            $mode = $this->sourceMode;
+            /** @var mixed $value */
+            $value = $this->sourceValue;
+
+            if ($mode === 'url' && is_string($value) && $value !== '') {
+                $host = parse_url($value, PHP_URL_HOST);
+                if (is_string($host) && $host !== '') {
+                    return $host;
+                }
+            }
+
+            if ($mode === 'file' && is_string($value) && $value !== '') {
+                $base = basename(str_replace('\\', '/', $value));
+                if ($base !== '') {
+                    return $base;
+                }
+            }
+        }
+
+        return 'Document';
     }
 
     protected function chromePdfDocumentAfterGenerate(string $rawPdf): PdfOutput
