@@ -55,7 +55,7 @@ use Throwable;
  * Call {@see loadRemoteImages(true)} when you need {@code http(s)://} in {@code img}/CSS. Auto font {@code @font-face}
  * maps are applied in-page only when {@code document.body} text matches CJK / Arabic / Cyrillic ranges (see {@see CombinedPostProcessScript}).
  *
- * Document extras (merge, native header/footer, watermark, encryption, PDF/A, linearize, metadata) live on
+ * Document extras (merge, native header/footer, watermark, encryption, PDF/A, metadata) live on
  * {@see Traits\ChromePdfDocumentTrait} and are composed into this class for maintainability.
  */
 final class ChromePdf

@@ -14,7 +14,7 @@ use Tamedevelopers\Support\Tame;
 use Throwable;
 
 /**
- * Merge / rebuild / linearize PDFs using FPDI + TCPDF when those packages are installed (see composer suggest).
+ * Merge / rebuild PDFs using FPDI + TCPDF when those packages are installed (see composer suggest).
  */
 final class PdfPipeline
 {
@@ -70,7 +70,7 @@ final class PdfPipeline
     }
 
     /**
-     * Re-imports one PDF and reapplies optional watermarks, metadata, encryption, PDF/A, and optional qpdf linearization.
+     * Re-imports one PDF and reapplies optional watermarks, metadata, encryption, and PDF/A.
      *
      * @throws ConversionFailedException
      */
@@ -93,12 +93,8 @@ final class PdfPipeline
             throw new ConversionFailedException('TCPDF does not support encryption together with PDF/A; disable one of them.');
         }
 
-        if (!$options->needsTcpdfPass() && !$options->linearize) {
+        if (!$options->needsTcpdfPass()) {
             return new PdfOutput($binary);
-        }
-
-        if (!$options->needsTcpdfPass() && $options->linearize) {
-            return new PdfOutput(self::linearizeWithQpdf($binary));
         }
 
         self::assertDependenciesAvailable();
@@ -146,10 +142,6 @@ final class PdfPipeline
             $out = $pdf->Output('', 'S');
             if (!is_string($out) || $out === '') {
                 throw new ConversionFailedException('PDF rebuild produced empty output.');
-            }
-
-            if ($options->linearize) {
-                $out = self::linearizeWithQpdf($out);
             }
 
             return new PdfOutput($out);

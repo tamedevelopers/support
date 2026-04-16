@@ -16,7 +16,7 @@ use Throwable;
 
 /**
  * Optional PDF document features for {@see \Tamedevelopers\Support\ChromePdf\ChromePdf}: native Chromium header/footer
- * templates, merge, watermark, encryption, PDF/A, linearization (qpdf), and metadata.
+ * templates, merge, watermark, encryption, PDF/A, and metadata.
  *
  * {@see \setasign\Fpdi\Tcpdf\Fpdi} is optional and needs **both** {@code setasign/fpdi} and {@code tecnickcom/tcpdf}
  * (see composer {@code suggest}; do not use the abandoned {@code setasign/fpdi-tcpdf} meta package). When missing,
@@ -323,7 +323,7 @@ trait ChromePdfDocumentTrait
     }
 
     /**
-     * Re-run FPDI/TCPDF (and optional qpdf) on an existing PDF using the options configured on this builder instance.
+     * Re-run FPDI/TCPDF on an existing PDF using the options configured on this builder instance.
      * Does not invoke Chromium.
      *
      * @throws ConversionFailedException
