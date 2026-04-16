@@ -29,14 +29,15 @@ $files = [
 
 $output = ChromePdf::create()
     // ->fromHtml('<html><body><p>你好世界</p></body></html>')
-    ->fromFile($files['1'])
+    ->fromFile($files['3'])
     // ->fromUrl('https://www.google.com')
     ->paper('A4') // A4, letter, Legal, Ledger
     ->colorScheme('dark')
     ->selectElement('.body')
     ->margins(10)
     // Native Chromium header/footer (HTML templates; classes: date, title, url, pageNumber, totalPages)
-    ->headerHtml('<span class="title">Hi</span>')
+    ->headerHtml()
+    ->footerHtml()
     // ->footerHtml('<div style="font-size:9px;width:100%;text-align:center;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>')
     // Text / image watermark (applied after print via FPDI + TCPDF when those packages are installed)
     ->textWatermark('DRAFT', opacity: 0.14, angleDegrees: 35.0, fontSizePt: 42.0)

@@ -66,11 +66,17 @@ trait ChromePdfDocumentTrait
     /**
      * Chromium {@code Page.printToPDF} header template (HTML). Implies {@code displayHeaderFooter}.
      * Use classes like {@code date}, {@code title}, {@code url}, {@code pageNumber}, {@code totalPages}.
+     * Note: Chromium replaces these class placeholders with runtime values. For literal text, avoid those class names
+     * (e.g. use {@code <span>Hi</span>} instead of {@code <span class="title">Hi</span>}).
      *
      * @see https://chromedevtools.github.io/devtools-protocol/tot/Page/#method-printToPDF
      */
-    public function headerHtml(?string $html): self
+    public function headerHtml(?string $html = null): self
     {
+        if(empty($html)){
+            $html = '<span class="title"></span>';
+        }
+        
         $this->pdfDocHeaderHtml = $html;
 
         return $this;
@@ -79,9 +85,13 @@ trait ChromePdfDocumentTrait
     /**
      * Chromium native footer template (HTML). Same placeholders as {@see headerHtml()}.
      */
-    public function footerHtml(string $html = null): self
+    public function footerHtml(?string $html = null): self
     {
-        $this->pdfDocFooterHtml = $html ?? '<span class="pageNumber"></span> / <span class="totalPages"></span>';
+        if(empty($html)){
+            $html = '<span class="pageNumber"></span> / <span class="totalPages"></span>';
+        }
+
+        $this->pdfDocFooterHtml = $html;
 
         return $this;
     }
