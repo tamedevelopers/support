@@ -39,7 +39,7 @@ trait ChromePdfDocumentTrait
     private int $pdfDocHeaderGapPx = 0;
     private int $pdfDocFooterGapPx = 0;
     private float $pdfDocHeaderTopInsetPx = 0.0;
-    private float $pdfDocFooterBottomInsetPx = 0.0;
+    private float $pdfDocFooterBottomInsetPx = -2;
     private float $pdfDocHeaderFooterLeftInsetPx = 0.0;
     private float $pdfDocHeaderFooterRightInsetPx = 0.0;
 
@@ -353,7 +353,7 @@ trait ChromePdfDocumentTrait
         if ($hasHeader || $hasFooter) {
             // Capture user/base print margins so fixed header/footer honor the same inset.
             $baseTopInches = (float) ($opts['marginTop'] ?? 0.0);
-            $baseBottomInches = (float) ($opts['marginBottom'] ?? 0.0);
+            $baseBottomInches = (float) ($opts['marginBottom'] ?? -2.0);
             $baseLeftInches = (float) ($opts['marginLeft'] ?? 0.0);
             $baseRightInches = (float) ($opts['marginRight'] ?? 0.0);
 
@@ -429,7 +429,7 @@ trait ChromePdfDocumentTrait
             . $edgeInset
             . 'display:flex;align-items:center;justify-content:' . $justify . ';'
             . 'text-align:' . $textAlign . ';color:' . $textColorCss . ';'
-            . 'width:100%;height:' . $heightPx . 'px;box-sizing:border-box;font-size:12px;line-height:1.35;';
+            . 'width:auto;min-width:0;height:' . $heightPx . 'px;box-sizing:border-box;font-size:12px;line-height:1.35;';
 
         return '<div style="' . $slotStyle . '">' . $content . '</div>';
     }

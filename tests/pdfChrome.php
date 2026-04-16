@@ -34,7 +34,7 @@ $output = ChromePdf::create()
     ->paper('A4') // A4, letter, Legal, Ledger
     ->colorScheme('dark')
     ->selectElement('.body')
-    ->margin(20)
+    // ->margin(20)
     // Native Chromium header/footer (HTML templates; classes: date, title, url, pageNumber, totalPages)
     ->headerHtml()
     ->headerRight()
