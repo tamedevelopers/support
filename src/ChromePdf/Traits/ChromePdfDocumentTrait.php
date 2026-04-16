@@ -39,9 +39,10 @@ trait ChromePdfDocumentTrait
     private int $pdfDocHeaderGapPx = 0;
     private int $pdfDocFooterGapPx = 0;
     private float $pdfDocHeaderTopInsetPx = 0.0;
-    private float $pdfDocFooterBottomInsetPx = -2;
+    private float $pdfDocFooterBottomInsetPx = 0.0;
     private float $pdfDocHeaderFooterLeftInsetPx = 0.0;
     private float $pdfDocHeaderFooterRightInsetPx = 0.0;
+    private float $pdfDocFooterEdgeOffsetPx = -2.0;
 
     private ?string $pdfDocWatermarkText = null;
 
@@ -203,6 +204,18 @@ trait ChromePdfDocumentTrait
         return $this;
     }
 
+    /**
+     * Fine-tune footer docking at the page edge.
+     * Accepts signed lengths (e.g. -1, '-12px', '-1.5mm', '0.02in').
+     * Negative values pull footer down to hide a seam.
+     */
+    public function footerEdgeOffset(float|int|string $value = -2.0): self
+    {
+        $this->pdfDocFooterEdgeOffsetPx = $this->chromePdfParseSignedLengthToPx($value);
+
+        return $this;
+    }
+
     public function textWatermark(
         ?string $text,
         float $opacity = 0.12,
@@ -353,12 +366,12 @@ trait ChromePdfDocumentTrait
         if ($hasHeader || $hasFooter) {
             // Capture user/base print margins so fixed header/footer honor the same inset.
             $baseTopInches = (float) ($opts['marginTop'] ?? 0.0);
-            $baseBottomInches = (float) ($opts['marginBottom'] ?? -2.0);
+            $baseBottomInches = (float) ($opts['marginBottom'] ?? 0.0);
             $baseLeftInches = (float) ($opts['marginLeft'] ?? 0.0);
             $baseRightInches = (float) ($opts['marginRight'] ?? 0.0);
 
             $this->pdfDocHeaderTopInsetPx = max(0.0, $baseTopInches * 96.0);
-            $this->pdfDocFooterBottomInsetPx = max(0.0, $baseBottomInches * 96.0);
+            $this->pdfDocFooterBottomInsetPx = $baseBottomInches * 96.0;
             $this->pdfDocHeaderFooterLeftInsetPx = max(0.0, $baseLeftInches * 96.0);
             $this->pdfDocHeaderFooterRightInsetPx = max(0.0, $baseRightInches * 96.0);
 
@@ -418,9 +431,10 @@ trait ChromePdfDocumentTrait
         };
 
         $heightPx = $isHeader ? $this->pdfDocHeaderHeightPx : $this->pdfDocFooterHeightPx;
+        $footerBottomPx = $this->pdfDocFooterBottomInsetPx + $this->pdfDocFooterEdgeOffsetPx;
         $edgeInset = $isHeader
             ? ('top:' . $this->chromePdfPx($this->pdfDocHeaderTopInsetPx) . ';')
-            : ('bottom:' . $this->chromePdfPx($this->pdfDocFooterBottomInsetPx) . ';');
+            : ('bottom:' . $this->chromePdfPx($footerBottomPx) . ';');
 
         $slotStyle = 'margin:0;padding:0 10px;border:none;outline:0;background:' . $backgroundCss . ';'
             . '-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;'
@@ -514,7 +528,37 @@ trait ChromePdfDocumentTrait
 
     private function chromePdfPx(float $value): string
     {
-        return rtrim(rtrim(sprintf('%.2f', max(0.0, $value)), '0'), '.') . 'px';
+        return rtrim(rtrim(sprintf('%.2f', $value), '0'), '.') . 'px';
+    }
+
+    private function chromePdfParseSignedLengthToPx(float|int|string $value): float
+    {
+        if (is_int($value) || is_float($value)) {
+            return (float) $value;
+        }
+
+        $s = Str::trim($value);
+        if ($s === '') {
+            return 0.0;
+        }
+
+        if (preg_match('/^(-?[\d.]+)\s*px$/i', $s, $m) === 1) {
+            return (float) $m[1];
+        }
+        if (preg_match('/^(-?[\d.]+)\s*mm$/i', $s, $m) === 1) {
+            return (float) $m[1] * (96.0 / 25.4);
+        }
+        if (preg_match('/^(-?[\d.]+)\s*cm$/i', $s, $m) === 1) {
+            return (float) $m[1] * (96.0 / 2.54);
+        }
+        if (preg_match('/^(-?[\d.]+)\s*in$/i', $s, $m) === 1) {
+            return (float) $m[1] * 96.0;
+        }
+        if (preg_match('/^-?[\d.]+$/', $s) === 1) {
+            return (float) $s;
+        }
+
+        throw new ConversionFailedException(sprintf('Invalid footer edge offset value: %s', $value));
     }
 
     protected function chromePdfDocumentAfterGenerate(string $rawPdf): PdfOutput
