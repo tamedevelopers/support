@@ -19,6 +19,7 @@ use Tamedevelopers\Support\ChromePdf\Internal\FileUri;
 use Tamedevelopers\Support\ChromePdf\Internal\FlattenLinksScript;
 use Tamedevelopers\Support\ChromePdf\Internal\PreloaderRemovalScript;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;
+use Tamedevelopers\Support\ChromePdf\Traits\ChromePdfDocumentTrait;
 use Tamedevelopers\Support\ChromePdf\Traits\FontManagerTrait;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Str;
@@ -53,9 +54,13 @@ use Throwable;
  * Remote images: Chromium image loading is **off** by default (bitmap/CSS images from the network are skipped).
  * Call {@see loadRemoteImages(true)} when you need {@code http(s)://} in {@code img}/CSS. Auto font {@code @font-face}
  * maps are applied in-page only when {@code document.body} text matches CJK / Arabic / Cyrillic ranges (see {@see CombinedPostProcessScript}).
+ *
+ * Document extras (merge, native header/footer, watermark, encryption, PDF/A, linearize, metadata) live on
+ * {@see Traits\ChromePdfDocumentTrait} and are composed into this class for maintainability.
  */
 final class ChromePdf
 {
+    use ChromePdfDocumentTrait;
     use FontManagerTrait;
 
     private ?string $sourceMode = null;
@@ -536,7 +541,7 @@ final class ChromePdf
                 throw new ConversionFailedException('Chromium returned an empty or invalid PDF payload.');
             }
 
-            return new PdfOutput($raw);
+            return $this->chromePdfDocumentAfterGenerate($raw);
         } catch (FontNotFoundException $e) {
             throw $e;
         } catch (Throwable $e) {
@@ -613,7 +618,7 @@ final class ChromePdf
             $opts['marginRight'] = $inch;
         }
 
-        return $opts;
+        return $this->chromePdfDocumentMergePrintOptions($opts);
     }
 
     /**

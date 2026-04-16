@@ -1,8 +1,21 @@
-<?php 
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Chrome PDF smoke / demo script.
+ *
+ * Optional demos at the bottom need Composer dev deps: setasign/fpdi, tecnickcom/tcpdf.
+ * linearize() needs the qpdf CLI (or QPDF_BINARY). encrypt()/pdfA() are shown commented—enable with care.
+ */
 
 use Tamedevelopers\Support\ChromePdf\ChromePdf;
+use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
 
 require_once __DIR__ . '/../vendor/autoload.php';
+
+/** Set true to run merge + reprocessPdf demos after the main PDF (writes under upload/). */
+const PDF_CHROME_RUN_PIPELINE_DEMOS = false;
 
 $files = [
     '1' => 'upload/template.html',
@@ -10,22 +23,56 @@ $files = [
     '3' => base_path('upload/template3.html'),
 ];
 
-
-// On Windows, Linux, MacOS PHP (xampp, wamp, mamp, etc.), you need to enable the 
+// On Windows, Linux, MacOS PHP (xampp, wamp, mamp, etc.), you need to enable the
 // sockets extension in your php.ini file.
 // ;extension=sockets
 
 $output = ChromePdf::create()
     // ->fromHtml('<html><body><p>你好世界</p></body></html>')
-    ->fromFile($files['3'])
+    ->fromFile($files['1'])
     // ->fromUrl('https://www.google.com')
     ->paper('A4') // A4, letter, Legal, Ledger
     ->colorScheme('dark')
     ->selectElement('.body')
     ->margins(10)
-    // ->chromiumBinary(base_path('upload/chrome-win/chrome.exe'))
+    // Native Chromium header/footer (HTML templates; classes: date, title, url, pageNumber, totalPages)
+    ->headerHtml('<span class="title">Hi</span>')
+    // ->footerHtml('<div style="font-size:9px;width:100%;text-align:center;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>')
+    // Text / image watermark (applied after print via FPDI + TCPDF when those packages are installed)
+    ->textWatermark('DRAFT', opacity: 0.14, angleDegrees: 35.0, fontSizePt: 42.0)
+    // ->imageWatermark(base_path('upload/logo.png'), opacity: 0.15, widthMm: 40.0)
+    // Document metadata (rewritten on TCPDF pass when fpdi+tcpdf present)
+    // ->documentMetadata(title: 'Invoice', author: 'Acme', subject: 'Q1', keywords: 'invoice,demo')
+    // Passwords + permission **blocks** (TCPDF: list permissions to disallow—e.g. disallow copy but allow print)
+    // ->encrypt(userPassword: 'user', ownerPassword: 'owner', blockedPermissions: ['copy'], algorithm: 3)
+    // PDF/A (1 or 3); cannot combine with encrypt()
+    // ->pdfA(1)
+    // Fast Web View (needs qpdf on PATH or QPDF_BINARY)
+    // ->linearize(true)
+    // ->chromiumBinary('upload/chrome-win/chrome.exe')
     ->clickableLinks(false)
     ->generate();
+
+// -------------------------------------------------------------------------
+// ChromePdfDocumentTrait: merge + reprocessPdf (optional; requires fpdi+tcpdf)
+// Run before inline()/download() so response headers are not sent first.
+// -------------------------------------------------------------------------
+if (PDF_CHROME_RUN_PIPELINE_DEMOS) {
+    try {
+        // Concatenate the same PDF twice (toy example: invoice + terms as separate files in real apps).
+        $merged = ChromePdf::merge([$output, $output]);
+        $merged->save(__DIR__ . '/../upload/pdf-chrome-merged-demo.pdf');
+
+        // Re-run pipeline on bytes using fluent options on a fresh builder (no Chromium).
+        $stamped = ChromePdf::create()
+            ->textWatermark('CONFIDENTIAL', opacity: 0.12, angleDegrees: 40.0)
+            ->documentMetadata(title: 'Merged demo', author: 'Support package test')
+            ->reprocessPdf($merged);
+        $stamped->save(__DIR__ . '/../upload/pdf-chrome-reprocessed-demo.pdf');
+    } catch (ConversionFailedException $e) {
+        fwrite(STDERR, "[pdfChrome] pipeline demo skipped: " . $e->getMessage() . PHP_EOL);
+    }
+}
 
 $output->inline();
 

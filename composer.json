@@ -35,12 +35,21 @@
             "Tamedevelopers\\Support\\Installer::update" 
         ]
     },
+    "require-dev": {
+        "ext-sockets": "*",
+        "chrome-php/chrome": "^1.11",
+        "chrome-php/wrench": "^1.7",
+        "setasign/fpdi": "^2.6",
+        "tecnickcom/tcpdf": "^6.8"
+    },
     "suggest": {
         "aws/aws-sdk-php": "Required to use the `AWS` class and helper (^3.371)",
         "dompdf/dompdf": "Required to use the `PDF` class and helper (^3.0)",
         "chrome-php/chrome": "Required for high-performance Chrome PDF generation (^1.11)",
         "chrome-php/wrench": "Required for WebSocket communication with Chrome (^1.7)",
-        "ext-sockets": "PHP extension required by chrome-php for headless Chromium IPC"
+        "ext-sockets": "PHP extension required by chrome-php for headless Chromium IPC",
+        "setasign/fpdi": "ChromePdf merge/watermark/encryption/PDF/A via FPDI (^2.6). Docs: https://manuals.setasign.com/fpdi-manual/",
+        "tecnickcom/tcpdf": "Required with fpdi for \\setasign\\Fpdi\\Tcpdf\\Fpdi (merge, encryption, PDF/A). FPDI docs: https://github.com/Setasign/FPDI — install both;"
     },
     "autoload": {
         "files": [
