@@ -331,13 +331,6 @@ trait ChromePdfDocumentTrait
             $opts['footerTemplate'] = $hasFooter
                 ? $this->chromePdfNormalizeTemplate((string) $footer, false)
                 : $this->chromePdfEmptyTemplate();
-            
-            if ($hasHeader) {
-                $opts['marginTop'] = max((float) ($opts['marginTop'] ?? 0.0), 0.65);
-            }
-            if ($hasFooter) {
-                $opts['marginBottom'] = max((float) ($opts['marginBottom'] ?? 0.0), 0.35);
-            }
         }
 
         return $opts;
@@ -365,26 +358,27 @@ trait ChromePdfDocumentTrait
             ? $this->pdfDocHeaderTextColor
             : $this->pdfDocFooterTextColor;
 
-        $backgroundCss =  !empty($background) ? $background : 'transparent';
+        $backgroundCss = !empty($background) ? $background : 'transparent';
         $textColorCss = !empty($textColor) ? $textColor : '#111';
-        
-        $wrapStyle = 'margin:0;padding:0;border:none;outline:0;background-color:' . $backgroundCss . ';'
+
+        $justify = match ($textAlign) {
+            'left' => 'flex-start',
+            'right' => 'flex-end',
+            default => 'center',
+        };
+
+        $slotStyle = 'margin: 0;padding:0 10px;border:none;outline:0;background:' . $backgroundCss . ';'
             . '-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;'
-            . 'width:100%;height:28px;background-image:none;'
-            . 'display:flex;align-items:center;justify-content:center;';
+            . 'display:flex;align-items:center;justify-content:' . $justify . ';'
+            . 'text-align:' . $textAlign . ';color:' . $textColorCss . ';'
+            . 'width:100%;height:30px;font-size:12px;line-height:1.35;';
 
-        $slotStyle = 'margin:0;padding:0 10px;border:none;outline:0;background-color:transparent;'
-            . 'display:block;width:100%;text-align:' . $textAlign . ';color:' . $textColorCss . ';'
-            . 'font-size:12px;line-height:1.35;';
-
-        
-        return '<div style="' . $wrapStyle . '"><div style="' . $slotStyle . '">' . $content . '</div></div>';
+        return '<div style="' . $slotStyle . '">' . $content . '</div>';
     }
 
     private function chromePdfEmptyTemplate(): string
     {
-        return '<div style="margin:0;padding:0;border:none;outline:0;background:transparent;'
-            . 'width:100%;height:0;font-size:0;line-height:0;"></div>';
+        return '<span></span>';
     }
 
     private function chromePdfResolveDefaultHeaderText(): string
