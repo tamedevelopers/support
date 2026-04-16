@@ -55,7 +55,7 @@ trait ChromePdfDocumentTrait
 
     private float $pdfDocWatermarkTextOpacity = 0.12;
 
-    private float $pdfDocWatermarkTextAngleDeg = 45.0;
+    private float $pdfDocWatermarkTextAngleDeg = -45.0;
 
     private float $pdfDocWatermarkTextFontSizePt = 44.0;
 
@@ -210,8 +210,8 @@ trait ChromePdfDocumentTrait
     public function textWatermark(
         ?string $text,
         float $opacity = 0.14,
-        float $angleDegrees = 35.0,
-        float $fontSizePt = 42.0,
+        float $angleDegrees = -45.0,
+        float $fontSizePt = 44.0,
     ): self {
         $this->pdfDocWatermarkText = !empty($text) ? $text : null;
         $this->pdfDocWatermarkTextOpacity = max(0.02, min(1.0, $opacity));
@@ -260,6 +260,21 @@ trait ChromePdfDocumentTrait
             : WatermarkPosition::parse($position);
 
         return $this;
+    }
+
+    /**
+     * Set text and image watermark positions in one call.
+     *
+     * @param WatermarkPosition|string $textPosition Position for {@see textWatermark()}.
+     * @param WatermarkPosition|string $imagePosition Position for {@see imageWatermark()}.
+     */
+    public function watermarkPositions(
+        WatermarkPosition|string $textPosition = WatermarkPosition::Center,
+        WatermarkPosition|string $imagePosition = WatermarkPosition::Center,
+    ): self {
+        return $this
+            ->textWatermarkPosition($textPosition)
+            ->imageWatermarkPosition($imagePosition);
     }
 
     /**
