@@ -9,6 +9,7 @@ use setasign\Fpdi\Tcpdf\Fpdi;
 use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;
 use Tamedevelopers\Support\ChromePdf\PdfRebuildOptions;
+use Tamedevelopers\Support\ChromePdf\WatermarkPosition;
 use Tamedevelopers\Support\Tame;
 use Throwable;
 
@@ -208,19 +209,74 @@ final class PdfPipeline
     {
         $w = $pdf->getPageWidth();
         $h = $pdf->getPageHeight();
-        $cx = $w / 2.0;
-        $cy = $h / 2.0;
+
+        $pdf->SetFont('helvetica', 'B', $options->textWatermarkFontSizePt);
+        $sw = $pdf->GetStringWidth($options->textWatermark);
+        $fsMm = max(1.0, $options->textWatermarkFontSizePt * 0.352778);
+        $pad = 8.0;
+
+        [$xText, $yText, $rx, $ry] = match ($options->textWatermarkPosition) {
+            WatermarkPosition::Center => [
+                max(5.0, $w / 2.0 - $sw / 2.0),
+                $h / 2.0,
+                $w / 2.0,
+                $h / 2.0,
+            ],
+            WatermarkPosition::TopLeft => [
+                $pad,
+                $pad + $fsMm * 0.85,
+                $pad + $sw / 2.0,
+                $pad + $fsMm * 0.85 - $fsMm * 0.35,
+            ],
+            WatermarkPosition::TopCenter => [
+                max(5.0, $w / 2.0 - $sw / 2.0),
+                $pad + $fsMm * 0.85,
+                $w / 2.0,
+                $pad + $fsMm * 0.85 - $fsMm * 0.35,
+            ],
+            WatermarkPosition::TopRight => [
+                max($pad, $w - $pad - $sw),
+                $pad + $fsMm * 0.85,
+                max($pad, $w - $pad - $sw) + $sw / 2.0,
+                $pad + $fsMm * 0.85 - $fsMm * 0.35,
+            ],
+            WatermarkPosition::MiddleLeft => [
+                $pad,
+                $h / 2.0 + $fsMm * 0.25,
+                $pad + $sw / 2.0,
+                $h / 2.0 + $fsMm * 0.25 - $fsMm * 0.35,
+            ],
+            WatermarkPosition::MiddleRight => [
+                max($pad, $w - $pad - $sw),
+                $h / 2.0 + $fsMm * 0.25,
+                max($pad, $w - $pad - $sw) + $sw / 2.0,
+                $h / 2.0 + $fsMm * 0.25 - $fsMm * 0.35,
+            ],
+            WatermarkPosition::BottomLeft => [
+                $pad,
+                $h - $pad,
+                $pad + $sw / 2.0,
+                ($h - $pad) - $fsMm * 0.35,
+            ],
+            WatermarkPosition::BottomCenter => [
+                max(5.0, $w / 2.0 - $sw / 2.0),
+                $h - $pad,
+                $w / 2.0,
+                ($h - $pad) - $fsMm * 0.35,
+            ],
+            WatermarkPosition::BottomRight => [
+                max($pad, $w - $pad - $sw),
+                $h - $pad,
+                max($pad, $w - $pad - $sw) + $sw / 2.0,
+                ($h - $pad) - $fsMm * 0.35,
+            ],
+        };
 
         $pdf->StartTransform();
         $pdf->SetAlpha(max(0.02, min(1.0, $options->textWatermarkOpacity)));
-        $pdf->Rotate($options->textWatermarkAngleDeg, $cx, $cy);
-        $pdf->SetFont('helvetica', 'B', $options->textWatermarkFontSizePt);
+        $pdf->Rotate($options->textWatermarkAngleDeg, $rx, $ry);
         $pdf->SetTextColor(128, 128, 128);
-        $pdf->Text(
-            max(5.0, $cx - $pdf->GetStringWidth($options->textWatermark) / 2.0),
-            $cy,
-            $options->textWatermark
-        );
+        $pdf->Text($xText, $yText, $options->textWatermark);
         $pdf->StopTransform();
         $pdf->SetAlpha(1.0);
     }
@@ -232,6 +288,11 @@ final class PdfPipeline
             throw new ConversionFailedException(sprintf('Image watermark path is not readable: %s', $options->imageWatermarkPath ?? ''));
         }
 
+        $info = @getimagesize($path);
+        if ($info === false || ($info[0] ?? 0) < 1 || ($info[1] ?? 0) < 1) {
+            throw new ConversionFailedException(sprintf('Image watermark could not be measured: %s', $options->imageWatermarkPath ?? ''));
+        }
+
         $w = $pdf->getPageWidth();
         $h = $pdf->getPageHeight();
         $targetW = $options->imageWatermarkWidthMm;
@@ -240,10 +301,28 @@ final class PdfPipeline
         }
         $targetW = max(5.0, $targetW);
 
+        $iw = (float) $info[0];
+        $ih = (float) $info[1];
+        $targetH = max(1.0, $targetW * ($ih / $iw));
+
+        $pad = 8.0;
+        [$x, $y] = match ($options->imageWatermarkPosition) {
+            WatermarkPosition::Center => [
+                ($w - $targetW) / 2.0,
+                ($h - $targetH) / 2.0,
+            ],
+            WatermarkPosition::TopLeft => [$pad, $pad],
+            WatermarkPosition::TopCenter => [($w - $targetW) / 2.0, $pad],
+            WatermarkPosition::TopRight => [max($pad, $w - $pad - $targetW), $pad],
+            WatermarkPosition::MiddleLeft => [$pad, ($h - $targetH) / 2.0],
+            WatermarkPosition::MiddleRight => [max($pad, $w - $pad - $targetW), ($h - $targetH) / 2.0],
+            WatermarkPosition::BottomLeft => [$pad, max($pad, $h - $pad - $targetH)],
+            WatermarkPosition::BottomCenter => [($w - $targetW) / 2.0, max($pad, $h - $pad - $targetH)],
+            WatermarkPosition::BottomRight => [max($pad, $w - $pad - $targetW), max($pad, $h - $pad - $targetH)],
+        };
+
         $pdf->StartTransform();
         $pdf->SetAlpha(max(0.02, min(1.0, $options->imageWatermarkOpacity)));
-        $x = ($w - $targetW) / 2.0;
-        $y = $h / 2.0 - $targetW * 0.35;
         $pdf->Image($path, $x, $y, $targetW, 0, '', '', '', false, 300, '', false, false, 0);
         $pdf->StopTransform();
         $pdf->SetAlpha(1.0);

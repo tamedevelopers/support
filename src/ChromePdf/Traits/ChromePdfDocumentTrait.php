@@ -8,6 +8,7 @@ use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
 use Tamedevelopers\Support\ChromePdf\Internal\PdfPipeline;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;
 use Tamedevelopers\Support\ChromePdf\PdfRebuildOptions;
+use Tamedevelopers\Support\ChromePdf\WatermarkPosition;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
 use TCPDF;
@@ -52,11 +53,15 @@ trait ChromePdfDocumentTrait
 
     private float $pdfDocWatermarkTextFontSizePt = 44.0;
 
+    private WatermarkPosition $pdfDocWatermarkTextPosition = WatermarkPosition::Center;
+
     private ?string $pdfDocWatermarkImagePath = null;
 
     private float $pdfDocWatermarkImageOpacity = 0.18;
 
     private ?float $pdfDocWatermarkImageWidthMm = null;
+
+    private WatermarkPosition $pdfDocWatermarkImagePosition = WatermarkPosition::Center;
 
     private ?string $pdfDocEncryptUserPassword = null;
 
@@ -212,6 +217,16 @@ trait ChromePdfDocumentTrait
         return $this;
     }
 
+    /**
+     * Where the text watermark is placed ({@code center} matches the historical default).
+     */
+    public function textWatermarkPosition(WatermarkPosition $position): self
+    {
+        $this->pdfDocWatermarkTextPosition = $position;
+
+        return $this;
+    }
+
     public function imageWatermark(
         ?string $absoluteOrProjectPath,
         float $opacity = 0.18,
@@ -223,6 +238,16 @@ trait ChromePdfDocumentTrait
         $this->pdfDocWatermarkImagePath = !empty($path)? $path: null;
         $this->pdfDocWatermarkImageOpacity = max(0.02, min(1.0, $opacity));
         $this->pdfDocWatermarkImageWidthMm = $widthMm;
+
+        return $this;
+    }
+
+    /**
+     * Where the image watermark is placed ({@code center} matches the historical default).
+     */
+    public function imageWatermarkPosition(WatermarkPosition $position): self
+    {
+        $this->pdfDocWatermarkImagePosition = $position;
 
         return $this;
     }
@@ -604,9 +629,11 @@ trait ChromePdfDocumentTrait
             textWatermarkOpacity: $this->pdfDocWatermarkTextOpacity,
             textWatermarkAngleDeg: $this->pdfDocWatermarkTextAngleDeg,
             textWatermarkFontSizePt: $this->pdfDocWatermarkTextFontSizePt,
+            textWatermarkPosition: $this->pdfDocWatermarkTextPosition,
             imageWatermarkPath: $this->pdfDocWatermarkImagePath,
             imageWatermarkOpacity: $this->pdfDocWatermarkImageOpacity,
             imageWatermarkWidthMm: $this->pdfDocWatermarkImageWidthMm,
+            imageWatermarkPosition: $this->pdfDocWatermarkImagePosition,
             encryptUserPassword: $this->pdfDocEncryptUserPassword,
             encryptOwnerPassword: $this->pdfDocEncryptOwnerPassword,
             encryptBlockedPermissions: $this->pdfDocEncryptBlockedPermissions,

@@ -53,6 +53,7 @@ In essence, ChromePdf bridges the gap between **web rendering** and **document g
     * [waitForWindowLoadEvent](#waitforwindowloadevent)
 * [DOM Processing](#dom-processing)
     * [printFromElement](#printFromElement)
+    * [hideElements](#hideElements)
     * [removeCookiePopups](#removecookiepopups)
     * [clickableLinks](#clickablelinks)
 * [Styling](#styling)
@@ -429,6 +430,18 @@ Render only a specific element.
 ```php
 ChromePdf::create()
     ->printFromElement('#invoice');
+```
+
+## hideElements
+
+Render only a specific element.
+
+```php
+ChromePdf::create()
+    ->hideElements(['#invoice', '#footer']);
+
+// or
+// ->hideElements('#invoice', '#footer', ['body p', 'div.content'])
 ```
 
 ---
