@@ -370,9 +370,9 @@ trait ChromePdfDocumentTrait
         
         $wrapStyle = 'margin:0;padding:0;border:none;outline:0;background-color:' . $backgroundCss . ';'
             . '-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;'
-            . 'width:100%;height:28px;display:flex;align-items:center;justify-content:center;';
+            . 'width:100%;height:30px;display:flex;align-items:center;justify-content:center;';
 
-        $slotStyle = 'margin:0;padding:0 2px;border:none;outline:0;background-color:transparent;'
+        $slotStyle = 'margin:0;padding:0 10px;border:none;outline:0;background-color:transparent;'
             . 'width:100%;text-align:' . $textAlign . ';color:' . $textColorCss . ';font-size:12px;line-height:1.35;';
 
         return '<div style="' . $wrapStyle . '"><div style="' . $slotStyle . '">' . $content . '</div></div>';
