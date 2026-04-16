@@ -8,6 +8,7 @@ use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
 use Tamedevelopers\Support\ChromePdf\Internal\PdfPipeline;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;
 use Tamedevelopers\Support\ChromePdf\PdfRebuildOptions;
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
 use TCPDF;
 use Throwable;
@@ -29,6 +30,10 @@ trait ChromePdfDocumentTrait
     private ?string $pdfDocFooterHtml = null;
     private ?string $pdfDocHeaderBackgroundColor = null;
     private ?string $pdfDocFooterBackgroundColor = null;
+    private string $pdfDocHeaderTextAlign = 'center';
+    private string $pdfDocFooterTextAlign = 'center';
+    private ?string $pdfDocHeaderTextColor = null;
+    private ?string $pdfDocFooterTextColor = null;
 
     private ?string $pdfDocWatermarkText = null;
 
@@ -112,12 +117,60 @@ trait ChromePdfDocumentTrait
     }
 
     /**
+     * Set header text color (e.g. #fff, rgb(...), var(...)). Null resets to default.
+     */
+    public function headerColor(?string $cssColor = null): self
+    {
+        $this->pdfDocHeaderTextColor = !empty($cssColor) ? trim($cssColor) : null;
+
+        return $this;
+    }
+
+    /**
      * Force a printable background color in the footer template area.
      * Pass null/empty to keep it transparent.
      */
     public function footerBackground(?string $cssColor = null): self
     {
         $this->pdfDocFooterBackgroundColor = !empty($cssColor) ? trim($cssColor) : null;
+
+        return $this;
+    }
+
+    /**
+     * Set footer text color (e.g. #fff, rgb(...), var(...)). Null resets to default.
+     */
+    public function footerColor(?string $cssColor = null): self
+    {
+        $this->pdfDocFooterTextColor = !empty($cssColor) ? trim($cssColor) : null;
+
+        return $this;
+    }
+
+    public function headerLeft(): self
+    {
+        $this->pdfDocHeaderTextAlign = 'left';
+
+        return $this;
+    }
+
+    public function headerRight(): self
+    {
+        $this->pdfDocHeaderTextAlign = 'right';
+
+        return $this;
+    }
+
+    public function footerLeft(): self
+    {
+        $this->pdfDocFooterTextAlign = 'left';
+
+        return $this;
+    }
+
+    public function footerRight(): self
+    {
+        $this->pdfDocFooterTextAlign = 'right';
 
         return $this;
     }
@@ -292,8 +345,8 @@ trait ChromePdfDocumentTrait
 
     private function chromePdfNormalizeTemplate(string $template, bool $isHeader): string
     {
-        $trimmed = trim($template);
-        if ($trimmed === '') {
+        $trimmed = Str::trim($template);
+        if (empty($trimmed)) {
             return $this->chromePdfEmptyTemplate();
         }
 
@@ -305,15 +358,22 @@ trait ChromePdfDocumentTrait
         $background = $isHeader 
             ? $this->pdfDocHeaderBackgroundColor 
             : $this->pdfDocFooterBackgroundColor;
+        $textAlign = $isHeader
+            ? $this->pdfDocHeaderTextAlign
+            : $this->pdfDocFooterTextAlign;
+        $textColor = $isHeader
+            ? $this->pdfDocHeaderTextColor
+            : $this->pdfDocFooterTextColor;
 
         $backgroundCss =  !empty($background) ? $background : 'transparent';
+        $textColorCss = !empty($textColor) ? $textColor : '#111';
         
         $wrapStyle = 'margin:0;padding:0;border:none;outline:0;background-color:' . $backgroundCss . ';'
-            . '-webkit-print-color-adjust:exact;print-color-adjust:exact;'
+            . '-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;'
             . 'width:100%;height:28px;display:flex;align-items:center;justify-content:center;';
 
         $slotStyle = 'margin:0;padding:0 2px;border:none;outline:0;background-color:transparent;'
-            . 'width:100%;text-align:center;color:#111;font-size:12px;line-height:1.35;';
+            . 'width:100%;text-align:' . $textAlign . ';color:' . $textColorCss . ';font-size:12px;line-height:1.35;';
 
         return '<div style="' . $wrapStyle . '"><div style="' . $slotStyle . '">' . $content . '</div></div>';
     }
@@ -326,6 +386,11 @@ trait ChromePdfDocumentTrait
 
     private function chromePdfResolveDefaultHeaderText(): string
     {
+        $fromTitle = $this->chromePdfExtractDocumentTitleFromSource();
+        if ($fromTitle !== null) {
+            return $fromTitle;
+        }
+
         if (property_exists($this, 'sourceMode') && property_exists($this, 'sourceValue')) {
             /** @var mixed $mode */
             $mode = $this->sourceMode;
@@ -348,6 +413,48 @@ trait ChromePdfDocumentTrait
         }
 
         return 'Document';
+    }
+
+    private function chromePdfExtractDocumentTitleFromSource(): ?string
+    {
+        if (!property_exists($this, 'sourceMode') || !property_exists($this, 'sourceValue')) {
+            return null;
+        }
+
+        /** @var mixed $mode */
+        $mode = $this->sourceMode;
+        /** @var mixed $value */
+        $value = $this->sourceValue;
+
+        if ($mode === 'html' && is_string($value) && $value !== '') {
+            return $this->chromePdfExtractTitleTagValue($value);
+        }
+
+        if ($mode === 'file' && is_string($value) && $value !== '' && is_readable($value)) {
+            $raw = @file_get_contents($value);
+            if (is_string($raw) && $raw !== '') {
+                return $this->chromePdfExtractTitleTagValue($raw);
+            }
+        }
+
+        return null;
+    }
+
+    private function chromePdfExtractTitleTagValue(string $html): ?string
+    {
+        if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $m) !== 1) {
+            return null;
+        }
+
+        $title = trim(strip_tags((string) ($m[1] ?? '')));
+        if ($title === '') {
+            return null;
+        }
+
+        $decoded = html_entity_decode($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $decoded = trim($decoded);
+
+        return $decoded !== '' ? $decoded : null;
     }
 
     protected function chromePdfDocumentAfterGenerate(string $rawPdf): PdfOutput
