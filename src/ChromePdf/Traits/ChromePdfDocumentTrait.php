@@ -367,11 +367,15 @@ trait ChromePdfDocumentTrait
             default => 'center',
         };
 
-        $slotStyle = 'margin: 0;padding:0 10px;border:none;outline:0;background:' . $backgroundCss . ';'
+        $edgeDock = $isHeader ? 'top:0;' : 'bottom: -1px;';
+        $height = $isHeader ? '40px' : '30px';
+
+        $slotStyle = 'margin:0;padding:0 10px;border:none;outline:0;background:' . $backgroundCss . ';'
             . '-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;'
+            . 'position:fixed;left:0;right:0;' . $edgeDock
             . 'display:flex;align-items:center;justify-content:' . $justify . ';'
             . 'text-align:' . $textAlign . ';color:' . $textColorCss . ';'
-            . 'width:100%;height:30px;font-size:12px;line-height:1.35;';
+            . 'width:100%;height:' . $height . ';box-sizing:border-box;font-size:12px;line-height:1.35;';
 
         return '<div style="' . $slotStyle . '">' . $content . '</div>';
     }
