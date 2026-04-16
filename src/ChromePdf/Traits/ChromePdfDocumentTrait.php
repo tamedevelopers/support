@@ -219,10 +219,13 @@ trait ChromePdfDocumentTrait
 
     /**
      * Where the text watermark is placed ({@code center} matches the historical default).
+     * Pass a {@see WatermarkPosition} or a string ({@code top_left}, {@code top left}, {@code top-left}, etc.).
      */
-    public function textWatermarkPosition(WatermarkPosition $position): self
+    public function textWatermarkPosition(WatermarkPosition|string $position): self
     {
-        $this->pdfDocWatermarkTextPosition = $position;
+        $this->pdfDocWatermarkTextPosition = $position instanceof WatermarkPosition
+            ? $position
+            : WatermarkPosition::parse($position);
 
         return $this;
     }
@@ -244,10 +247,13 @@ trait ChromePdfDocumentTrait
 
     /**
      * Where the image watermark is placed ({@code center} matches the historical default).
+     * Pass a {@see WatermarkPosition} or a string ({@code bottom_right}, {@code bottom right}, {@code bottom-right}, etc.).
      */
-    public function imageWatermarkPosition(WatermarkPosition $position): self
+    public function imageWatermarkPosition(WatermarkPosition|string $position): self
     {
-        $this->pdfDocWatermarkImagePosition = $position;
+        $this->pdfDocWatermarkImagePosition = $position instanceof WatermarkPosition
+            ? $position
+            : WatermarkPosition::parse($position);
 
         return $this;
     }

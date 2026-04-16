@@ -240,13 +240,13 @@ final class PdfPipeline
                 max($pad, $w - $pad - $sw) + $sw / 2.0,
                 $pad + $fsMm * 0.85 - $fsMm * 0.35,
             ],
-            WatermarkPosition::MiddleLeft => [
+            WatermarkPosition::CenterLeft => [
                 $pad,
                 $h / 2.0 + $fsMm * 0.25,
                 $pad + $sw / 2.0,
                 $h / 2.0 + $fsMm * 0.25 - $fsMm * 0.35,
             ],
-            WatermarkPosition::MiddleRight => [
+            WatermarkPosition::CenterRight => [
                 max($pad, $w - $pad - $sw),
                 $h / 2.0 + $fsMm * 0.25,
                 max($pad, $w - $pad - $sw) + $sw / 2.0,
@@ -314,8 +314,8 @@ final class PdfPipeline
             WatermarkPosition::TopLeft => [$pad, $pad],
             WatermarkPosition::TopCenter => [($w - $targetW) / 2.0, $pad],
             WatermarkPosition::TopRight => [max($pad, $w - $pad - $targetW), $pad],
-            WatermarkPosition::MiddleLeft => [$pad, ($h - $targetH) / 2.0],
-            WatermarkPosition::MiddleRight => [max($pad, $w - $pad - $targetW), ($h - $targetH) / 2.0],
+            WatermarkPosition::CenterLeft => [$pad, ($h - $targetH) / 2.0],
+            WatermarkPosition::CenterRight => [max($pad, $w - $pad - $targetW), ($h - $targetH) / 2.0],
             WatermarkPosition::BottomLeft => [$pad, max($pad, $h - $pad - $targetH)],
             WatermarkPosition::BottomCenter => [($w - $targetW) / 2.0, max($pad, $h - $pad - $targetH)],
             WatermarkPosition::BottomRight => [max($pad, $w - $pad - $targetW), max($pad, $h - $pad - $targetH)],
