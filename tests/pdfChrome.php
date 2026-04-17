@@ -19,8 +19,8 @@ $files = [
 ];
 
 $output = ChromePdf::create()
-    // ->fromFile('upload/template.html')
-    ->fromUrl('https://www.lhkexpress.com')
+    ->fromFile('upload/template.html')
+    // ->fromUrl('https://www.lhkexpress.com')
     // ->clickableLinks(false)
     // ->cssFile('upload/style2.css')
     // ->margin(20)
