@@ -16,6 +16,7 @@ use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
 use Tamedevelopers\Support\ChromePdf\Exception\FontNotFoundException;
 use Tamedevelopers\Support\ChromePdf\Internal\ChromePdfDomWatermark;
 use Tamedevelopers\Support\ChromePdf\Internal\CombinedPostProcessScript;
+use Tamedevelopers\Support\ChromePdf\Internal\FileUri;
 use Tamedevelopers\Support\ChromePdf\Internal\FlattenLinksScript;
 use Tamedevelopers\Support\ChromePdf\Internal\PreloaderRemovalScript;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;
@@ -1070,9 +1071,7 @@ final class ChromePdf
 
     private function loadFromFile(Page $page): void
     {
-        $this->sourceValue = File::get($this->sourceValue);
-
-        $this->loadFromHtml($page);
+        $this->loadFromFileUri($page);
     }
 
     private function loadFromHtml(Page $page): void
@@ -1081,6 +1080,31 @@ final class ChromePdf
         $this->injectionCssForPostProcess = '';
         $merged = self::mergeCssIntoHtmlDocument($html, $this->buildThemeCssOnly(), null);
         $page->setHtml($merged, 500, Page::DOM_CONTENT_LOADED);
+    }
+
+    /**
+     * For speed, we use the file content directly instead of navigating to the file URI.
+     * Css must be in the same file or using the cssFile() method to load its styles.
+     */
+    private function loadFromFileContent(Page $page): void
+    {
+        $this->sourceValue = File::get($this->sourceValue);
+        $this->loadFromHtml($page);
+    }
+
+    /**
+     * Navigate to the file URI.
+     */
+    private function loadFromFileUri(Page $page): void
+    {
+        $path = $this->sourceValue;
+        $fileUri = FileUri::fromPath($path);
+        $this->injectionCssForPostProcess = null;
+
+        $page->navigate($fileUri)->waitForNavigation(
+            Page::DOM_CONTENT_LOADED,
+            min(10000, max(1200, $this->effectiveNavigationTimeoutMs()))
+        );
     }
 
     /**

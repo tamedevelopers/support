@@ -31,16 +31,18 @@ $files = [
 
 $output = ChromePdf::create()
     // ->fromHtml('<html><body><p>你好世界</p></body></html>')
-    ->fromFile($files['1'])
+    // ->fromFile($files['1'])
+    ->fromFile('upload/template5.html')
     // ->fromUrl('https://www.google.com')
     ->paper('A4') // A4, letter, Legal, Ledger
     ->colorScheme('dark')
-    ->printFromElement('.body')
-    ->hideElements('.row-content::nth-child(1)', '.footer')
+    ->hideElements('.tm_hide_print')
+    ->printFromElement('.tm_download_section')
+    // ->cssFile('upload/style2.css')
     // ->margin(20)
     // Native Chromium header/footer (HTML templates; classes: date, title, url, pageNumber, totalPages)
-    ->headerHtml()
-    ->footerHtml()
+    // ->headerHtml()
+    // ->footerHtml()
     // ->landscape()
     // ->headerFooterColor('white', 'white')
     // ->headerFooterBackground('transparent')
@@ -55,8 +57,6 @@ $output = ChromePdf::create()
     //     ownerPassword: 'owner', 
     //     blockedPermissions: ['copy', 'print'],
     // )
-    // PDF/A (1 or 3); cannot combine with encrypt()
-    // ->pdfA(1)
     // ->chromiumBinary('upload/chrome-win/chrome.exe')
     // ->clickableLinks(true)
     ->generate();
