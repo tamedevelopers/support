@@ -32,7 +32,7 @@ $files = [
 $output = ChromePdf::create()
     // ->fromHtml('<html><body><p>你好世界</p></body></html>')
     // ->fromFile($files['1'])
-    ->fromFile('upload/template5.html')
+    ->fromFile('upload/template4.html')
     // ->fromUrl('https://www.google.com')
     ->paper('A4') // A4, letter, Legal, Ledger
     ->colorScheme('dark')

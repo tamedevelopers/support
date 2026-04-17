@@ -1071,32 +1071,6 @@ final class ChromePdf
 
     private function loadFromFile(Page $page): void
     {
-        $this->loadFromFileUri($page);
-    }
-
-    private function loadFromHtml(Page $page): void
-    {
-        $html = $this->sourceValue;
-        $this->injectionCssForPostProcess = '';
-        $merged = self::mergeCssIntoHtmlDocument($html, $this->buildThemeCssOnly(), null);
-        $page->setHtml($merged, 500, Page::DOM_CONTENT_LOADED);
-    }
-
-    /**
-     * For speed, we use the file content directly instead of navigating to the file URI.
-     * Css must be in the same file or using the cssFile() method to load its styles.
-     */
-    private function loadFromFileContent(Page $page): void
-    {
-        $this->sourceValue = File::get($this->sourceValue);
-        $this->loadFromHtml($page);
-    }
-
-    /**
-     * Navigate to the file URI.
-     */
-    private function loadFromFileUri(Page $page): void
-    {
         $path = $this->sourceValue;
         $fileUri = FileUri::fromPath($path);
         $this->injectionCssForPostProcess = null;
@@ -1105,6 +1079,14 @@ final class ChromePdf
             Page::DOM_CONTENT_LOADED,
             min(10000, max(1200, $this->effectiveNavigationTimeoutMs()))
         );
+    }
+
+    private function loadFromHtml(Page $page): void
+    {
+        $html = $this->sourceValue;
+        $this->injectionCssForPostProcess = '';
+        $merged = self::mergeCssIntoHtmlDocument($html, $this->buildThemeCssOnly(), null);
+        $page->setHtml($merged, 500, Page::DOM_CONTENT_LOADED);
     }
 
     /**
