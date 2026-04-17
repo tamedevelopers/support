@@ -9,12 +9,18 @@ use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
 
 class FileHelper{
-        
-    /** Upload Data @var mixed */
-    private $data;
-        
-    /** Regenerated name @var string */
-    private $generatedName;
+
+    /** @var string */
+    private string $name;
+    private string $path;
+    private string $filename;
+    private string $type;
+    private string $tmp_name;
+    private int $error;
+    private int $size;
+    private string $extension;
+    private string $errorMessage;
+    private string|null $generatedName;
 
     /**
      * __construct
@@ -24,7 +30,15 @@ class FileHelper{
      */
     public function __construct($data = null)
     {
-        $this->data = $data;
+        $this->name = $data['name'] ?? '';
+        $this->path = $data['path'] ?? '';
+        $this->filename = $data['filename'] ?? '';
+        $this->type = $data['type'] ?? '';
+        $this->tmp_name = $data['tmp_name'] ?? '';
+        $this->error = $data['error'] ?? 0;
+        $this->size = $data['size'] ?? 0;
+        $this->extension = $data['extension'] ?? '';
+        $this->errorMessage = $this->errorMessage();
     }
     
     /**
@@ -34,10 +48,29 @@ class FileHelper{
      */
     public function extension()
     {
-        return Str::lower(
-            pathinfo($this->data['name'], PATHINFO_EXTENSION)
-        );
+        return Str::lower($this->extension);
     }
+    
+    /**
+     * Error code
+     *
+     * @return int
+     */
+    public function error()
+    {
+        return $this->error;
+    }
+    
+    /**
+     * Error on upload
+     * 
+     * @return string|null
+     */
+    public function noError(): bool
+    {
+        return ($this->error() === UPLOAD_ERR_OK);
+    }
+
     
     /**
      * Get Temporary Path
@@ -46,7 +79,7 @@ class FileHelper{
      */
     public function tmp()
     {
-        return $this->data['tmp_name'];
+        return $this->tmp_name;
     }
     
     /**
@@ -56,7 +89,27 @@ class FileHelper{
      */
     public function type()
     {
-        return $this->data['type'];
+        return $this->type;
+    }
+    
+    /**
+     * If uploaded file is empty
+     *
+     * @return bool
+     */
+    public function isEmpty()
+    {
+        return empty($this->name);
+    }
+    
+    /**
+     * If uploaded file is not empty
+     *
+     * @return bool
+     */
+    public function isNotEmpty()
+    {
+        return !$this->isEmpty();
     }
     
     /**
@@ -66,7 +119,17 @@ class FileHelper{
      */
     public function name()
     {
-        return $this->data['name'];
+        return $this->name;
+    }
+    
+    /**
+     * Get File Name
+     *
+     * @return string
+     */
+    public function fileName()
+    {
+        return $this->filename;
     }
         
     /**
@@ -89,7 +152,7 @@ class FileHelper{
      */
     public function size()
     {
-        return $this->data['size'];
+        return $this->size;
     }
 
     /**
@@ -101,7 +164,7 @@ class FileHelper{
      */
     public function sizeFormatted(int $precision = 2): string
     {
-        $size = $this->data['size'];
+        $size = $this->size;
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
         
         for ($i = 0; $size >= 1024 && $i < count($units) - 1; $i++) {
@@ -119,7 +182,7 @@ class FileHelper{
      */
     public function sizeIn(string $unit = 'KB'): float
     {
-        $size = (float)$this->data['size'];
+        $size = (float)$this->size;
         $units = ['B' => 1, 'KB' => 1024, 'MB' => 1048576, 'GB' => 1073741824];
         
         return $size / ($units[strtoupper($unit)] ?? 1);
@@ -134,7 +197,7 @@ class FileHelper{
      */
     public function sizeBetween($maxSize, $minSize = null): bool
     {
-        $size = $this->data['size'];
+        $size = $this->size;
 
         $maxSize = Tame::sizeToBytes($maxSize);
         $minSize = Tame::sizeToBytes($minSize);
@@ -214,12 +277,18 @@ class FileHelper{
      */
     public function move(string $destination, ?string $newName = null)
     {
-        $fileName   = File::name($newName ?? $this->generatedName ?? $this->name());
-        $directory  = Tame::stringReplacer($destination);
-        $fullPath   = "{$directory}/{$fileName}.{$this->extension()}";
+        $fileName = File::name($newName ?? $this->generatedName ?? $this->name());
 
-        if(!File::isDirectory($directory)){
-            File::makeDirectory($directory);
+        // get the path
+        $path = Tame::stringReplacer($destination);
+
+        // get actual storage path
+        $storagePath = Str::replace($this->name(), '', $path);
+
+        $fullPath = "{$storagePath}/{$fileName}.{$this->extension()}";
+
+        if(!File::isDirectory($storagePath)){
+            File::makeDirectory($storagePath);
         }
 
         $move = @move_uploaded_file($this->tmp(), $fullPath);
@@ -236,22 +305,9 @@ class FileHelper{
      * 
      * @return string|null
      */
-    public function getError(): ?string
+    public function getErrorMessage(): ?string
     {
-        $error = $this->data['error'] ?? UPLOAD_ERR_OK;
-        
-        $errors = [
-            UPLOAD_ERR_OK => 'No error',
-            UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize directive',
-            UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE directive',
-            UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
-            UPLOAD_ERR_NO_FILE => 'No file was uploaded',
-            UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder',
-            UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
-            UPLOAD_ERR_EXTENSION => 'File upload stopped by extension',
-        ];
-        
-        return $errors[$error] ?? ($error === UPLOAD_ERR_OK ? null : 'Unknown error');
+        return $this->errorMessage;
     }
 
     /**
@@ -266,6 +322,29 @@ class FileHelper{
             return unlink($tmpPath);
         }
         return false;
+    }
+
+    /**
+     * Normalize error message
+     * 
+     * @return string|null
+     */
+    private function errorMessage(): ?string
+    {
+        $error = $this->error();
+        
+        $errors = [
+            UPLOAD_ERR_OK => 'No error',
+            UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize directive',
+            UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE directive',
+            UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
+            UPLOAD_ERR_NO_FILE => 'No file was uploaded',
+            UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder',
+            UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
+            UPLOAD_ERR_EXTENSION => 'File upload stopped by extension',
+        ];
+        
+        return $errors[$error] ?? ($error === UPLOAD_ERR_OK ? null : 'Unknown error');
     }
 
     /**

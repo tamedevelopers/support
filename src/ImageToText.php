@@ -151,36 +151,34 @@ class ImageToText
     private static function resolveInput(array $config): array
     {
         File::makeDirectory($config['tmp_dir']);
-        $tempFiles = [];
-        $maxFileSize = $config['max_file_size'];
 
-        if (is_array($config['upload']) && isset($config['upload']['tmp_name'])) {
+        $tempFiles      = [];
+        $maxFileSize    = $config['max_file_size'];
+        $upload         = $config['upload'];
+
+        if ($upload && $upload->isNotEmpty()) {
             // Validate uploaded file
-            if (!isset($config['upload']['error']) || (int) $config['upload']['error'] !== UPLOAD_ERR_OK) {
+            if (!$upload->noError()) {
                 throw new CustomException('Image upload failed.');
             }
 
             // Check file size
-            if ($maxFileSize > 0 && $config['upload']['size'] > $maxFileSize) {
+            if ($maxFileSize > 0 && $upload->size() > $maxFileSize) {
                 $maxMB = round($maxFileSize / 1024 / 1024, 2);
-                $actualMB = round($config['upload']['size'] / 1024 / 1024, 2);
+                $actualMB = round($upload->size() / 1024 / 1024, 2);
                 throw new CustomException("File size exceeds {$maxMB} MB limit. Actual: {$actualMB} MB.");
             }
 
-            // Move uploaded file to temporary location
-            $originalName = $config['upload']['name'] ?? 'upload';
-            $ext = self::guessExtension($config['upload']['type'] ?? '', $originalName);
-            $dest = rtrim($config['tmp_dir'], '/\\') . '/' . self::uniqueName('upload', $ext);
+            $upload->generate();
+            $uploaded = $upload->move($config['tmp_dir']);
             
-            if (!move_uploaded_file($config['upload']['tmp_name'], $dest)) {
-                if (!@copy($config['upload']['tmp_name'], $dest)) {
-                    throw new CustomException('Unable to store uploaded file.');
-                }
+            if (!$uploaded['status']) {
+                throw new CustomException('Unable to store uploaded file.');
             }
 
-            return ['path' => $dest, 'tempFiles' => [$dest]];
+            return ['path' => $uploaded['path'], 'tempFiles' => [$uploaded['path']]];
 
-        } elseif (is_string($config['source']) && $config['source'] !== '') {
+        } elseif (is_string($config['source']) && !empty($config['source'])) {
             // Validate source file
             if (!@is_readable($config['source'])) {
                 throw new CustomException('Source image is not readable: ' . $config['source']);
