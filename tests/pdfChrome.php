@@ -52,7 +52,6 @@ $output = ChromePdf::create()
     // ->watermarkPositions('Center Right')
     // Document metadata (incremental Info update when fpdi present; keeps Chromium link annotations)
     // ->documentMetadata(title: 'Invoice', author: 'Acme', subject: 'Q1', keywords: 'invoice,demo')
-    // Passwords + permission **blocks** (TCPDF: list permissions to disallow—e.g. disallow copy but allow print)
     ->encrypt(
         userPassword: 'user', 
         ownerPassword: 'owner', 
