@@ -160,6 +160,11 @@ final class ChromePdf
      */
     private bool $enableRemoteImageLoading = true;
 
+    /**
+     *  Delete file passed to fromFile
+     */
+    private bool $deleteUploadedFile = false;
+
     private int $desktopViewportWidth = 1920;
 
     private int $desktopViewportHeight = 1080;
@@ -441,6 +446,16 @@ final class ChromePdf
     }
 
     /**
+     * Ability to delete uploaded file
+     */
+    public function deleteUploadedFile(bool $enable = false): self
+    {
+        $this->deleteUploadedFile = $enable;
+
+        return $this;
+    }
+
+    /**
      * {@code prefers-color-scheme} emulation. Pass {@see ColorScheme} or a string: {@code light}, {@code dark},
      * {@code no-preference} (aliases: none, system, default, auto). Unknown strings use {@see ColorScheme::NoPreference}.
      */
@@ -583,7 +598,16 @@ final class ChromePdf
                 throw new ConversionFailedException('Chromium returned an empty or invalid PDF payload.');
             }
 
-            return $this->chromePdfDocumentAfterGenerate($raw);
+            $chromePDF = $this->chromePdfDocumentAfterGenerate($raw);
+
+            // delete uploaded file as we already attached PDF as binary file data
+            if($this->sourceMode === 'file' && $this->deleteUploadedFile){
+                if(File::exists($this->sourceValue)){
+                    File::delete($this->sourceValue);
+                }
+            }
+            
+            return $chromePDF;
         } catch (FontNotFoundException $e) {
             throw $e;
         } catch (Throwable $e) {

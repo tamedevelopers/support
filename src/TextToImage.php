@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 use Exception;
-use Tamedevelopers\Support\Str;
-use Tamedevelopers\Support\Capsule\File;
-use Tamedevelopers\Support\Traits\FontPathTrait;
+use Tamedevelopers\Support\Asset;
 use Tamedevelopers\Support\Capsule\CustomException;
+use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Traits\FontPathTrait;
 
 /**
  * Generate initial-based avatar images similar to Google profile placeholders.
@@ -251,7 +252,7 @@ class TextToImage
                 $fullPath = self::stringReplacer("$destination/{$fileName}");
 
                 // domain full path
-                $domainPath = Server::formatWithDomainURI("{$storagePath}/{$fileName}");
+                $domainPath = Asset::asset("{$storagePath}/{$fileName}", true, false);
 
                 imagepng($img, $fullPath);
                 unset($img);

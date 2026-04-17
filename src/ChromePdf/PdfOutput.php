@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\ChromePdf;
 
+use Tamedevelopers\Support\Asset;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
 use Tamedevelopers\Support\Server;
@@ -50,7 +51,7 @@ final class PdfOutput
         $storagePath = Str::replace(Server::getServers('server'), '', $path);
 
         // domain full path
-        $domainPath = Server::formatWithDomainURI($storagePath);
+        $domainPath = Asset::asset($storagePath, true, false);
 
         return [
             'path' => $path,
