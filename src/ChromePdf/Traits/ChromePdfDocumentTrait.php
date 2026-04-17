@@ -617,38 +617,42 @@ trait ChromePdfDocumentTrait
         throw new ConversionFailedException(sprintf('Invalid footer edge offset value: %s', $value));
     }
 
-    protected function chromePdfDocumentAfterGenerate(string $rawPdf, array $trackedLinks = []): PdfOutput
+    /**
+     * @param array{links?: list<array<string, mixed>>, meta?: array<string, float|int>|null}|list<array<string, mixed>> $trackedBundle
+     */
+    protected function chromePdfDocumentAfterGenerate(string $rawPdf, array $trackedBundle = []): PdfOutput
     {
-        $hasUser =  !empty($this->pdfDocEncryptUserPassword);
+        $hasUser = !empty($this->pdfDocEncryptUserPassword);
         $hasOwner = !empty($this->pdfDocEncryptOwnerPassword);
 
         if ($this->pdfDocPdfA !== false && ($hasUser || $hasOwner)) {
             throw new ConversionFailedException('Choose either pdfA() or encrypt(); TCPDF cannot apply both.');
         }
-        
-        if($this->preserveLinksDuringEncryption){
-            
-            dd(
-                $trackedLinks,
-                $this->hasTrackedLinks
-            );
 
+        if ($this->preserveLinksDuringEncryption) {
             try {
                 $encrypted = $this->encryptWithLinks(
                     $rawPdf,
-                    $trackedLinks,
-                    $this->pdfDocEncryptUserPassword,
+                    $trackedBundle,
+                    (string) $this->pdfDocEncryptUserPassword,
                     $this->pdfDocEncryptOwnerPassword,
                     $this->pdfDocEncryptBlockedPermissions,
                     $this->pdfDocEncryptAlgorithm
                 );
+
                 return new PdfOutput($encrypted);
             } catch (ConversionFailedException $e) {
-                // Log warning and fall back
+                throw $e;
+            } catch (Throwable $e) {
+                throw new ConversionFailedException(
+                    'Encrypt with link preservation failed: ' . $e->getMessage(),
+                    (int) $e->getCode(),
+                    $e
+                );
             }
         }
 
-        
+
         try {
             $options = $this->pdfDocBuildRebuildOptions(includeTcpdfRasterWatermarks: false);
             if (!$options->needsTcpdfPass()) {

@@ -540,9 +540,9 @@ final class ChromePdf
         $browser = $this->acquireSharedBrowser();
         $this->injectionCssForPostProcess = null;
         $page = null;
-        $trackedLinks = [];
-        
-        if($this->clickableLinks && !empty($this->pdfDocEncryptUserPassword)) {
+        $trackedBundle = ['links' => [], 'meta' => null];
+
+        if ($this->clickableLinks && !empty($this->pdfDocEncryptUserPassword)) {
             $this->preserveLinksDuringEncryption = true;
         }
 
@@ -573,9 +573,9 @@ final class ChromePdf
 
             if ($this->clickableLinks) {
                 if ($this->preserveLinksDuringEncryption) {
-                    $this->injectLinkTrackingScript($page);
+                    $this->injectLinkTrackingScript($page, $this->pdfLinkPrintLayoutForScript());
                 }
-            } else{
+            } else {
                 $this->flattenLinksForPrint($page);
             }
 
@@ -592,12 +592,11 @@ final class ChromePdf
                 throw new ConversionFailedException('Chromium returned an empty or invalid PDF payload.');
             }
 
-            // Extract tracked links if they exist
             if ($this->preserveLinksDuringEncryption) {
-                $trackedLinks = $this->extractTrackedLinks($page);
+                $trackedBundle = $this->extractTrackedLinks($page);
             }
 
-            return $this->chromePdfDocumentAfterGenerate($raw, $trackedLinks);
+            return $this->chromePdfDocumentAfterGenerate($raw, $trackedBundle);
         } catch (FontNotFoundException $e) {
             throw $e;
         } catch (Throwable $e) {
@@ -680,6 +679,30 @@ final class ChromePdf
         }
 
         return $this->chromePdfDocumentMergePrintOptions($opts);
+    }
+
+    /**
+     * @return array{
+     *     paperWidthIn: float,
+     *     paperHeightIn: float,
+     *     marginTopIn: float,
+     *     marginRightIn: float,
+     *     marginBottomIn: float,
+     *     marginLeftIn: float
+     * }
+     */
+    private function pdfLinkPrintLayoutForScript(): array
+    {
+        $o = $this->buildPdfPrintOptions();
+
+        return [
+            'paperWidthIn' => (float) ($o['paperWidth'] ?? 8.27),
+            'paperHeightIn' => (float) ($o['paperHeight'] ?? 11.69),
+            'marginTopIn' => (float) ($o['marginTop'] ?? 0.0),
+            'marginRightIn' => (float) ($o['marginRight'] ?? 0.0),
+            'marginBottomIn' => (float) ($o['marginBottom'] ?? 0.0),
+            'marginLeftIn' => (float) ($o['marginLeft'] ?? 0.0),
+        ];
     }
 
     /**
@@ -886,114 +909,6 @@ final class ChromePdf
         $page->evaluate(FlattenLinksScript::asExpression())->getReturnValue(
             min(15000, max(2500, (int) ($this->effectiveNavigationTimeoutMs() / 4)))
         );
-    }
-
-    /**
-     * Inject script to track all links with automatic page detection
-     */
-    private function injectLinkTrackingScript(Page $page): void
-    {
-        $script = '
-            (function() {
-                // Store links with their positions and page info
-                window.__pdfLinks = [];
-                
-                // Function to check if element spans across pages
-                function getElementPageInfo(el) {
-                    var rect = el.getBoundingClientRect();
-                    var viewportHeight = window.innerHeight;
-                    var scrollY = window.scrollY || window.pageYOffset;
-                    
-                    // Calculate which page(s) this element appears on
-                    var elementTop = rect.top + scrollY;
-                    var elementBottom = rect.bottom + scrollY;
-                    
-                    // Estimate page number based on viewport height
-                    var startPage = Math.floor(elementTop / viewportHeight) + 1;
-                    var endPage = Math.floor((elementBottom - 1) / viewportHeight) + 1;
-                    
-                    return {
-                        startPage: startPage,
-                        endPage: endPage,
-                        elementTop: elementTop,
-                        elementBottom: elementBottom,
-                        viewportHeight: viewportHeight
-                    };
-                }
-                
-                // Collect all links
-                var links = document.querySelectorAll("a[href]");
-                links.forEach(function(link, index) {
-                    var rect = link.getBoundingClientRect();
-                    if (rect.width > 0 && rect.height > 0) {
-                        var pageInfo = getElementPageInfo(link);
-                        
-                        // For each page this link spans, create a link annotation
-                        for (var pageNum = pageInfo.startPage; pageNum <= pageInfo.endPage; pageNum++) {
-                            var yOnPage = 0;
-                            if (pageNum === pageInfo.startPage) {
-                                // On first page, calculate Y from top of page
-                                var scrollY = window.scrollY || window.pageYOffset;
-                                yOnPage = rect.top + scrollY - ((pageNum - 1) * pageInfo.viewportHeight);
-                            } else {
-                                // On subsequent pages, link starts at top of page
-                                yOnPage = 0;
-                            }
-                            
-                            window.__pdfLinks.push({
-                                url: link.href,
-                                x: rect.left,
-                                y: yOnPage,
-                                w: rect.width,
-                                h: (pageNum === pageInfo.endPage && pageInfo.endPage > pageInfo.startPage) 
-                                    ? rect.height - (pageInfo.elementBottom - (pageNum * pageInfo.viewportHeight))
-                                    : rect.height,
-                                page: pageNum,
-                                linkIndex: index,
-                                text: link.textContent || link.href
-                            });
-                        }
-                    }
-                });
-                
-                // Also collect links from PDF-specific elements
-                var areaElements = document.querySelectorAll("area[href]");
-                areaElements.forEach(function(area, index) {
-                    // For image maps, use parent map positioning
-                    var rect = area.getBoundingClientRect();
-                    if (rect.width > 0 && rect.height > 0) {
-                        var pageInfo = getElementPageInfo(area);
-                        window.__pdfLinks.push({
-                            url: area.href,
-                            x: rect.left,
-                            y: rect.top - ((pageInfo.startPage - 1) * pageInfo.viewportHeight),
-                            w: rect.width,
-                            h: rect.height,
-                            page: pageInfo.startPage,
-                            linkIndex: index + links.length,
-                            text: area.alt || area.href
-                        });
-                    }
-                });
-                
-                // Store total pages estimate
-                window.__pdfTotalPages = Math.ceil(
-                    (document.body.scrollHeight || document.documentElement.scrollHeight) / window.innerHeight
-                );
-                
-                return window.__pdfLinks.length;
-            })();
-        ';
-        
-        try {
-            $result = $page->evaluate($script)->getReturnValue(2000);
-            if ($result > 0) {
-                // Store that we have tracked links
-                $this->hasTrackedLinks = true;
-            }
-        } catch (Throwable $e) {
-            // Ignore errors
-        }
     }
 
     /**
