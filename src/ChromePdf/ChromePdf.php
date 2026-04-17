@@ -542,7 +542,7 @@ final class ChromePdf
         $page = null;
         $trackedBundle = ['links' => [], 'meta' => null];
 
-        if ($this->clickableLinks && !empty($this->pdfDocEncryptUserPassword)) {
+        if ($this->clickableLinks && !empty($this->pdfDocEncryptUserPassword) && $this->sourceMode !== 'url') {
             $this->preserveLinksDuringEncryption = true;
         }
 
@@ -573,6 +573,7 @@ final class ChromePdf
 
             if ($this->clickableLinks) {
                 if ($this->preserveLinksDuringEncryption) {
+                    $this->applyPrintMediaEmulationForLinkMetrics($page);
                     $this->injectLinkTrackingScript($page, $this->pdfLinkPrintLayoutForScript());
                 }
             } else {
@@ -938,6 +939,40 @@ final class ChromePdf
      * Batches prefers-color-scheme emulation, optional auto-dark override, and client hints in one pass.
      * Skips duplicate CDP work when the target session already has the same scheme applied.
      */
+    /**
+     * Link hit-testing must match the same {@code print} layout Blink uses for {@code Page.printToPDF}. Measuring in
+     * the default screen media misses {@code @media print} rules, fixed/sticky reflow, and width/pagination — which
+     * skews coordinates for large link sets.
+     */
+    private function applyPrintMediaEmulationForLinkMetrics(Page $page): void
+    {
+        $session = $page->getSession();
+        $features = [];
+        if ($this->colorScheme !== ColorScheme::NoPreference) {
+            $features[] = ['name' => 'prefers-color-scheme', 'value' => $this->colorScheme->value];
+        }
+        try {
+            $session->sendMessageSync(new Message('Emulation.setEmulatedMedia', [
+                'media' => 'print',
+                'features' => $features,
+            ]));
+        } catch (Throwable) {
+            return;
+        }
+        if ($this->colorScheme === ColorScheme::Light) {
+            try {
+                $session->sendMessageSync(new Message('Emulation.setAutoDarkModeOverride', [
+                    'enabled' => false,
+                ]));
+            } catch (Throwable) {
+            }
+        }
+        try {
+            $page->evaluate('document.documentElement.offsetHeight')->getReturnValue(1500);
+        } catch (Throwable) {
+        }
+    }
+
     private function applyColorSchemeToPage(Page $page): void
     {
         $session = $page->getSession();

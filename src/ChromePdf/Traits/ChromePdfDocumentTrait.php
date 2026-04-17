@@ -291,10 +291,14 @@ trait ChromePdfDocumentTrait
         ?array $blockedPermissions = [],
         int $algorithm = 3,
     ): self {
-        $this->pdfDocEncryptUserPassword = $userPassword;
-        $this->pdfDocEncryptOwnerPassword = $ownerPassword;
-        $this->pdfDocEncryptBlockedPermissions = $blockedPermissions;
-        $this->pdfDocEncryptAlgorithm = max(0, min(3, $algorithm));
+
+        if($this->sourceMode === 'url') {
+            $this->pdfDocEncryptUserPassword = $userPassword;
+            $this->pdfDocEncryptOwnerPassword = $ownerPassword;
+            $this->pdfDocEncryptBlockedPermissions = $blockedPermissions;
+            $this->pdfDocEncryptAlgorithm = max(0, min(3, $algorithm));
+        }
+
 
         return $this;
     }
@@ -631,6 +635,7 @@ trait ChromePdfDocumentTrait
 
         if ($this->preserveLinksDuringEncryption) {
             try {
+
                 $encrypted = $this->encryptWithLinks(
                     $rawPdf,
                     $trackedBundle,

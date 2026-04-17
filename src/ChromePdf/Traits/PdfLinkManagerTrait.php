@@ -123,9 +123,16 @@ trait PdfLinkManagerTrait
 
             $layoutWpx = max(1.0, (float) ($meta['layoutWidthPx'] ?? 1.0));
             $layoutHpx = max(1.0, (float) ($meta['layoutHeightPx'] ?? 1.0));
-            $contentHpx = (float) ($meta['contentHeightPxPerPage'] ?? 0.0);
-            if ($contentHpx < 1.0) {
-                $contentHpx = max(1.0, $layoutHpx / max(1, $pageCount));
+            $contentHFromPaper = (float) ($meta['contentHeightPxPerPage'] ?? 0.0);
+            $sliceHFromPdf = $layoutHpx / max(1, $pageCount);
+            $contentHpx = $contentHFromPaper >= 1.0
+                ? $contentHFromPaper
+                : max(1.0, $sliceHFromPdf);
+            if ($contentHFromPaper >= 1.0 && $sliceHFromPdf >= 1.0) {
+                $virtualPages = (int) ceil($layoutHpx / $contentHFromPaper);
+                if ($virtualPages >= 1 && abs($pageCount - $virtualPages) >= 2) {
+                    $contentHpx = max(1.0, $sliceHFromPdf);
+                }
             }
 
             for ($pageNo = 1; $pageNo <= $pageCount; ++$pageNo) {

@@ -611,6 +611,12 @@ Requires **FPDI + TCPDF**. These steps **re-import** the rasterized PDF and gene
 );
 ```
 
+### `pdfA`
+
+```php
+->pdfA(true);  // or int level per TCPDF PDF/A support
+```
+
 Cannot be combined with `encrypt()` in the same rebuild options (library enforces pipeline rules).
 
 ### `documentMetadata`
@@ -707,6 +713,7 @@ ChromePdf::shutdown();
 ```
 
 Also registered on PHP shutdown in normal long-lived scripts; call explicitly in workers/daemons when PDF work is done.
+
 ---
 
 ## Exceptions

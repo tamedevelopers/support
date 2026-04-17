@@ -2,16 +2,9 @@
 
 declare(strict_types=1);
 
-/**
- * Chrome PDF smoke / demo script.
- *
- * Optional demos at the bottom need Composer dev deps: setasign/fpdi, tecnickcom/tcpdf.
- *
- */
 
 use Tamedevelopers\Support\ChromePdf\ChromePdf;
 use Tamedevelopers\Support\ChromePdf\Exception\ConversionFailedException;
-use HeadlessChromium\BrowserFactory;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -25,33 +18,14 @@ $files = [
     '3' => base_path('upload/template3.html'),
 ];
 
-// On Windows, Linux, MacOS PHP (xampp, wamp, mamp, etc.), you need to enable the
-// sockets extension in your php.ini file.
-// ;extension=sockets
-
 $output = ChromePdf::create()
-    // ->fromHtml('<html><body><p>你好世界</p></body></html>')
-    // ->fromFile($files['1'])
-    ->fromFile('upload/template.html')
-    // ->fromUrl('https://www.google.com')
-    ->paper('A4') // A4, letter, Legal, Ledger
-    ->colorScheme('dark')
-    ->hideElements('.tm_hide_print')
-    ->printFromElement('.body')
+    // ->fromFile('upload/template.html')
+    ->fromUrl('https://www.lhkexpress.com')
     // ->clickableLinks(false)
     // ->cssFile('upload/style2.css')
     // ->margin(20)
-    // Native Chromium header/footer (HTML templates; classes: date, title, url, pageNumber, totalPages)
-    // ->headerHtml()
-    // ->footerHtml()
-    // ->landscape()
-    // ->headerFooterColor('white', 'white')
-    // ->headerFooterBackground('transparent')
+    ->printFromElement('.body')
     ->textWatermark('CONFIDENTIAL')
-    // ->imageWatermark('upload/zimage/header.png')
-    // ->watermarkPositions('Center Right')
-    // Document metadata (incremental Info update when fpdi present; keeps Chromium link annotations)
-    // ->documentMetadata(title: 'Invoice', author: 'Acme', subject: 'Q1', keywords: 'invoice,demo')
     ->encrypt(
         userPassword: 'user', 
         ownerPassword: 'owner', 
