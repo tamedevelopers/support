@@ -32,12 +32,13 @@ $files = [
 $output = ChromePdf::create()
     // ->fromHtml('<html><body><p>你好世界</p></body></html>')
     // ->fromFile($files['1'])
-    ->fromFile('upload/template4.html')
+    ->fromFile('upload/template.html')
     // ->fromUrl('https://www.google.com')
     ->paper('A4') // A4, letter, Legal, Ledger
     ->colorScheme('dark')
     ->hideElements('.tm_hide_print')
-    ->printFromElement('.tm_download_section')
+    ->printFromElement('.body')
+    // ->clickableLinks(false)
     // ->cssFile('upload/style2.css')
     // ->margin(20)
     // Native Chromium header/footer (HTML templates; classes: date, title, url, pageNumber, totalPages)
@@ -52,13 +53,12 @@ $output = ChromePdf::create()
     // Document metadata (incremental Info update when fpdi present; keeps Chromium link annotations)
     // ->documentMetadata(title: 'Invoice', author: 'Acme', subject: 'Q1', keywords: 'invoice,demo')
     // Passwords + permission **blocks** (TCPDF: list permissions to disallow—e.g. disallow copy but allow print)
-    // ->encrypt(
-    //     userPassword: 'user', 
-    //     ownerPassword: 'owner', 
-    //     blockedPermissions: ['copy', 'print'],
-    // )
+    ->encrypt(
+        userPassword: 'user', 
+        ownerPassword: 'owner', 
+        blockedPermissions: ['copy', 'print'],
+    )
     // ->chromiumBinary('upload/chrome-win/chrome.exe')
-    // ->clickableLinks(true)
     ->generate();
 
 // -------------------------------------------------------------------------

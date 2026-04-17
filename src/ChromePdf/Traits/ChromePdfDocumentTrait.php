@@ -617,14 +617,38 @@ trait ChromePdfDocumentTrait
         throw new ConversionFailedException(sprintf('Invalid footer edge offset value: %s', $value));
     }
 
-    protected function chromePdfDocumentAfterGenerate(string $rawPdf): PdfOutput
+    protected function chromePdfDocumentAfterGenerate(string $rawPdf, array $trackedLinks = []): PdfOutput
     {
-        $hasUser = $this->pdfDocEncryptUserPassword !== null && $this->pdfDocEncryptUserPassword !== '';
-        $hasOwner = $this->pdfDocEncryptOwnerPassword !== null && $this->pdfDocEncryptOwnerPassword !== '';
+        $hasUser =  !empty($this->pdfDocEncryptUserPassword);
+        $hasOwner = !empty($this->pdfDocEncryptOwnerPassword);
+
         if ($this->pdfDocPdfA !== false && ($hasUser || $hasOwner)) {
             throw new ConversionFailedException('Choose either pdfA() or encrypt(); TCPDF cannot apply both.');
         }
+        
+        if($this->preserveLinksDuringEncryption){
+            
+            dd(
+                $trackedLinks,
+                $this->hasTrackedLinks
+            );
 
+            try {
+                $encrypted = $this->encryptWithLinks(
+                    $rawPdf,
+                    $trackedLinks,
+                    $this->pdfDocEncryptUserPassword,
+                    $this->pdfDocEncryptOwnerPassword,
+                    $this->pdfDocEncryptBlockedPermissions,
+                    $this->pdfDocEncryptAlgorithm
+                );
+                return new PdfOutput($encrypted);
+            } catch (ConversionFailedException $e) {
+                // Log warning and fall back
+            }
+        }
+
+        
         try {
             $options = $this->pdfDocBuildRebuildOptions(includeTcpdfRasterWatermarks: false);
             if (!$options->needsTcpdfPass()) {

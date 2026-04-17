@@ -10,6 +10,10 @@ namespace Tamedevelopers\Support\ChromePdf\Internal;
  */
 final class FlattenLinksScript
 {
+    /**
+     * Strips navigation attributes from {@code <a>} / {@code <area>} so PDF links are not clickable.
+     * Elements stay as {@code <a>} so author CSS still applies.
+     */
     public static function asExpression(): string
     {
         return <<<'JS'
@@ -29,4 +33,5 @@ final class FlattenLinksScript
             })()
         JS;
     }
+
 }

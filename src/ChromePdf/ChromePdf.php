@@ -22,6 +22,7 @@ use Tamedevelopers\Support\ChromePdf\Internal\PreloaderRemovalScript;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;
 use Tamedevelopers\Support\ChromePdf\Traits\ChromePdfDocumentTrait;
 use Tamedevelopers\Support\ChromePdf\Traits\FontManagerTrait;
+use Tamedevelopers\Support\ChromePdf\Traits\PdfLinkManagerTrait;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Str;
 use Throwable;
@@ -63,8 +64,10 @@ use Throwable;
  */
 final class ChromePdf
 {
-    use ChromePdfDocumentTrait;
-    use FontManagerTrait;
+    use ChromePdfDocumentTrait, 
+        FontManagerTrait, 
+        PdfLinkManagerTrait;
+
 
     private ?string $sourceMode = null;
 
@@ -535,8 +538,13 @@ final class ChromePdf
         }
 
         $browser = $this->acquireSharedBrowser();
-        $page = null;
         $this->injectionCssForPostProcess = null;
+        $page = null;
+        $trackedLinks = [];
+        
+        if($this->clickableLinks && !empty($this->pdfDocEncryptUserPassword)) {
+            $this->preserveLinksDuringEncryption = true;
+        }
 
         try {
             $page = $browser->createPage();
@@ -563,7 +571,11 @@ final class ChromePdf
 
             $this->installDomWatermarksBeforePrint($page);
 
-            if (!$this->clickableLinks) {
+            if ($this->clickableLinks) {
+                if ($this->preserveLinksDuringEncryption) {
+                    $this->injectLinkTrackingScript($page);
+                }
+            } else{
                 $this->flattenLinksForPrint($page);
             }
 
@@ -580,7 +592,12 @@ final class ChromePdf
                 throw new ConversionFailedException('Chromium returned an empty or invalid PDF payload.');
             }
 
-            return $this->chromePdfDocumentAfterGenerate($raw);
+            // Extract tracked links if they exist
+            if ($this->preserveLinksDuringEncryption) {
+                $trackedLinks = $this->extractTrackedLinks($page);
+            }
+
+            return $this->chromePdfDocumentAfterGenerate($raw, $trackedLinks);
         } catch (FontNotFoundException $e) {
             throw $e;
         } catch (Throwable $e) {
@@ -869,6 +886,114 @@ final class ChromePdf
         $page->evaluate(FlattenLinksScript::asExpression())->getReturnValue(
             min(15000, max(2500, (int) ($this->effectiveNavigationTimeoutMs() / 4)))
         );
+    }
+
+    /**
+     * Inject script to track all links with automatic page detection
+     */
+    private function injectLinkTrackingScript(Page $page): void
+    {
+        $script = '
+            (function() {
+                // Store links with their positions and page info
+                window.__pdfLinks = [];
+                
+                // Function to check if element spans across pages
+                function getElementPageInfo(el) {
+                    var rect = el.getBoundingClientRect();
+                    var viewportHeight = window.innerHeight;
+                    var scrollY = window.scrollY || window.pageYOffset;
+                    
+                    // Calculate which page(s) this element appears on
+                    var elementTop = rect.top + scrollY;
+                    var elementBottom = rect.bottom + scrollY;
+                    
+                    // Estimate page number based on viewport height
+                    var startPage = Math.floor(elementTop / viewportHeight) + 1;
+                    var endPage = Math.floor((elementBottom - 1) / viewportHeight) + 1;
+                    
+                    return {
+                        startPage: startPage,
+                        endPage: endPage,
+                        elementTop: elementTop,
+                        elementBottom: elementBottom,
+                        viewportHeight: viewportHeight
+                    };
+                }
+                
+                // Collect all links
+                var links = document.querySelectorAll("a[href]");
+                links.forEach(function(link, index) {
+                    var rect = link.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        var pageInfo = getElementPageInfo(link);
+                        
+                        // For each page this link spans, create a link annotation
+                        for (var pageNum = pageInfo.startPage; pageNum <= pageInfo.endPage; pageNum++) {
+                            var yOnPage = 0;
+                            if (pageNum === pageInfo.startPage) {
+                                // On first page, calculate Y from top of page
+                                var scrollY = window.scrollY || window.pageYOffset;
+                                yOnPage = rect.top + scrollY - ((pageNum - 1) * pageInfo.viewportHeight);
+                            } else {
+                                // On subsequent pages, link starts at top of page
+                                yOnPage = 0;
+                            }
+                            
+                            window.__pdfLinks.push({
+                                url: link.href,
+                                x: rect.left,
+                                y: yOnPage,
+                                w: rect.width,
+                                h: (pageNum === pageInfo.endPage && pageInfo.endPage > pageInfo.startPage) 
+                                    ? rect.height - (pageInfo.elementBottom - (pageNum * pageInfo.viewportHeight))
+                                    : rect.height,
+                                page: pageNum,
+                                linkIndex: index,
+                                text: link.textContent || link.href
+                            });
+                        }
+                    }
+                });
+                
+                // Also collect links from PDF-specific elements
+                var areaElements = document.querySelectorAll("area[href]");
+                areaElements.forEach(function(area, index) {
+                    // For image maps, use parent map positioning
+                    var rect = area.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        var pageInfo = getElementPageInfo(area);
+                        window.__pdfLinks.push({
+                            url: area.href,
+                            x: rect.left,
+                            y: rect.top - ((pageInfo.startPage - 1) * pageInfo.viewportHeight),
+                            w: rect.width,
+                            h: rect.height,
+                            page: pageInfo.startPage,
+                            linkIndex: index + links.length,
+                            text: area.alt || area.href
+                        });
+                    }
+                });
+                
+                // Store total pages estimate
+                window.__pdfTotalPages = Math.ceil(
+                    (document.body.scrollHeight || document.documentElement.scrollHeight) / window.innerHeight
+                );
+                
+                return window.__pdfLinks.length;
+            })();
+        ';
+        
+        try {
+            $result = $page->evaluate($script)->getReturnValue(2000);
+            if ($result > 0) {
+                // Store that we have tracked links
+                $this->hasTrackedLinks = true;
+            }
+        } catch (Throwable $e) {
+            // Ignore errors
+        }
     }
 
     /**
