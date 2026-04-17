@@ -22,7 +22,6 @@ use Tamedevelopers\Support\ChromePdf\Internal\PreloaderRemovalScript;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;
 use Tamedevelopers\Support\ChromePdf\Traits\ChromePdfDocumentTrait;
 use Tamedevelopers\Support\ChromePdf\Traits\FontManagerTrait;
-use Tamedevelopers\Support\ChromePdf\Traits\PdfLinkManagerTrait;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Str;
 use Throwable;
@@ -65,8 +64,7 @@ use Throwable;
 final class ChromePdf
 {
     use ChromePdfDocumentTrait, 
-        FontManagerTrait, 
-        PdfLinkManagerTrait;
+        FontManagerTrait;
 
 
     private ?string $sourceMode = null;
@@ -540,11 +538,6 @@ final class ChromePdf
         $browser = $this->acquireSharedBrowser();
         $this->injectionCssForPostProcess = null;
         $page = null;
-        $trackedBundle = ['links' => [], 'meta' => null];
-
-        if ($this->clickableLinks && !empty($this->pdfDocEncryptUserPassword) && $this->sourceMode !== 'url') {
-            $this->preserveLinksDuringEncryption = true;
-        }
 
         try {
             $page = $browser->createPage();
@@ -572,10 +565,7 @@ final class ChromePdf
             $this->installDomWatermarksBeforePrint($page);
 
             if ($this->clickableLinks) {
-                if ($this->preserveLinksDuringEncryption) {
-                    $this->applyPrintMediaEmulationForLinkMetrics($page);
-                    $this->injectLinkTrackingScript($page, $this->pdfLinkPrintLayoutForScript());
-                }
+                // Keep anchors untouched so Chromium can emit native link annotations.
             } else {
                 $this->flattenLinksForPrint($page);
             }
@@ -593,11 +583,7 @@ final class ChromePdf
                 throw new ConversionFailedException('Chromium returned an empty or invalid PDF payload.');
             }
 
-            if ($this->preserveLinksDuringEncryption) {
-                $trackedBundle = $this->extractTrackedLinks($page);
-            }
-
-            return $this->chromePdfDocumentAfterGenerate($raw, $trackedBundle);
+            return $this->chromePdfDocumentAfterGenerate($raw);
         } catch (FontNotFoundException $e) {
             throw $e;
         } catch (Throwable $e) {
@@ -680,30 +666,6 @@ final class ChromePdf
         }
 
         return $this->chromePdfDocumentMergePrintOptions($opts);
-    }
-
-    /**
-     * @return array{
-     *     paperWidthIn: float,
-     *     paperHeightIn: float,
-     *     marginTopIn: float,
-     *     marginRightIn: float,
-     *     marginBottomIn: float,
-     *     marginLeftIn: float
-     * }
-     */
-    private function pdfLinkPrintLayoutForScript(): array
-    {
-        $o = $this->buildPdfPrintOptions();
-
-        return [
-            'paperWidthIn' => (float) ($o['paperWidth'] ?? 8.27),
-            'paperHeightIn' => (float) ($o['paperHeight'] ?? 11.69),
-            'marginTopIn' => (float) ($o['marginTop'] ?? 0.0),
-            'marginRightIn' => (float) ($o['marginRight'] ?? 0.0),
-            'marginBottomIn' => (float) ($o['marginBottom'] ?? 0.0),
-            'marginLeftIn' => (float) ($o['marginLeft'] ?? 0.0),
-        ];
     }
 
     /**

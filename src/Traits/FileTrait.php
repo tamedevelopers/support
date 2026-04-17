@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Traits;
 
+use Tamedevelopers\Support\FileHelper;
+
 
 trait FileTrait
 {
@@ -26,12 +28,12 @@ trait FileTrait
         // Handle multiple files (works with both name="files" and name="files[]")
         if (is_array($files['name'])) {
             foreach ($files['name'] as $index => $name) {
-                $collect[] = self::createFileItem($files, $index);
+                $collect[] = new FileHelper(self::createFileItem($files, $index));
             }
         }
         // Handle single file
         else {
-            $collect[] = self::createFileItem($files);
+            $collect[] = new FileHelper(self::createFileItem($files));
         }
 
         return new static($collect);
@@ -166,26 +168,23 @@ trait FileTrait
     {
       return <<<'JS'
         <script>
-        (function() {
             'use strict';
             
-            function initMultiInputFile() {
+            window.initMultiInputFile = function() {
                 var inputs = document.querySelectorAll('input[type="file"]');
                 
                 for (var i = 0; i < inputs.length; i++) {
                     var input = inputs[i];
                     
-                    // Add brackets to name if not already present
                     if ((input.multiple && input.name) && input.name.indexOf('[]') === -1) {
                         input.name = input.name + '[]';
                     }
                 }
-            }
+            };
 
             document.addEventListener('DOMContentLoaded', function(){
-              initMultiInputFile();
+                window.initMultiInputFile();
             });
-        })();
         </script>
       JS;
     }

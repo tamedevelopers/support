@@ -31,12 +31,18 @@ final class PdfOutput
      * Write PDF bytes to a filesystem path (creates parent directories).
      *
      * @param string $path Absolute or relative path, e.g. {@code storage_path('app/out.pdf')}
+     * @param string|null $name Name of the file, e.g. {@code 'out.pdf'}
      *
      * @throws ConversionFailedException
      */
-    public function save(string $path): array
+    public function save(string $path, ?string $name = null): array
     {
         $path = Tame::stringReplacer($path);
+
+        $originalName = File::name($path);
+        $fileName = Str::camel(File::name($name ?? $path));
+
+        $path = Str::replace($originalName, $fileName, $path);
 
         self::writeBinaryToPath($path, $this->binary);
 
@@ -49,7 +55,7 @@ final class PdfOutput
         return [
             'path' => $path,
             'url' => $domainPath, 
-            'name' => File::name($path), 
+            'name' => $fileName, 
             'storage' => $storagePath, 
         ];
     }

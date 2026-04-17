@@ -621,10 +621,7 @@ trait ChromePdfDocumentTrait
         throw new ConversionFailedException(sprintf('Invalid footer edge offset value: %s', $value));
     }
 
-    /**
-     * @param array{links?: list<array<string, mixed>>, meta?: array<string, float|int>|null}|list<array<string, mixed>> $trackedBundle
-     */
-    protected function chromePdfDocumentAfterGenerate(string $rawPdf, array $trackedBundle = []): PdfOutput
+    protected function chromePdfDocumentAfterGenerate(string $rawPdf): PdfOutput
     {
         $hasUser = !empty($this->pdfDocEncryptUserPassword);
         $hasOwner = !empty($this->pdfDocEncryptOwnerPassword);
@@ -632,31 +629,6 @@ trait ChromePdfDocumentTrait
         if ($this->pdfDocPdfA !== false && ($hasUser || $hasOwner)) {
             throw new ConversionFailedException('Choose either pdfA() or encrypt(); TCPDF cannot apply both.');
         }
-
-        if ($this->preserveLinksDuringEncryption) {
-            try {
-
-                $encrypted = $this->encryptWithLinks(
-                    $rawPdf,
-                    $trackedBundle,
-                    (string) $this->pdfDocEncryptUserPassword,
-                    $this->pdfDocEncryptOwnerPassword,
-                    $this->pdfDocEncryptBlockedPermissions,
-                    $this->pdfDocEncryptAlgorithm
-                );
-
-                return new PdfOutput($encrypted);
-            } catch (ConversionFailedException $e) {
-                throw $e;
-            } catch (Throwable $e) {
-                throw new ConversionFailedException(
-                    'Encrypt with link preservation failed: ' . $e->getMessage(),
-                    (int) $e->getCode(),
-                    $e
-                );
-            }
-        }
-
 
         try {
             $options = $this->pdfDocBuildRebuildOptions(includeTcpdfRasterWatermarks: false);
