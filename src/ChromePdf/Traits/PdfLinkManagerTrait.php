@@ -123,7 +123,6 @@ trait PdfLinkManagerTrait
 
             $layoutWpx = max(1.0, (float) ($meta['layoutWidthPx'] ?? 1.0));
             $layoutHpx = max(1.0, (float) ($meta['layoutHeightPx'] ?? 1.0));
-            $contentWpx = max(1.0, (float) ($meta['contentWidthPx'] ?? $layoutWpx));
             $contentHpx = (float) ($meta['contentHeightPxPerPage'] ?? 0.0);
             if ($contentHpx < 1.0) {
                 $contentHpx = max(1.0, $layoutHpx / max(1, $pageCount));
