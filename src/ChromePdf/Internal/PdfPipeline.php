@@ -49,7 +49,7 @@ final class PdfPipeline
                 $reader = self::openSourceReader($item, $index);
                 $pageCount = $pdf->setSourceFile($reader);
                 for ($p = 1; $p <= $pageCount; ++$p) {
-                    $tpl = $pdf->importPage($p);
+                    $tpl = self::importPageWithLinks($pdf, $p);
                     $size = $pdf->getTemplateSize($tpl);
                     $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
                     $pdf->useTemplate($tpl);
@@ -114,7 +114,7 @@ final class PdfPipeline
             $reader = StreamReader::createByString($binary);
             $pageCount = $pdf->setSourceFile($reader);
             for ($p = 1; $p <= $pageCount; ++$p) {
-                $tpl = $pdf->importPage($p);
+                $tpl = self::importPageWithLinks($pdf, $p);
                 $size = $pdf->getTemplateSize($tpl);
                 $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
                 $pdf->useTemplate($tpl);
@@ -204,6 +204,22 @@ final class PdfPipeline
         $pdf->SetHeaderMargin(0.0);
         $pdf->SetFooterMargin(0.0);
         $pdf->SetAutoPageBreak(false, 0.0);
+    }
+
+    /**
+     * Import source page and preserve native PDF links when supported by installed FPDI.
+     *
+     * @return string|int
+     */
+    private static function importPageWithLinks(Fpdi $pdf, int $pageNo): string|int
+    {
+        try {
+            // FPDI v2 supports: importPage($pageNo, $box, $groupXObject, $importExternalLinks).
+            return $pdf->importPage($pageNo, '/CropBox', true, true);
+        } catch (\ArgumentCountError|\TypeError) {
+            // Older signatures: fallback without explicit link-import parameter.
+            return $pdf->importPage($pageNo);
+        }
     }
 
     private static function stampTextWatermark(Fpdi $pdf, PdfRebuildOptions $options): void

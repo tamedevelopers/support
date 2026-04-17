@@ -292,13 +292,10 @@ trait ChromePdfDocumentTrait
         int $algorithm = 3,
     ): self {
 
-        if($this->sourceMode !== 'url') {
-            $this->pdfDocEncryptUserPassword = $userPassword;
-            $this->pdfDocEncryptOwnerPassword = $ownerPassword;
-            $this->pdfDocEncryptBlockedPermissions = $blockedPermissions;
-            $this->pdfDocEncryptAlgorithm = max(0, min(3, $algorithm));
-        }
-
+        $this->pdfDocEncryptUserPassword = $userPassword;
+        $this->pdfDocEncryptOwnerPassword = $ownerPassword;
+        $this->pdfDocEncryptBlockedPermissions = $blockedPermissions;
+        $this->pdfDocEncryptAlgorithm = max(0, min(3, $algorithm));
 
         return $this;
     }

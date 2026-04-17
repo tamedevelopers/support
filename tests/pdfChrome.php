@@ -13,7 +13,8 @@ $files = [
 ];
 
 $output = ChromePdf::create()
-    ->fromFile('upload/template3.html')
+    // ->fromUrl('https://www.google.com')
+    ->fromFile('upload/template.html')
     ->margin(20)
     ->printFromElement('.body')
     ->textWatermark('CONFIDENTIAL')
