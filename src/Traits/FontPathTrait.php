@@ -11,7 +11,6 @@ use Tamedevelopers\Support\Traits\TameTrait;
 trait FontPathTrait{
 
     use TameTrait;
-    
 
     /**
      * Try to resolve a readable TTF/TTC font path. Use provided path if valid; otherwise try system fonts.
@@ -39,9 +38,8 @@ trait FontPathTrait{
 
         $isUnicode = self::needsUnicodeFont($textForFont);
 
-        $iconsFonts = self::iconsFontsDirectory();
-        $bundledUnicode = $iconsFonts . ($weight === 'bold' ? 'NotoSansSC-Bold.ttf' : 'NotoSansSC-Medium.ttf');
-        $bundledLatin = $iconsFonts . ($weight === 'bold' ? 'Inter-Bold.ttf' : 'Inter-Medium.ttf');
+        $bundledSc = self::firstReadableBundled($weight === 'bold' ? 'NotoSansSC-Bold.ttf' : 'NotoSansSC-Medium.ttf');
+        $bundledLatin = self::firstReadableBundled($weight === 'bold' ? 'Inter-Bold.ttf' : 'Inter-Medium.ttf');
 
         // Script-specific fonts (NotoSansSC does not cover Arabic — avoid blank Arabic initials)
         if ($isUnicode) {
@@ -75,72 +73,16 @@ trait FontPathTrait{
                     return $resolved;
                 }
             }
-            if (self::textContainsCjkScript($textForFont) && file_exists($bundledUnicode)) {
-                return $bundledUnicode;
+            if (self::textContainsCjkScript($textForFont) && $bundledSc !== null) {
+                return $bundledSc;
             }
         }
 
-        if (file_exists($bundledLatin)) {
+        if ($bundledLatin !== null) {
             return $bundledLatin;
         }
 
-        // Unicode/CJK-capable fonts (Windows, then Linux/macOS) – try first when text has non-ASCII
-        $unicodeFontsBold = [
-            'C:\\Windows\\Fonts\\msyhbd.ttf',   // Microsoft YaHei Bold
-            'C:\\Windows\\Fonts\\simhei.ttf',   // SimHei
-            'C:\\Windows\\Fonts\\simsun.ttc',   // SimSun (TTC; GD uses first font)
-            '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
-            '/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc',
-            '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
-            '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
-            '/Library/Fonts/PingFang.ttc',
-            '/System/Library/Fonts/PingFang.ttc',
-            '/Library/Fonts/Supplemental/Songti.ttc',
-        ];
-
-        $unicodeFontsRegular = [
-            'C:\\Windows\\Fonts\\msyh.ttf',     // Microsoft YaHei
-            'C:\\Windows\\Fonts\\simsun.ttc',
-            '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-            '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
-            '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
-            '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
-            '/Library/Fonts/PingFang.ttc',
-            '/System/Library/Fonts/PingFang.ttc',
-        ];
-
-        // Latin-only fonts (Arial, Segoe, DejaVu)
-        $winFontsBold = [
-            'C:\\Windows\\Fonts\\arialbd.ttf',
-            'C:\\Windows\\Fonts\\segoeuib.ttf',
-        ];
-        $winFontsRegular = [
-            'C:\\Windows\\Fonts\\arial.ttf',
-            'C:\\Windows\\Fonts\\segoeui.ttf',
-        ];
-        $unixFontsBold = [
-            '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-            '/Library/Fonts/Arial Bold.ttf',
-        ];
-        $unixFontsRegular = [
-            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-            '/Library/Fonts/Arial.ttf',
-        ];
-
-        $unicodeOrdered = $weight === 'normal'
-            ? array_merge($unicodeFontsRegular, $unicodeFontsBold)
-            : array_merge($unicodeFontsBold, $unicodeFontsRegular);
-
-        $latinOrdered = $weight === 'normal'
-            ? array_merge($winFontsRegular, $unixFontsRegular, $winFontsBold, $unixFontsBold)
-            : array_merge($winFontsBold, $unixFontsBold, $winFontsRegular, $unixFontsRegular);
-
-        // When text has CJK/Unicode, try Unicode fonts first so glyphs render; else Latin first
-        $ordered = $isUnicode
-            ? array_merge($unicodeOrdered, $latinOrdered)
-            : array_merge($latinOrdered, $unicodeOrdered);
-
-        foreach ($ordered as $cand) {
+        foreach (self::systemFallbackOrdered($weight, $isUnicode) as $cand) {
             if (@is_readable($cand)) {
                 return $cand;
             }
@@ -156,82 +98,144 @@ trait FontPathTrait{
     }
 
     /**
-     * Directory for optional packaged fonts (relative to this trait file).
+     * Packaged font directories: preferred {@see Traits/icons/fonts}, alternate {@see src/icons/fonts}.
+     *
+     * @return list<string>
      */
-    private static function iconsFontsDirectory(): string
+    private static function iconsFontsDirectories(): array
     {
-        return self::stringReplacer(__DIR__ . DIRECTORY_SEPARATOR . 'icons' . DIRECTORY_SEPARATOR . 'fonts' . DIRECTORY_SEPARATOR);
+        $primary = self::stringReplacer(__DIR__ . DIRECTORY_SEPARATOR . 'icons' . DIRECTORY_SEPARATOR . 'fonts' . DIRECTORY_SEPARATOR);
+        $alternate = self::stringReplacer(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'icons' . DIRECTORY_SEPARATOR . 'fonts' . DIRECTORY_SEPARATOR);
+
+        return $primary === $alternate ? [$primary] : [$primary, $alternate];
     }
 
     /**
-     * Bundled fallbacks when system fonts are missing (minimal Linux Docker, CI, etc.).
+     * @return list<string>
+     */
+    private static function bundledRelativePaths(string $relative): array
+    {
+        $paths = [];
+        foreach (self::iconsFontsDirectories() as $d) {
+            $paths[] = $d . $relative;
+        }
+
+        return $paths;
+    }
+
+    private static function firstReadableBundled(string $relative): ?string
+    {
+        foreach (self::bundledRelativePaths($relative) as $p) {
+            if (@is_readable($p)) {
+                return $p;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Bundled fallbacks under Traits/icons/fonts/ when no system font is readable.
      *
-     * No single small font covers Unicode completely. Prefer optional Noto per script, then GNU Unifont
-     * (very wide coverage, basic glyphs), then Noto Sans (Latin/Cyrillic/Greek), then Inter.
-     * NotoSansSC is only suggested when the text actually contains CJK (it does not cover Arabic).
+     * These are NOT OS defaults — ship them with your app if you need consistent results everywhere:
+     * - Inter + NotoSansSC (Latin + Simplified Chinese) — typical minimum
+     * - Optional: NotoSansCJK-{Regular,Bold}.ttc (Google Noto CJK, one file ~70MB+), NotoNaskhArabic, unifont.ttf
      *
      * @return list<string>
      */
     private static function bundledIconsFontFallbacks(string $weight, string $textForFont): array
     {
-        $d = self::iconsFontsDirectory();
         $bold = $weight === 'bold';
         $out = [];
 
-        if (self::textContainsCjkScript($textForFont)) {
-            foreach (($bold
-                ? [
-                    'NotoSansCJK-Bold.ttc',
-                    'NotoSansCJKtc-Bold.ttc',
-                    'NotoSansCJKjp-Bold.ttc',
-                    'NotoSansCJKkr-Bold.ttc',
-                    'NotoSansCJKsc-Bold.ttc',
-                ]
-                : [
-                    'NotoSansCJK-Regular.ttc',
-                    'NotoSansCJKtc-Regular.ttc',
-                    'NotoSansCJKjp-Regular.ttc',
-                    'NotoSansCJKkr-Regular.ttc',
-                    'NotoSansCJKsc-Regular.ttc',
-                ]) as $f) {
+        foreach (self::iconsFontsDirectories() as $d) {
+            if (self::textContainsCjkScript($textForFont)) {
+                $out[] = $d . ($bold ? 'NotoSansCJK-Bold.ttc' : 'NotoSansCJK-Regular.ttc');
+                $out[] = $d . ($bold ? 'NotoSansSC-Bold.ttf' : 'NotoSansSC-Medium.ttf');
+            }
+
+            if (self::textContainsArabicScript($textForFont)) {
+                foreach (($bold
+                    ? ['NotoNaskhArabic-Bold.ttf', 'NotoSansArabic-Bold.ttf']
+                    : ['NotoNaskhArabic-Regular.ttf', 'NotoSansArabic-Regular.ttf']) as $f) {
+                    $out[] = $d . $f;
+                }
+            }
+
+            if (self::textContainsHebrewScript($textForFont)) {
+                $out[] = $d . ($bold ? 'NotoSansHebrew-Bold.ttf' : 'NotoSansHebrew-Regular.ttf');
+            }
+
+            if (self::textContainsThaiScript($textForFont)) {
+                $out[] = $d . ($bold ? 'NotoSansThai-Bold.ttf' : 'NotoSansThai-Regular.ttf');
+            }
+
+            if (self::textContainsDevanagariScript($textForFont)) {
+                $out[] = $d . ($bold ? 'NotoSansDevanagari-Bold.ttf' : 'NotoSansDevanagari-Regular.ttf');
+            }
+
+            foreach (['unifont.ttf', 'Unifont.ttf', 'GNUUnifont.ttf'] as $f) {
                 $out[] = $d . $f;
             }
-            $out[] = $d . ($bold ? 'NotoSansSC-Bold.ttf' : 'NotoSansSC-Medium.ttf');
-        }
 
-        if (self::textContainsArabicScript($textForFont)) {
             foreach (($bold
-                ? ['NotoNaskhArabic-Bold.ttf', 'NotoSansArabic-Bold.ttf']
-                : ['NotoNaskhArabic-Regular.ttf', 'NotoSansArabic-Regular.ttf']) as $f) {
+                ? ['NotoSans-Bold.ttf', 'NotoSans-SemiBold.ttf', 'NotoSans-Medium.ttf']
+                : ['NotoSans-Regular.ttf', 'NotoSans-Medium.ttf']) as $f) {
                 $out[] = $d . $f;
             }
-        }
 
-        if (self::textContainsHebrewScript($textForFont)) {
-            $out[] = $d . ($bold ? 'NotoSansHebrew-Bold.ttf' : 'NotoSansHebrew-Regular.ttf');
+            $out[] = $d . ($bold ? 'Inter-Bold.ttf' : 'Inter-Medium.ttf');
         }
-
-        if (self::textContainsThaiScript($textForFont)) {
-            $out[] = $d . ($bold ? 'NotoSansThai-Bold.ttf' : 'NotoSansThai-Regular.ttf');
-        }
-
-        if (self::textContainsDevanagariScript($textForFont)) {
-            $out[] = $d . ($bold ? 'NotoSansDevanagari-Bold.ttf' : 'NotoSansDevanagari-Regular.ttf');
-        }
-
-        foreach (['unifont.ttf', 'Unifont.ttf', 'GNUUnifont.ttf'] as $f) {
-            $out[] = $d . $f;
-        }
-
-        foreach (($bold
-            ? ['NotoSans-Bold.ttf', 'NotoSans-SemiBold.ttf', 'NotoSans-Medium.ttf']
-            : ['NotoSans-Regular.ttf', 'NotoSans-Medium.ttf']) as $f) {
-            $out[] = $d . $f;
-        }
-
-        $out[] = $d . ($bold ? 'Inter-Bold.ttf' : 'Inter-Medium.ttf');
 
         return $out;
+    }
+
+    /**
+     * OS-installed font paths (optional; may be missing on Docker/minimal images).
+     *
+     * @return list<string>
+     */
+    private static function systemFallbackOrdered(string $weight, bool $unicodeFirst): array
+    {
+        $bold = $weight === 'bold';
+
+        $unicodeBold = [
+            'C:\\Windows\\Fonts\\msyhbd.ttf',
+            'C:\\Windows\\Fonts\\simhei.ttf',
+            'C:\\Windows\\Fonts\\simsun.ttc',
+            '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
+            '/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc',
+            '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+            '/Library/Fonts/PingFang.ttc',
+            '/System/Library/Fonts/PingFang.ttc',
+        ];
+
+        $unicodeRegular = [
+            'C:\\Windows\\Fonts\\msyh.ttf',
+            'C:\\Windows\\Fonts\\simsun.ttc',
+            '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+            '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
+            '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+            '/Library/Fonts/PingFang.ttc',
+            '/System/Library/Fonts/PingFang.ttc',
+        ];
+
+        $winFontsBold = ['C:\\Windows\\Fonts\\arialbd.ttf', 'C:\\Windows\\Fonts\\segoeuib.ttf'];
+        $winFontsRegular = ['C:\\Windows\\Fonts\\arial.ttf', 'C:\\Windows\\Fonts\\segoeui.ttf'];
+        $unixFontsBold = ['/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/Library/Fonts/Arial Bold.ttf'];
+        $unixFontsRegular = ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', '/Library/Fonts/Arial.ttf'];
+
+        $unicodeOrdered = $bold
+            ? array_merge($unicodeBold, $unicodeRegular)
+            : array_merge($unicodeRegular, $unicodeBold);
+
+        $latinOrdered = $bold
+            ? array_merge($winFontsBold, $unixFontsBold, $winFontsRegular, $unixFontsRegular)
+            : array_merge($winFontsRegular, $unixFontsRegular, $winFontsBold, $unixFontsBold);
+
+        return $unicodeFirst
+            ? array_merge($unicodeOrdered, $latinOrdered)
+            : array_merge($latinOrdered, $unicodeOrdered);
     }
 
     /**
@@ -275,11 +279,17 @@ trait FontPathTrait{
     private static function arabicFontCandidates(string $weight): array
     {
         $bold = $weight === 'bold';
-        $d = self::iconsFontsDirectory();
+        $bundled = $bold
+            ? array_merge(
+                self::bundledRelativePaths('NotoNaskhArabic-Bold.ttf'),
+                self::bundledRelativePaths('NotoSansArabic-Bold.ttf')
+            )
+            : array_merge(
+                self::bundledRelativePaths('NotoNaskhArabic-Regular.ttf'),
+                self::bundledRelativePaths('NotoSansArabic-Regular.ttf')
+            );
 
-        return $bold ? [
-            $d . 'NotoNaskhArabic-Bold.ttf',
-            $d . 'NotoSansArabic-Bold.ttf',
+        return $bold ? array_merge($bundled, [
             'C:\\Windows\\Fonts\\tradbdo.ttf',
             'C:\\Windows\\Fonts\\arabtype.ttf',
             'C:\\Windows\\Fonts\\tahomabd.ttf',
@@ -292,9 +302,7 @@ trait FontPathTrait{
             '/usr/share/fonts/opentype/noto/NotoSansArabic-Bold.otf',
             '/Library/Fonts/Arial Unicode.ttf',
             '/System/Library/Fonts/Supplemental/Arial Unicode.ttf',
-        ] : [
-            $d . 'NotoNaskhArabic-Regular.ttf',
-            $d . 'NotoSansArabic-Regular.ttf',
+        ]) : array_merge($bundled, [
             'C:\\Windows\\Fonts\\trado.ttf',
             'C:\\Windows\\Fonts\\arabtype.ttf',
             'C:\\Windows\\Fonts\\tahoma.ttf',
@@ -307,7 +315,7 @@ trait FontPathTrait{
             '/usr/share/fonts/opentype/noto/NotoSansArabic-Regular.otf',
             '/Library/Fonts/Arial Unicode.ttf',
             '/System/Library/Fonts/Supplemental/Arial Unicode.ttf',
-        ];
+        ]);
     }
 
     /**
@@ -432,218 +440,6 @@ trait FontPathTrait{
     {
         $c = mb_convert_encoding($char, 'UCS-4BE', 'UTF-8');
         return $c === false ? 0 : unpack('N', $c)[1];
-    }
-
-    /**
-     * True if $text contains at least one Unicode emoji / extended pictographic character.
-     * Useful for OCR post-checks or choosing emoji-friendly pipelines.
-     */
-    public static function textContainsEmoji(string $text): bool
-    {
-        return $text !== '' && (bool) preg_match('/\p{Extended_Pictographic}/u', $text);
-    }
-
-    /**
-     * Split a user OCR language string into tokens (e.g. "eng+chi_sim", "en, ja", "auto").
-     *
-     * @return list<string>
-     */
-    public static function parseOcrLanguageTokens(string $language): array
-    {
-        $language = Str::trim($language);
-        if ($language === '' || strcasecmp($language, 'auto') === 0) {
-            return [];
-        }
-        $parts = preg_split('/[\s,+;]+/u', $language) ?: [];
-        $out = [];
-        foreach ($parts as $p) {
-            $p = Str::trim((string) $p);
-            if ($p !== '') {
-                $out[] = $p;
-            }
-        }
-        return array_values(array_unique($out));
-    }
-
-    /**
-     * Map one user/language token to Tesseract traineddata code (lowercase alpha, 3+ chars typical).
-     */
-    public static function normalizeTokenToTesseract(string $token): string
-    {
-        $t = Str::lower(Str::trim($token));
-        if ($t === '') {
-            return '';
-        }
-        $tHyphen = str_replace('_', '-', $t);
-        if (preg_match('/^zh-(hans|cn)$/i', $tHyphen)) {
-            return 'chi_sim';
-        }
-        if (preg_match('/^zh-(hant|tw|hk|mo)$/i', $tHyphen)) {
-            return 'chi_tra';
-        }
-        if (in_array($t, ['emoji', 'emojis', 'symbol', 'symbols', 'pic'], true)) {
-            return '';
-        }
-        static $aliases = [
-            'en' => 'eng', 'english' => 'eng',
-            'zh' => 'chi_sim', 'zh-cn' => 'chi_sim', 'zh-hans' => 'chi_sim', 'zh_cn' => 'chi_sim', 'cn' => 'chi_sim',
-            'zh-tw' => 'chi_tra', 'zh-hant' => 'chi_tra', 'zh_hk' => 'chi_tra', 'tw' => 'chi_tra', 'hk' => 'chi_tra',
-            'ja' => 'jpn', 'jp' => 'jpn', 'japanese' => 'jpn',
-            'ko' => 'kor', 'korean' => 'kor',
-            'ar' => 'ara', 'arabic' => 'ara',
-            'ru' => 'rus', 'russian' => 'rus',
-            'fr' => 'fra', 'french' => 'fra',
-            'de' => 'deu', 'german' => 'deu',
-            'es' => 'spa', 'spanish' => 'spa',
-            'pt' => 'por', 'portuguese' => 'por',
-            'it' => 'ita', 'italian' => 'ita',
-            'hi' => 'hin', 'hindi' => 'hin',
-            'th' => 'tha', 'thai' => 'tha',
-            'vi' => 'vie', 'vietnamese' => 'vie',
-            'id' => 'ind', 'indonesian' => 'ind',
-            'tr' => 'tur', 'turkish' => 'tur',
-            'pl' => 'pol', 'polish' => 'pol',
-            'nl' => 'nld', 'dutch' => 'nld',
-            'sv' => 'swe', 'swedish' => 'swe',
-            'no' => 'nor', 'nb' => 'nor', 'nn' => 'nor',
-            'da' => 'dan', 'danish' => 'dan',
-            'fi' => 'fin', 'finnish' => 'fin',
-            'cs' => 'ces', 'czech' => 'ces',
-            'sk' => 'slk', 'slovak' => 'slk',
-            'hu' => 'hun', 'hungarian' => 'hun',
-            'ro' => 'ron', 'romanian' => 'ron',
-            'el' => 'ell', 'greek' => 'ell',
-            'he' => 'heb', 'iw' => 'heb',
-            'uk' => 'ukr', 'ukrainian' => 'ukr',
-            'bg' => 'bul', 'bulgarian' => 'bul',
-            'sr' => 'srp', 'serbian' => 'srp',
-            'hr' => 'hrv', 'croatian' => 'hrv',
-            'sl' => 'slv', 'slovenian' => 'slv',
-            'ms' => 'msa', 'malay' => 'msa',
-            'tl' => 'tgl', 'fil' => 'tgl',
-            'fa' => 'fas', 'persian' => 'fas',
-            'ur' => 'urd', 'urdu' => 'urd',
-            'bn' => 'ben', 'bengali' => 'ben',
-            'ta' => 'tam', 'tamil' => 'tam',
-            'te' => 'tel', 'telugu' => 'tel',
-            'kn' => 'kan', 'kannada' => 'kan',
-            'ml' => 'mal', 'malayalam' => 'mal',
-        ];
-        if (isset($aliases[$t])) {
-            return $aliases[$t];
-        }
-        if (preg_match('/^[a-z]{3,}$/', $t)) {
-            return $t;
-        }
-        return $t;
-    }
-
-    /**
-     * Tesseract lang → Google Vision languageHints (BCP-47).
-     *
-     * @return string|null null if unknown (caller may skip or pass through)
-     */
-    public static function tesseractLangToGoogleBcp47(string $tessLang): ?string
-    {
-        $t = Str::lower(Str::trim($tessLang));
-        static $map = [
-            'eng' => 'en', 'fra' => 'fr', 'deu' => 'de', 'spa' => 'es', 'por' => 'pt', 'ita' => 'it',
-            'nld' => 'nl', 'pol' => 'pl', 'ces' => 'cs', 'slk' => 'sk', 'hun' => 'hu', 'ron' => 'ro',
-            'ell' => 'el', 'swe' => 'sv', 'nor' => 'no', 'dan' => 'da', 'fin' => 'fi', 'tur' => 'tr',
-            'rus' => 'ru', 'ukr' => 'uk', 'bul' => 'bg', 'srp' => 'sr', 'hrv' => 'hr', 'slv' => 'sl',
-            'ara' => 'ar', 'fas' => 'fa', 'urd' => 'ur', 'heb' => 'he', 'hin' => 'hi', 'ben' => 'bn',
-            'tam' => 'ta', 'tel' => 'te', 'kan' => 'kn', 'mal' => 'ml', 'tha' => 'th', 'vie' => 'vi',
-            'ind' => 'id', 'msa' => 'ms', 'jpn' => 'ja', 'kor' => 'ko', 'chi_sim' => 'zh-Hans',
-            'chi_tra' => 'zh-Hant', 'tgl' => 'fil',
-        ];
-        return $map[$t] ?? null;
-    }
-
-    /**
-     * Tesseract lang → Azure Computer Vision v3.2 ocr language query value.
-     *
-     * @return string|null
-     */
-    public static function tesseractLangToAzure(string $tessLang): ?string
-    {
-        $g = self::tesseractLangToGoogleBcp47($tessLang);
-        if ($g === null) {
-            return null;
-        }
-        static $azureSpecial = [
-            'fil' => 'fil', // Azure uses fil for Filipino
-        ];
-        return $azureSpecial[$g] ?? $g;
-    }
-
-    /**
-     * Build per-engine language settings from a user-facing language string.
-     * Supports multi-language: "en+ja", "eng chi_sim", "zh-CN+fra", etc.
-     * Use "auto" or empty for engine defaults (Azure: unk, Google: broad hints, Tesseract: no -l).
-     *
-     * @return array{tesseract:string,google_hints:list<string>,azure:string,ocrspace:string}
-     */
-    public static function expandOcrLanguageForEngines(string $language, bool $emojiFriendly = false): array
-    {
-        $tokens = self::parseOcrLanguageTokens($language);
-        if ($tokens === []) {
-            // Broad BCP-47 hints improve autodetect for Han / Hangul / Hiragana / Arabic + Latin charts
-            $hints = ['en', 'zh-Hans', 'zh-Hant', 'ja', 'ko', 'ar', 'th', 'hi'];
-            if ($emojiFriendly) {
-                $hints[] = 'und';
-            }
-            return [
-                'tesseract' => '',
-                'google_hints' => array_values(array_unique($hints)),
-                'azure' => 'unk',
-                'ocrspace' => 'auto',
-            ];
-        }
-
-        $tessParts = [];
-        foreach ($tokens as $tok) {
-            $norm = self::normalizeTokenToTesseract($tok);
-            if ($norm !== '' && $norm !== 'auto' && !in_array($norm, $tessParts, true)) {
-                $tessParts[] = $norm;
-            }
-        }
-        if ($tessParts === [] && $tokens !== []) {
-            $tessParts = ['eng'];
-        }
-        $tesseract = implode('+', $tessParts);
-
-        $googleHints = [];
-        foreach ($tessParts as $tp) {
-            $bcp = self::tesseractLangToGoogleBcp47($tp);
-            if ($bcp !== null && !in_array($bcp, $googleHints, true)) {
-                $googleHints[] = $bcp;
-            }
-        }
-        if ($emojiFriendly && !in_array('und', $googleHints, true)) {
-            $googleHints[] = 'und';
-        }
-
-        $azure = 'unk';
-        if (!$emojiFriendly && count($tessParts) === 1) {
-            $a = self::tesseractLangToAzure($tessParts[0]);
-            if ($a !== null) {
-                $azure = $a;
-            }
-        }
-
-        $ocrspace = $tessParts[0] ?? 'eng';
-        $ocrspaceMap = [
-            'chi_sim' => 'chs', 'chi_tra' => 'cht', 'jpn' => 'jpn', 'kor' => 'kor', 'ara' => 'ara',
-            'rus' => 'rus', 'hin' => 'hin', 'ben' => 'ben', 'tam' => 'tam', 'tel' => 'tel',
-        ];
-        $ocrspace = $ocrspaceMap[$ocrspace] ?? $ocrspace;
-
-        return [
-            'tesseract' => $tesseract,
-            'google_hints' => array_values(array_unique($googleHints)),
-            'azure' => $azure,
-            'ocrspace' => $ocrspace,
-        ];
     }
 
 }

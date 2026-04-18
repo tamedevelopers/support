@@ -7,8 +7,8 @@ namespace Tamedevelopers\Support;
 use Exception;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\CustomException;
-use Tamedevelopers\Support\Traits\FontPathTrait;
 use Tamedevelopers\Support\Traits\ImageToTextTrait;
+use Tamedevelopers\Support\Traits\OcrLanguageTrait;
 
 
 /**
@@ -39,8 +39,8 @@ use Tamedevelopers\Support\Traits\ImageToTextTrait;
  */
 class ImageToText
 {
-    use FontPathTrait;
     use ImageToTextTrait;
+    use OcrLanguageTrait;
 
     /**
      * Supported OCR engines
