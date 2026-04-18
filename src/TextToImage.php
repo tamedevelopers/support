@@ -16,9 +16,8 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
  *
  * Features:
  * - Clip type: circle | radius | square (`type`)
- * - Optional overlay `shape`: diagonal | stripe | ring | gloss | corner | split — each applies a **filled**
- *   geometric zone (lighter/darker `bg_color` factors) then a **~1px seam** darkened from the pixel under the line
- *   so it reads as a shape (like legacy diagonal) with a crisp edge. Applied after fill/gradient, before initials.
+ * - Optional overlay `shape`: diagonal | stripe | ring | gloss | corner | split — filled geometric zones
+ *   (lighter/darker `bg_color` factors), no extra stroke pixels. Applied after fill/gradient, before initials.
  * - Optional `gradient` presets (null = solid `bg_color` only)
  * - Initials: first character(s) from name – supports all languages (English, Chinese, Japanese,
  *   Arabic, etc.); two words → first char of each; one word → first two characters
@@ -37,7 +36,7 @@ class TextToImage
      * - name: string (required)
      * - size: int (square dimension in px, default 256)
      * - type: string ('circle' | 'radius' | 'square') default 'square' — clip/mask for the avatar
-     * - shape: string|null diagonal|stripe|ring|gloss|corner|split (filled geometry + 1px dark seams). null = no overlay.
+     * - shape: string|null diagonal|stripe|ring|gloss|corner|split (filled geometry only, no seam stroke). null = no overlay.
      * - gradient: string|null Preset gradient fill. null = solid bg_color only.
      * - radius: int (corner radius for 'radius' shape) default size/6
      * - bg_color: string|array (hex '#RRGGBB'|'#RGB'|'rgb(r,g,b)'|[r,g,b]) default '#4A5568'
@@ -63,7 +62,7 @@ class TextToImage
             'name'        => '',
             'size'        => 256,
             'type'        => 'square', // circle|radius|square
-            'shape'       => null, // fill + seam: diagonal|stripe|ring|gloss|corner|split
+            'shape'       => null, // diagonal|stripe|ring|gloss|corner|split
             'gradient'    => null, // preset name or null for solid bg_color
             'radius'      => null,     // default computed: size/6
             'bg_color'    => '',
@@ -435,30 +434,6 @@ class TextToImage
         }
     }
 
-    /** Per-channel multiplier for stroke vs underlying pixel (lower = darker seam). */
-    private static function shapeStrokeDarkenFactor(): float
-    {
-        return 0.44;
-    }
-
-    /**
-     * @param resource|\GdImage $img
-     * @return array{0:int,1:int,2:int}|null
-     */
-    private static function readTruecolorRgbAt($img, int $x, int $y): ?array
-    {
-        $c = @imagecolorat($img, $x, $y);
-        if ($c === false) {
-            return null;
-        }
-        $a = ($c >> 24) & 127;
-        if ($a >= 127) {
-            return null;
-        }
-
-        return [($c >> 16) & 0xFF, ($c >> 8) & 0xFF, $c & 0xFF];
-    }
-
     /**
      * @param resource|\GdImage      $img
      * @param array{0:int,1:int,2:int} $rgb
@@ -550,69 +525,10 @@ class TextToImage
     }
 
     /**
-     * @param array{0:int,1:int,2:int}      $fallbackRgb
-     * @param array<string,int>             $cache
-     * @param resource|\GdImage             $img
-     */
-    private static function allocateStrokeColor(
-        $img,
-        int $x,
-        int $y,
-        array $fallbackRgb,
-        float $darkenFactor,
-        array &$cache
-    ): int {
-        $base = self::readTruecolorRgbAt($img, $x, $y);
-        if ($base === null) {
-            $base = $fallbackRgb;
-        }
-        $r = max(0, min(255, (int) round($base[0] * $darkenFactor)));
-        $g = max(0, min(255, (int) round($base[1] * $darkenFactor)));
-        $b = max(0, min(255, (int) round($base[2] * $darkenFactor)));
-        $k = $r . ',' . $g . ',' . $b;
-        if (!isset($cache[$k])) {
-            $cache[$k] = (int) imagecolorallocate($img, $r, $g, $b);
-        }
-
-        return $cache[$k];
-    }
-
-    /**
-     * ~1px strokes: darken the colour already at each pixel (keeps gradients); falls back to `bg_color`.
+     * Filled geometry only (legacy solid two-tone), clipped to `type`. No post-process seam strokes.
      *
      * @param resource|\GdImage $img
-     * @param array{0:int,1:int,2:int} $fallbackRgb
-     * @param callable(int,int,int):bool $predicate
-     */
-    private static function applyStrokeWhere(
-        $img,
-        string $type,
-        int $size,
-        int $radius,
-        array $fallbackRgb,
-        callable $predicate
-    ): void {
-        $cache = [];
-        $f = self::shapeStrokeDarkenFactor();
-        for ($y = 0; $y < $size; $y++) {
-            for ($x = 0; $x < $size; $x++) {
-                if (!self::pixelInClipType($type, $x, $y, $size, $radius)) {
-                    continue;
-                }
-                if (!$predicate($x, $y, $size)) {
-                    continue;
-                }
-                $col = self::allocateStrokeColor($img, $x, $y, $fallbackRgb, $f, $cache);
-                imagesetpixel($img, $x, $y, $col);
-            }
-        }
-    }
-
-    /**
-     * Filled geometry (readable “shape”) plus ~1px darkened seams on boundaries. Clipped to `type`.
-     *
-     * @param resource|\GdImage $img
-     * @param array{0:int,1:int,2:int} $rgb bg_color seed for flat fills and stroke fallback
+     * @param array{0:int,1:int,2:int} $rgb bg_color seed for flat overlay fills
      */
     private static function applyShapeOverlay($img, string $type, int $size, array $rgb, int $radius, string $shapeType): void
     {
@@ -620,19 +536,9 @@ class TextToImage
         $sMax = max(0, $size - 1);
         switch ($shapeType) {
             case 'diagonal':
-                // Legacy: lighter triangle (0,s)–(s,s)–(s,0); seam on main BL→TR diagonal.
+                // Legacy: lighter triangle (0,s)–(s,s)–(s,0).
                 $fill = self::shapeAllocateLighten15($img, $rgb);
                 self::applySolidInTriangle($img, $type, $size, $radius, 0.0, $s, $s, $s, $s, 0.0, $fill);
-                self::applyStrokeWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    $rgb,
-                    static function (int $x, int $y, int $sz) use ($sMax) {
-                        return $x + $y === $sMax;
-                    }
-                );
                 break;
 
             case 'stripe': {
@@ -648,18 +554,6 @@ class TextToImage
                         return abs($y - $cy) < $halfH;
                     },
                     $fill
-                );
-                $yLo = (int) max(0, ceil($cy - $halfH));
-                $yHi = (int) min($sMax, floor($cy + $halfH));
-                self::applyStrokeWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    $rgb,
-                    static function (int $x, int $y, int $sz) use ($yLo, $yHi) {
-                        return $y === $yLo || $y === $yHi;
-                    }
                 );
                 break;
             }
@@ -681,20 +575,6 @@ class TextToImage
                     },
                     $fill
                 );
-                $rIn = $rr * 0.72;
-                $rOut = $rr * 0.94;
-                self::applyStrokeWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    $rgb,
-                    static function (int $x, int $y, int $sz) use ($cx, $cy, $rIn, $rOut) {
-                        $d = hypot($x - $cx, $y - $cy);
-
-                        return abs($d - $rIn) <= 0.65 || abs($d - $rOut) <= 0.65;
-                    }
-                );
                 break;
             }
 
@@ -713,18 +593,6 @@ class TextToImage
                     },
                     $fill
                 );
-                $y0 = (int) floor($size * 0.36);
-                $ySeam = $y0 >= $size ? $sMax : $y0;
-                self::applyStrokeWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    $rgb,
-                    static function (int $x, int $y, int $sz) use ($ySeam) {
-                        return $y === $ySeam;
-                    }
-                );
                 break;
             }
 
@@ -735,21 +603,6 @@ class TextToImage
                 $k = (float) max(2, (int) round($sMax * 0.52));
                 $fill = self::shapeAllocateMultiply($img, $rgb, 1.18);
                 self::applySolidInTriangle($img, $type, $size, $radius, 0.0, 0.0, $k, 0.0, 0.0, $k, $fill);
-                $ki = (int) round($k);
-                self::applyStrokeWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    $rgb,
-                    static function (int $x, int $y, int $sz) use ($ki) {
-                        if ($x > $ki || $y > $ki) {
-                            return false;
-                        }
-
-                        return ($y === 0 && $x <= $ki) || ($x === 0 && $y <= $ki) || ($x + $y === $ki);
-                    }
-                );
                 break;
 
             case 'split': {
@@ -775,17 +628,6 @@ class TextToImage
                         return $x >= $mid;
                     },
                     $right
-                );
-                $x0 = $mid >= $size ? $sMax : $mid;
-                self::applyStrokeWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    $rgb,
-                    static function (int $x, int $y, int $sz) use ($x0) {
-                        return $x === $x0;
-                    }
                 );
                 break;
             }

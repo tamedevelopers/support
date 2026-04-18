@@ -7,16 +7,15 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $ntoimage = new TextToImage();
 
 
-// Shapes: diagonal | stripe | ring | gloss | corner | split (filled geometry + 1px dark seams)
-// 1) Square + diagonal (legacy lighter triangle + BL→TR seam) + cosmic gradient
+// Shapes: diagonal | stripe | ring | gloss | corner | split (solid fills only, no stroke seam)
+// 1) Square + diagonal + cosmic gradient
 $path1 = TextToImage::run([
     'name' => 'John Doe',
     'font_weight' => 'normal',
     'bg_color' => '#008000',
     'text_color' => 'rgba(255,255,255,1)',
     'generate' => false,
-    // 'type' => 'diagonal',
-    'shape' => 'diagonal',
+    'shape' => 'corner',
     // 'gradient' => 'cosmic',
 ]);
 
