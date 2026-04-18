@@ -7,9 +7,8 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $ntoimage = new TextToImage();
 
 
-// Shapes (shape => null default): diagonal (top-right wedge), diagonal_flip (bottom-left),
-// corner_tr / corner_bl (aliases), stripe | stripe_vertical | corner_tl | corner_br | split_vertical | ring | gloss
-// 1) Square + diagonal wedge + cosmic gradient
+// Shapes: diagonal | stripe | ring | gloss | corner | split (solid legacy-style overlays)
+// 1) Square + diagonal (BL–BR–TR triangle, +15% lighter) + cosmic gradient
 $path1 = TextToImage::run([
     'name' => 'John Doe',
     'font_weight' => 'normal',
@@ -17,7 +16,7 @@ $path1 = TextToImage::run([
     'text_color' => 'rgba(255,255,255,1)',
     'generate' => false,
     'type' => 'square',
-    'shape' => 'stripe',
+    'shape' => 'diagonal',
     'gradient' => 'cosmic',
 ]);
 

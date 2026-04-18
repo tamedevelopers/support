@@ -16,7 +16,7 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
  *
  * Features:
  * - Clip type: circle | radius | square (`type`)
- * - Optional overlay `shape` (`diagonal` = top-right corner wedge, `diagonal_flip` = bottom-left; stripes, corners, ring, gloss, …) blended on top of fill/gradient, before initials
+ * - Optional overlay `shape`: diagonal | stripe | ring | gloss | corner | split (solid two-tone accents, legacy vendor style). null = none. Applied after fill/gradient, before initials.
  * - Optional `gradient` presets (null = solid `bg_color` only)
  * - Initials: first character(s) from name – supports all languages (English, Chinese, Japanese,
  *   Arabic, etc.); two words → first char of each; one word → first two characters
@@ -35,7 +35,7 @@ class TextToImage
      * - name: string (required)
      * - size: int (square dimension in px, default 256)
      * - type: string ('circle' | 'radius' | 'square') default 'square' — clip/mask for the avatar
-     * - shape: string|null Overlay preset (see shapeTypePresets). null = no overlay. Applied after fill/gradient, before initials.
+     * - shape: string|null diagonal|stripe|ring|gloss|corner|split. null = no overlay. Applied after fill/gradient, before initials.
      * - gradient: string|null Preset gradient fill. null = solid bg_color only.
      * - radius: int (corner radius for 'radius' shape) default size/6
      * - bg_color: string|array (hex '#RRGGBB'|'#RGB'|'rgb(r,g,b)'|[r,g,b]) default '#4A5568'
@@ -61,7 +61,7 @@ class TextToImage
             'name'        => '',
             'size'        => 256,
             'type'        => 'square', // circle|radius|square
-            'shape'       => null, // overlay: diagonal (TR wedge), diagonal_flip (BL), stripe, …
+            'shape'       => null, // diagonal|stripe|ring|gloss|corner|split
             'gradient'    => null, // preset name or null for solid bg_color
             'radius'      => null,     // default computed: size/6
             'bg_color'    => '',
@@ -324,14 +324,11 @@ class TextToImage
     {
         return [
             'diagonal',
-            'diagonal_flip',
             'stripe',
-            'stripe_vertical',
-            'corner_tl',
-            'corner_br',
-            'split_vertical',
             'ring',
             'gloss',
+            'corner',
+            'split',
         ];
     }
 
@@ -346,17 +343,22 @@ class TextToImage
         }
         $aliases = [
             'diag' => 'diagonal',
-            'diagonal-opposite' => 'diagonal_flip',
-            'diagonal_opposite' => 'diagonal_flip',
-            'flip' => 'diagonal_flip',
             'h_stripe' => 'stripe',
-            'v_stripe' => 'stripe_vertical',
-            'corners_tl' => 'corner_tl',
-            'corners_br' => 'corner_br',
-            'corner_tr' => 'diagonal',
-            'corner_bl' => 'diagonal_flip',
-            'split_v' => 'split_vertical',
-            'vsplit' => 'split_vertical',
+            'v_stripe' => 'stripe',
+            'stripe_vertical' => 'stripe',
+            'split_vertical' => 'split',
+            'split_v' => 'split',
+            'vsplit' => 'split',
+            'corner_tl' => 'corner',
+            'corner_br' => 'corner',
+            'corner_tr' => 'corner',
+            'corners_tl' => 'corner',
+            'corners_br' => 'corner',
+            'diagonal_flip' => 'diagonal',
+            'diagonal-opposite' => 'diagonal',
+            'diagonal_opposite' => 'diagonal',
+            'flip' => 'diagonal',
+            'corner_bl' => 'corner',
         ];
         if (isset($aliases[$s])) {
             $s = $aliases[$s];
@@ -432,188 +434,32 @@ class TextToImage
     }
 
     /**
-     * Decorative overlay blended onto existing pixels (keeps gradients visible). Clipped to `type`.
+     * Solid overlay color from base RGB and multiplier (per channel, clamped).
      *
-     * @param resource|\GdImage $img
+     * @param resource|\GdImage      $img
+     * @param array{0:int,1:int,2:int} $rgb
      */
-    private static function applyShapeOverlay($img, string $type, int $size, array $rgb, int $radius, string $shapeType): void
+    private static function shapeAllocateMultiply($img, array $rgb, float $mul): int
     {
-        switch ($shapeType) {
-            case 'diagonal':
-                // Top-right corner wedge (classic avatar diagonal): triangle TR → down right edge → in along top.
-                $sMax = max(0, $size - 1);
-                if ($sMax < 2) {
-                    break;
-                }
-                $xr = (float) min($sMax - 1, max(1, (int) round($sMax * 0.58)));
-                $yr = (float) min($sMax, max(1, (int) round($sMax * 0.40)));
-                if ($xr >= $sMax || $yr < 1) {
-                    break;
-                }
-                self::applyBlendInTriangle(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    (float) $sMax,
-                    0.0,
-                    (float) $sMax,
-                    $yr,
-                    $xr,
-                    0.0,
-                    self::accentLighterRgb($rgb, 1.28),
-                    0.58
-                );
-                break;
-            case 'diagonal_flip':
-                // Bottom-left corner wedge (mirror of `diagonal`).
-                $sMax = max(0, $size - 1);
-                if ($sMax < 2) {
-                    break;
-                }
-                $xr = (float) min($sMax - 1, max(1, (int) round($sMax * 0.58)));
-                $yr = (float) min($sMax, max(1, (int) round($sMax * 0.40)));
-                if ($xr >= $sMax || $yr < 1) {
-                    break;
-                }
-                $xh = (float) ($sMax - $xr);
-                $yv = (float) ($sMax - $yr);
-                self::applyBlendInTriangle(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    0.0,
-                    (float) $sMax,
-                    $xh,
-                    (float) $sMax,
-                    0.0,
-                    $yv,
-                    self::accentLighterRgb($rgb, 1.26),
-                    0.56
-                );
-                break;
-            case 'stripe':
-                self::applyBlendWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) {
-                        $cy = ($sz - 1) / 2.0;
+        $r = max(0, min(255, (int) round($rgb[0] * $mul)));
+        $g = max(0, min(255, (int) round($rgb[1] * $mul)));
+        $b = max(0, min(255, (int) round($rgb[2] * $mul)));
 
-                        return abs($y - $cy) < $sz * 0.11;
-                    },
-                    self::accentLighterRgb($rgb, 1.18),
-                    0.32
-                );
-                break;
-            case 'stripe_vertical':
-                self::applyBlendWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) {
-                        $cx = ($sz - 1) / 2.0;
+        return (int) imagecolorallocate($img, $r, $g, $b);
+    }
 
-                        return abs($x - $cx) < $sz * 0.09;
-                    },
-                    self::accentLighterRgb($rgb, 1.15),
-                    0.3
-                );
-                break;
-            case 'corner_tl':
-                self::applyBlendWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) {
-                        return $x < $sz * 0.48 && $y < $sz * 0.48;
-                    },
-                    self::accentLighterRgb($rgb, 1.22),
-                    0.35
-                );
-                break;
-            case 'corner_br':
-                self::applyBlendWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) {
-                        return $x > $sz * 0.52 && $y > $sz * 0.52;
-                    },
-                    self::accentLighterRgb($rgb, 1.2),
-                    0.35
-                );
-                break;
-            case 'split_vertical':
-                self::applyBlendWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) {
-                        return $x < (int) floor($sz / 2);
-                    },
-                    self::accentDarkerRgb($rgb, 0.88),
-                    0.22
-                );
-                self::applyBlendWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) {
-                        return $x >= (int) floor($sz / 2);
-                    },
-                    self::accentLighterRgb($rgb, 1.08),
-                    0.18
-                );
-                break;
-            case 'ring':
-                self::applyBlendWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) {
-                        $cx = ($sz - 1) / 2.0;
-                        $cy = ($sz - 1) / 2.0;
-                        $rr = $sz / 2.0;
-                        $d = hypot($x - $cx, $y - $cy);
-
-                        return $d > $rr * 0.72 && $d < $rr * 0.94;
-                    },
-                    self::accentDarkerRgb($rgb, 0.75),
-                    0.45
-                );
-                break;
-            case 'gloss':
-                self::applyBlendWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) {
-                        return $y < $sz * 0.36;
-                    },
-                    [255.0, 255.0, 255.0],
-                    0.18
-                );
-                break;
-        }
+    /** Legacy vendor diagonal secondary (~15% lift per channel). */
+    private static function shapeAllocateLighten15($img, array $rgb): int
+    {
+        return self::shapeAllocateMultiply($img, $rgb, 1.15);
     }
 
     /**
      * @param resource|\GdImage $img
      * @param callable(int,int,int):bool $predicate
      */
-    private static function applyBlendWhere($img, string $type, int $size, int $radius, callable $predicate, array $accentRgb, float $strength): void
+    private static function applySolidWhere($img, string $type, int $size, int $radius, callable $predicate, int $color): void
     {
-        $cache = [];
         for ($y = 0; $y < $size; $y++) {
             for ($x = 0; $x < $size; $x++) {
                 if (!self::pixelInClipType($type, $x, $y, $size, $radius)) {
@@ -622,17 +468,15 @@ class TextToImage
                 if (!$predicate($x, $y, $size)) {
                     continue;
                 }
-                self::blendPixelToward($img, $x, $y, $accentRgb, $strength, $cache);
+                imagesetpixel($img, $x, $y, $color);
             }
         }
     }
 
     /**
-     * Blend accent inside a triangle (e.g. corner wedges). Clipped to `type`.
-     *
      * @param resource|\GdImage $img
      */
-    private static function applyBlendInTriangle(
+    private static function applySolidInTriangle(
         $img,
         string $type,
         int $size,
@@ -643,10 +487,8 @@ class TextToImage
         float $by,
         float $cx,
         float $cy,
-        array $accentRgb,
-        float $strength
+        int $color
     ): void {
-        $cache = [];
         for ($y = 0; $y < $size; $y++) {
             for ($x = 0; $x < $size; $x++) {
                 if (!self::pixelInClipType($type, $x, $y, $size, $radius)) {
@@ -655,7 +497,116 @@ class TextToImage
                 if (!self::pointInTriangle((float) $x, (float) $y, $ax, $ay, $bx, $by, $cx, $cy)) {
                     continue;
                 }
-                self::blendPixelToward($img, $x, $y, $accentRgb, $strength, $cache);
+                imagesetpixel($img, $x, $y, $color);
+            }
+        }
+    }
+
+    /**
+     * Solid two-tone shape overlays (legacy vendor `TextToImage` style). Clipped to `type`.
+     *
+     * @param resource|\GdImage $img
+     */
+    private static function applyShapeOverlay($img, string $type, int $size, array $rgb, int $radius, string $shapeType): void
+    {
+        $s = (float) $size;
+        $sMax = max(0, $size - 1);
+        switch ($shapeType) {
+            case 'diagonal':
+                // Same geometry as legacy: full fill already done; lighter triangle (0,s)–(s,s)–(s,0).
+                $sec = self::shapeAllocateLighten15($img, $rgb);
+                self::applySolidInTriangle($img, $type, $size, $radius, 0.0, $s, $s, $s, $s, 0.0, $sec);
+                break;
+
+            case 'stripe': {
+                $sec = self::shapeAllocateMultiply($img, $rgb, 1.18);
+                $halfH = $size * 0.11;
+                $cy = ($size - 1) / 2.0;
+                self::applySolidWhere(
+                    $img,
+                    $type,
+                    $size,
+                    $radius,
+                    static function (int $x, int $y, int $sz) use ($halfH, $cy) {
+                        return abs($y - $cy) < $halfH;
+                    },
+                    $sec
+                );
+                break;
+            }
+
+            case 'ring': {
+                $sec = self::shapeAllocateMultiply($img, $rgb, 0.72);
+                $cx = ($size - 1) / 2.0;
+                $cy = ($size - 1) / 2.0;
+                $rr = $size / 2.0;
+                self::applySolidWhere(
+                    $img,
+                    $type,
+                    $size,
+                    $radius,
+                    static function (int $x, int $y, int $sz) use ($cx, $cy, $rr) {
+                        $d = hypot($x - $cx, $y - $cy);
+
+                        return $d > $rr * 0.72 && $d < $rr * 0.94;
+                    },
+                    $sec
+                );
+                break;
+            }
+
+            case 'gloss': {
+                $r = min(255, (int) round($rgb[0] * 0.78 + 255 * 0.22));
+                $g = min(255, (int) round($rgb[1] * 0.78 + 255 * 0.22));
+                $b = min(255, (int) round($rgb[2] * 0.78 + 255 * 0.22));
+                $sec = (int) imagecolorallocate($img, $r, $g, $b);
+                self::applySolidWhere(
+                    $img,
+                    $type,
+                    $size,
+                    $radius,
+                    static function (int $x, int $y, int $sz) {
+                        return $y < $sz * 0.36;
+                    },
+                    $sec
+                );
+                break;
+            }
+
+            case 'corner':
+                if ($sMax < 2) {
+                    break;
+                }
+                $k = (float) max(2, (int) round($sMax * 0.52));
+                $sec = self::shapeAllocateMultiply($img, $rgb, 1.18);
+                self::applySolidInTriangle($img, $type, $size, $radius, 0.0, 0.0, $k, 0.0, 0.0, $k, $sec);
+                break;
+
+            case 'split': {
+                $mid = (int) floor($size / 2);
+                $left = self::shapeAllocateMultiply($img, $rgb, 0.88);
+                $right = self::shapeAllocateMultiply($img, $rgb, 1.1);
+                self::applySolidWhere(
+                    $img,
+                    $type,
+                    $size,
+                    $radius,
+                    static function (int $x, int $y, int $sz) use ($mid) {
+                        return $x < $mid;
+                    },
+                    $left
+                );
+                self::applySolidWhere(
+                    $img,
+                    $type,
+                    $size,
+                    $radius,
+                    static function (int $x, int $y, int $sz) use ($mid) {
+                        return $x >= $mid;
+                    },
+                    $right
+                );
+                break;
             }
         }
     }
@@ -681,80 +632,6 @@ class TextToImage
         $hasPos = ($d1 > 0) || ($d2 > 0) || ($d3 > 0);
 
         return !($hasNeg && $hasPos);
-    }
-
-    /**
-     * @param array{0:int,1:int,2:int} $rgb
-     * @return array{0:float,1:float,2:float}
-     */
-    private static function accentLighterRgb(array $rgb, float $mul): array
-    {
-        return [
-            min(255.0, $rgb[0] * $mul),
-            min(255.0, $rgb[1] * $mul),
-            min(255.0, $rgb[2] * $mul),
-        ];
-    }
-
-    /**
-     * @param array{0:int,1:int,2:int} $rgb
-     * @return array{0:float,1:float,2:float}
-     */
-    private static function accentDarkerRgb(array $rgb, float $mul): array
-    {
-        return [
-            max(0.0, $rgb[0] * $mul),
-            max(0.0, $rgb[1] * $mul),
-            max(0.0, $rgb[2] * $mul),
-        ];
-    }
-
-    /**
-     * @param array<string,int> $cache
-     * @param resource|\GdImage $img
-     */
-    private static function blendPixelToward($img, int $x, int $y, array $targetRgb, float $strength, array &$cache): void
-    {
-        $base = self::readTruecolorRgb($img, $x, $y);
-        if ($base === null) {
-            return;
-        }
-        $s = max(0.0, min(1.0, $strength));
-        $out = [
-            $base[0] + ($targetRgb[0] - $base[0]) * $s,
-            $base[1] + ($targetRgb[1] - $base[1]) * $s,
-            $base[2] + ($targetRgb[2] - $base[2]) * $s,
-        ];
-        $r = max(0, min(255, (int) round($out[0])));
-        $g = max(0, min(255, (int) round($out[1])));
-        $b = max(0, min(255, (int) round($out[2])));
-        $k = $r . ',' . $g . ',' . $b;
-        if (!isset($cache[$k])) {
-            $cache[$k] = imagecolorallocate($img, $r, $g, $b);
-        }
-        imagesetpixel($img, $x, $y, $cache[$k]);
-    }
-
-    /**
-     * @param resource|\GdImage $img
-     * @return array{0:float,1:float,2:float}|null
-     */
-    private static function readTruecolorRgb($img, int $x, int $y): ?array
-    {
-        $c = @imagecolorat($img, $x, $y);
-        if ($c === false) {
-            return null;
-        }
-        $a = ($c >> 24) & 127;
-        if ($a >= 127) {
-            return null;
-        }
-
-        return [
-            (float) (($c >> 16) & 0xFF),
-            (float) (($c >> 8) & 0xFF),
-            (float) ($c & 0xFF),
-        ];
     }
 
     private static function pixelInClipType(string $type, int $x, int $y, int $size, int $radius): bool
