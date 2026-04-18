@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 use Tamedevelopers\Support\TextToImage;
 
@@ -7,21 +7,20 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $ntoimage = new TextToImage();
 
 
-// 1) Provide a directory as destination; slug is appended automatically
+// Shapes (shape => null default): diagonal (top-right wedge), diagonal_flip (bottom-left),
+// corner_tr / corner_bl (aliases), stripe | stripe_vertical | corner_tl | corner_br | split_vertical | ring | gloss
+// 1) Square + diagonal wedge + cosmic gradient
 $path1 = TextToImage::run([
     'name' => 'John Doe',
-    'font_weight' => 'normal', //normal|bold
-    'bg_color' => '#04068dff',     // 8-digit hex supported
+    'font_weight' => 'normal',
+    'bg_color' => '#04068dff',
     'text_color' => 'rgba(255,255,255,1)',
-    'generate' => false, 
-    'type' => 'diagonal', // circle | radius | square | diagonal
-    'output' => 'save', // download|view|save|data,
-    'destination' => base_path('storage/avatars'),
-    // 'font_path' => __DIR__ . '/fonts/Inter-Bold.ttf', // recommended for best results
-    'gradient' => 'cosmic', 
+    'generate' => false,
+    'type' => 'square',
+    'shape' => 'stripe',
+    'gradient' => 'cosmic',
 ]);
 
-// 3) Auto-fit font size (no touching edges)
 $path2 = TextToImage::run([
     'name' => '王小明',
     'font_weight' => 'normal',
@@ -35,29 +34,8 @@ $path3 = $ntoimage->run([
     'font_weight' => 'bold',
     'type' => 'radius',
     'text_color' => '#26012b',
-    'gradient' => 'aurora', 
+    'gradient' => 'aurora',
 ]);
-
-
-// good ones
-// vertical 
-// horizontal
-// cosmic
-// mesh
-// noir
-// ember
-// forest
-// aurora
-// ocean
-// sunset
-// candy
-// vignette
-// spotlight
-// radial
-
-// dawn
-// ice
-// lavender
 
 $path4 = $ntoimage->run([
     'name' => 'Facebook',
@@ -65,8 +43,8 @@ $path4 = $ntoimage->run([
     'bg_color' => '#063903ff',
     'text_color' => '#cae6ff',
     'type' => 'square',
-    'gradient' => 'dawn', 
-]); 
+    'gradient' => 'forest',
+]);
 
 $path5 = $ntoimage->run([
     'name' => 'GitHub Microsoft',
@@ -74,6 +52,7 @@ $path5 = $ntoimage->run([
     'bg_color' => '#000000',
     'text_color' => '#4A5568',
     'type' => 'circle',
+    'shape' => 'diagonal',
 ]);
 
 $path6 = $ntoimage->run([
