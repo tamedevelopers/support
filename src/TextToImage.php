@@ -16,7 +16,8 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
  *
  * Features:
  * - Clip type: circle | radius | square (`type`)
- * - Optional overlay `shape`: diagonal | stripe | ring | gloss | corner | split (solid two-tone accents, legacy vendor style). null = none. Applied after fill/gradient, before initials.
+ * - Optional overlay `shape`: diagonal | stripe | ring | gloss | corner | split — each draws ~1px strokes
+ *   using a darker shade of the pixel under the stroke (gradient-safe) or `bg_color` if unreadable. Applied after fill/gradient, before initials.
  * - Optional `gradient` presets (null = solid `bg_color` only)
  * - Initials: first character(s) from name – supports all languages (English, Chinese, Japanese,
  *   Arabic, etc.); two words → first char of each; one word → first two characters
@@ -35,7 +36,7 @@ class TextToImage
      * - name: string (required)
      * - size: int (square dimension in px, default 256)
      * - type: string ('circle' | 'radius' | 'square') default 'square' — clip/mask for the avatar
-     * - shape: string|null diagonal|stripe|ring|gloss|corner|split. null = no overlay. Applied after fill/gradient, before initials.
+     * - shape: string|null diagonal|stripe|ring|gloss|corner|split (~1px dark seams on existing fill). null = no overlay.
      * - gradient: string|null Preset gradient fill. null = solid bg_color only.
      * - radius: int (corner radius for 'radius' shape) default size/6
      * - bg_color: string|array (hex '#RRGGBB'|'#RGB'|'rgb(r,g,b)'|[r,g,b]) default '#4A5568'
@@ -61,7 +62,7 @@ class TextToImage
             'name'        => '',
             'size'        => 256,
             'type'        => 'square', // circle|radius|square
-            'shape'       => null, // diagonal|stripe|ring|gloss|corner|split
+            'shape'       => null, // ~1px stroke presets: diagonal|stripe|ring|gloss|corner|split
             'gradient'    => null, // preset name or null for solid bg_color
             'radius'      => null,     // default computed: size/6
             'bg_color'    => '',
@@ -433,33 +434,75 @@ class TextToImage
         }
     }
 
-    /**
-     * Solid overlay color from base RGB and multiplier (per channel, clamped).
-     *
-     * @param resource|\GdImage      $img
-     * @param array{0:int,1:int,2:int} $rgb
-     */
-    private static function shapeAllocateMultiply($img, array $rgb, float $mul): int
+    /** Per-channel multiplier for stroke vs underlying pixel (lower = darker seam). */
+    private static function shapeStrokeDarkenFactor(): float
     {
-        $r = max(0, min(255, (int) round($rgb[0] * $mul)));
-        $g = max(0, min(255, (int) round($rgb[1] * $mul)));
-        $b = max(0, min(255, (int) round($rgb[2] * $mul)));
-
-        return (int) imagecolorallocate($img, $r, $g, $b);
-    }
-
-    /** Legacy vendor diagonal secondary (~15% lift per channel). */
-    private static function shapeAllocateLighten15($img, array $rgb): int
-    {
-        return self::shapeAllocateMultiply($img, $rgb, 1.15);
+        return 0.44;
     }
 
     /**
      * @param resource|\GdImage $img
+     * @return array{0:int,1:int,2:int}|null
+     */
+    private static function readTruecolorRgbAt($img, int $x, int $y): ?array
+    {
+        $c = @imagecolorat($img, $x, $y);
+        if ($c === false) {
+            return null;
+        }
+        $a = ($c >> 24) & 127;
+        if ($a >= 127) {
+            return null;
+        }
+
+        return [($c >> 16) & 0xFF, ($c >> 8) & 0xFF, $c & 0xFF];
+    }
+
+    /**
+     * @param array{0:int,1:int,2:int}      $fallbackRgb
+     * @param array<string,int>             $cache
+     * @param resource|\GdImage             $img
+     */
+    private static function allocateStrokeColor(
+        $img,
+        int $x,
+        int $y,
+        array $fallbackRgb,
+        float $darkenFactor,
+        array &$cache
+    ): int {
+        $base = self::readTruecolorRgbAt($img, $x, $y);
+        if ($base === null) {
+            $base = $fallbackRgb;
+        }
+        $r = max(0, min(255, (int) round($base[0] * $darkenFactor)));
+        $g = max(0, min(255, (int) round($base[1] * $darkenFactor)));
+        $b = max(0, min(255, (int) round($base[2] * $darkenFactor)));
+        $k = $r . ',' . $g . ',' . $b;
+        if (!isset($cache[$k])) {
+            $cache[$k] = (int) imagecolorallocate($img, $r, $g, $b);
+        }
+
+        return $cache[$k];
+    }
+
+    /**
+     * ~1px strokes: darken the colour already at each pixel (keeps gradients); falls back to `bg_color`.
+     *
+     * @param resource|\GdImage $img
+     * @param array{0:int,1:int,2:int} $fallbackRgb
      * @param callable(int,int,int):bool $predicate
      */
-    private static function applySolidWhere($img, string $type, int $size, int $radius, callable $predicate, int $color): void
-    {
+    private static function applyStrokeWhere(
+        $img,
+        string $type,
+        int $size,
+        int $radius,
+        array $fallbackRgb,
+        callable $predicate
+    ): void {
+        $cache = [];
+        $f = self::shapeStrokeDarkenFactor();
         for ($y = 0; $y < $size; $y++) {
             for ($x = 0; $x < $size; $x++) {
                 if (!self::pixelInClipType($type, $x, $y, $size, $radius)) {
@@ -468,170 +511,126 @@ class TextToImage
                 if (!$predicate($x, $y, $size)) {
                     continue;
                 }
-                imagesetpixel($img, $x, $y, $color);
+                $col = self::allocateStrokeColor($img, $x, $y, $fallbackRgb, $f, $cache);
+                imagesetpixel($img, $x, $y, $col);
             }
         }
     }
 
     /**
-     * @param resource|\GdImage $img
-     */
-    private static function applySolidInTriangle(
-        $img,
-        string $type,
-        int $size,
-        int $radius,
-        float $ax,
-        float $ay,
-        float $bx,
-        float $by,
-        float $cx,
-        float $cy,
-        int $color
-    ): void {
-        for ($y = 0; $y < $size; $y++) {
-            for ($x = 0; $x < $size; $x++) {
-                if (!self::pixelInClipType($type, $x, $y, $size, $radius)) {
-                    continue;
-                }
-                if (!self::pointInTriangle((float) $x, (float) $y, $ax, $ay, $bx, $by, $cx, $cy)) {
-                    continue;
-                }
-                imagesetpixel($img, $x, $y, $color);
-            }
-        }
-    }
-
-    /**
-     * Solid two-tone shape overlays (legacy vendor `TextToImage` style). Clipped to `type`.
+     * Thin stroke overlays (no second fill layer). Clipped to `type`.
      *
      * @param resource|\GdImage $img
+     * @param array{0:int,1:int,2:int} $rgb bg_color seed (fallback when pixel unreadable)
      */
     private static function applyShapeOverlay($img, string $type, int $size, array $rgb, int $radius, string $shapeType): void
     {
-        $s = (float) $size;
         $sMax = max(0, $size - 1);
         switch ($shapeType) {
-            case 'diagonal':
-                // Same geometry as legacy: full fill already done; lighter triangle (0,s)–(s,s)–(s,0).
-                $sec = self::shapeAllocateLighten15($img, $rgb);
-                self::applySolidInTriangle($img, $type, $size, $radius, 0.0, $s, $s, $s, $s, 0.0, $sec);
-                break;
-
-            case 'stripe': {
-                $sec = self::shapeAllocateMultiply($img, $rgb, 1.18);
-                $halfH = $size * 0.11;
-                $cy = ($size - 1) / 2.0;
-                self::applySolidWhere(
+            case 'diagonal': {
+                // Two parallel BL→TR anti-diagonals (1 cell thick): sharp seams, gradient stays between.
+                $step = max(2, (int) round($size * 0.12));
+                $k2 = $sMax - $step;
+                self::applyStrokeWhere(
                     $img,
                     $type,
                     $size,
                     $radius,
-                    static function (int $x, int $y, int $sz) use ($halfH, $cy) {
-                        return abs($y - $cy) < $halfH;
-                    },
-                    $sec
+                    $rgb,
+                    static function (int $x, int $y, int $sz) use ($sMax, $k2) {
+                        $s = $x + $y;
+
+                        return $s === $sMax || ($k2 >= 1 && $s === $k2);
+                    }
+                );
+                break;
+            }
+
+            case 'stripe': {
+                $y0 = (int) floor(($size - 1) / 2);
+                self::applyStrokeWhere(
+                    $img,
+                    $type,
+                    $size,
+                    $radius,
+                    $rgb,
+                    static function (int $x, int $y, int $sz) use ($y0) {
+                        return $y === $y0;
+                    }
                 );
                 break;
             }
 
             case 'ring': {
-                $sec = self::shapeAllocateMultiply($img, $rgb, 0.72);
                 $cx = ($size - 1) / 2.0;
                 $cy = ($size - 1) / 2.0;
-                $rr = $size / 2.0;
-                self::applySolidWhere(
+                $R = ($size / 2.0) * 0.82;
+                self::applyStrokeWhere(
                     $img,
                     $type,
                     $size,
                     $radius,
-                    static function (int $x, int $y, int $sz) use ($cx, $cy, $rr) {
+                    $rgb,
+                    static function (int $x, int $y, int $sz) use ($cx, $cy, $R) {
                         $d = hypot($x - $cx, $y - $cy);
 
-                        return $d > $rr * 0.72 && $d < $rr * 0.94;
-                    },
-                    $sec
+                        return abs($d - $R) <= 0.65;
+                    }
                 );
                 break;
             }
 
             case 'gloss': {
-                $r = min(255, (int) round($rgb[0] * 0.78 + 255 * 0.22));
-                $g = min(255, (int) round($rgb[1] * 0.78 + 255 * 0.22));
-                $b = min(255, (int) round($rgb[2] * 0.78 + 255 * 0.22));
-                $sec = (int) imagecolorallocate($img, $r, $g, $b);
-                self::applySolidWhere(
+                $y0 = (int) floor($size * 0.36);
+                if ($y0 >= $size) {
+                    $y0 = $size - 1;
+                }
+                self::applyStrokeWhere(
                     $img,
                     $type,
                     $size,
                     $radius,
-                    static function (int $x, int $y, int $sz) {
-                        return $y < $sz * 0.36;
-                    },
-                    $sec
+                    $rgb,
+                    static function (int $x, int $y, int $sz) use ($y0) {
+                        return $y === $y0;
+                    }
                 );
                 break;
             }
 
-            case 'corner':
-                if ($sMax < 2) {
-                    break;
-                }
-                $k = (float) max(2, (int) round($sMax * 0.52));
-                $sec = self::shapeAllocateMultiply($img, $rgb, 1.18);
-                self::applySolidInTriangle($img, $type, $size, $radius, 0.0, 0.0, $k, 0.0, 0.0, $k, $sec);
+            case 'corner': {
+                $k = max(2, (int) round($size * 0.36));
+                self::applyStrokeWhere(
+                    $img,
+                    $type,
+                    $size,
+                    $radius,
+                    $rgb,
+                    static function (int $x, int $y, int $sz) use ($k) {
+                        return ($y === 0 && $x <= $k) || ($x === 0 && $y <= $k);
+                    }
+                );
                 break;
+            }
 
             case 'split': {
-                $mid = (int) floor($size / 2);
-                $left = self::shapeAllocateMultiply($img, $rgb, 0.88);
-                $right = self::shapeAllocateMultiply($img, $rgb, 1.1);
-                self::applySolidWhere(
+                $x0 = (int) floor($size / 2);
+                if ($x0 >= $size) {
+                    $x0 = $size - 1;
+                }
+                self::applyStrokeWhere(
                     $img,
                     $type,
                     $size,
                     $radius,
-                    static function (int $x, int $y, int $sz) use ($mid) {
-                        return $x < $mid;
-                    },
-                    $left
-                );
-                self::applySolidWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) use ($mid) {
-                        return $x >= $mid;
-                    },
-                    $right
+                    $rgb,
+                    static function (int $x, int $y, int $sz) use ($x0) {
+                        return $x === $x0;
+                    }
                 );
                 break;
             }
         }
-    }
-
-    private static function pointInTriangle(
-        float $px,
-        float $py,
-        float $ax,
-        float $ay,
-        float $bx,
-        float $by,
-        float $cx,
-        float $cy
-    ): bool {
-        $sign = static function (float $p1x, float $p1y, float $p2x, float $p2y, float $p3x, float $p3y): float {
-            return ($p1x - $p3x) * ($p2y - $p3y) - ($p2x - $p3x) * ($p1y - $p3y);
-        };
-
-        $d1 = $sign($px, $py, $ax, $ay, $bx, $by);
-        $d2 = $sign($px, $py, $bx, $by, $cx, $cy);
-        $d3 = $sign($px, $py, $cx, $cy, $ax, $ay);
-        $hasNeg = ($d1 < 0) || ($d2 < 0) || ($d3 < 0);
-        $hasPos = ($d1 > 0) || ($d2 > 0) || ($d3 > 0);
-
-        return !($hasNeg && $hasPos);
     }
 
     private static function pixelInClipType(string $type, int $x, int $y, int $size, int $radius): bool

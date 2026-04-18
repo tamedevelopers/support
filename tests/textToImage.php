@@ -7,17 +7,16 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $ntoimage = new TextToImage();
 
 
-// Shapes: diagonal | stripe | ring | gloss | corner | split (solid legacy-style overlays)
-// 1) Square + diagonal (BL–BR–TR triangle, +15% lighter) + cosmic gradient
+// Shapes: diagonal | stripe | ring | gloss | corner | split (~1px dark seams from local pixel / bg_color)
+// 1) Square + diagonal (two parallel BL→TR seams) + cosmic gradient
 $path1 = TextToImage::run([
     'name' => 'John Doe',
     'font_weight' => 'normal',
-    'bg_color' => '#04068dff',
+    'bg_color' => '#008000',
     'text_color' => 'rgba(255,255,255,1)',
     'generate' => false,
-    'type' => 'square',
     'shape' => 'diagonal',
-    'gradient' => 'cosmic',
+    'gradient' => 'diagonal',
 ]);
 
 $path2 = TextToImage::run([
@@ -25,13 +24,11 @@ $path2 = TextToImage::run([
     'font_weight' => 'normal',
     'bg_color' => [147, 51, 234],
     'text_color' => '#ffffff',
-    'type' => 'square',
 ]);
 
 $path3 = $ntoimage->run([
     'name' => 'Tamedevelopers Peterson Moore',
     'font_weight' => 'bold',
-    'type' => 'radius',
     'text_color' => '#26012b',
     'gradient' => 'aurora',
 ]);
@@ -41,7 +38,7 @@ $path4 = $ntoimage->run([
     'font_weight' => 'bold',
     'bg_color' => '#063903ff',
     'text_color' => '#cae6ff',
-    'type' => 'square',
+    'type' => 'radius',
     'gradient' => 'forest',
 ]);
 
