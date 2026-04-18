@@ -7,6 +7,7 @@ namespace Tamedevelopers\Support;
 use Exception;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\CustomException;
+use Tamedevelopers\Support\Traits\FontPathTrait;
 use Tamedevelopers\Support\Traits\ImageToTextTrait;
 
 
@@ -23,22 +24,22 @@ use Tamedevelopers\Support\Traits\ImageToTextTrait;
  *
  * Usage examples:
  *
- * 1) From uploaded file
+ * 1) From uploaded file (script / language is autodetected by each OCR engine)
  *    $text = ImageToText::run([
  *        'upload' => $_FILES['image'],
  *        'engine' => 'auto',
- *        'language' => 'eng'
  *    ]);
  *
- * 2) From file path
+ * 2) From file path — optional emoji / color UI handling (still fully autodetect)
  *    $text = ImageToText::run([
- *        'source' => '/path/to/image.png',
+ *        'source' => '/path/to/ui.png',
  *        'engine' => 'google',
- *        'language' => 'fra'
+ *        'emoji_friendly' => true,
  *    ]);
  */
 class ImageToText
 {
+    use FontPathTrait;
     use ImageToTextTrait;
 
     /**
@@ -52,7 +53,9 @@ class ImageToText
      * Options:
      * - upload: array|null        Uploaded file array from $_FILES
      * - source: string|null       Path to existing image file
-     * - language: string          Language code (default: 'eng')
+     * - emoji_friendly: bool      Preserve color in preprocessing; broaden Google hints for symbols / emoji.
+     * - preserve_color: bool      Skip grayscale preprocessing (helps colored emoji / UI screenshots).
+     * - google_detection_feature: string  TEXT_DETECTION | DOCUMENT_TEXT_DETECTION (default: DOCUMENT_TEXT_DETECTION).
      * - engine: string            OCR engine (default: 'auto')
      * - max_file_size: int        Maximum file size in bytes (default: 5MB)
      * - tmp_dir: string|null      Temporary directory for processing
@@ -86,8 +89,13 @@ class ImageToText
         try {
             // Apply preprocessing if enabled
             if ($config['preprocess'] !== false) {
-                $processed = self::preprocessImage($inputPath, $config['tmp_dir'], 
-                    is_array($config['preprocess']) ? $config['preprocess'] : []);
+                $defaults = ['grayscale' => true, 'brightness' => 0, 'contrast' => 15, 'threshold' => null];
+                $userPre = is_array($config['preprocess']) ? $config['preprocess'] : [];
+                $preOpts = array_merge($defaults, $userPre);
+                if ($config['emoji_friendly'] || $config['preserve_color']) {
+                    $preOpts['grayscale'] = false;
+                }
+                $processed = self::preprocessImage($inputPath, $config['tmp_dir'], $preOpts);
                 if ($processed !== null) {
                     $inputPath = $processed;
                     $tempFiles[] = $processed;
@@ -102,7 +110,7 @@ class ImageToText
                 self::cleanupFiles($tempFiles);
             }
 
-            return $text;
+            return self::normalizeOcrText($text);
 
         } catch (\Throwable $e) {
             // Ensure cleanup on failure
@@ -123,16 +131,25 @@ class ImageToText
             throw new CustomException("Unsupported engine: {$engine}. Supported: " . implode(', ', self::ENGINES));
         }
 
-        return [
+        $emojiFriendly = (bool) ($options['emoji_friendly'] ?? false);
+        $preserveColor = (bool) ($options['preserve_color'] ?? false);
+        $gdf = strtoupper((string) ($options['google_detection_feature'] ?? 'DOCUMENT_TEXT_DETECTION'));
+        if (!in_array($gdf, ['TEXT_DETECTION', 'DOCUMENT_TEXT_DETECTION'], true)) {
+            $gdf = 'DOCUMENT_TEXT_DETECTION';
+        }
+
+        $config = [
             'upload' => $options['upload'] ?? null,
             'source' => $options['source'] ?? null,
-            'language' => (string)($options['language'] ?? 'eng'),
+            'emoji_friendly' => $emojiFriendly,
+            'preserve_color' => $preserveColor,
             'engine' => $engine,
-            'max_file_size' => $options['max_file_size'] ?? Tame()->sizeToBytes('2mb'), 
+            'max_file_size' => $options['max_file_size'] ?? Tame()->sizeToBytes('2mb'),
             'tmp_dir' => $options['tmp_dir'] ?? (\dirname(__DIR__) . '/storage/ocr'),
-            'cleanup' => (bool)($options['cleanup'] ?? true),
+            'cleanup' => (bool) ($options['cleanup'] ?? true),
             'preprocess' => $options['preprocess'] ?? true,
-            
+            'google_detection_feature' => $gdf,
+
             // Engine-specific configurations
             'ocrspace_api_key' => $options['ocrspace_api_key'] ?? (env('OCR_SPACE_API_KEY', 'helloworld')),
             'google_api_key' => $options['google_api_key'] ?? env('GOOGLE_VISION_API_KEY'),
@@ -143,6 +160,12 @@ class ImageToText
             'tesseract_oem' => $options['tesseract_oem'] ?? $options['oem'] ?? null,
             'tesseract_whitelist' => $options['tesseract_whitelist'] ?? $options['whitelist'] ?? null,
         ];
+
+        // Always engine autodetect (no manual language): parallel to TextToImage choosing fonts from content,
+        // OCR backends infer script; Tesseract runs without -l unless traineddata default is installed.
+        $config['_ocr'] = self::expandOcrLanguageForEngines('', $emojiFriendly);
+
+        return $config;
     }
 
     /**
@@ -214,15 +237,15 @@ class ImageToText
 
         switch ($engine) {
             case 'ocrspace':
-                return self::ocrspaceEngine($imagePath, $config['language'], $config['ocrspace_api_key']);
+                return self::ocrspaceEngine($imagePath, $config['_ocr']['ocrspace'], $config['ocrspace_api_key']);
             case 'tesseract':
                 return self::tesseractEngine($imagePath, $config);
             case 'google':
-                return self::googleEngine($imagePath, $config['language'], $config['google_api_key']);
+                return self::googleEngine($imagePath, $config);
             case 'azure':
-                return self::azureEngine($imagePath, $config['language'], $config['azure_api_key'], $config['azure_endpoint']);
+                return self::azureEngine($imagePath, $config['_ocr']['azure'], $config['azure_api_key'], $config['azure_endpoint']);
             case 'freeocr':
-                return self::freeocrEngine($imagePath, $config['language']);
+                return self::freeocrEngine($imagePath, $config['_ocr']['ocrspace']);
             default:
                 throw new CustomException("Unsupported engine: {$engine}");
         }
@@ -332,8 +355,12 @@ class ImageToText
 
         $cmd = [self::escapeArg($exe), self::escapeArg($imagePath), 'stdout'];
         
-        if ($config['language']) {
-            array_push($cmd, '-l', self::escapeArg($config['language']));
+        $tessLang = $config['_ocr']['tesseract'] ?? '';
+        if ($tessLang === '') {
+            $tessLang = self::inferTesseractAutodetectLangPack($exe);
+        }
+        if ($tessLang !== '') {
+            array_push($cmd, '-l', self::escapeArg($tessLang));
         }
         if ($config['tesseract_psm'] !== null) {
             array_push($cmd, '--psm', (string)(int)$config['tesseract_psm']);
@@ -359,36 +386,42 @@ class ImageToText
     /**
      * Google Cloud Vision OCR Engine
      */
-    private static function googleEngine(string $imagePath, string $language, ?string $apiKey): string
+    private static function googleEngine(string $imagePath, array $config): string
     {
+        $apiKey = $config['google_api_key'];
         if (!$apiKey) {
             throw new CustomException('Google Vision API key required. Set google_api_key option or GOOGLE_VISION_API_KEY environment variable.');
         }
 
-        $imageContent = base64_encode(file_get_contents($imagePath));
-        
-        $data = [
-            'requests' => [[
-                'image' => ['content' => $imageContent],
-                'features' => [[
-                    'type' => 'TEXT_DETECTION',
-                    'maxResults' => 1
-                ]],
-                'imageContext' => [
-                    'languageHints' => [$language]
-                ]
-            ]]
+        $imageContent = base64_encode((string) file_get_contents($imagePath));
+
+        $hints = array_values(array_unique($config['_ocr']['google_hints'] ?? []));
+        if (!empty($config['preserve_color']) && !in_array('und', $hints, true)) {
+            $hints[] = 'und';
+        }
+
+        $request = [
+            'image' => ['content' => $imageContent],
+            'features' => [[
+                'type' => $config['google_detection_feature'],
+                'maxResults' => 50,
+            ]],
         ];
+        if ($hints !== []) {
+            $request['imageContext'] = ['languageHints' => $hints];
+        }
+
+        $data = ['requests' => [$request]];
 
         $url = "https://vision.googleapis.com/v1/images:annotate?key={$apiKey}";
-        
+
         $context = stream_context_create([
             'http' => [
                 'method' => 'POST',
                 'header' => 'Content-Type: application/json',
                 'content' => json_encode($data),
-                'timeout' => 30
-            ]
+                'timeout' => 30,
+            ],
         ]);
 
         $response = @file_get_contents($url, false, $context);
@@ -397,7 +430,29 @@ class ImageToText
         }
 
         $result = json_decode($response, true);
-        return $result['responses'][0]['fullTextAnnotation']['text'] ?? '';
+        if (!is_array($result)) {
+            throw new CustomException('Invalid Google Vision API response.');
+        }
+        $first = $result['responses'][0] ?? null;
+        if (!is_array($first)) {
+            return '';
+        }
+        if (!empty($first['error'])) {
+            $msg = $first['error']['message'] ?? json_encode($first['error']);
+            throw new CustomException('Google Vision API error: ' . $msg);
+        }
+
+        $text = $first['fullTextAnnotation']['text'] ?? '';
+        if ($text !== '') {
+            return $text;
+        }
+        foreach ($first['textAnnotations'] ?? [] as $i => $ann) {
+            if ($i === 0 && isset($ann['description'])) {
+                return (string) $ann['description'];
+            }
+        }
+
+        return '';
     }
 
     /**
@@ -481,5 +536,18 @@ class ImageToText
         $result = json_decode($response, true);
         return $result['text'] ?? '';
     }
-    
+
+    /**
+     * Trim and NFC-normalize OCR output when intl is available (stable composed emoji / Hangul).
+     */
+    private static function normalizeOcrText(string $text): string
+    {
+        $text = trim($text);
+        if ($text === '' || !class_exists(\Normalizer::class)) {
+            return $text;
+        }
+        $norm = \Normalizer::normalize($text, \Normalizer::FORM_C);
+
+        return is_string($norm) ? $norm : $text;
+    }
 }

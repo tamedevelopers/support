@@ -16,7 +16,7 @@ $output = ChromePdf::create()
     // ->fromUrl('https://www.google.com')
     ->fromFile('upload/template.html')
     ->margin(20)
-    ->printFromElement('.body')
+    ->createFromElement('.body')
     ->textWatermark('CONFIDENTIAL')
     // ->clickableLinks(false)
     ->encrypt(

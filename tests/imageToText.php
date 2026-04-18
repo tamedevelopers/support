@@ -10,7 +10,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // Simple example demonstrating ImageToText usage from CLI or Web.
 //
 // CLI usage:
-//   php tests/imagetotext.php path/to/image.png [lang] [psm]
+//   php tests/imagetotext.php path/to/image.png [psm]
 //
 // Web usage:
 //   Visit tests/imagetotext.php in your browser, upload an image, and submit.
@@ -29,7 +29,6 @@ if ($isCli) {
 
 // Web mode
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $lang = isset($_POST['lang']) && $_POST['lang'] !== '' ? (string)$_POST['lang'] : 'eng';
     $psm  = isset($_POST['psm']) && $_POST['psm'] !== '' ? (int)$_POST['psm'] : null;
 
     $preprocess = [
@@ -45,10 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $text = ImageToText::run([
             'upload'     => $files->first(),
-            'language'   => $lang,
             'psm'        => $psm,
             'preprocess' => $preprocess,
             'engine'     => 'auto', // 'ocrspace', 'google', 'azure', 'freeocr', 'auto'
+            'emoji_friendly' => isset($_POST['emoji_friendly']),
             // 'tesseract_path' => 'C:\Program Files\Tesseract-OCR\tesseract.exe'
         ]);
 
@@ -89,16 +88,13 @@ $error = $error ?? null;
         <input id="image" type="file" name="image" accept="image/*" multiple/>
       </div>
       <div class="row">
-        <label for="lang">Language</label>
-        <input id="lang" type="text" name="lang" value="eng" placeholder="eng" />
-      </div>
-      <div class="row">
-        <label for="psm">PSM</label>2348184
+        <label for="psm">PSM</label>
         <input id="psm" type="number" name="psm" min="0" max="13" placeholder="6" />
       </div>
       <div class="row">
-        <label>Preprocess</label>
+        <label>Options</label>
         <label><input type="checkbox" name="grayscale" checked /> grayscale</label>
+        <label style="margin-left:1rem;"><input type="checkbox" name="emoji_friendly" /> emoji-friendly (keep color, broader detection)</label>
       </div>
       <div class="row">
         <label for="brightness">Brightness</label>
@@ -118,6 +114,6 @@ $error = $error ?? null;
     </fieldset>
   </form>
 
-  <p style="margin-top:2rem;color:#666;">Note: Requires Tesseract OCR installed and available on PATH, or configure a custom path in the class options.</p>
+  <p style="margin-top:2rem;color:#666;">Language / script is autodetected by each OCR engine. For colored emoji or UI screenshots, enable emoji-friendly mode.</p>
 </body>
 </html>

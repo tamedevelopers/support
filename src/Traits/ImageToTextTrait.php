@@ -94,7 +94,55 @@ trait ImageToTextTrait{
         $stdout = stream_get_contents($pipes[1]);
         $stderr = stream_get_contents($pipes[2]);
         fclose($pipes[1]); fclose($pipes[2]);
-        return [proc_close($proc), (string)$stdout, (string)$stderr];
+        return [proc_close($proc), self::ensureUtf8OcrOutput((string) $stdout), (string) $stderr];
+    }
+
+    /**
+     * Tesseract may emit non–UTF-8 on some Windows locales; normalize for downstream use.
+     */
+    private static function ensureUtf8OcrOutput(string $s): string
+    {
+        if ($s === '' || mb_check_encoding($s, 'UTF-8')) {
+            return $s;
+        }
+        $converted = @mb_convert_encoding($s, 'UTF-8', 'Windows-1252');
+        if ($converted !== false && mb_check_encoding($converted, 'UTF-8')) {
+            return $converted;
+        }
+        $latin = @mb_convert_encoding($s, 'UTF-8', 'ISO-8859-1');
+        return ($latin !== false && mb_check_encoding($latin, 'UTF-8')) ? $latin : $s;
+    }
+
+    /**
+     * When OCR language is fully autodetect, prefer multilingual traineddata if present (e.g. chi_sim+eng for Han + Latin).
+     */
+    private static function inferTesseractAutodetectLangPack(string $exe): string
+    {
+        $dir = dirname($exe);
+        $tessdata = $dir . DIRECTORY_SEPARATOR . 'tessdata';
+        if (!is_dir($tessdata)) {
+            return '';
+        }
+        $has = static function (string $name) use ($tessdata): bool {
+            return is_file($tessdata . DIRECTORY_SEPARATOR . $name . '.traineddata');
+        };
+        if ($has('chi_sim') && $has('eng')) {
+            return 'chi_sim+eng';
+        }
+        if ($has('chi_tra') && $has('eng')) {
+            return 'chi_tra+eng';
+        }
+        if ($has('jpn') && $has('eng')) {
+            return 'jpn+eng';
+        }
+        if ($has('kor') && $has('eng')) {
+            return 'kor+eng';
+        }
+        if ($has('ara') && $has('eng')) {
+            return 'ara+eng';
+        }
+
+        return '';
     }
 
     private static function escapeArg(string $arg): string

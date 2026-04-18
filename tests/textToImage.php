@@ -52,6 +52,12 @@ $path5 = $ntoimage->run([
     'type' => 'circle',
 ]);
 
+$path6 = $ntoimage->run([
+    'name' => 'آية. مليون.',
+    'font_weight' => 'bold',
+    'type' => 'circle',
+]);
+
 ?>
 
 <img src="<?php echo $path1['url']; ?>" alt="Text to Image">
@@ -59,3 +65,4 @@ $path5 = $ntoimage->run([
 <img src="<?php echo $path3['url']; ?>" alt="Text to Image">
 <img src="<?php echo $path4['url']; ?>" alt="Text to Image">
 <img src="<?php echo $path5['url']; ?>" alt="Text to Image">
+<img src="<?php echo $path6['url']; ?>" alt="Text to Image">

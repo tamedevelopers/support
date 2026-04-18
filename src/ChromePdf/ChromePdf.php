@@ -265,7 +265,7 @@ final class ChromePdf
     /**
      * When set, only the first matching element is kept in the document body before PDF capture.
      */
-    public function printFromElement(?string $cssSelector): self
+    public function createFromElement(?string $cssSelector): self
     {
         $this->selector = !empty($cssSelector) ? $cssSelector : null;
 

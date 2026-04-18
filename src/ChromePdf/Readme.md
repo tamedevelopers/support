@@ -56,7 +56,7 @@ A single fluent API that:
   - [`css()`](#css)
   - [`cssFile()`](#cssfile)
 - [DOM processing](#dom-processing)
-  - [`printFromElement()`](#printfromelement)
+  - [`createFromElement()`](#createfromelement)
   - [`hideElements()`](#hideelements)
   - [`removeCookiePopups()`](#removecookiepopups)
   - [`clickableLinks()`](#clickablelinks)
@@ -71,6 +71,7 @@ A single fluent API that:
   - [`navigationTimeoutMs()`](#navigationtimeoutms)
   - [`withoutDefaultPostProcessing()`](#withoutdefaultpostprocessing)
   - [`postProcessLocalSources()`](#postprocesslocalsources)
+  - [`deleteUploadedFile()`](#deleteuploadedfile)
 - [Fonts](#fonts)
 - [Print appearance](#print-appearance)
 - [Chromium settings](#chromium-settings)
@@ -94,6 +95,17 @@ A single fluent API that:
 - **Google Chrome or Chromium** (binary on the server)
 - **Composer**
 - PHP **sockets** extension (for `chrome-php` WebSocket IPC)
+
+Required packages (to be installed):
+```json
+{
+    "ext-sockets": "*",
+    "chrome-php/chrome": "^1.11",
+    "chrome-php/wrench": "^1.7",
+    "setasign/fpdi": "^2.6",
+    "tecnickcom/tcpdf": "^6.8"
+}
+```
 
 ---
 
@@ -137,7 +149,6 @@ extension=sockets
 ```
 
 Restart PHP / the web server (XAMPP, WAMP, MAMP, Linux `php-fpm`, etc.).
-
 ---
 
 ## Development environment
@@ -252,7 +263,7 @@ use Tamedevelopers\Support\ChromePdf\ChromePdf;
 $output = ChromePdf::create()
     ->fromFile('invoice/template.html')
     ->paper('A4')
-    ->printFromElement('.body')
+    ->createFromElement('.body')
     ->margins(20)
     ->clickableLinks(false)
     ->generate();
@@ -379,13 +390,12 @@ Append CSS from a readable file path.
 
 ## DOM processing
 
-### `printFromElement`
+### `createFromElement`
 
 When set, only the **first matching element** is kept in the document body before capture (CSS selector).
 
 ```php
-->printFromElement('#invoice')
-->printFromElement(null) // clear
+->createFromElement('#invoice')
 ```
 
 ### `hideElements`
@@ -492,6 +502,14 @@ When `true`, **`fromFile` / `fromHtml`** also run the same stabilize + cookie pa
 
 ```php
 ->postProcessLocalSources(true);
+```
+
+### `deleteUploadedFile`
+
+When `true`, the file-path passed to  **`fromFile`** will automatically be deleted after PDF creation.
+
+```php
+->deleteUploadedFile(true);
 ```
 
 ---
