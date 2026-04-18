@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
-use Exception;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\CustomException;
 use Tamedevelopers\Support\Traits\ImageToTextTrait;
 use Tamedevelopers\Support\Traits\OcrLanguageTrait;
-
 
 /**
  * ImageToText: Extract text from images using multiple OCR engines
