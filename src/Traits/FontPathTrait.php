@@ -39,10 +39,9 @@ trait FontPathTrait{
 
         $isUnicode = self::needsUnicodeFont($textForFont);
 
-        $path = self::stringReplacer(__DIR__ . DIRECTORY_SEPARATOR);
-
-        $bundledUnicode = "{$path}icons/fonts/" . ($weight === 'bold' ? 'NotoSansSC-Bold.ttf' : 'NotoSansSC-Medium.ttf');
-        $bundledLatin = "{$path}icons/fonts/" . ($weight === 'bold' ? 'Inter-Bold.ttf' : 'Inter-Medium.ttf');
+        $iconsFonts = self::iconsFontsDirectory();
+        $bundledUnicode = $iconsFonts . ($weight === 'bold' ? 'NotoSansSC-Bold.ttf' : 'NotoSansSC-Medium.ttf');
+        $bundledLatin = $iconsFonts . ($weight === 'bold' ? 'Inter-Bold.ttf' : 'Inter-Medium.ttf');
 
         // Script-specific fonts (NotoSansSC does not cover Arabic — avoid blank Arabic initials)
         if ($isUnicode) {
@@ -147,7 +146,92 @@ trait FontPathTrait{
             }
         }
 
+        // Optional fonts in Traits/icons/fonts/ when the OS has nothing readable
+        $bundled = self::firstReadableFont(self::bundledIconsFontFallbacks($weight, $textForFont));
+        if ($bundled !== null) {
+            return $bundled;
+        }
+
         return null;
+    }
+
+    /**
+     * Directory for optional packaged fonts (relative to this trait file).
+     */
+    private static function iconsFontsDirectory(): string
+    {
+        return self::stringReplacer(__DIR__ . DIRECTORY_SEPARATOR . 'icons' . DIRECTORY_SEPARATOR . 'fonts' . DIRECTORY_SEPARATOR);
+    }
+
+    /**
+     * Bundled fallbacks when system fonts are missing (minimal Linux Docker, CI, etc.).
+     *
+     * No single small font covers Unicode completely. Prefer optional Noto per script, then GNU Unifont
+     * (very wide coverage, basic glyphs), then Noto Sans (Latin/Cyrillic/Greek), then Inter.
+     * NotoSansSC is only suggested when the text actually contains CJK (it does not cover Arabic).
+     *
+     * @return list<string>
+     */
+    private static function bundledIconsFontFallbacks(string $weight, string $textForFont): array
+    {
+        $d = self::iconsFontsDirectory();
+        $bold = $weight === 'bold';
+        $out = [];
+
+        if (self::textContainsCjkScript($textForFont)) {
+            foreach (($bold
+                ? [
+                    'NotoSansCJK-Bold.ttc',
+                    'NotoSansCJKtc-Bold.ttc',
+                    'NotoSansCJKjp-Bold.ttc',
+                    'NotoSansCJKkr-Bold.ttc',
+                    'NotoSansCJKsc-Bold.ttc',
+                ]
+                : [
+                    'NotoSansCJK-Regular.ttc',
+                    'NotoSansCJKtc-Regular.ttc',
+                    'NotoSansCJKjp-Regular.ttc',
+                    'NotoSansCJKkr-Regular.ttc',
+                    'NotoSansCJKsc-Regular.ttc',
+                ]) as $f) {
+                $out[] = $d . $f;
+            }
+            $out[] = $d . ($bold ? 'NotoSansSC-Bold.ttf' : 'NotoSansSC-Medium.ttf');
+        }
+
+        if (self::textContainsArabicScript($textForFont)) {
+            foreach (($bold
+                ? ['NotoNaskhArabic-Bold.ttf', 'NotoSansArabic-Bold.ttf']
+                : ['NotoNaskhArabic-Regular.ttf', 'NotoSansArabic-Regular.ttf']) as $f) {
+                $out[] = $d . $f;
+            }
+        }
+
+        if (self::textContainsHebrewScript($textForFont)) {
+            $out[] = $d . ($bold ? 'NotoSansHebrew-Bold.ttf' : 'NotoSansHebrew-Regular.ttf');
+        }
+
+        if (self::textContainsThaiScript($textForFont)) {
+            $out[] = $d . ($bold ? 'NotoSansThai-Bold.ttf' : 'NotoSansThai-Regular.ttf');
+        }
+
+        if (self::textContainsDevanagariScript($textForFont)) {
+            $out[] = $d . ($bold ? 'NotoSansDevanagari-Bold.ttf' : 'NotoSansDevanagari-Regular.ttf');
+        }
+
+        foreach (['unifont.ttf', 'Unifont.ttf', 'GNUUnifont.ttf'] as $f) {
+            $out[] = $d . $f;
+        }
+
+        foreach (($bold
+            ? ['NotoSans-Bold.ttf', 'NotoSans-SemiBold.ttf', 'NotoSans-Medium.ttf']
+            : ['NotoSans-Regular.ttf', 'NotoSans-Medium.ttf']) as $f) {
+            $out[] = $d . $f;
+        }
+
+        $out[] = $d . ($bold ? 'Inter-Bold.ttf' : 'Inter-Medium.ttf');
+
+        return $out;
     }
 
     /**
@@ -191,10 +275,11 @@ trait FontPathTrait{
     private static function arabicFontCandidates(string $weight): array
     {
         $bold = $weight === 'bold';
+        $d = self::iconsFontsDirectory();
 
         return $bold ? [
-            __DIR__ . '/icons/fonts/NotoNaskhArabic-Bold.ttf',
-            __DIR__ . '/icons/fonts/NotoSansArabic-Bold.ttf',
+            $d . 'NotoNaskhArabic-Bold.ttf',
+            $d . 'NotoSansArabic-Bold.ttf',
             'C:\\Windows\\Fonts\\tradbdo.ttf',
             'C:\\Windows\\Fonts\\arabtype.ttf',
             'C:\\Windows\\Fonts\\tahomabd.ttf',
@@ -208,8 +293,8 @@ trait FontPathTrait{
             '/Library/Fonts/Arial Unicode.ttf',
             '/System/Library/Fonts/Supplemental/Arial Unicode.ttf',
         ] : [
-            __DIR__ . '/icons/fonts/NotoNaskhArabic-Regular.ttf',
-            __DIR__ . '/icons/fonts/NotoSansArabic-Regular.ttf',
+            $d . 'NotoNaskhArabic-Regular.ttf',
+            $d . 'NotoSansArabic-Regular.ttf',
             'C:\\Windows\\Fonts\\trado.ttf',
             'C:\\Windows\\Fonts\\arabtype.ttf',
             'C:\\Windows\\Fonts\\tahoma.ttf',

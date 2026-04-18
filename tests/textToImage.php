@@ -54,7 +54,7 @@ $path5 = $ntoimage->run([
 
 $path6 = $ntoimage->run([
     'name' => 'آية. مليون.',
-    'font_weight' => 'bold',
+    'font_weight' => 'normal',
     'type' => 'circle',
 ]);
 
