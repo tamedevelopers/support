@@ -16,8 +16,8 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
  *
  * Features:
  * - Clip type: circle | radius | square (`type`)
- * - Optional overlay `shape`: diagonal | stripe | ring | gloss | corner | split — filled geometric zones
- *   (lighter/darker `bg_color` factors), no extra stroke pixels. Applied after fill/gradient, before initials.
+ * - Optional overlay `shape`: diagonal | stripe | ring | gloss | corner | split — fills only; boundaries come
+ *   from colour changes (like `diagonal`), no separate edge stroke. Applied after fill/gradient, before initials.
  * - Optional `gradient` presets (null = solid `bg_color` only)
  * - Initials: first character(s) from name – supports all languages (English, Chinese, Japanese,
  *   Arabic, etc.); two words → first char of each; one word → first two characters
@@ -36,7 +36,7 @@ class TextToImage
      * - name: string (required)
      * - size: int (square dimension in px, default 256)
      * - type: string ('circle' | 'radius' | 'square') default 'square' — clip/mask for the avatar
-     * - shape: string|null diagonal|stripe|ring|gloss|corner|split (filled geometry only, no seam stroke). null = no overlay.
+     * - shape: string|null diagonal|stripe|ring|gloss|corner|split (nested fills; no extra edge pixels). null = no overlay.
      * - gradient: string|null Preset gradient fill. null = solid bg_color only.
      * - radius: int (corner radius for 'radius' shape) default size/6
      * - bg_color: string|array (hex '#RRGGBB'|'#RGB'|'rgb(r,g,b)'|[r,g,b]) default '#4A5568'
@@ -525,7 +525,8 @@ class TextToImage
     }
 
     /**
-     * Filled geometry only (legacy solid two-tone), clipped to `type`. No post-process seam strokes.
+     * Shape overlays: `diagonal` is one lighter BR triangle. Others use nested fills only — edges match diagonal
+     * (clean transitions between filled colours, no drawn stroke or double outline).
      *
      * @param resource|\GdImage $img
      * @param array{0:int,1:int,2:int} $rgb bg_color seed for flat overlay fills
@@ -536,7 +537,7 @@ class TextToImage
         $sMax = max(0, $size - 1);
         switch ($shapeType) {
             case 'diagonal':
-                // Legacy: lighter triangle (0,s)–(s,s)–(s,0).
+                // Reference: one lighter BR triangle (unchanged).
                 $fill = self::shapeAllocateLighten15($img, $rgb);
                 self::applySolidInTriangle($img, $type, $size, $radius, 0.0, $s, $s, $s, $s, 0.0, $fill);
                 break;
@@ -544,7 +545,7 @@ class TextToImage
             case 'stripe': {
                 $halfH = $size * 0.11;
                 $cy = ($size - 1) / 2.0;
-                $fill = self::shapeAllocateMultiply($img, $rgb, 1.18);
+                $fillBand = self::shapeAllocateMultiply($img, $rgb, 1.18);
                 self::applySolidWhere(
                     $img,
                     $type,
@@ -553,7 +554,19 @@ class TextToImage
                     static function (int $x, int $y, int $sz) use ($halfH, $cy) {
                         return abs($y - $cy) < $halfH;
                     },
-                    $fill
+                    $fillBand
+                );
+                $innerH = $halfH * 0.42;
+                $fillSpine = self::shapeAllocateMultiply($img, $rgb, 1.26);
+                self::applySolidWhere(
+                    $img,
+                    $type,
+                    $size,
+                    $radius,
+                    static function (int $x, int $y, int $sz) use ($innerH, $cy) {
+                        return abs($y - $cy) < $innerH;
+                    },
+                    $fillSpine
                 );
                 break;
             }
@@ -562,18 +575,35 @@ class TextToImage
                 $cx = ($size - 1) / 2.0;
                 $cy = ($size - 1) / 2.0;
                 $rr = $size / 2.0;
-                $fill = self::shapeAllocateMultiply($img, $rgb, 0.72);
+                $rIn = $rr * 0.72;
+                $rOut = $rr * 0.94;
+                $fillRing = self::shapeAllocateMultiply($img, $rgb, 0.72);
                 self::applySolidWhere(
                     $img,
                     $type,
                     $size,
                     $radius,
-                    static function (int $x, int $y, int $sz) use ($cx, $cy, $rr) {
+                    static function (int $x, int $y, int $sz) use ($cx, $cy, $rIn, $rOut) {
                         $d = hypot($x - $cx, $y - $cy);
 
-                        return $d > $rr * 0.72 && $d < $rr * 0.94;
+                        return $d > $rIn && $d < $rOut;
                     },
-                    $fill
+                    $fillRing
+                );
+                $rMid = ($rIn + $rOut) / 2.0;
+                $wSpine = ($rOut - $rIn) * 0.28;
+                $fillSpine = self::shapeAllocateMultiply($img, $rgb, 0.62);
+                self::applySolidWhere(
+                    $img,
+                    $type,
+                    $size,
+                    $radius,
+                    static function (int $x, int $y, int $sz) use ($cx, $cy, $rMid, $wSpine, $rIn, $rOut) {
+                        $d = hypot($x - $cx, $y - $cy);
+
+                        return $d > $rIn && $d < $rOut && abs($d - $rMid) <= $wSpine / 2.0;
+                    },
+                    $fillSpine
                 );
                 break;
             }
@@ -582,7 +612,7 @@ class TextToImage
                 $r = min(255, (int) round($rgb[0] * 0.78 + 255 * 0.22));
                 $g = min(255, (int) round($rgb[1] * 0.78 + 255 * 0.22));
                 $b = min(255, (int) round($rgb[2] * 0.78 + 255 * 0.22));
-                $fill = (int) imagecolorallocate($img, $r, $g, $b);
+                $fillTop = (int) imagecolorallocate($img, $r, $g, $b);
                 self::applySolidWhere(
                     $img,
                     $type,
@@ -591,7 +621,21 @@ class TextToImage
                     static function (int $x, int $y, int $sz) {
                         return $y < $sz * 0.36;
                     },
-                    $fill
+                    $fillTop
+                );
+                $r2 = min(255, (int) round($rgb[0] * 0.85 + 255 * 0.15));
+                $g2 = min(255, (int) round($rgb[1] * 0.85 + 255 * 0.15));
+                $b2 = min(255, (int) round($rgb[2] * 0.85 + 255 * 0.15));
+                $fillCap = (int) imagecolorallocate($img, $r2, $g2, $b2);
+                self::applySolidWhere(
+                    $img,
+                    $type,
+                    $size,
+                    $radius,
+                    static function (int $x, int $y, int $sz) {
+                        return $y < $sz * 0.2;
+                    },
+                    $fillCap
                 );
                 break;
             }
@@ -601,21 +645,28 @@ class TextToImage
                     break;
                 }
                 $k = (float) max(2, (int) round($sMax * 0.52));
-                $fill = self::shapeAllocateMultiply($img, $rgb, 1.18);
-                self::applySolidInTriangle($img, $type, $size, $radius, 0.0, 0.0, $k, 0.0, 0.0, $k, $fill);
+                $fillOuter = self::shapeAllocateMultiply($img, $rgb, 1.18);
+                self::applySolidInTriangle($img, $type, $size, $radius, 0.0, 0.0, $k, 0.0, 0.0, $k, $fillOuter);
+                $ki = $k * 0.74;
+                $fillInner = self::shapeAllocateMultiply($img, $rgb, 1.08);
+                self::applySolidInTriangle($img, $type, $size, $radius, 0.0, 0.0, $ki, 0.0, 0.0, $ki, $fillInner);
                 break;
 
             case 'split': {
                 $mid = (int) floor($size / 2);
+                $halfW = max(1, (int) round($size * 0.028));
+                $xL = max(0, $mid - $halfW);
+                $xR = min($sMax, $mid + $halfW);
                 $left = self::shapeAllocateMultiply($img, $rgb, 0.88);
+                $midFill = self::shapeAllocateMultiply($img, $rgb, 0.985);
                 $right = self::shapeAllocateMultiply($img, $rgb, 1.1);
                 self::applySolidWhere(
                     $img,
                     $type,
                     $size,
                     $radius,
-                    static function (int $x, int $y, int $sz) use ($mid) {
-                        return $x < $mid;
+                    static function (int $x, int $y, int $sz) use ($xL) {
+                        return $x < $xL;
                     },
                     $left
                 );
@@ -624,8 +675,18 @@ class TextToImage
                     $type,
                     $size,
                     $radius,
-                    static function (int $x, int $y, int $sz) use ($mid) {
-                        return $x >= $mid;
+                    static function (int $x, int $y, int $sz) use ($xL, $xR) {
+                        return $x >= $xL && $x <= $xR;
+                    },
+                    $midFill
+                );
+                self::applySolidWhere(
+                    $img,
+                    $type,
+                    $size,
+                    $radius,
+                    static function (int $x, int $y, int $sz) use ($xR) {
+                        return $x > $xR;
                     },
                     $right
                 );
