@@ -15,7 +15,8 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
  * Generate initial-based avatar images similar to Google profile placeholders.
  *
  * Features:
- * - Shape: circle or rounded-rectangle ("radius")
+ * - Shape: circle, rounded-rectangle ("radius"), square, or solid diagonal split
+ * - Optional gradient: preset names via `gradient` (null = solid `bg_color` only)
  * - Initials: first character(s) from name – supports all languages (English, Chinese, Japanese,
  *   Arabic, etc.); two words → first char of each; one word → first two characters
  * - Font: automatically uses a Unicode/CJK-capable font when the name contains non-ASCII characters
@@ -32,7 +33,8 @@ class TextToImage
      * Options keys:
      * - name: string (required)
      * - size: int (square dimension in px, default 256)
-     * - type: string ('circle' | 'radius') default 'circle'
+     * - type: string ('circle' | 'radius' | 'square' | 'diagonal') default 'square'
+     * - gradient: string|null Preset gradient fill (see GRADIENT_TYPES). null = solid bg_color only.
      * - radius: int (corner radius for 'radius' shape) default size/6
      * - bg_color: string|array (hex '#RRGGBB'|'#RGB'|'rgb(r,g,b)'|[r,g,b]) default '#4A5568'
      * - text_color: string|array default '#FFFFFF'
@@ -56,7 +58,8 @@ class TextToImage
         $opts = array_merge([
             'name'        => '',
             'size'        => 256,
-            'type'        => '', // circle|radius|square
+            'type'        => '', // circle|radius|square|diagonal
+            'gradient'    => null, // preset name or null for solid bg_color
             'radius'      => null,     // default computed: size/6
             'bg_color'    => '',
             'text_color'  => '',
@@ -100,9 +103,17 @@ class TextToImage
         $size = max(32, (int)$opts['size']);
         $radius = $opts['radius'] !== null ? (int) $opts['radius'] : max(4, (int)round($size / 6));
         $type = strtolower((string) $opts['type']);
-        if (!in_array($type, ['circle', 'radius', 'square', 'gradient', 'diagonal'], true)) {
+        if ($type === 'gradient') {
+            $type = 'square';
+            if (($opts['gradient'] ?? null) === null || $opts['gradient'] === '') {
+                $opts['gradient'] = 'vertical';
+            }
+        }
+        if (!in_array($type, ['circle', 'radius', 'square', 'diagonal'], true)) {
             $type = 'square';
         }
+
+        $gradientType = self::normalizeGradientType($opts['gradient'] ?? null);
 
         [$br, $bg, $bt] = [
             self::normalizeColor($opts['bg_color']),
@@ -134,8 +145,8 @@ class TextToImage
         $bgCol = imagecolorallocate($img, $br[0], $br[1], $br[2]);
         $txCol = imagecolorallocate($img, $bt[0], $bt[1], $bt[2]);
 
-        // Draw background shape
-        self::drawBackground($img, $type, $size, $bgCol, $br, $radius);
+        // Draw background shape (solid or gradient)
+        self::drawBackground($img, $type, $size, $bgCol, $br, $radius, $gradientType);
 
         // Compute initials (supports all scripts: Latin, CJK, Arabic, etc.)
         $initials = self::computeInitials($name);
@@ -158,7 +169,7 @@ class TextToImage
                     $contentFactorX = ($type === 'circle') ? 0.62 : 0.68;
                     $contentFactorY = ($type === 'circle') ? 0.62 : 0.68;
                 } else {
-                    // For square/gradient/diagonal: keep mostly full height, add light side padding only.
+                    // For square / diagonal / gradient fills: keep mostly full height, add light side padding only.
                     $contentFactorX = 0.70;
                     $contentFactorY = 0.70;
                 }
@@ -268,17 +279,80 @@ class TextToImage
     }
 
     /**
+     * @return list<string>
+     */
+    private static function gradientTypePresets(): array
+    {
+        return [
+            'vertical',
+            'horizontal',
+            'radial',
+            'spotlight',
+            'vignette',
+            'sunset',
+            'ocean',
+            'aurora',
+            'forest',
+            'ember',
+            'cosmic',
+            'mesh',
+            'dawn',
+            'noir',
+            'candy',
+            'ice',
+            'lavender',
+        ];
+    }
+
+    private static function normalizeGradientType($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        $g = strtolower(trim((string) $value));
+        if ($g === '') {
+            return null;
+        }
+        $aliases = [
+            'v' => 'vertical',
+            'linear-down' => 'vertical',
+            'h' => 'horizontal',
+            'linear-right' => 'horizontal',
+            'r' => 'radial',
+            'radial-soft' => 'radial',
+            'center-glow' => 'spotlight',
+            'edge-dark' => 'vignette',
+            'sunrise' => 'dawn',
+            'purple-haze' => 'lavender',
+        ];
+        if (isset($aliases[$g])) {
+            $g = $aliases[$g];
+        }
+        if (!in_array($g, self::gradientTypePresets(), true)) {
+            return null;
+        }
+
+        return $g;
+    }
+
+    /**
      * Draw the background shape or pattern onto the image.
-     * * @param resource $img   GD image resource
-     * @param string   $type  The shape/pattern type
+     *
+     * @param resource $img   GD image resource
+     * @param string   $type  circle|radius|square|diagonal
      * @param int      $size  Square dimension
-     * @param int      $color The allocated background color
+     * @param int      $color The allocated background color (solid path)
      * @param array    $rgb   The raw [r, g, b] array for pattern calculations
      * @param int      $radius Corner radius for 'radius' type
-     * @return void
+     * @param string|null $gradientType normalized preset or null
      */
-    private static function drawBackground($img, string $type, int $size, int $color, array $rgb, int $radius): void
+    private static function drawBackground($img, string $type, int $size, int $color, array $rgb, int $radius, ?string $gradientType): void
     {
+        if ($gradientType !== null) {
+            self::fillShapeWithGradient($img, $type, $size, $rgb, $radius, $gradientType);
+            return;
+        }
+
         switch ($type) {
             case 'circle':
                 imagefilledellipse($img, (int)($size / 2), (int)($size / 2), $size, $size, $color);
@@ -288,24 +362,8 @@ class TextToImage
                 self::imageFilledRoundedRect($img, 0, 0, $size - 1, $size - 1, $radius, $color);
                 break;
 
-            case 'gradient':
-                // Vertical gradient: transitions from original color to 30% darker
-                for ($i = 0; $i < $size; $i++) {
-                    $factor = 1 - ($i / $size * 0.3);
-                    $lineCol = imagecolorallocate(
-                        $img, 
-                        (int)($rgb[0] * $factor), 
-                        (int)($rgb[1] * $factor), 
-                        (int)($rgb[2] * $factor)
-                    );
-                    imageline($img, 0, $i, $size, $i, $lineCol);
-                }
-                break;
-
             case 'diagonal':
-                // Primary background
                 imagefilledrectangle($img, 0, 0, $size, $size, $color);
-                // Secondary color (15% lighter) for the diagonal split
                 $sCol = imagecolorallocate(
                     $img,
                     min(255, (int)($rgb[0] * 1.15)),
@@ -321,6 +379,226 @@ class TextToImage
                 imagefilledrectangle($img, 0, 0, $size, $size, $color);
                 break;
         }
+    }
+
+    /**
+     * @param resource $img
+     */
+    private static function fillShapeWithGradient($img, string $type, int $size, array $rgb, int $radius, string $gradientType): void
+    {
+        $cx = ($size - 1) / 2.0;
+        $cy = ($size - 1) / 2.0;
+        $r = $size / 2.0;
+        $colorCache = [];
+
+        $alloc = static function ($img, array $c) use (&$colorCache): int {
+            $c[0] = max(0, min(255, (int) round($c[0])));
+            $c[1] = max(0, min(255, (int) round($c[1])));
+            $c[2] = max(0, min(255, (int) round($c[2])));
+            $k = $c[0] . ',' . $c[1] . ',' . $c[2];
+            if (!isset($colorCache[$k])) {
+                $colorCache[$k] = imagecolorallocate($img, $c[0], $c[1], $c[2]);
+            }
+
+            return $colorCache[$k];
+        };
+
+        $inShape = function (int $x, int $y) use ($type, $size, $radius, $cx, $cy, $r): bool {
+            if ($x < 0 || $y < 0 || $x >= $size || $y >= $size) {
+                return false;
+            }
+            if ($type === 'square') {
+                return true;
+            }
+            if ($type === 'circle') {
+                return hypot($x - $cx, $y - $cy) <= $r + 0.5;
+            }
+            if ($type === 'radius') {
+                return self::pixelInFilledRoundRect($x, $y, $size, $radius);
+            }
+            if ($type === 'diagonal') {
+                return true;
+            }
+
+            return false;
+        };
+
+        for ($y = 0; $y < $size; $y++) {
+            for ($x = 0; $x < $size; $x++) {
+                if (!$inShape($x, $y)) {
+                    continue;
+                }
+                $c = self::gradientRgbAt($x, $y, $size, $rgb, $gradientType, $cx, $cy, $r);
+                imagesetpixel($img, $x, $y, $alloc($img, $c));
+            }
+        }
+    }
+
+    private static function pixelInFilledRoundRect(int $x, int $y, int $size, int $radius): bool
+    {
+        $x2 = $size - 1;
+        $y2 = $size - 1;
+        $r = max(0, min((int) floor(min($size, $size) / 2), $radius));
+
+        if ($x >= $r && $x <= $x2 - $r) {
+            return true;
+        }
+        if ($y >= $r && $y <= $y2 - $r) {
+            return true;
+        }
+        if (hypot($x - $r, $y - $r) <= $r) {
+            return true;
+        }
+        if (hypot($x - ($x2 - $r), $y - $r) <= $r) {
+            return true;
+        }
+        if (hypot($x - $r, $y - ($y2 - $r)) <= $r) {
+            return true;
+        }
+        if (hypot($x - ($x2 - $r), $y - ($y2 - $r)) <= $r) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array{0:float,1:float,2:float}
+     */
+    private static function gradientRgbAt(
+        int $x,
+        int $y,
+        int $size,
+        array $rgb,
+        string $gradientType,
+        float $cx,
+        float $cy,
+        float $r
+    ): array {
+        $br = [(float) $rgb[0], (float) $rgb[1], (float) $rgb[2]];
+        $nx = $size > 1 ? $x / ($size - 1) : 0.0;
+        $ny = $size > 1 ? $y / ($size - 1) : 0.0;
+        $d = $r > 0 ? hypot($x - $cx, $y - $cy) / $r : 0.0;
+        $d = max(0.0, min(1.0, $d));
+
+        switch ($gradientType) {
+            case 'vertical':
+                return self::rgbLerp($br, self::rgbDarken($br, 0.32), $ny);
+
+            case 'horizontal':
+                return self::rgbLerp($br, self::rgbDarken($br, 0.28), $nx);
+
+            case 'radial':
+                return self::rgbLerp(self::rgbLighten($br, 0.18), self::rgbDarken($br, 0.35), $d);
+
+            case 'spotlight':
+                return self::rgbLerp(self::rgbLighten($br, 0.35), self::rgbDarken($br, 0.25), $d);
+
+            case 'vignette':
+                return self::rgbLerp($br, self::rgbDarken($br, 0.55), $d * $d);
+
+            case 'sunset':
+                return self::rgbLerp3($br, [255.0, 118.0, 92.0], [168.0, 85.0, 247.0], $ny);
+
+            case 'ocean':
+                return self::rgbLerp3($br, [56.0, 189.0, 248.0], [30.0, 58.0, 138.0], $ny);
+
+            case 'aurora':
+                return self::rgbLerp3($br, [52.0, 211.0, 153.0], [129.0, 140.0, 248.0], $ny);
+
+            case 'forest':
+                return self::rgbLerp3($br, [74.0, 222.0, 128.0], [22.0, 101.0, 52.0], $ny);
+
+            case 'ember':
+                return self::rgbLerp3($br, [251.0, 191.0, 36.0], [127.0, 29.0, 29.0], $ny);
+
+            case 'cosmic':
+                $t = ($nx + $ny) / 2;
+
+                return self::rgbLerp3($br, [147.0, 51.0, 234.0], [6.0, 182.0, 212.0], $t);
+
+            case 'mesh':
+                $t = ($nx + (1.0 - $ny)) / 2;
+
+                return self::rgbLerp($br, self::rgbDarken($br, 0.45), $t);
+
+            case 'dawn':
+                return self::rgbLerp3($br, [253.0, 186.0, 116.0], [196.0, 181.0, 253.0], $ny);
+
+            case 'noir':
+                $g = 0.299 * $br[0] + 0.587 * $br[1] + 0.114 * $br[2];
+                $g0 = [$g, $g, $g];
+                $g1 = [max(0.0, $g * 0.35), max(0.0, $g * 0.35), max(0.0, $g * 0.38)];
+
+                return self::rgbLerp($g0, $g1, $ny);
+
+            case 'candy':
+                return self::rgbLerp3($br, [244.0, 114.0, 182.0], [192.0, 132.0, 252.0], $nx);
+
+            case 'ice':
+                return self::rgbLerp3($br, [224.0, 242.0, 254.0], [59.0, 130.0, 246.0], $ny);
+
+            case 'lavender':
+                return self::rgbLerp3($br, [221.0, 214.0, 254.0], [109.0, 40.0, 217.0], $ny);
+
+            default:
+                return $br;
+        }
+    }
+
+    /**
+     * @param array{0:float,1:float,2:float} $a
+     * @param array{0:float,1:float,2:float} $b
+     * @return array{0:float,1:float,2:float}
+     */
+    private static function rgbLerp(array $a, array $b, float $t): array
+    {
+        $t = max(0.0, min(1.0, $t));
+
+        return [
+            $a[0] + ($b[0] - $a[0]) * $t,
+            $a[1] + ($b[1] - $a[1]) * $t,
+            $a[2] + ($b[2] - $a[2]) * $t,
+        ];
+    }
+
+    /**
+     * @param array{0:float,1:float,2:float} $a
+     * @param array{0:float,1:float,2:float} $b
+     * @param array{0:float,1:float,2:float} $c
+     */
+    private static function rgbLerp3(array $a, array $b, array $c, float $t): array
+    {
+        $t = max(0.0, min(1.0, $t));
+        if ($t <= 0.5) {
+            return self::rgbLerp($a, $b, $t * 2.0);
+        }
+
+        return self::rgbLerp($b, $c, ($t - 0.5) * 2.0);
+    }
+
+    /**
+     * @param array{0:float,1:float,2:float} $rgb
+     * @return array{0:float,1:float,2:float}
+     */
+    private static function rgbDarken(array $rgb, float $amount): array
+    {
+        $f = max(0.0, min(1.0, 1.0 - $amount));
+
+        return [$rgb[0] * $f, $rgb[1] * $f, $rgb[2] * $f];
+    }
+
+    /**
+     * @param array{0:float,1:float,2:float} $rgb
+     * @return array{0:float,1:float,2:float}
+     */
+    private static function rgbLighten(array $rgb, float $amount): array
+    {
+        return [
+            $rgb[0] + (255.0 - $rgb[0]) * $amount,
+            $rgb[1] + (255.0 - $rgb[1]) * $amount,
+            $rgb[2] + (255.0 - $rgb[2]) * $amount,
+        ];
     }
 
     /**

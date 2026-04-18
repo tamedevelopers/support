@@ -14,10 +14,11 @@ $path1 = TextToImage::run([
     'bg_color' => '#04068dff',     // 8-digit hex supported
     'text_color' => 'rgba(255,255,255,1)',
     'generate' => false, 
-    'type' => 'diagonal', //'circle', 'radius', 'square', 'gradient', 'diagonal'
+    'type' => 'diagonal', // circle | radius | square | diagonal
     'output' => 'save', // download|view|save|data,
     'destination' => base_path('storage/avatars'),
     // 'font_path' => __DIR__ . '/fonts/Inter-Bold.ttf', // recommended for best results
+    'gradient' => 'cosmic', 
 ]);
 
 // 3) Auto-fit font size (no touching edges)
@@ -34,15 +35,38 @@ $path3 = $ntoimage->run([
     'font_weight' => 'bold',
     'type' => 'radius',
     'text_color' => '#26012b',
+    'gradient' => 'aurora', 
 ]);
+
+
+// good ones
+// vertical 
+// horizontal
+// cosmic
+// mesh
+// noir
+// ember
+// forest
+// aurora
+// ocean
+// sunset
+// candy
+// vignette
+// spotlight
+// radial
+
+// dawn
+// ice
+// lavender
 
 $path4 = $ntoimage->run([
     'name' => 'Facebook',
     'font_weight' => 'bold',
     'bg_color' => '#063903ff',
     'text_color' => '#cae6ff',
-    'type' => 'gradient',
-]);
+    'type' => 'square',
+    'gradient' => 'dawn', 
+]); 
 
 $path5 = $ntoimage->run([
     'name' => 'GitHub Microsoft',
