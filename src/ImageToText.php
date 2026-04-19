@@ -28,12 +28,14 @@ use Tamedevelopers\Support\Traits\OcrLanguageTrait;
  *        'engine' => 'auto',
  *    ]);
  *
- * 2) From file path — optional emoji / color UI handling (still fully autodetect)
+ * 2) Colored UI / screenshots: keep color for OCR (do not use emoji_friendly for that — use preserve_color).
  *    $text = ImageToText::run([
  *        'source' => '/path/to/ui.png',
  *        'engine' => 'google',
- *        'emoji_friendly' => true,
+ *        'preserve_color' => true,
  *    ]);
+ *
+ *    emoji_friendly strips emoji pictographs from the result so OCR noise from emoji does not garble Arabic/CJK text.
  *
  * 3) Mixed simplified Chinese + Latin (e.g. phonetic charts): hint languages so OCR is not English-only.
  *    $text = ImageToText::run([
@@ -65,8 +67,8 @@ class ImageToText
      * Options:
      * - upload: array|null        Uploaded file array from $_FILES
      * - source: string|null       Path to existing image file
-     * - emoji_friendly: bool      Preserve color in preprocessing; broaden Google hints for symbols / emoji.
-     * - preserve_color: bool      Skip grayscale preprocessing (helps colored emoji / UI screenshots).
+     * - emoji_friendly: bool      After OCR, remove emoji pictographs (avoids bogus symbols when engines misread faces).
+     * - preserve_color: bool      Skip grayscale preprocessing (colored UI / screenshots; use instead of emoji_friendly for color).
      * - google_detection_feature: string  TEXT_DETECTION | DOCUMENT_TEXT_DETECTION (default: DOCUMENT_TEXT_DETECTION).
      * - engine: string            OCR engine (default: 'auto')
      * - max_file_size: int        Maximum file size in bytes (default: 5MB)
@@ -106,7 +108,9 @@ class ImageToText
                 $defaults = ['grayscale' => true, 'brightness' => 0, 'contrast' => 15, 'threshold' => null];
                 $userPre = is_array($config['preprocess']) ? $config['preprocess'] : [];
                 $preOpts = array_merge($defaults, $userPre);
-                if ($config['emoji_friendly'] || $config['preserve_color']) {
+                // Only preserve_color skips grayscale. emoji_friendly must not alter preprocessing or OCR engines
+                // misread Arabic/CJK when given full-color images.
+                if ($config['preserve_color']) {
                     $preOpts['grayscale'] = false;
                 }
                 $processed = self::preprocessImage($inputPath, $config['tmp_dir'], $preOpts);
@@ -124,7 +128,7 @@ class ImageToText
                 self::cleanupFiles($tempFiles);
             }
 
-            return self::normalizeOcrText($text);
+            return self::normalizeOcrText($text, (bool) $config['emoji_friendly']);
 
         } catch (\Throwable $e) {
             // Ensure cleanup on failure
@@ -548,11 +552,21 @@ class ImageToText
     }
 
     /**
-     * Trim and NFC-normalize OCR output when intl is available (stable composed emoji / Hangul).
+     * Trim, NFC-normalize, and optionally strip emoji glyphs (emoji_friendly: remove pictographs so OCR junk does not mix into text).
      */
-    private static function normalizeOcrText(string $text): string
+    private static function normalizeOcrText(string $text, bool $emojiFriendlyStrip = false): string
     {
         $text = trim($text);
+        if ($emojiFriendlyStrip && $text !== '') {
+            // Drop emoji / pictographic symbols from output; engines rarely emit valid emoji and often emit garbage instead.
+            $stripped = preg_replace('/\p{Extended_Pictographic}/u', '', $text);
+            if (is_string($stripped)) {
+                $text = $stripped;
+            }
+            // Tidy spaces left where emoji columns were
+            $text = trim(preg_replace('/[ \t]{2,}/u', ' ', $text) ?? $text);
+            $text = trim(preg_replace('/\n{3,}/u', "\n\n", $text) ?? $text);
+        }
         if ($text === '' || !class_exists(\Normalizer::class)) {
             return $text;
         }

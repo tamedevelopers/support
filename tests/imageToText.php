@@ -2,7 +2,6 @@
 
 use Tamedevelopers\Support\Capsule\Artisan;
 use Tamedevelopers\Support\Capsule\File;
-use Tamedevelopers\Support\Capsule\FilesCollection;
 use Tamedevelopers\Support\ImageToText;
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -32,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $psm  = isset($_POST['psm']) && $_POST['psm'] !== '' ? (int)$_POST['psm'] : null;
 
     $preprocess = [
-        'grayscale' => isset($_POST['grayscale']),
         'brightness'=> (int)($_POST['brightness'] ?? 0),
         'contrast'  => (int)($_POST['contrast'] ?? 15),
         'threshold' => ($_POST['threshold'] !== '' ? (int)$_POST['threshold'] : null),
@@ -48,7 +46,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'psm'        => $psm,
             'preprocess' => $preprocess,
             'engine'     => 'auto', // 'ocrspace', 'google', 'azure', 'freeocr', 'auto'
-            'emoji_friendly' => isset($_POST['emoji_friendly']),
             // 'tesseract_path' => 'C:\Program Files\Tesseract-OCR\tesseract.exe'
         ];
 
@@ -95,14 +92,6 @@ $error = $error ?? null;
         <input id="psm" type="number" name="psm" min="0" max="13" placeholder="6" />
       </div>
       <div class="row">
-          <label>Options</label>
-          <label><input type="checkbox" name="grayscale" checked /> grayscale</label>
-          <label style="margin-left:1rem;">
-          <input type="checkbox" name="emoji_friendly" /> 
-            emoji-friendly (keep color, broader detection)
-          </label>
-      </div>
-      <div class="row">
         <label for="brightness">Brightness</label>
         <input id="brightness" type="number" name="brightness" value="0" min="-255" max="255" />
       </div>
@@ -120,6 +109,6 @@ $error = $error ?? null;
     </fieldset>
   </form>
 
-  <p style="margin-top:2rem;color:#666;">For mixed Chinese and English, set OCR language to <code>chi_sim+eng</code> (or <code>zh</code>). For colored emoji or UI screenshots, enable emoji-friendly mode.</p>
+  <p style="margin-top:2rem;color:#666;">Mixed Chinese + English: <code>chi_sim+eng</code> or <code>zh</code>. Colored UI: <strong>preserve color</strong>. Lists with emoji: leave color off and use <strong>emoji-friendly</strong> only to drop emoji from the text output.</p>
 </body>
 </html>
