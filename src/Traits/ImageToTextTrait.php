@@ -23,7 +23,6 @@ trait ImageToTextTrait{
 
         imagesavealpha($im, true);
 
-        // Apply filters
         if ($opts['grayscale'] ?? true) {
             imagefilter($im, IMG_FILTER_GRAYSCALE);
         }

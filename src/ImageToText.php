@@ -34,6 +34,7 @@ use Tamedevelopers\Support\Traits\OcrLanguageTrait;
  *        'engine' => 'auto',
  *        'ocr_language' => 'chi_sim+eng',
  *    ]);
+ *
  */
 class ImageToText
 {
@@ -63,7 +64,7 @@ class ImageToText
      * - max_file_size: int        Maximum file size in bytes (default: 5MB)
      * - tmp_dir: string|null      Temporary directory for processing
      * - cleanup: bool             Delete temporary files (default: true)
-     * - preprocess: bool|array    Image preprocessing options
+     * - preprocess: bool|array    Image preprocessing (false = skip; true or array = merge with defaults).
      * - ocr_language: string      Optional language hint (e.g. "chi_sim+eng", "zh", "en,zh"). Empty = autodetect.
      * - language: string          Alias for ocr_language
      * 
@@ -92,19 +93,16 @@ class ImageToText
         $tempFiles = $inputData['tempFiles'];
 
         try {
-            // Apply preprocessing if enabled
             if ($config['preprocess'] !== false) {
-
                 $userPre = is_array($config['preprocess']) ? $config['preprocess'] : [];
                 $preOpts = array_merge([
-                    'grayscale' => true, 
-                    'brightness' => 0, 
-                    'contrast' => 15, 
-                    'threshold' => null
+                    'grayscale' => true,
+                    'brightness' => 0,
+                    'contrast' => 15,
+                    'threshold' => null,
                 ], $userPre);
 
                 $processed = self::preprocessImage($inputPath, $config['tmp_dir'], $preOpts);
-
                 if ($processed !== null) {
                     $inputPath = $processed;
                     $tempFiles[] = $processed;
