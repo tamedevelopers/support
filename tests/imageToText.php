@@ -36,15 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'threshold' => ($_POST['threshold'] !== '' ? (int)$_POST['threshold'] : null),
     ];
 
-    // get uploaded file
-    $files = File::collect('image');
-
     try {
 
         $opts = [
-            'upload'     => $files->first(),
+            'upload'     => 'image',
             'psm'        => $psm,
-            'preprocess' => $preprocess,
+            // 'preprocess' => $preprocess,
             'engine'     => 'auto', // 'ocrspace', 'google', 'azure', 'freeocr', 'auto'
             // 'tesseract_path' => 'C:\Program Files\Tesseract-OCR\tesseract.exe'
         ];
@@ -92,14 +89,6 @@ $error = $error ?? null;
         <input id="psm" type="number" name="psm" min="0" max="13" placeholder="6" />
       </div>
       <div class="row">
-        <label for="brightness">Brightness</label>
-        <input id="brightness" type="number" name="brightness" value="0" min="-255" max="255" />
-      </div>
-      <div class="row">
-        <label for="contrast">Contrast</label>
-        <input id="contrast" type="number" name="contrast" value="20" min="0" max="255" />
-      </div>
-      <div class="row">
         <label for="threshold">Threshold</label>
         <input id="threshold" type="number" name="threshold" value="" min="0" max="255" placeholder="(optional)" />
       </div>
@@ -108,7 +97,5 @@ $error = $error ?? null;
       </div>
     </fieldset>
   </form>
-
-  <p style="margin-top:2rem;color:#666;">Mixed Chinese + English: <code>chi_sim+eng</code> or <code>zh</code>. Colored UI: <strong>preserve color</strong>. Lists with emoji: leave color off and use <strong>emoji-friendly</strong> only to drop emoji from the text output.</p>
 </body>
 </html>

@@ -156,14 +156,12 @@ trait OcrLanguageTrait
      * Build per-engine language settings from a user-facing language string.
      * Empty / "auto" → broad autodetect hints for cloud OCR; Tesseract uses empty string (see ImageToText tessdata probe).
      *
-     * @param bool $emojiFriendly Ignored (backward compatibility); language hints no longer depend on it.
      * @return array{tesseract:string,google_hints:list<string>,azure:string,ocrspace:string}
      */
-    public static function expandOcrLanguageForEngines(string $language, bool $emojiFriendly = false): array
+    public static function expandOcrLanguageForEngines(string $language): array
     {
         $tokens = self::parseOcrLanguageTokens($language);
         if ($tokens === []) {
-            // Do not add 'und' for emoji_friendly — it biases cloud OCR away from ar/zh/en and garbles mixed text.
             $hints = ['en', 'zh-Hans', 'zh-Hant', 'ja', 'ko', 'ar', 'th', 'hi'];
 
             return [

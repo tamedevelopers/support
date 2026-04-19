@@ -28,16 +28,7 @@ use Tamedevelopers\Support\Traits\OcrLanguageTrait;
  *        'engine' => 'auto',
  *    ]);
  *
- * 2) Colored UI / screenshots: keep color for OCR (do not use emoji_friendly for that — use preserve_color).
- *    $text = ImageToText::run([
- *        'source' => '/path/to/ui.png',
- *        'engine' => 'google',
- *        'preserve_color' => true,
- *    ]);
- *
- *    emoji_friendly strips emoji pictographs from the result so OCR noise from emoji does not garble Arabic/CJK text.
- *
- * 3) Mixed simplified Chinese + Latin (e.g. phonetic charts): hint languages so OCR is not English-only.
+ * 2) Mixed simplified Chinese + Latin (e.g. phonetic charts): hint languages so OCR is not English-only.
  *    $text = ImageToText::run([
  *        'source' => '/path/to/chart.png',
  *        'engine' => 'auto',
@@ -67,8 +58,6 @@ class ImageToText
      * Options:
      * - upload: array|null        Uploaded file array from $_FILES
      * - source: string|null       Path to existing image file
-     * - emoji_friendly: bool      After OCR, remove emoji pictographs (avoids bogus symbols when engines misread faces).
-     * - preserve_color: bool      Skip grayscale preprocessing (colored UI / screenshots; use instead of emoji_friendly for color).
      * - google_detection_feature: string  TEXT_DETECTION | DOCUMENT_TEXT_DETECTION (default: DOCUMENT_TEXT_DETECTION).
      * - engine: string            OCR engine (default: 'auto')
      * - max_file_size: int        Maximum file size in bytes (default: 5MB)
@@ -105,15 +94,17 @@ class ImageToText
         try {
             // Apply preprocessing if enabled
             if ($config['preprocess'] !== false) {
-                $defaults = ['grayscale' => true, 'brightness' => 0, 'contrast' => 15, 'threshold' => null];
+
                 $userPre = is_array($config['preprocess']) ? $config['preprocess'] : [];
-                $preOpts = array_merge($defaults, $userPre);
-                // Only preserve_color skips grayscale. emoji_friendly must not alter preprocessing or OCR engines
-                // misread Arabic/CJK when given full-color images.
-                if ($config['preserve_color']) {
-                    $preOpts['grayscale'] = false;
-                }
+                $preOpts = array_merge([
+                    'grayscale' => true, 
+                    'brightness' => 0, 
+                    'contrast' => 15, 
+                    'threshold' => null
+                ], $userPre);
+
                 $processed = self::preprocessImage($inputPath, $config['tmp_dir'], $preOpts);
+
                 if ($processed !== null) {
                     $inputPath = $processed;
                     $tempFiles[] = $processed;
@@ -128,7 +119,7 @@ class ImageToText
                 self::cleanupFiles($tempFiles);
             }
 
-            return self::normalizeOcrText($text, (bool) $config['emoji_friendly']);
+            return self::normalizeOcrText($text);
 
         } catch (\Throwable $e) {
             // Ensure cleanup on failure
@@ -149,8 +140,6 @@ class ImageToText
             throw new CustomException("Unsupported engine: {$engine}. Supported: " . implode(', ', self::ENGINES));
         }
 
-        $emojiFriendly = (bool) ($options['emoji_friendly'] ?? false);
-        $preserveColor = (bool) ($options['preserve_color'] ?? false);
         $gdf = strtoupper((string) ($options['google_detection_feature'] ?? 'DOCUMENT_TEXT_DETECTION'));
         if (!in_array($gdf, ['TEXT_DETECTION', 'DOCUMENT_TEXT_DETECTION'], true)) {
             $gdf = 'DOCUMENT_TEXT_DETECTION';
@@ -159,8 +148,6 @@ class ImageToText
         $config = [
             'upload' => $options['upload'] ?? null,
             'source' => $options['source'] ?? null,
-            'emoji_friendly' => $emojiFriendly,
-            'preserve_color' => $preserveColor,
             'engine' => $engine,
             'max_file_size' => $options['max_file_size'] ?? Tame()->sizeToBytes('2mb'),
             'tmp_dir' => $options['tmp_dir'] ?? (\dirname(__DIR__) . '/storage/ocr'),
@@ -180,7 +167,7 @@ class ImageToText
         ];
 
         $ocrLang = (string) ($options['ocr_language'] ?? $options['language'] ?? '');
-        $config['_ocr'] = self::expandOcrLanguageForEngines($ocrLang, $emojiFriendly);
+        $config['_ocr'] = self::expandOcrLanguageForEngines($ocrLang);
 
         return $config;
     }
@@ -194,7 +181,9 @@ class ImageToText
 
         $tempFiles      = [];
         $maxFileSize    = $config['max_file_size'];
-        $upload         = $config['upload'];
+        
+        $file = File::collect($config['upload'] ?? 'image');
+        $upload = $file->first();
 
         if ($upload && $upload->isNotEmpty()) {
             // Validate uploaded file
@@ -410,9 +399,6 @@ class ImageToText
         $imageContent = base64_encode((string) file_get_contents($imagePath));
 
         $hints = array_values(array_unique($config['_ocr']['google_hints'] ?? []));
-        if (!empty($config['preserve_color']) && !in_array('und', $hints, true)) {
-            $hints[] = 'und';
-        }
 
         $request = [
             'image' => ['content' => $imageContent],
@@ -552,21 +538,11 @@ class ImageToText
     }
 
     /**
-     * Trim, NFC-normalize, and optionally strip emoji glyphs (emoji_friendly: remove pictographs so OCR junk does not mix into text).
+     * Trim and NFC-normalize OCR output when intl is available (stable composed Hangul, etc.).
      */
-    private static function normalizeOcrText(string $text, bool $emojiFriendlyStrip = false): string
+    private static function normalizeOcrText(string $text): string
     {
         $text = trim($text);
-        if ($emojiFriendlyStrip && $text !== '') {
-            // Drop emoji / pictographic symbols from output; engines rarely emit valid emoji and often emit garbage instead.
-            $stripped = preg_replace('/\p{Extended_Pictographic}/u', '', $text);
-            if (is_string($stripped)) {
-                $text = $stripped;
-            }
-            // Tidy spaces left where emoji columns were
-            $text = trim(preg_replace('/[ \t]{2,}/u', ' ', $text) ?? $text);
-            $text = trim(preg_replace('/\n{3,}/u', "\n\n", $text) ?? $text);
-        }
         if ($text === '' || !class_exists(\Normalizer::class)) {
             return $text;
         }
