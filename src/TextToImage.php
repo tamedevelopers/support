@@ -23,6 +23,7 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
  *   Arabic, etc.); two words → first char of each; one word → first two characters
  * - Font: automatically uses a Unicode/CJK-capable font when the name contains non-ASCII characters
  * - Custom background and text color
+ * - Option `transparent`: when true, pixels outside the clip `type` are full PNG transparency (initials stay solid `text_color`)
  * - Output: save to file, stream to browser (inline or download), or return as data URI
  */
 class TextToImage
@@ -47,6 +48,7 @@ class TextToImage
      * - output: string ('save'|'view'|'download'|'data') default 'save'
      * - destination: string (required only when output='save')
      * - generate: boolean (default false). When true, appends a unique suffix to filename to avoid overwriting.
+     * - transparent: boolean (default false). When true, area outside the clip shape is fully transparent in the PNG.
      *
      * @param array $options
      * @return array Returns destination path for 'save', data URI for 'data', null when streaming
@@ -73,6 +75,7 @@ class TextToImage
             'output'      => 'save',   // 'save' | 'view' | 'download' | 'data'
             'destination' => null,     // file path or directory; if directory, slug.png will be appended
             'generate'  => false,    // when true, append a unique suffix to filename
+            'transparent' => false, // when true, trim square canvas to clip (transparent outside shape)
         ], $options);
 
         // set default data
@@ -123,6 +126,7 @@ class TextToImage
 
         $gradientType = self::normalizeGradientType($opts['gradient'] ?? null);
         $shapeType = self::normalizeShapeType($opts['shape'] ?? null);
+        $trimOutsideClip = filter_var($opts['transparent'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         [$br, $bg, $bt] = [
             self::normalizeColor($opts['bg_color']),
@@ -149,6 +153,7 @@ class TextToImage
         imagesavealpha($img, true);
         $transparent = imagecolorallocatealpha($img, 0, 0, 0, 127);
         imagefill($img, 0, 0, $transparent);
+        imagealphablending($img, false);
 
         // Allocate colors
         $bgCol = imagecolorallocate($img, $br[0], $br[1], $br[2]);
@@ -224,6 +229,7 @@ class TextToImage
             if ($shapeType !== null) {
                 self::applyShapeOverlay($img, $type, $size, $br, $radius, $shapeType);
             }
+            imagealphablending($img, true);
             imagettftext($img, $fontSize, 0, $x, $y, $txCol, $fontPath, $initials);
         } else {
             // Fallback: built-in font
@@ -235,7 +241,12 @@ class TextToImage
             if ($shapeType !== null) {
                 self::applyShapeOverlay($img, $type, $size, $br, $radius, $shapeType);
             }
+            imagealphablending($img, true);
             imagestring($img, $font, $x, $y, $initials, $txCol);
+        }
+
+        if ($trimOutsideClip) {
+            self::applyTransparencyOutsideClip($img, $type, $size, $radius);
         }
 
         // Output handling
@@ -258,12 +269,14 @@ class TextToImage
                         header('Content-Disposition: inline');
                     }
                 }
+                imagesavealpha($img, true);
                 imagepng($img);
                 unset($img);
 
                 return ['path' => null, 'url' => null, 'name' => null, 'storage' => null, 'data' => null];
             case 'data':
                 ob_start();
+                imagesavealpha($img, true);
                 imagepng($img);
                 $bin = ob_get_clean();
                 unset($img);
@@ -286,6 +299,7 @@ class TextToImage
                 // domain full path
                 $domainPath = Asset::asset("{$storagePath}/{$fileName}", true, false);
 
+                imagesavealpha($img, true);
                 imagepng($img, $fullPath);
                 unset($img);
 
@@ -1424,6 +1438,25 @@ class TextToImage
         $maxY = max($yValues);
 
         return [max(0, $maxX - $minX), max(0, $maxY - $minY), $minX, $minY];
+    }
+
+    /**
+     * Force pixels outside the clip `type` to full transparency (PNG alpha outside the shape).
+     *
+     * @param resource|\GdImage $img
+     */
+    private static function applyTransparencyOutsideClip($img, string $type, int $size, int $radius): void
+    {
+        imagealphablending($img, false);
+        imagesavealpha($img, true);
+        $clear = imagecolorallocatealpha($img, 0, 0, 0, 127);
+        for ($y = 0; $y < $size; $y++) {
+            for ($x = 0; $x < $size; $x++) {
+                if (!self::pixelInClipType($type, $x, $y, $size, $radius)) {
+                    imagesetpixel($img, $x, $y, $clear);
+                }
+            }
+        }
     }
 
     /**
