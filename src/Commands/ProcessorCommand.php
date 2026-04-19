@@ -92,7 +92,7 @@ class ProcessorCommand extends CommandHelper
         [$path, $grayscale, $contrast] = [
             $this->flag('path'), 
             (bool) $this->flag('grayscale') ?: true, 
-            $this->flag('contrast') ?: 20, 
+            $this->flag('contrast') ?: 12, 
         ];
         
         $text = ImageToText::run([

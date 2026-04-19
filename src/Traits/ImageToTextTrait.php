@@ -26,10 +26,15 @@ trait ImageToTextTrait{
         if ($opts['grayscale'] ?? true) {
             imagefilter($im, IMG_FILTER_GRAYSCALE);
         }
+
+        if (($opts['adaptive_brightness'] ?? false) === true) {
+            self::applyAdaptiveBrightness($im);
+        }
+
         if (($brightness = $opts['brightness'] ?? 0) !== 0) {
             imagefilter($im, IMG_FILTER_BRIGHTNESS, $brightness);
         }
-        if (($contrast = $opts['contrast'] ?? 15) !== 0) {
+        if (($contrast = $opts['contrast'] ?? 12) !== 0) {
             imagefilter($im, IMG_FILTER_CONTRAST, -abs($contrast));
         }
 
@@ -53,6 +58,48 @@ trait ImageToTextTrait{
         imagepng($im, $out);
         unset($im);
         return $out;
+    }
+
+    /**
+     * Nudge very dark or extremely bright scans toward mid-tones so OCR sees strokes more clearly.
+     */
+    private static function applyAdaptiveBrightness($im): void
+    {
+        $mean = self::sampleMeanLuminance($im);
+        if ($mean < 88.0) {
+            $delta = (int) min(28, max(6, (88.0 - $mean) * 0.45));
+            imagefilter($im, IMG_FILTER_BRIGHTNESS, $delta);
+        } elseif ($mean > 248.0) {
+            $delta = (int) max(-10, (248.0 - $mean) * 0.5);
+            if ($delta !== 0) {
+                imagefilter($im, IMG_FILTER_BRIGHTNESS, $delta);
+            }
+        }
+    }
+
+    private static function sampleMeanLuminance($im): float
+    {
+        $w = imagesx($im);
+        $h = imagesy($im);
+        if ($w < 1 || $h < 1) {
+            return 128.0;
+        }
+        $stepX = max(1, (int) ($w / 80));
+        $stepY = max(1, (int) ($h / 80));
+        $sum = 0.0;
+        $n = 0;
+        for ($y = 0; $y < $h; $y += $stepY) {
+            for ($x = 0; $x < $w; $x += $stepX) {
+                $rgb = imagecolorat($im, $x, $y);
+                $r = ($rgb >> 16) & 0xFF;
+                $g = ($rgb >> 8) & 0xFF;
+                $b = $rgb & 0xFF;
+                $sum += ($r + $g + $b) / 3;
+                $n++;
+            }
+        }
+
+        return $n > 0 ? $sum / $n : 128.0;
     }
 
     /**

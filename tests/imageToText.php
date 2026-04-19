@@ -33,10 +33,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
 
         $opts = [
-            'upload'     => 'image',
-            'psm'        => $psm,
-            // 'preprocess' => false,
-            'engine'     => 'auto', // 'ocrspace', 'google', 'azure', 'freeocr', 'auto'
+            'upload' => 'image',
+            'psm'    => $psm,
+            // 'engine' => 'ocrspace', // optional; default is auto (ocrspace first)
             // 'tesseract_path' => 'C:\Program Files\Tesseract-OCR\tesseract.exe'
         ];
 

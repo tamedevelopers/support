@@ -13,7 +13,8 @@ use Tamedevelopers\Support\Traits\OcrLanguageTrait;
  * ImageToText: Extract text from images using multiple OCR engines
  * 
  * Supported Engines:
- * - ocrspace: Free online OCR with 1MB limit (default)
+ * - auto: Try ocrspace then tesseract, google, … (default when engine omitted)
+ * - ocrspace: Free online OCR with 1MB limit
  * - tesseract: Local OCR engine (requires installation)
  * - google: Google Cloud Vision OCR (free tier: 1000 units/month)
  * - azure: Microsoft Azure Computer Vision (free tier: 5000 transactions/month)
@@ -22,18 +23,8 @@ use Tamedevelopers\Support\Traits\OcrLanguageTrait;
  *
  * Usage examples:
  *
- * 1) From uploaded file (script / language is autodetected by each OCR engine)
- *    $text = ImageToText::run([
- *        'upload' => 'image_name',
- *        'engine' => 'auto',
- *    ]);
- *
- * 2) Mixed simplified Chinese + Latin (e.g. phonetic charts): hint languages so OCR is not English-only.
- *    $text = ImageToText::run([
- *        'source' => '/path/to/chart.png',
- *        'engine' => 'auto',
- *        'ocr_language' => 'chi_sim+eng',
- *    ]);
+ * 1) From uploaded file — omit engine and ocr_language; backends autodetect script/language.
+ *    $text = ImageToText::run(['upload' => 'image_name']);
  *
  */
 class ImageToText
@@ -42,7 +33,7 @@ class ImageToText
     use OcrLanguageTrait;
 
     /**
-     * Supported OCR engines (first entry is the default when engine is omitted).
+     * Supported OCR engines (default selection is 'auto', not this list order).
      */
     private const ENGINES = ['tesseract', 'ocrspace', 'google', 'azure', 'freeocr', 'auto'];
 
@@ -64,8 +55,8 @@ class ImageToText
      * - max_file_size: int        Maximum file size in bytes (default: 5MB)
      * - tmp_dir: string|null      Temporary directory for processing
      * - cleanup: bool             Delete temporary files (default: true)
-     * - preprocess: bool|array    Image preprocessing (false = skip; true or array = merge with defaults).
-     * - ocr_language: string      Optional language hint (e.g. "chi_sim+eng", "zh", "en,zh"). Empty = autodetect.
+     * - preprocess: bool|array    Preprocess (false = skip). Defaults: contrast 12, adaptive_brightness for dark/very bright photos. Override keys: grayscale, brightness, contrast, threshold, adaptive_brightness.
+     * - ocr_language: string      Optional override; omit for full autodetect (recommended).
      * - language: string          Alias for ocr_language
      * 
      * Engine-specific options:
@@ -77,6 +68,7 @@ class ImageToText
      * - tesseract_psm: int        Page segmentation mode
      * - tesseract_oem: int        OCR engine mode
      * - tesseract_whitelist: string Character whitelist
+     * - ocrspace_ocr_engine: int   OCR.space OCREngine 1 or 2 (default 2, original API default).
      *
      * @param array $options
      * @return string
@@ -98,8 +90,9 @@ class ImageToText
                 $preOpts = array_merge([
                     'grayscale' => true,
                     'brightness' => 0,
-                    'contrast' => 15,
+                    'contrast' => 12,
                     'threshold' => null,
+                    'adaptive_brightness' => true,
                 ], $userPre);
 
                 $processed = self::preprocessImage($inputPath, $config['tmp_dir'], $preOpts);
@@ -133,7 +126,7 @@ class ImageToText
      */
     private static function validateOptions(array $options): array
     {
-        $engine = strtolower($options['engine'] ?? self::ENGINES[0]);
+        $engine = strtolower($options['engine'] ?? 'auto');
         if (!in_array($engine, self::ENGINES, true)) {
             throw new CustomException("Unsupported engine: {$engine}. Supported: " . implode(', ', self::ENGINES));
         }
@@ -162,6 +155,7 @@ class ImageToText
             'tesseract_psm' => $options['tesseract_psm'] ?? $options['psm'] ?? null,
             'tesseract_oem' => $options['tesseract_oem'] ?? $options['oem'] ?? null,
             'tesseract_whitelist' => $options['tesseract_whitelist'] ?? $options['whitelist'] ?? null,
+            'ocrspace_ocr_engine' => max(1, min(2, (int) ($options['ocrspace_ocr_engine'] ?? 2))),
         ];
 
         $ocrLang = (string) ($options['ocr_language'] ?? $options['language'] ?? '');
@@ -241,7 +235,12 @@ class ImageToText
 
         switch ($engine) {
             case 'ocrspace':
-                return self::ocrspaceEngine($imagePath, $config['_ocr']['ocrspace'], $config['ocrspace_api_key']);
+                return self::ocrspaceEngine(
+                    $imagePath,
+                    $config['_ocr']['ocrspace'],
+                    $config['ocrspace_api_key'],
+                    (int) $config['ocrspace_ocr_engine']
+                );
             case 'tesseract':
                 return self::tesseractEngine($imagePath, $config);
             case 'google':
@@ -278,7 +277,7 @@ class ImageToText
     /**
      * OCR.space Online OCR Engine
      */
-    private static function ocrspaceEngine(string $imagePath, string $language, string $apiKey): string
+    private static function ocrspaceEngine(string $imagePath, string $language, string $apiKey, int $ocrEngine = 2): string
     {
         if (!@is_readable($imagePath)) {
             throw new CustomException('OCR input not readable.');
@@ -289,11 +288,13 @@ class ImageToText
         $eol = "\r\n";
         $body = '';
 
+        $ocrEngine = max(1, min(2, $ocrEngine));
+
         $fields = [
             'language' => $language,
             'isOverlayRequired' => 'false',
             'scale' => 'true',
-            'OCREngine' => '2',
+            'OCREngine' => (string) $ocrEngine,
         ];
 
         foreach ($fields as $name => $value) {
