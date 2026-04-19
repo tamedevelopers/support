@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
-use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\CustomException;
+use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Traits\ImageToTextTrait;
 use Tamedevelopers\Support\Traits\OcrLanguageTrait;
 
@@ -13,13 +14,13 @@ use Tamedevelopers\Support\Traits\OcrLanguageTrait;
  * ImageToText: Extract text from images using multiple OCR engines
  * 
  * Supported Engines:
- * - auto: Try ocrspace then tesseract, google, … (default when engine omitted)
+ * - auto: One engine per run, tried in fixed order until non-empty text (default when engine omitted).
+ *   Different engines use different models — identical output is not possible; order prefers multilingual cloud OCR before local Tesseract.
  * - ocrspace: Free online OCR with 1MB limit
- * - tesseract: Local OCR engine (requires installation)
- * - google: Google Cloud Vision OCR (free tier: 1000 units/month)
- * - azure: Microsoft Azure Computer Vision (free tier: 5000 transactions/month)
- * - freeocr: FreeOCR.com API (no API key required, limited)
- * - auto: Try all engines in order until one works
+ * - google: Google Cloud Vision (needs API key)
+ * - azure: Azure Computer Vision (needs key)
+ * - freeocr: FreeOCR.com API (limited)
+ * - tesseract: Local Tesseract (install language packs for non-Latin script)
  *
  * Usage examples:
  *
@@ -38,11 +39,11 @@ class ImageToText
     private const ENGINES = ['tesseract', 'ocrspace', 'google', 'azure', 'freeocr', 'auto'];
 
     /**
-     * Order for engine=auto: online OCR first handles Han + Latin without local chi_sim; Tesseract is fallback.
+     * engine=auto: try in order until non-empty result. Tesseract is last — without chi_sim/ara traineddata it misreads CJK/Arabic as Latin.
      *
      * @var list<string>
      */
-    private const AUTO_ENGINE_TRY_ORDER = ['ocrspace', 'tesseract', 'google', 'azure', 'freeocr'];
+    private const AUTO_ENGINE_TRY_ORDER = ['ocrspace', 'google', 'azure', 'freeocr', 'tesseract'];
 
     /**
      * Extract text from an image using OCR
@@ -161,6 +162,11 @@ class ImageToText
         $ocrLang = (string) ($options['ocr_language'] ?? $options['language'] ?? '');
         $config['_ocr'] = self::expandOcrLanguageForEngines($ocrLang);
 
+        // Normalize path to the absolute path
+        if(!empty($config['source'])){
+            $config['source'] = Tame::stringReplacer((string) $config['source']);
+        }
+
         return $config;
     }
 
@@ -177,7 +183,7 @@ class ImageToText
         $file = File::collect($config['upload'] ?? 'image');
         $upload = $file->first();
 
-        if ($upload && $upload->isNotEmpty()) {
+        if ($upload->isNotEmpty()) {
             // Validate uploaded file
             if (!$upload->noError()) {
                 throw new CustomException('Image upload failed.');
@@ -199,7 +205,7 @@ class ImageToText
 
             return ['path' => $uploaded['path'], 'tempFiles' => [$uploaded['path']]];
 
-        } elseif (is_string($config['source']) && !empty($config['source'])) {
+        } elseif (!empty($config['source']) && is_string($config['source'])) {
             // Validate source file
             if (!@is_readable($config['source'])) {
                 throw new CustomException('Source image is not readable: ' . $config['source']);
@@ -255,7 +261,7 @@ class ImageToText
     }
 
     /**
-     * Try all engines in order until one works
+     * Run engines in fixed order until a non-empty string is returned. Empty OCR skips to next engine (same image, different backend).
      */
     private static function autoEngine(string $imagePath, array $config, array $tempFiles): string
     {
@@ -264,14 +270,20 @@ class ImageToText
         foreach (self::AUTO_ENGINE_TRY_ORDER as $engine) {
             try {
                 $config['engine'] = $engine;
-                return self::processWithEngine($imagePath, $config, $tempFiles);
+                $text = self::processWithEngine($imagePath, $config, $tempFiles);
+                if (trim($text) !== '') {
+                    return $text;
+                }
             } catch (\Throwable $e) {
                 $lastException = $e;
-                // Continue to next engine
             }
         }
 
-        throw new CustomException('All OCR engines failed. Last error: ' . $lastException->getMessage());
+        if ($lastException !== null) {
+            throw new CustomException('All OCR engines failed or returned empty. Last error: ' . $lastException->getMessage());
+        }
+
+        return '';
     }
 
     /**
