@@ -15,9 +15,8 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
  * Generate initial-based avatar images similar to Google profile placeholders.
  *
  * Features:
- * - Clip type: circle | radius | square (`type`)
- * - Optional overlay `shape`: diagonal | stripe | ring | gloss | corner | split — fills only; boundaries come
- *   from colour changes (like `diagonal`), no separate edge stroke. Applied after fill/gradient, before initials.
+ * - Clip `type`: circle | radius | square | reuleaux3 | reuleaux | hexagon | decagram | octagram
+ * - Optional overlay `shape`: diagonal | stripe | ring | gloss | corner | split — fills only. After fill/gradient, before initials.
  * - Optional `gradient` presets (null = solid `bg_color` only)
  * - Initials: first character(s) from name – supports all languages (English, Chinese, Japanese,
  *   Arabic, etc.); two words → first char of each; one word → first two characters
@@ -35,8 +34,8 @@ class TextToImage
      * Options keys:
      * - name: string (required)
      * - size: int (square dimension in px, default 256)
-     * - type: string ('circle' | 'radius' | 'square') default 'square' — clip/mask for the avatar
-     * - shape: string|null diagonal|stripe|ring|gloss|corner|split (nested fills; no extra edge pixels). null = no overlay.
+     * - type: string clip shape — circle | radius | square | reuleaux3 | reuleaux | hexagon | decagram | octagram (default square)
+     * - shape: string|null … see shapeTypePresets() (nested fills; no extra edge pixels). null = no overlay.
      * - gradient: string|null Preset gradient fill. null = solid bg_color only.
      * - radius: int (corner radius for 'radius' shape) default size/6
      * - bg_color: string|array (hex '#RRGGBB'|'#RGB'|'rgb(r,g,b)'|[r,g,b]) default '#4A5568'
@@ -61,7 +60,7 @@ class TextToImage
         $opts = array_merge([
             'name'        => '',
             'size'        => 256,
-            'type'        => 'square', // circle|radius|square
+            'type'        => 'square', // see normalizeClipType()
             'shape'       => null, // diagonal|stripe|ring|gloss|corner|split
             'gradient'    => null, // preset name or null for solid bg_color
             'radius'      => null,     // default computed: size/6
@@ -119,9 +118,7 @@ class TextToImage
                 $opts['shape'] = 'diagonal';
             }
         }
-        if (!in_array($type, ['circle', 'radius', 'square'], true)) {
-            $type = 'square';
-        }
+        $type = self::normalizeClipType($type);
 
         $gradientType = self::normalizeGradientType($opts['gradient'] ?? null);
         $shapeType = self::normalizeShapeType($opts['shape'] ?? null);
@@ -176,9 +173,12 @@ class TextToImage
 
             if ($fontSize === null) {
                 // Circle/rounded shapes need stronger all-side padding due to curved corners.
-                if (in_array($type, ['circle', 'radius'], true)) {
-                    $contentFactorX = ($type === 'circle') ? 0.62 : 0.68;
-                    $contentFactorY = ($type === 'circle') ? 0.62 : 0.68;
+                if ($type === 'radius') {
+                    $contentFactorX = 0.68;
+                    $contentFactorY = 0.68;
+                } elseif (in_array($type, ['circle', 'reuleaux3', 'reuleaux', 'hexagon', 'decagram', 'octagram'], true)) {
+                    $contentFactorX = 0.62;
+                    $contentFactorY = 0.62;
                 } else {
                     // Square (and overlays like diagonal): keep mostly full height, light side padding.
                     $contentFactorX = 0.70;
@@ -192,10 +192,13 @@ class TextToImage
                 $best = $low;
 
                 // Binary search for the best fit within the target area
+                $needShapeFit = $type !== 'square';
                 while ($low <= $high) {
                     $mid = (int)floor(($low + $high) / 2);
                     [$w, $h] = self::measureText($initials, $mid, $fontPath);
-                    if ($w <= $targetWidth && $h <= $targetHeight) {
+                    $fitsBox = $w <= $targetWidth && $h <= $targetHeight;
+                    $fitsShape = !$needShapeFit || self::initialsFitClipShape($type, $size, $radius, $mid, $fontPath, $initials);
+                    if ($fitsBox && $fitsShape) {
                         $best = $mid;
                         $low = $mid + 1;
                     } else {
@@ -333,6 +336,54 @@ class TextToImage
         ];
     }
 
+    /**
+     * @return list<string>
+     */
+    private static function clipTypePresets(): array
+    {
+        return [
+            'square',
+            'circle',
+            'radius',
+            'reuleaux3',
+            'reuleaux',
+            'hexagon',
+            'decagram',
+            'octagram',
+        ];
+    }
+
+    /**
+     * Normalized clip `type` for the avatar canvas (not `shape` overlays).
+     */
+    private static function normalizeClipType(string $type): string
+    {
+        $t = strtolower(trim($type));
+        $aliases = [
+            'reuleaux_triangle' => 'reuleaux3',
+            'reuleaux_tri' => 'reuleaux3',
+            'rtri' => 'reuleaux3',
+            'reuleaux_polygon' => 'reuleaux',
+            'reuleaux5' => 'reuleaux',
+            'reuleaux_pentagon' => 'reuleaux',
+            'polygon' => 'hexagon',
+            'hex' => 'hexagon',
+            'ngon' => 'hexagon',
+            'star10' => 'decagram',
+            'star_10' => 'decagram',
+            'star8' => 'octagram',
+            'star_8' => 'octagram',
+        ];
+        if (isset($aliases[$t])) {
+            $t = $aliases[$t];
+        }
+        if (!in_array($t, self::clipTypePresets(), true)) {
+            return 'square';
+        }
+
+        return $t;
+    }
+
     private static function normalizeShapeType($value): ?string
     {
         if ($value === null || $value === '') {
@@ -404,7 +455,7 @@ class TextToImage
      * Draw the background shape or pattern onto the image.
      *
      * @param resource $img   GD image resource
-     * @param string   $type  circle|radius|square
+     * @param string   $type  clip preset (see clipTypePresets)
      * @param int      $size  Square dimension
      * @param int      $color The allocated background color (solid path)
      * @param array    $rgb   The raw [r, g, b] array for pattern calculations
@@ -427,10 +478,34 @@ class TextToImage
                 self::imageFilledRoundedRect($img, 0, 0, $size - 1, $size - 1, $radius, $color);
                 break;
 
+            case 'reuleaux3':
+            case 'reuleaux':
+            case 'hexagon':
+            case 'decagram':
+            case 'octagram':
+                self::fillClipScanlines($img, $type, $size, $color, $radius);
+                break;
+
             case 'square':
             default:
                 imagefilledrectangle($img, 0, 0, $size, $size, $color);
                 break;
+        }
+    }
+
+    /**
+     * Solid fill for clip types defined by per-pixel geometry tests.
+     *
+     * @param resource|\GdImage $img
+     */
+    private static function fillClipScanlines($img, string $type, int $size, int $color, int $radius): void
+    {
+        for ($y = 0; $y < $size; $y++) {
+            for ($x = 0; $x < $size; $x++) {
+                if (self::pixelInClipType($type, $x, $y, $size, $radius)) {
+                    imagesetpixel($img, $x, $y, $color);
+                }
+            }
         }
     }
 
@@ -695,6 +770,133 @@ class TextToImage
         }
     }
 
+    /**
+     * Same radial extent as {@see pixelInClipType} circle test: `r = size/2` (center ((size-1)/2,(size-1)/2)).
+     */
+    private static function clipRadiusHalf(int $size): float
+    {
+        return $size / 2.0;
+    }
+
+    /**
+     * Point inside regular n-gon (convex), vertices on circle radius R from (cx,cy), first vertex at top.
+     */
+    private static function pointInRegularPolygon(float $px, float $py, float $cx, float $cy, int $size, int $n): bool
+    {
+        $R = self::clipRadiusHalf($size);
+        $poly = [];
+        for ($k = 0; $k < $n; $k++) {
+            $t = -M_PI / 2 + 2 * M_PI * $k / $n;
+            $poly[] = [$cx + $R * cos($t), $cy + $R * sin($t)];
+        }
+
+        return self::pointInPolygonEvenOdd($px, $py, $poly);
+    }
+
+    /**
+     * Reuleaux pentagon: disk-intersection body stays much smaller than vertex radius; scale Rc so max
+     * distance from center to the clip (matches circle’s size/2) like triangle with Rc = size/2.
+     */
+    private const REULEAUX_PENTAGON_RC_FACTOR = 2.3892892185171;
+
+    /**
+     * Reuleaux triangle / odd Reuleaux n-gon: intersection of disks of radius a (side length) at each vertex.
+     */
+    private static function pointInReuleauxOdd(float $px, float $py, float $cx, float $cy, int $size, int $n): bool
+    {
+        // Triangle: vertices on circle r = size/2 so the shape reaches the canvas like `type=circle`.
+        // Pentagon: same max extent via empirical factor (intersection is not vertex-centered).
+        $Rc = $n === 3 ? self::clipRadiusHalf($size) : self::REULEAUX_PENTAGON_RC_FACTOR * $size;
+        $a = 2.0 * $Rc * sin(M_PI / (float) $n);
+        for ($k = 0; $k < $n; $k++) {
+            $t = -M_PI / 2 + 2 * M_PI * $k / $n;
+            $vx = $cx + $Rc * cos($t);
+            $vy = $cy + $Rc * sin($t);
+            if (hypot($px - $vx, $py - $vy) > $a + 1e-4) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Even–odd ray test for a closed polygon (supports star polygons).
+     *
+     * @param list<array{0:float,1:float}> $poly
+     */
+    private static function pointInPolygonEvenOdd(float $px, float $py, array $poly): bool
+    {
+        $n = count($poly);
+        if ($n < 3) {
+            return false;
+        }
+        $inside = false;
+        for ($i = 0, $j = $n - 1; $i < $n; $j = $i++) {
+            $xi = $poly[$i][0];
+            $yi = $poly[$i][1];
+            $xj = $poly[$j][0];
+            $yj = $poly[$j][1];
+            $yn = $yj - $yi;
+            if ((($yi > $py) !== ($yj > $py)) && ($yn !== 0.0)) {
+                $xInt = $xi + ($py - $yi) * ($xj - $xi) / $yn;
+                if ($px < $xInt) {
+                    $inside = !$inside;
+                }
+            }
+        }
+
+        return $inside;
+    }
+
+    /**
+     * n-point star: alternating outer / inner radius (octagram, decagram).
+     *
+     * @return list<array{0:float,1:float}>
+     */
+    private static function starPolygonVertices(float $cx, float $cy, int $size, int $n): array
+    {
+        $rOut = self::clipRadiusHalf($size);
+        $rIn = $rOut * (19.0 / 44.0);
+        $poly = [];
+        for ($k = 0; $k < $n; $k++) {
+            $t = -M_PI / 2 + 2 * M_PI * $k / $n;
+            $rad = ($k % 2 === 0) ? $rOut : $rIn;
+            $poly[] = [$cx + $rad * cos($t), $cy + $rad * sin($t)];
+        }
+
+        return $poly;
+    }
+
+    private static function pointInStarPolygon(float $px, float $py, float $cx, float $cy, int $size, int $n): bool
+    {
+        return self::pointInPolygonEvenOdd($px, $py, self::starPolygonVertices($cx, $cy, $size, $n));
+    }
+
+    private static function pixelInClipGeometry(string $type, float $px, float $py, int $size): bool
+    {
+        $cx = ($size - 1) / 2.0;
+        $cy = ($size - 1) / 2.0;
+        switch ($type) {
+            case 'reuleaux3':
+                return self::pointInReuleauxOdd($px, $py, $cx, $cy, $size, 3);
+
+            case 'reuleaux':
+                return self::pointInReuleauxOdd($px, $py, $cx, $cy, $size, 5);
+
+            case 'hexagon':
+                return self::pointInRegularPolygon($px, $py, $cx, $cy, $size, 6);
+
+            case 'octagram':
+                return self::pointInStarPolygon($px, $py, $cx, $cy, $size, 8);
+
+            case 'decagram':
+                return self::pointInStarPolygon($px, $py, $cx, $cy, $size, 10);
+        }
+
+        return false;
+    }
+
     private static function pixelInClipType(string $type, int $x, int $y, int $size, int $radius): bool
     {
         if ($x < 0 || $y < 0 || $x >= $size || $y >= $size) {
@@ -712,8 +914,80 @@ class TextToImage
         if ($type === 'radius') {
             return self::pixelInFilledRoundRect($x, $y, $size, $radius);
         }
+        if (in_array($type, ['reuleaux3', 'reuleaux', 'hexagon', 'decagram', 'octagram'], true)) {
+            return self::pixelInClipGeometry($type, (float) $x, (float) $y, $size);
+        }
 
         return false;
+    }
+
+    /**
+     * Subpixel clip test for fitting text (same geometry as {@see pixelInClipType}).
+     */
+    private static function pointInClipFloat(string $type, float $px, float $py, int $size, int $radius): bool
+    {
+        if ($px < 0.0 || $py < 0.0 || $px > $size - 1 || $py > $size - 1) {
+            return false;
+        }
+        if ($type === 'square') {
+            return true;
+        }
+        $cx = ($size - 1) / 2.0;
+        $cy = ($size - 1) / 2.0;
+        $r = $size / 2.0;
+        if ($type === 'circle') {
+            return hypot($px - $cx, $py - $cy) <= $r + 0.25;
+        }
+        if ($type === 'radius') {
+            return self::pixelInFilledRoundRect((int) round($px), (int) round($py), $size, $radius);
+        }
+        if (in_array($type, ['reuleaux3', 'reuleaux', 'hexagon', 'decagram', 'octagram'], true)) {
+            return self::pixelInClipGeometry($type, $px, $py, $size);
+        }
+
+        return false;
+    }
+
+    /**
+     * True if a dense grid over the glyph bounding box lies inside the clip (avoids concave clipping on stars / Reuleaux).
+     */
+    private static function initialsFitClipShape(
+        string $type,
+        int $size,
+        int $radius,
+        int $fontSize,
+        string $fontPath,
+        string $initials
+    ): bool {
+        $bbox = imagettfbbox($fontSize, 0, $fontPath, $initials);
+        if (!$bbox) {
+            return false;
+        }
+        $xs = [(float) $bbox[0], (float) $bbox[2], (float) $bbox[4], (float) $bbox[6]];
+        $ys = [(float) $bbox[1], (float) $bbox[3], (float) $bbox[5], (float) $bbox[7]];
+        $minBx = min($xs);
+        $maxBx = max($xs);
+        $minBy = min($ys);
+        $maxBy = max($ys);
+
+        [$textWidth, $textHeight, $minX, $minY] = self::measureBbox($bbox);
+        $x = (($size - $textWidth) / 2.0) - (float) $minX;
+        $y = (($size - $textHeight) / 2.0) - (float) $minY;
+
+        $steps = 7;
+        for ($iy = 0; $iy <= $steps; $iy++) {
+            for ($ix = 0; $ix <= $steps; $ix++) {
+                $bx = $minBx + ($maxBx - $minBx) * $ix / $steps;
+                $by = $minBy + ($maxBy - $minBy) * $iy / $steps;
+                $imgX = $x + $bx;
+                $imgY = $y + $by;
+                if (!self::pointInClipFloat($type, $imgX, $imgY, $size, $radius)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /**

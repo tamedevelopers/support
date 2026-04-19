@@ -9,13 +9,16 @@ $ntoimage = new TextToImage();
 
 // Shapes: diagonal | stripe | ring | gloss | corner | split (solid fills only, no stroke seam)
 // 1) Square + diagonal + cosmic gradient
+
+// Type: circle | radius | square | reuleaux3 | reuleaux | hexagon | decagram | octagram
 $path1 = TextToImage::run([
     'name' => 'John Doe',
     'font_weight' => 'normal',
     'bg_color' => '#008000',
     'text_color' => 'rgba(255,255,255,1)',
     'generate' => false,
-    'shape' => 'split',
+    'type' => 'reuleaux',
+    // 'shape' => 'split',
     // 'gradient' => 'cosmic',
 ]);
 
