@@ -15,8 +15,8 @@ $path1 = TextToImage::run([
     'name' => 'John Doe',
     'font_weight' => 'normal',
     'bg_color' => '#008000',
-    'text_color' => 'transparent',
-    // 'text_color' => 'rgba(255,255,255,1)',
+    'text_color' => 'rgba(255,255,255,1)',
+    'transparent' => true,
     'generate' => false,
     'type' => 'reuleaux3',
     // 'shape' => 'split',
@@ -63,9 +63,14 @@ $path6 = $ntoimage->run([
 
 ?>
 
-<img src="<?php echo $path1['url']; ?>" alt="Text to Image">
-<img src="<?php echo $path2['url']; ?>" alt="Text to Image">
-<img src="<?php echo $path3['url']; ?>" alt="Text to Image">
-<img src="<?php echo $path4['url']; ?>" alt="Text to Image">
-<img src="<?php echo $path5['url']; ?>" alt="Text to Image">
-<img src="<?php echo $path6['url']; ?>" alt="Text to Image">
+<div style="background-color:rgb(10, 85, 106); text-align: center;">
+    <img src="<?= $path1['url']; ?>" alt="Text to Image">
+    <img src="<?= $path5['url']; ?>" alt="Text to Image">
+</div>
+
+
+<!-- 
+<img src="<?= $path2['url']; ?>" alt="Text to Image">
+<img src="<?= $path3['url']; ?>" alt="Text to Image">
+<img src="<?= $path4['url']; ?>" alt="Text to Image">
+<img src="<?= $path6['url']; ?>" alt="Text to Image"> -->
