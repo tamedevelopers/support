@@ -16,7 +16,7 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
  *
  * Features:
  * - Clip `type`: circle | radius | square | reuleaux3 | reuleaux | hexagon | decagram | octagram
- *   (hexagon = flat-top regular hex; octagram = 8-point compound of two squares; decagram = regular {10/3} 10-pointed star)
+ *   (hexagon = flat-top regular hex; octagram = 8-point compound of two squares; decagram = regular {10/3}, nonzero fill)
  * - Optional overlay `shape`: diagonal | stripe | ring | gloss | corner | split — fills only. After fill/gradient, before initials.
  * - Optional `gradient` presets (null = solid `bg_color` only)
  * - Initials: first character(s) from name – supports all languages (English, Chinese, Japanese,
@@ -870,11 +870,51 @@ class TextToImage
     }
 
     /**
-     * Regular decagram (Schläfli {10/3}): 10-pointed star. Ten vertices lie on one circle (circumradius = size/2);
-     * edges connect every 3rd vertex around the decagon, so you get 10 outer tips and a 10-point inner outline
-     * (not a convex 10-gon — that would be a plain “decagon”).
+     * Non-zero winding rule (SVG fill-rule="nonzero"). Fills self-intersecting stars as one solid region
+     * without even-odd “holes” or moats between spikes and centre.
+     *
+     * @param list<array{0:float,1:float}> $poly
      */
-    private static function pointInDecagram(float $px, float $py, float $cx, float $cy, int $size): bool
+    private static function pointInPolygonNonZero(float $px, float $py, array $poly): bool
+    {
+        $n = count($poly);
+        if ($n < 3) {
+            return false;
+        }
+        $w = 0;
+        for ($i = 0; $i < $n; $i++) {
+            $j = ($i + 1) % $n;
+            $xi = $poly[$i][0];
+            $yi = $poly[$i][1];
+            $xj = $poly[$j][0];
+            $yj = $poly[$j][1];
+            if ($yi <= $py) {
+                if ($yj > $py) {
+                    $cross = ($xj - $xi) * ($py - $yi) - ($px - $xi) * ($yj - $yi);
+                    if ($cross > 0) {
+                        $w++;
+                    }
+                }
+            } else {
+                if ($yj <= $py) {
+                    $cross = ($xj - $xi) * ($py - $yi) - ($px - $xi) * ($yj - $yi);
+                    if ($cross < 0) {
+                        $w--;
+                    }
+                }
+            }
+        }
+
+        return $w !== 0;
+    }
+
+    /**
+     * Regular decagram {10/3}: 10 edges (step 3 on a decagon), all vertices on the circumcircle, one at the top.
+     * This is the true decagram star — not the alternating-radius polygon that reads like a rounded decagon.
+     *
+     * @return list<array{0:float,1:float}>
+     */
+    private static function decagramSchlafli10_3Polygon(float $cx, float $cy, int $size): array
     {
         $R = self::clipRadiusHalf($size);
         $n = 10;
@@ -891,7 +931,23 @@ class TextToImage
             $idx = ($idx + $step) % $n;
         }
 
-        return self::pointInPolygonEvenOdd($px, $py, $poly);
+        return $poly;
+    }
+
+    /**
+     * Decagram: {10/3} path + non-zero winding so the fill is one solid colour (no even-odd holes / moats).
+     */
+    private static function pointInDecagram(float $px, float $py, float $cx, float $cy, int $size): bool
+    {
+        $R = self::clipRadiusHalf($size);
+        $dx = $px - $cx;
+        $dy = $py - $cy;
+        if (hypot($dx, $dy) > $R + 1e-6) {
+            return false;
+        }
+        $poly = self::decagramSchlafli10_3Polygon($cx, $cy, $size);
+
+        return self::pointInPolygonNonZero($px, $py, $poly);
     }
 
     private static function pixelInClipGeometry(string $type, float $px, float $py, int $size): bool

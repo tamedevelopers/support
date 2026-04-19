@@ -15,9 +15,10 @@ $path1 = TextToImage::run([
     'name' => 'John Doe',
     'font_weight' => 'normal',
     'bg_color' => '#008000',
-    'text_color' => 'rgba(255,255,255,1)',
+    'text_color' => 'transparent',
+    // 'text_color' => 'rgba(255,255,255,1)',
     'generate' => false,
-    'type' => 'decagram',
+    'type' => 'reuleaux3',
     // 'shape' => 'split',
     // 'gradient' => 'cosmic',
 ]);
