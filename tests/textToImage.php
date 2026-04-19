@@ -17,7 +17,7 @@ $path1 = TextToImage::run([
     'bg_color' => '#008000',
     'text_color' => 'rgba(255,255,255,1)',
     'generate' => false,
-    'type' => 'reuleaux',
+    'type' => 'decagram',
     // 'shape' => 'split',
     // 'gradient' => 'cosmic',
 ]);

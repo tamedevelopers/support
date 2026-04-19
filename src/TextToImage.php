@@ -16,6 +16,7 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
  *
  * Features:
  * - Clip `type`: circle | radius | square | reuleaux3 | reuleaux | hexagon | decagram | octagram
+ *   (hexagon = flat-top regular hex; octagram = 8-point compound of two squares; decagram = regular {10/3} 10-pointed star)
  * - Optional overlay `shape`: diagonal | stripe | ring | gloss | corner | split — fills only. After fill/gradient, before initials.
  * - Optional `gradient` presets (null = solid `bg_color` only)
  * - Initials: first character(s) from name – supports all languages (English, Chinese, Japanese,
@@ -366,7 +367,7 @@ class TextToImage
             'reuleaux_polygon' => 'reuleaux',
             'reuleaux5' => 'reuleaux',
             'reuleaux_pentagon' => 'reuleaux',
-            'polygon' => 'hexagon',
+            'polygon' => 'reuleaux3',
             'hex' => 'hexagon',
             'ngon' => 'hexagon',
             'star10' => 'decagram',
@@ -779,18 +780,35 @@ class TextToImage
     }
 
     /**
-     * Point inside regular n-gon (convex), vertices on circle radius R from (cx,cy), first vertex at top.
+     * Regular hexagon with flat horizontal top and bottom edges (vertex at 3 o’clock), circumradius = size/2.
      */
-    private static function pointInRegularPolygon(float $px, float $py, float $cx, float $cy, int $size, int $n): bool
+    private static function pointInHexagonFlatTop(float $px, float $py, float $cx, float $cy, int $size): bool
     {
         $R = self::clipRadiusHalf($size);
         $poly = [];
-        for ($k = 0; $k < $n; $k++) {
-            $t = -M_PI / 2 + 2 * M_PI * $k / $n;
+        for ($k = 0; $k < 6; $k++) {
+            $t = 2 * M_PI * $k / 6.0;
             $poly[] = [$cx + $R * cos($t), $cy + $R * sin($t)];
         }
 
         return self::pointInPolygonEvenOdd($px, $py, $poly);
+    }
+
+    /**
+     * Octagram: 8-point / 8-edge compound — union of two equal squares (axis-aligned + 45°), same center.
+     */
+    private static function pointInOctagramTwoSquares(float $px, float $py, float $cx, float $cy, int $size): bool
+    {
+        $R = self::clipRadiusHalf($size);
+        $dx = $px - $cx;
+        $dy = $py - $cy;
+        $ax = abs($dx);
+        $ay = abs($dy);
+        $half = $R / sqrt(2.0);
+        $inAxisAligned = $ax <= $half && $ay <= $half;
+        $inDiamond = ($ax + $ay) <= $R;
+
+        return $inAxisAligned || $inDiamond;
     }
 
     /**
@@ -801,6 +819,7 @@ class TextToImage
 
     /**
      * Reuleaux triangle / odd Reuleaux n-gon: intersection of disks of radius a (side length) at each vertex.
+     * Same orientation for n=3 and n=5: first vertex at the top (no extra rotation).
      */
     private static function pointInReuleauxOdd(float $px, float $py, float $cx, float $cy, int $size, int $n): bool
     {
@@ -808,8 +827,9 @@ class TextToImage
         // Pentagon: same max extent via empirical factor (intersection is not vertex-centered).
         $Rc = $n === 3 ? self::clipRadiusHalf($size) : self::REULEAUX_PENTAGON_RC_FACTOR * $size;
         $a = 2.0 * $Rc * sin(M_PI / (float) $n);
+        $base = -M_PI / 2;
         for ($k = 0; $k < $n; $k++) {
-            $t = -M_PI / 2 + 2 * M_PI * $k / $n;
+            $t = $base + 2 * M_PI * $k / $n;
             $vx = $cx + $Rc * cos($t);
             $vy = $cy + $Rc * sin($t);
             if (hypot($px - $vx, $py - $vy) > $a + 1e-4) {
@@ -850,27 +870,28 @@ class TextToImage
     }
 
     /**
-     * n-point star: alternating outer / inner radius (octagram, decagram).
-     *
-     * @return list<array{0:float,1:float}>
+     * Regular decagram (Schläfli {10/3}): 10-pointed star. Ten vertices lie on one circle (circumradius = size/2);
+     * edges connect every 3rd vertex around the decagon, so you get 10 outer tips and a 10-point inner outline
+     * (not a convex 10-gon — that would be a plain “decagon”).
      */
-    private static function starPolygonVertices(float $cx, float $cy, int $size, int $n): array
+    private static function pointInDecagram(float $px, float $py, float $cx, float $cy, int $size): bool
     {
-        $rOut = self::clipRadiusHalf($size);
-        $rIn = $rOut * (19.0 / 44.0);
-        $poly = [];
+        $R = self::clipRadiusHalf($size);
+        $n = 10;
+        $step = 3;
+        $onCircle = [];
         for ($k = 0; $k < $n; $k++) {
             $t = -M_PI / 2 + 2 * M_PI * $k / $n;
-            $rad = ($k % 2 === 0) ? $rOut : $rIn;
-            $poly[] = [$cx + $rad * cos($t), $cy + $rad * sin($t)];
+            $onCircle[] = [$cx + $R * cos($t), $cy + $R * sin($t)];
+        }
+        $poly = [];
+        $idx = 0;
+        for ($i = 0; $i < $n; $i++) {
+            $poly[] = $onCircle[$idx];
+            $idx = ($idx + $step) % $n;
         }
 
-        return $poly;
-    }
-
-    private static function pointInStarPolygon(float $px, float $py, float $cx, float $cy, int $size, int $n): bool
-    {
-        return self::pointInPolygonEvenOdd($px, $py, self::starPolygonVertices($cx, $cy, $size, $n));
+        return self::pointInPolygonEvenOdd($px, $py, $poly);
     }
 
     private static function pixelInClipGeometry(string $type, float $px, float $py, int $size): bool
@@ -885,13 +906,13 @@ class TextToImage
                 return self::pointInReuleauxOdd($px, $py, $cx, $cy, $size, 5);
 
             case 'hexagon':
-                return self::pointInRegularPolygon($px, $py, $cx, $cy, $size, 6);
+                return self::pointInHexagonFlatTop($px, $py, $cx, $cy, $size);
 
             case 'octagram':
-                return self::pointInStarPolygon($px, $py, $cx, $cy, $size, 8);
+                return self::pointInOctagramTwoSquares($px, $py, $cx, $cy, $size);
 
             case 'decagram':
-                return self::pointInStarPolygon($px, $py, $cx, $cy, $size, 10);
+                return self::pointInDecagram($px, $py, $cx, $cy, $size);
         }
 
         return false;
