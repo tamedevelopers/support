@@ -29,6 +29,13 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
 class TextToImage
 {
     use FontPathTrait;
+
+    /**
+     * Reuleaux pentagon: disk-intersection body stays much smaller than vertex radius; scale Rc so max
+     * distance from center to the clip (matches circle’s size/2) like triangle with Rc = size/2.
+     */
+    private const REULEAUX_PENTAGON_RC_FACTOR = 2.3892892185171;
+    
     
     /**
      * Create an avatar image based on a name or text.
@@ -824,12 +831,6 @@ class TextToImage
 
         return $inAxisAligned || $inDiamond;
     }
-
-    /**
-     * Reuleaux pentagon: disk-intersection body stays much smaller than vertex radius; scale Rc so max
-     * distance from center to the clip (matches circle’s size/2) like triangle with Rc = size/2.
-     */
-    private const REULEAUX_PENTAGON_RC_FACTOR = 2.3892892185171;
 
     /**
      * Reuleaux triangle / odd Reuleaux n-gon: intersection of disks of radius a (side length) at each vertex.

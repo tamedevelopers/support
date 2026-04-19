@@ -15,38 +15,14 @@ $path1 = TextToImage::run([
     'name' => 'John Doe',
     'font_weight' => 'normal',
     'bg_color' => '#008000',
-    'text_color' => 'rgba(255,255,255,1)',
+    // 'text_color' => 'rgb(255, 0, 0)',
     'transparent' => true,
-    'generate' => false,
-    'type' => 'reuleaux3',
+    'type' => 'reuleaux',
     // 'shape' => 'split',
     // 'gradient' => 'cosmic',
 ]);
 
 $path2 = TextToImage::run([
-    'name' => '王小明',
-    'font_weight' => 'normal',
-    'bg_color' => [147, 51, 234],
-    'text_color' => '#ffffff',
-]);
-
-$path3 = $ntoimage->run([
-    'name' => 'Tamedevelopers Peterson Moore',
-    'font_weight' => 'bold',
-    'text_color' => '#26012b',
-    'gradient' => 'aurora',
-]);
-
-$path4 = $ntoimage->run([
-    'name' => 'Facebook',
-    'font_weight' => 'bold',
-    'bg_color' => '#063903ff',
-    'text_color' => '#cae6ff',
-    'type' => 'radius',
-    'gradient' => 'forest',
-]);
-
-$path5 = $ntoimage->run([
     'name' => 'GitHub Microsoft',
     'font_weight' => 'bold',
     'bg_color' => '#000000',
@@ -55,22 +31,45 @@ $path5 = $ntoimage->run([
     'shape' => 'diagonal',
 ]);
 
-$path6 = $ntoimage->run([
-    'name' => 'آية. مليون.',
-    'font_weight' => 'normal',
-    'type' => 'circle',
-]);
+// $path3 = $ntoimage->run([
+//     'name' => 'Tamedevelopers Peterson Moore',
+//     'font_weight' => 'bold',
+//     'text_color' => '#26012b',
+//     'gradient' => 'aurora',
+// ]);
+
+// $path4 = $ntoimage->run([
+//     'name' => 'Facebook',
+//     'font_weight' => 'bold',
+//     'bg_color' => '#063903ff',
+//     'text_color' => '#cae6ff',
+//     'type' => 'radius',
+//     'gradient' => 'forest',
+// ]);
+
+// $path5 = $ntoimage->run([
+//     'name' => '王小明',
+//     'font_weight' => 'normal',
+//     'bg_color' => [147, 51, 234],
+//     'text_color' => '#ffffff',
+// ]);
+
+// $path6 = $ntoimage->run([
+//     'name' => 'آية. مليون.',
+//     'font_weight' => 'normal',
+//     'type' => 'circle',
+// ]);
 
 ?>
 
 <div style="background-color:rgb(10, 85, 106); text-align: center;">
     <img src="<?= $path1['url']; ?>" alt="Text to Image">
-    <img src="<?= $path5['url']; ?>" alt="Text to Image">
+    <img src="<?= $path2['url']; ?>" alt="Text to Image">
 </div>
 
 
 <!-- 
-<img src="<?= $path2['url']; ?>" alt="Text to Image">
 <img src="<?= $path3['url']; ?>" alt="Text to Image">
 <img src="<?= $path4['url']; ?>" alt="Text to Image">
+<img src="<?= $path5['url']; ?>" alt="Text to Image">
 <img src="<?= $path6['url']; ?>" alt="Text to Image"> -->
