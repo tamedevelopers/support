@@ -30,18 +30,12 @@ if ($isCli) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $psm  = isset($_POST['psm']) && $_POST['psm'] !== '' ? (int)$_POST['psm'] : null;
 
-    $preprocess = [
-        'brightness'=> (int)($_POST['brightness'] ?? 0),
-        'contrast'  => (int)($_POST['contrast'] ?? 15),
-        'threshold' => ($_POST['threshold'] !== '' ? (int)$_POST['threshold'] : null),
-    ];
-
     try {
 
         $opts = [
             'upload'     => 'image',
             'psm'        => $psm,
-            // 'preprocess' => $preprocess,
+            'preprocess' => false,
             'engine'     => 'auto', // 'ocrspace', 'google', 'azure', 'freeocr', 'auto'
             // 'tesseract_path' => 'C:\Program Files\Tesseract-OCR\tesseract.exe'
         ];

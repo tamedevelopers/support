@@ -24,7 +24,7 @@ use Tamedevelopers\Support\Traits\OcrLanguageTrait;
  *
  * 1) From uploaded file (script / language is autodetected by each OCR engine)
  *    $text = ImageToText::run([
- *        'upload' => $_FILES['image'],
+ *        'upload' => 'image_name',
  *        'engine' => 'auto',
  *    ]);
  *
@@ -56,7 +56,7 @@ class ImageToText
      * Extract text from an image using OCR
      *
      * Options:
-     * - upload: array|null        Uploaded file array from $_FILES
+     * - upload: string            Uploaded file input name
      * - source: string|null       Path to existing image file
      * - google_detection_feature: string  TEXT_DETECTION | DOCUMENT_TEXT_DETECTION (default: DOCUMENT_TEXT_DETECTION).
      * - engine: string            OCR engine (default: 'auto')
