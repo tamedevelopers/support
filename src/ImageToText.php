@@ -34,6 +34,13 @@ use Tamedevelopers\Support\Traits\OcrLanguageTrait;
  *        'engine' => 'google',
  *        'emoji_friendly' => true,
  *    ]);
+ *
+ * 3) Mixed simplified Chinese + Latin (e.g. phonetic charts): hint languages so OCR is not English-only.
+ *    $text = ImageToText::run([
+ *        'source' => '/path/to/chart.png',
+ *        'engine' => 'auto',
+ *        'ocr_language' => 'chi_sim+eng',
+ *    ]);
  */
 class ImageToText
 {
@@ -41,9 +48,16 @@ class ImageToText
     use OcrLanguageTrait;
 
     /**
-     * Supported OCR engines
+     * Supported OCR engines (first entry is the default when engine is omitted).
      */
-    private const ENGINES = ['tesseract', 'ocrspace' , 'google', 'azure', 'freeocr', 'auto'];
+    private const ENGINES = ['tesseract', 'ocrspace', 'google', 'azure', 'freeocr', 'auto'];
+
+    /**
+     * Order for engine=auto: online OCR first handles Han + Latin without local chi_sim; Tesseract is fallback.
+     *
+     * @var list<string>
+     */
+    private const AUTO_ENGINE_TRY_ORDER = ['ocrspace', 'tesseract', 'google', 'azure', 'freeocr'];
 
     /**
      * Extract text from an image using OCR
@@ -59,6 +73,8 @@ class ImageToText
      * - tmp_dir: string|null      Temporary directory for processing
      * - cleanup: bool             Delete temporary files (default: true)
      * - preprocess: bool|array    Image preprocessing options
+     * - ocr_language: string      Optional language hint (e.g. "chi_sim+eng", "zh", "en,zh"). Empty = autodetect.
+     * - language: string          Alias for ocr_language
      * 
      * Engine-specific options:
      * - ocrspace_api_key: string  OCR.space API key
@@ -159,9 +175,8 @@ class ImageToText
             'tesseract_whitelist' => $options['tesseract_whitelist'] ?? $options['whitelist'] ?? null,
         ];
 
-        // Always engine autodetect (no manual language): parallel to TextToImage choosing fonts from content,
-        // OCR backends infer script; Tesseract runs without -l unless traineddata default is installed.
-        $config['_ocr'] = self::expandOcrLanguageForEngines('', $emojiFriendly);
+        $ocrLang = (string) ($options['ocr_language'] ?? $options['language'] ?? '');
+        $config['_ocr'] = self::expandOcrLanguageForEngines($ocrLang, $emojiFriendly);
 
         return $config;
     }
@@ -255,11 +270,8 @@ class ImageToText
     private static function autoEngine(string $imagePath, array $config, array $tempFiles): string
     {
         $lastException = null;
-        $engines = self::ENGINES;
 
-        array_pop($engines);
-
-        foreach ($engines as $engine) {
+        foreach (self::AUTO_ENGINE_TRY_ORDER as $engine) {
             try {
                 $config['engine'] = $engine;
                 return self::processWithEngine($imagePath, $config, $tempFiles);

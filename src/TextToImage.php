@@ -23,7 +23,8 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
  *   Arabic, etc.); two words → first char of each; one word → first two characters
  * - Font: automatically uses a Unicode/CJK-capable font when the name contains non-ASCII characters
  * - Custom background and text color
- * - Option `transparent`: when true, pixels outside the clip `type` are full PNG transparency (initials stay solid `text_color`)
+ * - Option `transparent`: when true, pixels outside the clip `type` are full PNG transparency; text uses alpha-aware
+ *   drawing so `text_color` may include opacity (`#RRGGBBAA`, `rgba(...)`, `[r,g,b,a]`) like the rest of the image
  * - Output: save to file, stream to browser (inline or download), or return as data URI
  */
 class TextToImage
@@ -55,7 +56,8 @@ class TextToImage
      * - output: string ('save'|'view'|'download'|'data') default 'save'
      * - destination: string (required only when output='save')
      * - generate: boolean (default false). When true, appends a unique suffix to filename to avoid overwriting.
-     * - transparent: boolean (default false). When true, area outside the clip shape is fully transparent in the PNG.
+     * - transparent: boolean (default false). When true, area outside the clip shape is fully transparent in the PNG
+     *   and text is drawn with `imagecolorallocatealpha` so `text_color` alpha is respected (default: opaque).
      *
      * @param array $options
      * @return array Returns destination path for 'save', data URI for 'data', null when streaming
@@ -164,7 +166,10 @@ class TextToImage
 
         // Allocate colors
         $bgCol = imagecolorallocate($img, $br[0], $br[1], $br[2]);
-        $txCol = imagecolorallocate($img, $bt[0], $bt[1], $bt[2]);
+        $txGdAlpha = $trimOutsideClip ? self::gdAlphaFromColorInput($opts['text_color']) : 0;
+        $txCol = $trimOutsideClip
+            ? imagecolorallocatealpha($img, $bt[0], $bt[1], $bt[2], $txGdAlpha)
+            : imagecolorallocate($img, $bt[0], $bt[1], $bt[2]);
 
         // Fill clip (solid or gradient only). Shape overlays run later — immediately before painting initials.
         self::drawBackground($img, $type, $size, $bgCol, $br, $radius, $gradientType);
@@ -1322,8 +1327,48 @@ class TextToImage
     }
 
     /**
+     * GD alpha for text when `transparent` is true: 0 = opaque, 127 = fully transparent.
+     * Reads opacity from `#RRGGBBAA`, `rgba(r,g,b,a)`, or `[r,g,b,a]` (a = 0..1 float or 0..255 byte).
+     *
+     * @param string|array $color
+     */
+    private static function gdAlphaFromColorInput($color): int
+    {
+        if (is_array($color) && count($color) >= 4 && is_numeric($color[3])) {
+            $af = (float) $color[3];
+            if ($af > 1.0) {
+                $ai = max(0, min(255, (int) round($af)));
+
+                return (int) max(0, min(127, round((255 - $ai) / 255 * 127)));
+            }
+
+            return (int) max(0, min(127, round((1.0 - max(0.0, min(1.0, $af))) * 127)));
+        }
+        if (is_string($color)) {
+            $c = trim($color);
+            if (preg_match('/^#([0-9a-f]{8})$/i', $c, $m)) {
+                $aa = hexdec(substr($m[1], 6, 2));
+
+                return (int) max(0, min(127, round((255 - $aa) / 255 * 127)));
+            }
+            if (preg_match('/^rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(\d*\.?\d+)\s*\)$/i', $c, $m)) {
+                $a = (float) $m[1];
+                if ($a > 1.0) {
+                    $a = max(0.0, min(255.0, $a)) / 255.0;
+                } else {
+                    $a = max(0.0, min(1.0, $a));
+                }
+
+                return (int) max(0, min(127, round((1.0 - $a) * 127)));
+            }
+        }
+
+        return 0;
+    }
+
+    /**
      * Convert color input to [r,g,b]. Accepts '#RRGGBB', '#RRGGBBAA', '#RGB', 'rgb(r,g,b)', 'rgba(r,g,b,a)', or [r,g,b].
-     * Alpha is ignored (GD fill uses full opacity for shapes).
+     * Alpha is ignored for backgrounds (GD fill uses full opacity for shapes). Text alpha uses {@see gdAlphaFromColorInput}.
      * @param string|array $color
      * @return array{0:int,1:int,2:int}
      */

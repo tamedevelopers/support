@@ -42,14 +42,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $files = File::collect('image');
 
     try {
-        $text = ImageToText::run([
+
+        $opts = [
             'upload'     => $files->first(),
             'psm'        => $psm,
             'preprocess' => $preprocess,
             'engine'     => 'auto', // 'ocrspace', 'google', 'azure', 'freeocr', 'auto'
             'emoji_friendly' => isset($_POST['emoji_friendly']),
             // 'tesseract_path' => 'C:\Program Files\Tesseract-OCR\tesseract.exe'
-        ]);
+        ];
+
+        $text = ImageToText::run($opts);
 
         header('Content-Type: text/plain; charset=utf-8');
         echo $text;
@@ -92,9 +95,12 @@ $error = $error ?? null;
         <input id="psm" type="number" name="psm" min="0" max="13" placeholder="6" />
       </div>
       <div class="row">
-        <label>Options</label>
-        <label><input type="checkbox" name="grayscale" checked /> grayscale</label>
-        <label style="margin-left:1rem;"><input type="checkbox" name="emoji_friendly" /> emoji-friendly (keep color, broader detection)</label>
+          <label>Options</label>
+          <label><input type="checkbox" name="grayscale" checked /> grayscale</label>
+          <label style="margin-left:1rem;">
+          <input type="checkbox" name="emoji_friendly" /> 
+            emoji-friendly (keep color, broader detection)
+          </label>
       </div>
       <div class="row">
         <label for="brightness">Brightness</label>
@@ -114,6 +120,6 @@ $error = $error ?? null;
     </fieldset>
   </form>
 
-  <p style="margin-top:2rem;color:#666;">Language / script is autodetected by each OCR engine. For colored emoji or UI screenshots, enable emoji-friendly mode.</p>
+  <p style="margin-top:2rem;color:#666;">For mixed Chinese and English, set OCR language to <code>chi_sim+eng</code> (or <code>zh</code>). For colored emoji or UI screenshots, enable emoji-friendly mode.</p>
 </body>
 </html>

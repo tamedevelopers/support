@@ -185,6 +185,11 @@ trait OcrLanguageTrait
         if ($tessParts === [] && $tokens !== []) {
             $tessParts = ['eng'];
         }
+        // Han / CJK scripts need Latin alongside for mixed charts (e.g. 诶 + A).
+        static $cjkTess = ['chi_sim', 'chi_tra', 'jpn', 'kor'];
+        if (array_intersect($tessParts, $cjkTess) !== [] && !in_array('eng', $tessParts, true)) {
+            $tessParts[] = 'eng';
+        }
         $tesseract = implode('+', $tessParts);
 
         $googleHints = [];
