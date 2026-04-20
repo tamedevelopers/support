@@ -265,7 +265,7 @@ final class ChromePdf
     /**
      * When set, only the first matching element is kept in the document body before PDF capture.
      */
-    public function printFromElement(?string $cssSelector): self
+    public function createFromElement(?string $cssSelector): self
     {
         $this->selector = !empty($cssSelector) ? $cssSelector : null;
 
@@ -857,6 +857,12 @@ final class ChromePdf
             '--disable-accelerated-jpeg-decoding',
             '--disable-accelerated-mjpeg-decode',
             '--disable-accelerated-video-decode',
+
+            // flags to reduce file system interactions
+            '--disable-features=WinRetrieveSuggestionsOnlyOnDemand',
+            '--disable-background-networking',
+            '--disk-cache-size=1',
+            '--media-cache-size=1',
         ]));
 
         $launch['ignoreCertificateErrors'] = $this->ignoreCertificateErrors;
