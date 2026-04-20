@@ -165,11 +165,6 @@ final class ChromePdf
      */
     private bool $deleteUploadedFile = false;
 
-    /**
-     * Layout viewport for {@see fromUrl()} captures. Also passed as {@code --window-size} at browser launch; the
-     * explicit {@code Emulation.setDeviceMetricsOverride} call is what keeps CSS breakpoints on desktop (the per-page
-     * viewport otherwise defaults to a narrow headless size).
-     */
     private int $desktopViewportWidth = 1920;
 
     private int $desktopViewportHeight = 1080;
@@ -270,7 +265,7 @@ final class ChromePdf
     /**
      * When set, only the first matching element is kept in the document body before PDF capture.
      */
-    public function createFromElement(?string $cssSelector): self
+    public function printFromElement(?string $cssSelector): self
     {
         $this->selector = !empty($cssSelector) ? $cssSelector : null;
 
@@ -301,16 +296,43 @@ final class ChromePdf
     /**
      * Width and height (CSS px) used as the desktop browser layout viewport for {@see fromUrl()} before PDF paper
      * sizing. Defaults to 1920×1080.
-     *
-     * @throws ConversionFailedException
+     * 
+     * Minimum dimensions: 320×240 (typical mobile breakpoint)
+     * Maximum dimensions: 8192×8192 (Chromium limit)
+     * 
+     * @param int $width Viewport width in CSS pixels (320-8192)
+     * @param int $height Viewport height in CSS pixels (240-8192)
+     * @throws ConversionFailedException When dimensions are outside valid ranges
      */
     public function desktopViewport(int $width, int $height): self
     {
-        if (($width < 320 || $height < 240) || ($width > 8192 || $height > 8192)) {
-            $width = $this->desktopViewportWidth;
-            $height = $this->desktopViewportHeight;
+        $minWidth = 320;
+        $minHeight = 240;
+        $maxDimension = 8192;
+        
+        $isWidthInvalid = $width < $minWidth || $width > $maxDimension;
+        $isHeightInvalid = $height < $minHeight || $height > $maxDimension;
+        
+        if ($isWidthInvalid || $isHeightInvalid) {
+            $invalidParams = [];
+            
+            if ($isWidthInvalid) {
+                $invalidParams[] = sprintf('width=%d (allowed: %d-%d)', $width, $minWidth, $maxDimension);
+            }
+            if ($isHeightInvalid) {
+                $invalidParams[] = sprintf('height=%d (allowed: %d-%d)', $height, $minHeight, $maxDimension);
+            }
+            
+            throw new ConversionFailedException(
+                sprintf(
+                    'Invalid desktopViewport dimensions: %s. Using defaults: %dx%d',
+                    implode(', ', $invalidParams),
+                    $this->desktopViewportWidth,
+                    $this->desktopViewportHeight
+                )
+            );
         }
-
+        
         $this->desktopViewportWidth = $width;
         $this->desktopViewportHeight = $height;
 
@@ -1051,9 +1073,6 @@ final class ChromePdf
         $teardown = $this->enableUrlRequestBlocking($page);
         try {
             $this->loadFromUrl($page);
-
-            // Apply viewport AFTER navigation, not before
-            $this->applyDesktopDeviceMetricsForUrlCapture($page);
         } finally {
             $teardown();
         }
@@ -1155,24 +1174,6 @@ final class ChromePdf
             $this->navigationLifecycleEvent(),
             $this->effectiveNavigationTimeoutMs()
         );
-    }
-
-    /**
-     * Set the viewport to the desktop viewport dimensions
-     * @param Page $page
-     * @return void
-     */
-    private function applyDesktopDeviceMetricsForUrlCapture(Page $page): void
-    {
-        try {
-            $page->setDeviceMetricsOverride([
-                'width' => $this->desktopViewportWidth,
-                'height' => $this->desktopViewportHeight,
-                'deviceScaleFactor' => 1,
-                'mobile' => false,
-            ])->await(5000);
-        } catch (Throwable) {
-        }
     }
 
     private function loadFromFile(Page $page): void

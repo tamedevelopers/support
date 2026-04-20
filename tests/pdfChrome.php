@@ -13,7 +13,7 @@ $files = [
 ];
 
 $output = ChromePdf::create()
-    ->fromUrl('https://www.google.com')
+    ->fromUrl('https://www.lhkexpress.com')
     // ->fromFile('upload/template.html')
     ->margin(20)
     ->createFromElement('.body')
