@@ -13,17 +13,17 @@ $files = [
 ];
 
 $output = ChromePdf::create()
-    // ->fromUrl('https://www.google.com')
-    ->fromFile('upload/template.html')
+    ->fromUrl('https://www.google.com')
+    // ->fromFile('upload/template.html')
     ->margin(20)
     ->createFromElement('.body')
     ->textWatermark('CONFIDENTIAL')
     // ->clickableLinks(false)
-    ->encrypt(
-        userPassword: 'user', 
-        ownerPassword: 'owner', 
-        blockedPermissions: ['copy', 'print'],
-    )
+    // ->encrypt(
+    //     userPassword: 'user', 
+    //     ownerPassword: 'owner', 
+    //     blockedPermissions: ['copy', 'print'],
+    // )
     // ->chromiumBinary('upload/chrome-win/chrome.exe')
     ->generate();
 

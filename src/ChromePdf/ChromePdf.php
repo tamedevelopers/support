@@ -165,6 +165,11 @@ final class ChromePdf
      */
     private bool $deleteUploadedFile = false;
 
+    /**
+     * Layout viewport for {@see fromUrl()} captures. Also passed as {@code --window-size} at browser launch; the
+     * explicit {@code Emulation.setDeviceMetricsOverride} call is what keeps CSS breakpoints on desktop (the per-page
+     * viewport otherwise defaults to a narrow headless size).
+     */
     private int $desktopViewportWidth = 1920;
 
     private int $desktopViewportHeight = 1080;
@@ -289,6 +294,25 @@ final class ChromePdf
     public function paper(PaperFormat|string $format): self
     {
         $this->paper = $format instanceof PaperFormat ? $format : PaperFormat::parse($format);
+
+        return $this;
+    }
+
+    /**
+     * Width and height (CSS px) used as the desktop browser layout viewport for {@see fromUrl()} before PDF paper
+     * sizing. Defaults to 1920×1080.
+     *
+     * @throws ConversionFailedException
+     */
+    public function desktopViewport(int $width, int $height): self
+    {
+        if (($width < 320 || $height < 240) || ($width > 8192 || $height > 8192)) {
+            $width = $this->desktopViewportWidth;
+            $height = $this->desktopViewportHeight;
+        }
+
+        $this->desktopViewportWidth = $width;
+        $this->desktopViewportHeight = $height;
 
         return $this;
     }
@@ -1027,6 +1051,9 @@ final class ChromePdf
         $teardown = $this->enableUrlRequestBlocking($page);
         try {
             $this->loadFromUrl($page);
+
+            // Apply viewport AFTER navigation, not before
+            $this->applyDesktopDeviceMetricsForUrlCapture($page);
         } finally {
             $teardown();
         }
@@ -1128,6 +1155,24 @@ final class ChromePdf
             $this->navigationLifecycleEvent(),
             $this->effectiveNavigationTimeoutMs()
         );
+    }
+
+    /**
+     * Set the viewport to the desktop viewport dimensions
+     * @param Page $page
+     * @return void
+     */
+    private function applyDesktopDeviceMetricsForUrlCapture(Page $page): void
+    {
+        try {
+            $page->setDeviceMetricsOverride([
+                'width' => $this->desktopViewportWidth,
+                'height' => $this->desktopViewportHeight,
+                'deviceScaleFactor' => 1,
+                'mobile' => false,
+            ])->await(5000);
+        } catch (Throwable) {
+        }
     }
 
     private function loadFromFile(Page $page): void
