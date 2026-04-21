@@ -70,15 +70,15 @@ class ConfigCommand extends CommandHelper
             realpath(__DIR__ . '/../')
         );
 
-        // $choice = $this->choice(
-        //     'Select the mail config file to publish',
-        //     ['mail', 'tame'],
-        //     // 'mail'
-        // );
+        $choice = $this->choice(
+            'Select the mail config file to publish',
+            ['mail', 'tame'],
+            // 'mail'
+        );
 
-        $action = $this->ask('Enter the action to perform');
-
+        // $action = $this->ask('Enter the action to perform');
         // $action = $this->confirm('Enter the action to perform');
+
 
         dd(
             $action ?? null,

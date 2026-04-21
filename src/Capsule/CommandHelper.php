@@ -352,17 +352,26 @@ class CommandHelper
     /**
      * Prompt the user for free text input.
      */
-    protected function ask(string $question, string $default = null): string
+    protected function ask($question, $default = null, $required = false): string
     {
         $question = $this->ensureQuestionMark($question);
 
-        // Print the question and force a new line
-        echo $question . PHP_EOL . "> ";
+        while (true) {
+            echo $question . PHP_EOL . '> ';
+            $answer = trim((string) readline());
 
-        // Now capture user input
-        $answer = trim(readline());
+            if (!empty($answer)) {
+                return $answer;
+            }
 
-        return $answer !== '' ? $answer : $default;
+            if (!empty($default)) {
+                return $default;
+            }
+
+            if ($required) {
+                echo "A value is required." . PHP_EOL;
+            }
+        }
     }
 
     /**
@@ -386,12 +395,41 @@ class CommandHelper
         }
 
         $defaultIndex = $this->resolveChoiceDefaultIndex($options, $default);
+        $defaultResult = $options[$defaultIndex]['result'];
+        $terminalWidth = $this->resolveTerminalWidth();
 
-        if ($this->canUseInteractiveChoice()) {
-            return $this->interactiveChoice($question, $options, $defaultIndex);
+        echo $question . PHP_EOL;
+        foreach ($options as $option) {
+            echo '  ' . $this->renderChoiceRow(
+                (string) $option['label'],
+                (string) $option['key'],
+                max(20, $terminalWidth - 2)
+            ) . PHP_EOL;
         }
 
-        return $this->fallbackChoice($question, $options, $defaultIndex);
+        $answer = trim((string) readline('> '));
+
+        if ($answer === '') {
+            return $defaultResult;
+        }
+
+        foreach ($options as $option) {
+            if (
+                (string) $option['key'] === $answer
+                || Str::lower((string) $option['label']) === Str::lower($answer)
+            ) {
+                return $option['result'];
+            }
+        }
+
+        if (ctype_digit($answer)) {
+            $index = (int) $answer;
+            if (isset($options[$index])) {
+                return $options[$index]['result'];
+            }
+        }
+
+        return $defaultResult;
     }
 
     /**
@@ -418,149 +456,6 @@ class CommandHelper
         }
 
         return 0;
-    }
-
-    /**
-     * Check if terminal can handle raw interactive key reading.
-     *
-     * @return bool
-     */
-    private function canUseInteractiveChoice(): bool
-    {
-        if (!$this->runningInConsole() || !defined('STDIN')) {
-            return false;
-        }
-
-        // PowerShell/Windows terminals can intercept arrows and make raw input freeze.
-        // Use fallback readline mode on Windows for reliable text/number/default selection.
-        if (DIRECTORY_SEPARATOR === '\\') {
-            return false;
-        }
-
-        return function_exists('shell_exec');
-    }
-
-    /**
-     * Render a simple arrow-key interactive menu and return selected option.
-     *
-     * @param string $question
-     * @param array $options
-     * @param int $selectedIndex
-     * @return mixed
-     */
-    private function interactiveChoice(string $question, array $options, int $selectedIndex)
-    {
-        $total = count($options);
-        $maxLines = $total + 1;
-        $terminalWidth = $this->resolveTerminalWidth();
-        $write = static function (string $text): void {
-            if (defined('STDOUT')) {
-                fwrite(STDOUT, $text);
-                fflush(STDOUT);
-            } else {
-                echo $text;
-            }
-        };
-
-        $draw = function () use ($question, $options, &$selectedIndex, $write, $terminalWidth): void {
-            $write($question . PHP_EOL);
-            foreach ($options as $i => $option) {
-                $marker = $i === $selectedIndex ? '>' : ' ';
-                $row = $this->renderChoiceRow((string) $option['label'], (string) $option['key'], $terminalWidth - 3);
-                $write(" {$marker} {$row}" . PHP_EOL);
-            }
-        };
-
-        $restoreMode = static function (): void {
-            if (DIRECTORY_SEPARATOR !== '\\') {
-                @shell_exec('stty sane');
-            }
-        };
-
-        try {
-            if (DIRECTORY_SEPARATOR !== '\\') {
-                @shell_exec('stty -icanon -echo');
-            }
-
-            $draw();
-            while (true) {
-                $key = $this->readChoiceKey();
-                if ($key === '') {
-                    continue;
-                }
-
-                if ($key === 'up') {
-                    $selectedIndex = ($selectedIndex - 1 + $total) % $total;
-                } elseif ($key === 'down') {
-                    $selectedIndex = ($selectedIndex + 1) % $total;
-                } elseif ($key === 'enter') {
-                    return $options[$selectedIndex]['result'];
-                } elseif (strlen($key) === 1 && ctype_alnum($key)) {
-                    foreach ($options as $option) {
-                        if ((string) $option['key'] === (string) $key) {
-                            return $option['result'];
-                        }
-                    }
-                } else {
-                    // Unknown key: ignore and keep waiting for a valid key.
-                    continue;
-                }
-
-                // Repaint menu in place.
-                $write("\033[" . $maxLines . "A");
-                for ($i = 0; $i < $maxLines; $i++) {
-                    $write("\033[2K");
-                    if ($i < $maxLines - 1) {
-                        $write("\033[1B");
-                    }
-                }
-                $write("\033[" . ($maxLines - 1) . "A");
-                $draw();
-            }
-        } finally {
-            $restoreMode();
-        }
-    }
-
-    /**
-     * Non-interactive choice fallback using a simple prompt.
-     *
-     * @param string $question
-     * @param array $options
-     * @param int $defaultIndex
-     * @return mixed
-     */
-    private function fallbackChoice(string $question, array $options, int $defaultIndex)
-    {
-        $terminalWidth = $this->resolveTerminalWidth();
-
-        echo $question . PHP_EOL;
-        foreach ($options as $i => $option) {
-            $marker = $i === $defaultIndex ? '*' : ' ';
-            $row = $this->renderChoiceRow((string) $option['label'], (string) $option['key'], $terminalWidth - 3);
-            echo " {$marker} {$row}" . PHP_EOL;
-        }
-
-        $answer = trim(readline("> "));
-        if ($answer === '') {
-            return $options[$defaultIndex]['result'];
-        }
-
-        foreach ($options as $option) {
-            if (
-                (string) $option['key'] === $answer ||
-                Str::lower((string) $option['label']) === Str::lower($answer)
-            ) {
-                return $option['result'];
-            }
-        }
-
-        if (ctype_digit($answer)) {
-            $index = (int) $answer;
-            return $options[$index]['result'] ?? $options[$defaultIndex]['result'];
-        }
-
-        return $options[$defaultIndex]['result'];
     }
 
     /**
@@ -630,38 +525,6 @@ class CommandHelper
         $dotsCount = max(4, $dotsCount);
 
         return $label . ' ' . str_repeat('.', $dotsCount) . ' ' . $key;
-    }
-
-    /**
-     * Read a single choice key from terminal.
-     * Returns: up|down|enter|single-char|''.
-     *
-     * @return string
-     */
-    private function readChoiceKey(): string
-    {
-        $char = fread(STDIN, 1);
-        if ($char === false || $char === '') {
-            return '';
-        }
-
-        if ($char === "\033") {
-            $next = fread(STDIN, 1);
-            $third = fread(STDIN, 1);
-            if ($next === '[' && $third === 'A') {
-                return 'up';
-            }
-            if ($next === '[' && $third === 'B') {
-                return 'down';
-            }
-            return '';
-        }
-
-        if ($char === "\r" || $char === "\n") {
-            return 'enter';
-        }
-
-        return $char;
     }
 
     /**
