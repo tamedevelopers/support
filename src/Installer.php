@@ -80,6 +80,8 @@ class Installer
             File::put($mail['path'], $dummyContent);
 
             Logger::info("\n<b>[Mail Config]</b> has been publised successfully!\n\n");
+        } else{
+            Logger::info("\n<b>[Mail Config]</b> already exists!\n\n");
         }
     }
 

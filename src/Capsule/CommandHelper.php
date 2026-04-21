@@ -394,9 +394,10 @@ class CommandHelper
             return $default ?? '';
         }
 
-        $defaultIndex = $this->resolveChoiceDefaultIndex($options, $default);
-        $defaultResult = $options[$defaultIndex]['result'];
-        $terminalWidth = $this->resolveTerminalWidth();
+        $keyResult      = 'result'; // key, label, result
+        $defaultIndex   = $this->resolveChoiceDefaultIndex($options, $default);
+        $defaultResult  = $options[$defaultIndex][$keyResult];
+        $terminalWidth  = $this->resolveTerminalWidth();
 
         echo $question . PHP_EOL;
         foreach ($options as $option) {
@@ -418,14 +419,14 @@ class CommandHelper
                 (string) $option['key'] === $answer
                 || Str::lower((string) $option['label']) === Str::lower($answer)
             ) {
-                return $option['result'];
+                return $option[$keyResult]; 
             }
         }
 
         if (ctype_digit($answer)) {
             $index = (int) $answer;
             if (isset($options[$index])) {
-                return $options[$index]['result'];
+                return $options[$index][$keyResult];
             }
         }
 
