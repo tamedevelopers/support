@@ -202,9 +202,22 @@ final class ChromePdf
      */
     private ?string $injectionCssForPostProcess = null;
 
+    /**
+     * Create a new ChromePdf instance
+     * @return self
+     */
     public static function create(): self
     {
         return new self();
+    }
+
+    /**
+     * Alias for {@see create()}
+     * @return self
+     */
+    public static function init(): self
+    {
+        return self::create();
     }
 
     /**
