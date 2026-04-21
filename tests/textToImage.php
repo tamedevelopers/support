@@ -17,7 +17,7 @@ $path1 = TextToImage::run([
     'bg_color' => '#008000',
     // 'text_color' => 'rgb(255, 0, 0)',
     'transparent' => true,
-    'type' => 'reuleaux',
+    'type' => 'octagram',
     // 'shape' => 'split',
     // 'gradient' => 'cosmic',
 ]);
@@ -25,10 +25,10 @@ $path1 = TextToImage::run([
 $path2 = TextToImage::run([
     'name' => 'GitHub Microsoft',
     'font_weight' => 'bold',
-    'bg_color' => '#000000',
+    // 'bg_color' => '#000000',
     'text_color' => '#4A5568',
     'type' => 'circle',
-    'shape' => 'diagonal',
+    'shape' => 'split',
 ]);
 
 // $path3 = $ntoimage->run([
