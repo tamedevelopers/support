@@ -354,6 +354,8 @@ class CommandHelper
      */
     protected function ask(string $question, string $default = ''): string
     {
+        $question = $this->ensureQuestionMark($question);
+
         // Print the question and force a new line
         echo $question . PHP_EOL . "> ";
 
@@ -361,6 +363,223 @@ class CommandHelper
         $answer = trim(readline());
 
         return $answer !== '' ? $answer : $default;
+    }
+
+    /**
+     * Prompt the user to choose from a list of values.
+     *
+     * Usage examples:
+     * - choice('Which starter kit?', ['Breeze', 'Breeze + Inertia', 'Bootstrap'], 'Breeze')
+     * - choice('Which starter kit?', 'Breeze', 'Breeze + Inertia', 'Bootstrap', 'Breeze')
+     *
+     * Notes:
+     * - Last argument is treated as default value.
+     * - Unknown input resolves to default.
+     *
+     * @param string $question
+     * @param mixed $values
+     * @param mixed $default
+     * @return mixed
+     */
+    protected function choice(string $question, $values, $default = null)
+    {
+        $question = $this->ensureQuestionMark($question);
+        $values = Str::flatten($values);
+        
+        $defaultIndex = $this->resolveChoiceDefaultIndex($values, $default);
+
+        // Interactive mode with arrow key support.
+        if ($this->canUseInteractiveChoice()) {
+            return $this->interactiveChoice($question, $values, $defaultIndex);
+        }
+
+        // Fallback mode (non-interactive / unsupported terminal).
+        return $this->fallbackChoice($question, $values, $defaultIndex);
+    }
+
+    /**
+     * Resolve the default option index.
+     *
+     * @param array $options
+     * @param mixed $defaultValue
+     * @return int
+     */
+    private function resolveChoiceDefaultIndex(array $options, $defaultValue): int
+    {
+        if ($defaultValue === null || $defaultValue === '') {
+            return 0;
+        }
+
+        // Allow numeric default like "1" / 1.
+        if (is_int($defaultValue) || (is_string($defaultValue) && ctype_digit($defaultValue))) {
+            $index = max(0, (int) $defaultValue - 1);
+            return $options[$index] ?? null ? $index : 0;
+        }
+
+        foreach ($options as $index => $option) {
+            if ((string) $option === (string) $defaultValue) {
+                return $index;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Check if terminal can handle raw interactive key reading.
+     *
+     * @return bool
+     */
+    private function canUseInteractiveChoice(): bool
+    {
+        if (!$this->runningInConsole() || !defined('STDIN')) {
+            return false;
+        }
+
+        if (DIRECTORY_SEPARATOR === '\\') {
+            return function_exists('sapi_windows_vt100_support');
+        }
+
+        return function_exists('shell_exec');
+    }
+
+    /**
+     * Render a simple arrow-key interactive menu and return selected option.
+     *
+     * @param string $question
+     * @param array $options
+     * @param int $selectedIndex
+     * @return mixed
+     */
+    private function interactiveChoice(string $question, array $options, int $selectedIndex)
+    {
+        $total = count($options);
+        $maxLines = $total + 2;
+        $write = static function (string $text): void {
+            if (defined('STDOUT')) {
+                fwrite(STDOUT, $text);
+                fflush(STDOUT);
+            } else {
+                echo $text;
+            }
+        };
+
+        $draw = function () use ($question, $options, &$selectedIndex, $total, $write): void {
+            $write($question . PHP_EOL);
+            foreach ($options as $i => $option) {
+                $marker = $i === $selectedIndex ? '›' : ' ';
+                $write(sprintf(" %s [%d] %s", $marker, $i + 1, (string) $option) . PHP_EOL);
+            }
+            $write(" Use ↑/↓ to choose, Enter to confirm, number key to select" . PHP_EOL);
+        };
+
+        $restoreMode = static function (): void {
+            if (DIRECTORY_SEPARATOR !== '\\') {
+                @shell_exec('stty sane');
+            }
+        };
+
+        try {
+            if (DIRECTORY_SEPARATOR !== '\\') {
+                @shell_exec('stty -icanon -echo');
+            }
+
+            $draw();
+            while (true) {
+                $char = fread(STDIN, 1);
+                if ($char === false || $char === '') {
+                    continue;
+                }
+
+                if ($char === "\033") {
+                    $next = fread(STDIN, 1);
+                    $third = fread(STDIN, 1);
+
+                    if ($next === '[' && $third === 'A') {
+                        $selectedIndex = ($selectedIndex - 1 + $total) % $total;
+                    } elseif ($next === '[' && $third === 'B') {
+                        $selectedIndex = ($selectedIndex + 1) % $total;
+                    } else {
+                        return $options[$selectedIndex];
+                    }
+                } elseif ($char === "\r" || $char === "\n") {
+                    return $options[$selectedIndex];
+                } elseif (ctype_digit($char)) {
+                    $pick = (int) $char - 1;
+                    if (isset($options[$pick])) {
+                        return $options[$pick];
+                    }
+
+                    return $options[$selectedIndex];
+                } else {
+                    // Unknown key -> default/selected value.
+                    return $options[$selectedIndex];
+                }
+
+                // Repaint menu in place.
+                $write("\033[" . $maxLines . "A");
+                for ($i = 0; $i < $maxLines; $i++) {
+                    $write("\033[2K");
+                    if ($i < $maxLines - 1) {
+                        $write("\033[1B");
+                    }
+                }
+                $write("\033[" . ($maxLines - 1) . "A");
+                $draw();
+            }
+        } finally {
+            $restoreMode();
+        }
+    }
+
+    /**
+     * Non-interactive choice fallback using a simple prompt.
+     *
+     * @param string $question
+     * @param array $options
+     * @param int $defaultIndex
+     * @return mixed
+     */
+    private function fallbackChoice(string $question, array $options, int $defaultIndex)
+    {
+        echo $question . PHP_EOL;
+        foreach ($options as $i => $option) {
+            $marker = $i === $defaultIndex ? '*' : ' ';
+            echo sprintf(" %s [%d] %s", $marker, $i + 1, (string) $option) . PHP_EOL;
+        }
+
+        $answer = trim(readline("> "));
+        if ($answer === '') {
+            return $options[$defaultIndex];
+        }
+
+        if (ctype_digit($answer)) {
+            $index = (int) $answer - 1;
+            return $options[$index] ?? $options[$defaultIndex];
+        }
+
+        foreach ($options as $option) {
+            if (Str::lower((string) $option) === Str::lower($answer)) {
+                return $option;
+            }
+        }
+
+        return $options[$defaultIndex];
+    }
+
+
+    /**
+     * Check if question contains ? and add if missing
+     *
+     * @param string $question
+     * @return string
+     */
+    private function ensureQuestionMark($question) {
+        if (substr($question, -1) !== '?') {
+            $question .= '?';
+        }
+
+        return $question;
     }
 
     /**

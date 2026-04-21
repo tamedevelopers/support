@@ -44,7 +44,7 @@ class ConfigCommand extends CommandHelper
     public function publish()
     {
         [$method, $force] = [
-            $this->argument('config') ?: $this->argument('name'),
+            $this->argument('name'),
             (bool) $this->flag('force') ?: false,
         ];
 
@@ -68,6 +68,16 @@ class ConfigCommand extends CommandHelper
     {
         $paths = Installer::getPathsData(
             realpath(__DIR__ . '/../')
+        );
+
+        $choice = $this->choice(
+            'Select the mail config file to publish',
+            ['mail', 'tame'],
+            'mail'
+        );
+
+        dd(
+            $choice,
         );
 
         Installer::createTameMailer($paths, $force);
