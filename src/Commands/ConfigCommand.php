@@ -73,7 +73,7 @@ class ConfigCommand extends CommandHelper
         $choice = $this->choice(
             'Select the mail config file to publish',
             ['mail', 'tame'],
-            'mail'
+            // 'mail'
         );
 
         dd(

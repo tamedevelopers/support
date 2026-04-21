@@ -368,13 +368,9 @@ class CommandHelper
     /**
      * Prompt the user to choose from a list of values.
      *
-     * Usage examples:
-     * - choice('Which starter kit?', ['Breeze', 'Breeze + Inertia', 'Bootstrap'], 'Breeze')
-     * - choice('Which starter kit?', 'Breeze', 'Breeze + Inertia', 'Bootstrap', 'Breeze')
-     *
-     * Notes:
-     * - Last argument is treated as default value.
-     * - Unknown input resolves to default.
+     * Supports both indexed and associative arrays:
+     * - ['mail', 'tame']
+     * - ['mail' => 'Mail config', 'tame' => 'Tame config']
      *
      * @param string $question
      * @param mixed $values
@@ -384,17 +380,18 @@ class CommandHelper
     protected function choice(string $question, $values, $default = null)
     {
         $question = $this->ensureQuestionMark($question);
-        $values = Str::flatten($values);
-        
-        $defaultIndex = $this->resolveChoiceDefaultIndex($values, $default);
-
-        // Interactive mode with arrow key support.
-        if ($this->canUseInteractiveChoice()) {
-            return $this->interactiveChoice($question, $values, $defaultIndex);
+        $options = $this->normalizeChoiceOptions($values);
+        if (empty($options)) {
+            return $default ?? '';
         }
 
-        // Fallback mode (non-interactive / unsupported terminal).
-        return $this->fallbackChoice($question, $values, $defaultIndex);
+        $defaultIndex = $this->resolveChoiceDefaultIndex($options, $default);
+
+        if ($this->canUseInteractiveChoice()) {
+            return $this->interactiveChoice($question, $options, $defaultIndex);
+        }
+
+        return $this->fallbackChoice($question, $options, $defaultIndex);
     }
 
     /**
@@ -410,14 +407,12 @@ class CommandHelper
             return 0;
         }
 
-        // Allow numeric default like "1" / 1.
-        if (is_int($defaultValue) || (is_string($defaultValue) && ctype_digit($defaultValue))) {
-            $index = max(0, (int) $defaultValue - 1);
-            return $options[$index] ?? null ? $index : 0;
-        }
-
         foreach ($options as $index => $option) {
-            if ((string) $option === (string) $defaultValue) {
+            if (
+                (string) $option['result'] === (string) $defaultValue ||
+                (string) $option['key'] === (string) $defaultValue ||
+                Str::lower((string) $option['label']) === Str::lower((string) $defaultValue)
+            ) {
                 return $index;
             }
         }
@@ -437,7 +432,10 @@ class CommandHelper
         }
 
         if (DIRECTORY_SEPARATOR === '\\') {
-            return function_exists('sapi_windows_vt100_support');
+            if (function_exists('sapi_windows_vt100_support') && defined('STDOUT')) {
+                @sapi_windows_vt100_support(STDOUT, true);
+            }
+            return true;
         }
 
         return function_exists('shell_exec');
@@ -454,7 +452,7 @@ class CommandHelper
     private function interactiveChoice(string $question, array $options, int $selectedIndex)
     {
         $total = count($options);
-        $maxLines = $total + 2;
+        $maxLines = $total + 1;
         $write = static function (string $text): void {
             if (defined('STDOUT')) {
                 fwrite(STDOUT, $text);
@@ -464,13 +462,12 @@ class CommandHelper
             }
         };
 
-        $draw = function () use ($question, $options, &$selectedIndex, $total, $write): void {
+        $draw = function () use ($question, $options, &$selectedIndex, $write): void {
             $write($question . PHP_EOL);
             foreach ($options as $i => $option) {
-                $marker = $i === $selectedIndex ? '›' : ' ';
-                $write(sprintf(" %s [%d] %s", $marker, $i + 1, (string) $option) . PHP_EOL);
+                $marker = $i === $selectedIndex ? '>' : ' ';
+                $write(" {$marker} " . $this->renderChoiceRow((string) $option['label'], (string) $option['key']) . PHP_EOL);
             }
-            $write(" Use ↑/↓ to choose, Enter to confirm, number key to select" . PHP_EOL);
         };
 
         $restoreMode = static function (): void {
@@ -500,20 +497,29 @@ class CommandHelper
                     } elseif ($next === '[' && $third === 'B') {
                         $selectedIndex = ($selectedIndex + 1) % $total;
                     } else {
-                        return $options[$selectedIndex];
+                        return $options[$selectedIndex]['result'];
+                    }
+                } elseif ($char === "\0" || $char === "\xE0") {
+                    // Windows arrow keys: prefix then H(up)/P(down)
+                    $next = fread(STDIN, 1);
+                    if ($next === 'H') {
+                        $selectedIndex = ($selectedIndex - 1 + $total) % $total;
+                    } elseif ($next === 'P') {
+                        $selectedIndex = ($selectedIndex + 1) % $total;
                     }
                 } elseif ($char === "\r" || $char === "\n") {
-                    return $options[$selectedIndex];
-                } elseif (ctype_digit($char)) {
-                    $pick = (int) $char - 1;
-                    if (isset($options[$pick])) {
-                        return $options[$pick];
+                    return $options[$selectedIndex]['result'];
+                } elseif (ctype_alnum($char)) {
+                    foreach ($options as $option) {
+                        if ((string) $option['key'] === (string) $char) {
+                            return $option['result'];
+                        }
                     }
 
-                    return $options[$selectedIndex];
+                    return $options[$selectedIndex]['result'];
                 } else {
                     // Unknown key -> default/selected value.
-                    return $options[$selectedIndex];
+                    return $options[$selectedIndex]['result'];
                 }
 
                 // Repaint menu in place.
@@ -545,26 +551,98 @@ class CommandHelper
         echo $question . PHP_EOL;
         foreach ($options as $i => $option) {
             $marker = $i === $defaultIndex ? '*' : ' ';
-            echo sprintf(" %s [%d] %s", $marker, $i + 1, (string) $option) . PHP_EOL;
+            echo " {$marker} " . $this->renderChoiceRow((string) $option['label'], (string) $option['key']) . PHP_EOL;
         }
 
         $answer = trim(readline("> "));
         if ($answer === '') {
-            return $options[$defaultIndex];
-        }
-
-        if (ctype_digit($answer)) {
-            $index = (int) $answer - 1;
-            return $options[$index] ?? $options[$defaultIndex];
+            return $options[$defaultIndex]['result'];
         }
 
         foreach ($options as $option) {
-            if (Str::lower((string) $option) === Str::lower($answer)) {
-                return $option;
+            if (
+                (string) $option['key'] === $answer ||
+                Str::lower((string) $option['label']) === Str::lower($answer)
+            ) {
+                return $option['result'];
             }
         }
 
-        return $options[$defaultIndex];
+        if (ctype_digit($answer)) {
+            $index = (int) $answer;
+            return $options[$index]['result'] ?? $options[$defaultIndex]['result'];
+        }
+
+        return $options[$defaultIndex]['result'];
+    }
+
+    /**
+     * Normalize choice values into display rows.
+     *
+     * @param mixed $values
+     * @return array<int, array{label:string,key:string,result:mixed}>
+     */
+    private function normalizeChoiceOptions($values): array
+    {
+        if (!is_array($values)) {
+            $values = [$values];
+        }
+
+        $rows = [];
+        $isAssoc = $this->isAssocArray($values);
+
+        if ($isAssoc) {
+            foreach ($values as $key => $value) {
+                $rows[] = [
+                    'label' => (string) $value,
+                    'key' => (string) $key,
+                    'result' => $value,
+                ];
+            }
+
+            return $rows;
+        }
+
+        foreach ($values as $index => $value) {
+            $rows[] = [
+                'label' => (string) $value,
+                'key' => (string) $index,
+                'result' => $value,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Determine whether array is associative.
+     *
+     * @param array $array
+     * @return bool
+     */
+    private function isAssocArray(array $array): bool
+    {
+        if ($array === []) {
+            return false;
+        }
+
+        return array_keys($array) !== range(0, count($array) - 1);
+    }
+
+    /**
+     * Render a dotted row: left label ........ right key.
+     *
+     * @param string $label
+     * @param string $key
+     * @return string
+     */
+    private function renderChoiceRow(string $label, string $key): string
+    {
+        $lineWidth = 70;
+        $dotsCount = $lineWidth - strlen($label) - strlen($key) - 2;
+        $dotsCount = max(4, $dotsCount);
+
+        return $label . ' ' . str_repeat('.', $dotsCount) . ' ' . $key;
     }
 
 
