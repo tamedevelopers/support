@@ -34,14 +34,13 @@ class Installer
         // dummy paths to be created 
         $paths = self::getPathsData(realpath(__DIR__));
 
-
         // only create when files are not present
         if(self::isDummyNotPresent($paths)){
             // create for [tame] 
             self::createTameBash($paths);
 
             // create for [database.php]
-            self::createTameMailer($paths);
+            // self::createTameMailer($paths);
         }
     }
 
@@ -66,11 +65,11 @@ class Installer
     /**
      * Create [database.php] file if not exist
      */
-    private static function createTameMailer($paths) : void
+    public static function createTameMailer($paths, $force = false) : void
     {
         $mail = $paths['mail'];
 
-        if(!File::exists($mail['path'])){
+        if(!File::exists($mail['path']) || $force === true){
 
             self::createConfigDirectory($paths);
 
@@ -82,36 +81,6 @@ class Installer
 
             Logger::info("\n<b>[Mail Config]</b> has been publised successfully!\n\n");
         }
-    }
-
-    /**
-     * Check if dummy data is present
-     * 
-     * @return bool
-     */
-    private static function isDummyNotPresent($paths)
-    {
-        $present = [false];
-        
-        // create for tame
-        if(!File::exists($paths['tame']['path'])){
-            $present[] = true;
-        }
-        
-        // create for mail
-        if(!File::exists($paths['mail']['path'])){
-            $present[] = true;
-        }
-
-        // Check if all elements in $present are false
-        $allFalse = empty(array_filter($present));
-        
-        // All elements in $present are false
-        if ($allFalse) {
-            return false;
-        }
-
-        return true;
     }
 
     /**
@@ -140,6 +109,36 @@ class Installer
                 'dummy' => "/Capsule/Dummy/disposableEmails.dum",
             ],
         ];
+    }
+
+    /**
+     * Check if dummy data is present
+     * 
+     * @return bool
+     */
+    protected static function isDummyNotPresent($paths)
+    {
+        $present = [false];
+        
+        // create for tame
+        if(!File::exists($paths['tame']['path'])){
+            $present[] = true;
+        }
+        
+        // create for mail
+        if(!File::exists($paths['mail']['path'])){
+            $present[] = true;
+        }
+
+        // Check if all elements in $present are false
+        $allFalse = empty(array_filter($present));
+        
+        // All elements in $present are false
+        if ($allFalse) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

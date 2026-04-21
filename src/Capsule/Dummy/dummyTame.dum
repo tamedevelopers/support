@@ -36,6 +36,7 @@ $artisan = new Tamedevelopers\Support\Capsule\Artisan();
 $artisan->registerAll([
     new Tamedevelopers\Support\Commands\MakeCommand,
     new Tamedevelopers\Support\Commands\ProcessorCommand,
+    new Tamedevelopers\Support\Commands\ConfigCommand,
 ]);
 
 

@@ -38,9 +38,6 @@ $mailer = Mail::config([
 // MAIL_SECRET=""
 // MAIL_REGION=""
 
-
-$mailer->obFlush();
-
 $mailer
     ->to('tamedevelopers@gmail.com')
     ->subject('New subject')
