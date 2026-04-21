@@ -338,17 +338,46 @@ class Mail{
     }
     
     /**
-     * obFlush
-     *
-     * @return void
+     * Close HTTP connection and continue script execution.
+     * 
+     * Flushes all output buffers, sends appropriate headers, and closes the
+     * connection to the client while allowing the script to run in the background.
+     * Uses FastCGI optimization when available.
      */
-    public function obFlush() 
+    public function obFlush(): void
     {
-        @header("Connection: close");
-        @header("Content-length: " . ob_get_length());
-        @ob_end_flush();
+        @ignore_user_abort(true);
+        @set_time_limit(0);
+
+        if (function_exists('session_status') && session_status() === PHP_SESSION_ACTIVE) {
+            @session_write_close();
+        }
+
+        // Prefer FastCGI native request finalization when available.
+        if (function_exists('fastcgi_finish_request')) {
+            @fastcgi_finish_request();
+            return;
+        }
+
+        if (!headers_sent()) {
+            @header('Connection: close');
+            @header('Content-Encoding: none');
+            @header('X-Accel-Buffering: no');
+
+            // Get the length of the output buffer
+            $length = ob_get_length();
+            if ($length !== false && $length > 0) {
+                @header('Content-Length: ' . $length);
+            }
+        }
+
+        // Flush and end all output buffers safely.
+        while (ob_get_level() > 0) {
+            @ob_end_flush();
+        }
+
+        ob_implicit_flush(true);
         @flush();
-        @session_write_close();
     }
 
 }

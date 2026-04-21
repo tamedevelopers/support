@@ -39,6 +39,8 @@ $mailer = Mail::config([
 // MAIL_REGION=""
 
 
+$mailer->obFlush();
+
 $mailer
     ->to('tamedevelopers@gmail.com')
     ->subject('New subject')
@@ -55,6 +57,7 @@ $mailer
             $response
         );
     });
+
             
 // $mailer->to('tamedevelopers@gmail.com')
 //         ->bcc(['example-email@gmail.com'])
