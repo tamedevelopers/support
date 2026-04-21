@@ -9,6 +9,7 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Mail;
+use Tamedevelopers\Support\Process\HttpRequest;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Str;
 
@@ -61,6 +62,24 @@ trait MailTrait{
      * @var bool
      */
     private $flushBuffering = false;
+
+    /**
+     * Queued callbacks for direct browser submit mode.
+     * @var array<int, callable>
+     */
+    private $directFlushQueue = [];
+
+    /**
+     * Ensure direct flush queue worker is registered once.
+     * @var bool
+     */
+    private $directFlushRegistered = false;
+
+    /**
+     * Ensure browser response is detached once per request.
+     * @var bool
+     */
+    private $directResponseDetached = false;
     
     /**
      * The resolved "from" address and name.
@@ -755,31 +774,110 @@ trait MailTrait{
      */
     private function ob_crons_flush(callable $callable, ?array $options = null)
     {
-        // Disable output compression
-        if (!headers_sent()) {
-            @ini_set('zlib.output_compression', 'Off');
-        }
-        
-        ob_implicit_flush(true); // Turn on implicit flushing
-        ignore_user_abort(true); // ignore user abort
-        set_time_limit(0); // Disable script timeout
+        // Keep legacy behavior for ajax/fetch/api where autoFlush already works well.
+        if ($this->isAsyncLikeRequest()) {
+            if (is_callable($callable)) {
+                $this->autoFlush($options);
+                $callable();
+            }
 
-        // turn on fast cgi
+            return;
+        }
+
+        // Direct browser submit:
+        // 1) detach response once so browser can complete immediately
+        // 2) run queued callbacks during shutdown
+        $this->directFlushQueue[] = $callable;
+
+        if (!$this->directResponseDetached) {
+            $this->detachDirectBrowserResponse($options);
+        }
+
+        if ($this->directFlushRegistered) {
+            return;
+        }
+
+        $this->directFlushRegistered = true;
+        register_shutdown_function(function () {
+            $this->runDirectFlushQueue();
+        });
+    }
+
+    /**
+     * Heuristic check for ajax/fetch/api style requests.
+     *
+     * @return bool
+     */
+    private function isAsyncLikeRequest(): bool
+    {
+        if (HttpRequest::runningInConsole()) {
+            return false;
+        }
+
+        if (HttpRequest::isAjax()) {
+            return true;
+        }
+
+        $accept = strtolower((string) ($_SERVER['HTTP_ACCEPT'] ?? ''));
+        $contentType = strtolower((string) ($_SERVER['CONTENT_TYPE'] ?? ''));
+        $uri = strtolower((string) ($_SERVER['REQUEST_URI'] ?? ''));
+
+        if (str_contains($accept, 'application/json')) {
+            return true;
+        }
+
+        if (str_contains($contentType, 'application/json')) {
+            return true;
+        }
+
+        return str_contains($uri, '/api/');
+    }
+
+    /**
+     * Close browser connection for direct submit requests.
+     *
+     * @param array|null $options
+     * @return void
+     */
+    private function detachDirectBrowserResponse(?array $options = null): void
+    {
+        $this->directResponseDetached = true;
+
+        ignore_user_abort(true);
+        @set_time_limit(0);
+
+        if (function_exists('session_status') && session_status() === PHP_SESSION_ACTIVE) {
+            @session_write_close();
+        }
+
         if (function_exists('fastcgi_finish_request')) {
-            fastcgi_finish_request();
+            @fastcgi_finish_request();
+            return;
         }
 
-        // Set the HTTP response code ... only available in > PHP 5.4.0
-        http_response_code(200);
-        ob_start(); // Start output buffering
+        $this->autoFlush($options);
+    }
 
-        // execute code block
-        if(is_callable($callable)){
-            $this->autoFlush($options); // flush before calling the callable();
-            $callable(); // call the method needed
+    /**
+     * Execute direct submit queued callbacks after response detach.
+     *
+     * @return void
+     */
+    private function runDirectFlushQueue(): void
+    {
+        foreach ($this->directFlushQueue as $callback) {
+            if (!is_callable($callback)) {
+                continue;
+            }
+
+            try {
+                call_user_func($callback);
+            } catch (\Throwable $e) {
+                continue;
+            }
         }
 
-        ob_implicit_flush(false); // Disable implicit flushing
+        $this->directFlushQueue = [];
     }
 
     /**
@@ -791,32 +889,33 @@ trait MailTrait{
      */
     private function autoFlush(?array $options = [])
     {
+        $options = is_array($options) ? $options : [];
+        $flushEnabled = (bool) ($options['flush'] ?? false);
+        $debugLevel = (int) ($options['debug'] ?? 0);
+
         // If flush is enabled and not in debug mode, set headers for streaming
-        if ($options['flush'] && $options['debug'] === 0) {
+        if ($flushEnabled && $debugLevel === 0) {
             if (!headers_sent()) {
                 @header('Surrogate-Control: BigPipe/1.0');
                 @header('X-Accel-Buffering: no');
                 @header("Content-Encoding: none");  
                 @header("Connection: close");
-                @header("Content-Length: " . ob_get_length());
+
+                $length = ob_get_length();
+                if ($length !== false && $length > 0) {
+                    @header("Content-Length: " . $length);
+                }
             }
         }
 
-        // Flush and end all output buffers if active
-        if (ob_get_level() > 0) {
-            flush();
-            ob_flush();
-            ob_end_flush();
-        }
-
-        // Clean up any remaining buffers if active
-        if (ob_get_level() > 0) {
-            ob_clean();
-            ob_end_clean();
+        // Flush and end all output buffers safely.
+        while (ob_get_level() > 0) {
+            @ob_end_flush();
         }
 
         // Enable implicit flush for real-time output
         ob_implicit_flush(true);
+        @flush();
     }
     
 }

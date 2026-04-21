@@ -55,10 +55,6 @@ $mailer
             $response
         );
     });
-
-dump(
-    'sss'
-);
             
 // $mailer->to('tamedevelopers@gmail.com')
 //         ->bcc(['example-email@gmail.com'])
@@ -75,8 +71,7 @@ dump(
 //         });
 
 
-
-dd(
+dump(
     $mailer,
-    'sss'
+    'last dump()'
 );
