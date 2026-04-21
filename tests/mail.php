@@ -40,22 +40,25 @@ $mailer = Mail::config([
 
 
 $mailer
-        ->to('tamedevelopers@gmail.com')
-        ->subject('New subject')
-        ->body('Hello this is a body text')
-        ->altBody('fff')
-        ->attach(
-            'New Units File',
-            base_path("thousand_units.png"), 
-        )
-        ->send(function($response){
-            // $response
-            dump(
-                $response
-            );
-        });
+    ->to('tamedevelopers@gmail.com')
+    ->subject('New subject')
+    ->body('Hello this is a body text')
+    ->altBody('fff')
+    ->attach(
+        'New Units File',
+        base_path("thousand_units.png"), 
+    )
+    ->flush(true)
+    ->send(function($response){
+        // $response
+        dump(
+            $response
+        );
+    });
 
-
+dump(
+    'sss'
+);
             
 // $mailer->to('tamedevelopers@gmail.com')
 //         ->bcc(['example-email@gmail.com'])

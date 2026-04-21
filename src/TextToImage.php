@@ -627,8 +627,9 @@ class TextToImage
     }
 
     /**
-     * Shape overlays: `diagonal` is one lighter BR triangle. Others use nested fills only — edges match diagonal
-     * (clean transitions between filled colours, no drawn stroke or double outline).
+     * Shape overlays: `diagonal` is one lighter BR triangle (reference style).
+     * Other shape variants keep their geometry but use one overlay tone only
+     * (clean 2-tone split with no extra nested colour bands).
      *
      * @param resource|\GdImage $img
      * @param array{0:int,1:int,2:int} $rgb bg_color seed for flat overlay fills
@@ -658,18 +659,6 @@ class TextToImage
                     },
                     $fillBand
                 );
-                $innerH = $halfH * 0.42;
-                $fillSpine = self::shapeAllocateMultiply($img, $rgb, 1.26);
-                self::applySolidWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) use ($innerH, $cy) {
-                        return abs($y - $cy) < $innerH;
-                    },
-                    $fillSpine
-                );
                 break;
             }
 
@@ -692,21 +681,6 @@ class TextToImage
                     },
                     $fillRing
                 );
-                $rMid = ($rIn + $rOut) / 2.0;
-                $wSpine = ($rOut - $rIn) * 0.28;
-                $fillSpine = self::shapeAllocateMultiply($img, $rgb, 0.62);
-                self::applySolidWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) use ($cx, $cy, $rMid, $wSpine, $rIn, $rOut) {
-                        $d = hypot($x - $cx, $y - $cy);
-
-                        return $d > $rIn && $d < $rOut && abs($d - $rMid) <= $wSpine / 2.0;
-                    },
-                    $fillSpine
-                );
                 break;
             }
 
@@ -725,20 +699,6 @@ class TextToImage
                     },
                     $fillTop
                 );
-                $r2 = min(255, (int) round($rgb[0] * 0.85 + 255 * 0.15));
-                $g2 = min(255, (int) round($rgb[1] * 0.85 + 255 * 0.15));
-                $b2 = min(255, (int) round($rgb[2] * 0.85 + 255 * 0.15));
-                $fillCap = (int) imagecolorallocate($img, $r2, $g2, $b2);
-                self::applySolidWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) {
-                        return $y < $sz * 0.2;
-                    },
-                    $fillCap
-                );
                 break;
             }
 
@@ -749,18 +709,11 @@ class TextToImage
                 $k = (float) max(2, (int) round($sMax * 0.52));
                 $fillOuter = self::shapeAllocateMultiply($img, $rgb, 1.18);
                 self::applySolidInTriangle($img, $type, $size, $radius, 0.0, 0.0, $k, 0.0, 0.0, $k, $fillOuter);
-                $ki = $k * 0.74;
-                $fillInner = self::shapeAllocateMultiply($img, $rgb, 1.08);
-                self::applySolidInTriangle($img, $type, $size, $radius, 0.0, 0.0, $ki, 0.0, 0.0, $ki, $fillInner);
                 break;
 
             case 'split': {
                 $mid = (int) floor($size / 2);
-                $halfW = max(1, (int) round($size * 0.028));
-                $xL = max(0, $mid - $halfW);
-                $xR = min($sMax, $mid + $halfW);
-                $left = self::shapeAllocateMultiply($img, $rgb, 0.88);
-                $midFill = self::shapeAllocateMultiply($img, $rgb, 0.985);
+                $xL = max(0, $mid);
                 $right = self::shapeAllocateMultiply($img, $rgb, 1.1);
                 self::applySolidWhere(
                     $img,
@@ -768,27 +721,7 @@ class TextToImage
                     $size,
                     $radius,
                     static function (int $x, int $y, int $sz) use ($xL) {
-                        return $x < $xL;
-                    },
-                    $left
-                );
-                self::applySolidWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) use ($xL, $xR) {
-                        return $x >= $xL && $x <= $xR;
-                    },
-                    $midFill
-                );
-                self::applySolidWhere(
-                    $img,
-                    $type,
-                    $size,
-                    $radius,
-                    static function (int $x, int $y, int $sz) use ($xR) {
-                        return $x > $xR;
+                        return $x >= $xL;
                     },
                     $right
                 );

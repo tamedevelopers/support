@@ -18,17 +18,17 @@ $path1 = TextToImage::run([
     // 'text_color' => 'rgb(255, 0, 0)',
     'transparent' => true,
     'type' => 'octagram',
-    // 'shape' => 'split',
+    'shape' => 'split',
     // 'gradient' => 'cosmic',
 ]);
 
 $path2 = TextToImage::run([
     'name' => 'GitHub Microsoft',
     'font_weight' => 'bold',
-    // 'bg_color' => '#000000',
+    'bg_color' => '#000000',
     'text_color' => '#4A5568',
     'type' => 'circle',
-    'shape' => 'split',
+    'shape' => 'diagonal',
 ]);
 
 // $path3 = $ntoimage->run([
