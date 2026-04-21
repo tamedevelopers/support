@@ -352,7 +352,7 @@ class CommandHelper
     /**
      * Prompt the user for free text input.
      */
-    protected function ask(string $question, string $default = ''): string
+    protected function ask(string $question, string $default = null): string
     {
         $question = $this->ensureQuestionMark($question);
 
@@ -431,11 +431,10 @@ class CommandHelper
             return false;
         }
 
+        // PowerShell/Windows terminals can intercept arrows and make raw input freeze.
+        // Use fallback readline mode on Windows for reliable text/number/default selection.
         if (DIRECTORY_SEPARATOR === '\\') {
-            if (function_exists('sapi_windows_vt100_support') && defined('STDOUT')) {
-                @sapi_windows_vt100_support(STDOUT, true);
-            }
-            return true;
+            return false;
         }
 
         return function_exists('shell_exec');
@@ -453,6 +452,7 @@ class CommandHelper
     {
         $total = count($options);
         $maxLines = $total + 1;
+        $terminalWidth = $this->resolveTerminalWidth();
         $write = static function (string $text): void {
             if (defined('STDOUT')) {
                 fwrite(STDOUT, $text);
@@ -462,11 +462,12 @@ class CommandHelper
             }
         };
 
-        $draw = function () use ($question, $options, &$selectedIndex, $write): void {
+        $draw = function () use ($question, $options, &$selectedIndex, $write, $terminalWidth): void {
             $write($question . PHP_EOL);
             foreach ($options as $i => $option) {
                 $marker = $i === $selectedIndex ? '>' : ' ';
-                $write(" {$marker} " . $this->renderChoiceRow((string) $option['label'], (string) $option['key']) . PHP_EOL);
+                $row = $this->renderChoiceRow((string) $option['label'], (string) $option['key'], $terminalWidth - 3);
+                $write(" {$marker} {$row}" . PHP_EOL);
             }
         };
 
@@ -483,43 +484,26 @@ class CommandHelper
 
             $draw();
             while (true) {
-                $char = fread(STDIN, 1);
-                if ($char === false || $char === '') {
+                $key = $this->readChoiceKey();
+                if ($key === '') {
                     continue;
                 }
 
-                if ($char === "\033") {
-                    $next = fread(STDIN, 1);
-                    $third = fread(STDIN, 1);
-
-                    if ($next === '[' && $third === 'A') {
-                        $selectedIndex = ($selectedIndex - 1 + $total) % $total;
-                    } elseif ($next === '[' && $third === 'B') {
-                        $selectedIndex = ($selectedIndex + 1) % $total;
-                    } else {
-                        return $options[$selectedIndex]['result'];
-                    }
-                } elseif ($char === "\0" || $char === "\xE0") {
-                    // Windows arrow keys: prefix then H(up)/P(down)
-                    $next = fread(STDIN, 1);
-                    if ($next === 'H') {
-                        $selectedIndex = ($selectedIndex - 1 + $total) % $total;
-                    } elseif ($next === 'P') {
-                        $selectedIndex = ($selectedIndex + 1) % $total;
-                    }
-                } elseif ($char === "\r" || $char === "\n") {
+                if ($key === 'up') {
+                    $selectedIndex = ($selectedIndex - 1 + $total) % $total;
+                } elseif ($key === 'down') {
+                    $selectedIndex = ($selectedIndex + 1) % $total;
+                } elseif ($key === 'enter') {
                     return $options[$selectedIndex]['result'];
-                } elseif (ctype_alnum($char)) {
+                } elseif (strlen($key) === 1 && ctype_alnum($key)) {
                     foreach ($options as $option) {
-                        if ((string) $option['key'] === (string) $char) {
+                        if ((string) $option['key'] === (string) $key) {
                             return $option['result'];
                         }
                     }
-
-                    return $options[$selectedIndex]['result'];
                 } else {
-                    // Unknown key -> default/selected value.
-                    return $options[$selectedIndex]['result'];
+                    // Unknown key: ignore and keep waiting for a valid key.
+                    continue;
                 }
 
                 // Repaint menu in place.
@@ -548,10 +532,13 @@ class CommandHelper
      */
     private function fallbackChoice(string $question, array $options, int $defaultIndex)
     {
+        $terminalWidth = $this->resolveTerminalWidth();
+
         echo $question . PHP_EOL;
         foreach ($options as $i => $option) {
             $marker = $i === $defaultIndex ? '*' : ' ';
-            echo " {$marker} " . $this->renderChoiceRow((string) $option['label'], (string) $option['key']) . PHP_EOL;
+            $row = $this->renderChoiceRow((string) $option['label'], (string) $option['key'], $terminalWidth - 3);
+            echo " {$marker} {$row}" . PHP_EOL;
         }
 
         $answer = trim(readline("> "));
@@ -636,13 +623,76 @@ class CommandHelper
      * @param string $key
      * @return string
      */
-    private function renderChoiceRow(string $label, string $key): string
+    private function renderChoiceRow(string $label, string $key, ?int $lineWidth = null): string
     {
-        $lineWidth = 70;
+        $lineWidth = $lineWidth ?? $this->resolveTerminalWidth();
         $dotsCount = $lineWidth - strlen($label) - strlen($key) - 2;
         $dotsCount = max(4, $dotsCount);
 
         return $label . ' ' . str_repeat('.', $dotsCount) . ' ' . $key;
+    }
+
+    /**
+     * Read a single choice key from terminal.
+     * Returns: up|down|enter|single-char|''.
+     *
+     * @return string
+     */
+    private function readChoiceKey(): string
+    {
+        $char = fread(STDIN, 1);
+        if ($char === false || $char === '') {
+            return '';
+        }
+
+        if ($char === "\033") {
+            $next = fread(STDIN, 1);
+            $third = fread(STDIN, 1);
+            if ($next === '[' && $third === 'A') {
+                return 'up';
+            }
+            if ($next === '[' && $third === 'B') {
+                return 'down';
+            }
+            return '';
+        }
+
+        if ($char === "\r" || $char === "\n") {
+            return 'enter';
+        }
+
+        return $char;
+    }
+
+    /**
+     * Resolve current terminal width with safe fallbacks.
+     *
+     * @return int
+     */
+    private function resolveTerminalWidth(): int
+    {
+        $width = (int) ($_SERVER['COLUMNS'] ?? 0);
+        if ($width > 20) {
+            return $width;
+        }
+
+        if (DIRECTORY_SEPARATOR === '\\' && function_exists('shell_exec')) {
+            $out = (string) @shell_exec('powershell -NoProfile -NonInteractive -Command "$Host.UI.RawUI.WindowSize.Width"');
+            $width = (int) trim($out);
+            if ($width > 20) {
+                return $width;
+            }
+        }
+
+        if (DIRECTORY_SEPARATOR !== '\\' && function_exists('shell_exec')) {
+            $out = (string) @shell_exec('tput cols 2>/dev/null');
+            $width = (int) trim($out);
+            if ($width > 20) {
+                return $width;
+            }
+        }
+
+        return 80;
     }
 
 
