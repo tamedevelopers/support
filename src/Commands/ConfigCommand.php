@@ -38,31 +38,33 @@ class ConfigCommand extends CommandHelper
         Logger::writeln('');
     }
 
+    /**
+     * Publish a configuration file [<name>] --force=[bool]
+     */
     public function publish()
     {
         [$method, $force] = [
-            $this->argument('name'), 
+            $this->argument('config') ?: $this->argument('name'),
             (bool) $this->flag('force') ?: false,
         ];
 
-        // since devs can build untop on my publish
-        // check if method exists and call the method
-        dd(
-            $name,
-            $force,
-        );
+        // Allow extending publish targets by adding methods (e.g. `mail`).
+        // Only dispatch to public methods on this command class.
+        if (empty($method)) {
+            return $this->error('Publish target is required. Example: config:publish mail');
+        }
 
-        if(method_exists($this, $method)){
+        if (method_exists($this, $method) && is_callable([$this, $method])) {
             return $this->{$method}($force);
         }
 
-        return $this->error("Method {$method} not found");
+        return $this->error("Publish target [{$method}] not found");
     }
     
     /**
      * Publish the mail config file
      */
-    public function mail($force = false): string
+    private function mail($force = false): void
     {
         $paths = Installer::getPathsData(
             realpath(__DIR__ . '/../')
