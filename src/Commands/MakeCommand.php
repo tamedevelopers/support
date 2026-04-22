@@ -65,6 +65,17 @@ class MakeCommand extends CommandHelper
     {
         [$className, $namespace, $filePath, $directory] = $this->parseInput();
 
+        if(empty($className)){
+            $className = $this->ask(
+                question: 'Service name is required',
+                required: true
+            );
+
+            [$className, $namespace, $filePath, $directory] = $this->parseInput(
+                $className
+            );
+        }
+
         if ($this->serviceExists($filePath)) {
             return;
         }

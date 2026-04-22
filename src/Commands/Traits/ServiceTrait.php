@@ -13,12 +13,13 @@ trait ServiceTrait{
 
     /**
      * Parse and normalize the user input into usable parts.
-     *
+     * 
+     * @param string|null $passedName
      * @return array
      */
-    protected function parseInput(): array
+    protected function parseInput($passedName = null): array
     {
-        $name = str_replace('\\', '/', $this->argument('name')); // normalize slashes
+        $name = str_replace('\\', '/', $passedName ?? $this->argument('name')); // normalize slashes
         $segments = explode('/', $name);
 
         $className    = Str::studly(array_pop($segments));
