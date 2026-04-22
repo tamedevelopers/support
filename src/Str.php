@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 use Tamedevelopers\Support\Purify;
+use Tamedevelopers\Support\Traits\StrTextTrait;
 use Tamedevelopers\Support\Traits\StrTrait;
 
 class Str
 {
-    use StrTrait;
+    use StrTrait, StrTextTrait;
     
     /**
      * Pad the left side of a string.

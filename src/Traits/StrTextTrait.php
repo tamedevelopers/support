@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Tamedevelopers\Support;
+namespace Tamedevelopers\Support\Traits;
 
 
-class TextDirection { 
+trait StrTextTrait { 
 
     // Only LTR languages array
     private static $ltrLanguages = [

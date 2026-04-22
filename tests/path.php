@@ -13,7 +13,7 @@ $array = [
 
 
 dd(
-
+    urlHelper()->path(),
     directory(),
     base_path(),
     storage_path(),
