@@ -10,7 +10,7 @@ $url2 = 'https://www.jumia.com.ng/ashion-kq-mens-stylish-grey-silver-turf-footba
 
 dd(
     (new WebScraper)
-        ->setUrl('https://www.aliexpress.com/item/1005010595606666.html?spm=a2g0o.tm1000029706.d1.1.519c474cIxz1fd&sourceType=561&pvid=5be201e4-688d-408d-9406-d9afd9354f39&pdp_ext_f=%7B%22ship_from%22%3A%22CN%22%2C%22sku_id%22%3A%2212000052930334905%22%7D&scm=1007.28480.478283.0&scm-url=1007.28480.478283.0&scm_id=1007.28480.478283.0&aecmd=true')
+        ->setUrl('https://www.aliexpress.com/item/1005010595606666.html')
         ->setSelectors([
             'title' => 'h1',
             'price' => 'span.price',

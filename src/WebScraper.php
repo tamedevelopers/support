@@ -84,9 +84,9 @@ class WebScraper
         
         // Set default selectors (can be customized)
         $this->selectors = $config['selectors'] ?? [
-            'name' => 'div h1.-fs20, h1[data-pl="product-title"]',
-            'price' => 'div span.-prxs',
-            'description' => '.markup.-mhm.-pvl.-oxa.-sc',
+            'name' => 'div h1.-fs20, .title--wrap--UUHae_g h1',
+            'price' => 'div span.-prxs, .price-default--current--F8OlYIo, .ux-textspans',
+            'description' => '.markup.-mhm.-pvl.-oxa.-sc, .description--wrap--LscZ0He',
             'colors' => '.itm-sel',
             'sizes' => '.vl',
             'images' => 'img.product-image, .product-gallery img, [data-image]'
@@ -125,7 +125,7 @@ class WebScraper
     /**
      * Set custom selectors for scraping
      * 
-     * @param array $selectors Associative array of CSS selectors
+     * @param array $selectors Associative array of CSS selectors (use "name" for the product title; "title" is an alias and maps to "name")
      * @return self Returns instance for method chaining
      */
     public function setSelectors(array $selectors): self
@@ -238,7 +238,50 @@ class WebScraper
             $this->productData['main_image'] = $this->productData['images'][0];
         }
         
+        $this->applyOpenGraphTitleFallback();
+        
         return $this;
+    }
+    
+    /**
+     * When CSS selectors find no title, use Open Graph or Twitter card title if present.
+     */
+    private function applyOpenGraphTitleFallback(): void
+    {
+        if (empty($this->productData['name'])) {
+            $name = $this->getMetaByProperty('og:title') 
+                ?? $this->getMetaByProperty('twitter:title');
+
+            if (!empty($name)) {
+                $this->productData['name'] = $this->decodeHtmlText($name);
+            }
+        }
+
+        if (empty($this->productData['description'])) {
+            $description = $this->getMetaByProperty('og:description') 
+                ?? $this->getMetaByProperty('twitter:description');
+
+            if (!empty($description)) {
+                $this->productData['description'] = $this->decodeHtmlText($description);
+            }
+        }
+
+    }
+    
+    private function getMetaByProperty(string $property): string
+    {
+        $n = $this->xpath->query("//meta[translate(@property,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='" . strtolower($property) . "']/@content");
+        if ($n && $n->length > 0) {
+            $v = trim($n->item(0)->nodeValue ?? '');
+            return $v;
+        }
+        
+        return '';
+    }
+    
+    private function decodeHtmlText(string $s): string
+    {
+        return trim(html_entity_decode($s, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 
     /**
@@ -739,7 +782,7 @@ class WebScraper
      */
     private function cssToXPath(string $selector): string
     {
-        $selector = trim($selector);
+        $selector = $this->normalizeCssSelectorQuotes(trim($selector));
         
         // Split by descendant combinator spaces
         $parts = preg_split('/\s+/', $selector, -1, PREG_SPLIT_NO_EMPTY);
@@ -818,22 +861,64 @@ class WebScraper
             return "*[@id='{$matches[1]}']";
         }
         
+        // Element with attribute: h1[data-pl="x"], a[href="..."], h1[title] (one [...] only)
+        if (preg_match('/^([a-zA-Z][a-zA-Z0-9]*)\[([A-Za-z_][A-Za-z0-9_:\-]*)\]$/u', $selector, $m)) {
+            return "{$m[1]}[@{$m[2]}]";
+        }
+        if (preg_match('/^([a-zA-Z][a-zA-Z0-9]*)\[([A-Za-z_][A-Za-z0-9_:\-]*)="((?:\\\\.|[^"\\\\])*)"\]$/u', $selector, $m)) {
+            $v = $this->escapeXpathStringLiteral($m[3]);
+
+            return "{$m[1]}[@{$m[2]}={$v}]";
+        }
+        if (preg_match("/^([a-zA-Z][a-zA-Z0-9]*)\[([A-Za-z_][A-Za-z0-9_:\-]*)='((?:\\\\'|[^'])*)'\]$/u", $selector, $m)) {
+            $v = $this->escapeXpathStringLiteral(stripslashes($m[3]));
+
+            return "{$m[1]}[@{$m[2]}={$v}]";
+        }
+        if (preg_match('/^([a-zA-Z][a-zA-Z0-9]*)\[([A-Za-z_][A-Za-z0-9_:\-]*)=([^]\s\]]+)\]$/u', $selector, $m)) {
+            $v = $this->escapeXpathStringLiteral($m[3]);
+
+            return "{$m[1]}[@{$m[2]}={$v}]";
+        }
+        
         // Just element: div
         if (preg_match('/^[a-zA-Z][a-zA-Z0-9]*$/', $selector)) {
             return $selector;
         }
         
         // Attribute selectors: [attr] or [attr=value]
-        if (preg_match('/^\[([a-zA-Z][a-zA-Z0-9_-]*)(?:=([\'"]?)([^\'\"]+)\2)?\]$/', $selector, $matches)) {
+        if (preg_match('/^\[([a-zA-Z_][A-Za-z0-9_:\-]*)(?:=([\'"]?)([^\'\"]+)\2)?\]$/u', $selector, $matches)) {
             $attr = $matches[1];
-            if (isset($matches[3])) {
-                return "*[@{$attr}='{$matches[3]}']";
+            if (isset($matches[3]) && $matches[3] !== '') {
+                $v = $this->escapeXpathStringLiteral($matches[3]);
+
+                return "*[@{$attr}={$v}]";
             }
             return "*[@{$attr}]";
         }
         
         // Default: return as is
         return "*[contains(concat(' ', @class, ' '), ' {$selector} ')]";
+    }
+    
+    /**
+     * Escape a value for XPath string literals in predicates.
+     */
+    private function escapeXpathStringLiteral(string $value): string
+    {
+        return "'" . str_replace("'", "''", $value) . "'";
+    }
+    
+    /**
+     * Replace Unicode “smart” quotes with ASCII so attribute selectors parse reliably.
+     */
+    private function normalizeCssSelectorQuotes(string $selector): string
+    {
+        return str_replace(
+            ["\u{201C}", "\u{201D}", "\u{2018}", "\u{2019}", "\u{00AB}", "\u{00BB}"],
+            ['"', '"', "'", "'", '"', '"'],
+            $selector
+        );
     }
     
     /**
