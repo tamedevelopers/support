@@ -84,11 +84,11 @@ class WebScraper
         
         // Set default selectors (can be customized)
         $this->selectors = $config['selectors'] ?? [
-            'name' => 'h1.product-title, .product-name, [itemprop="name"], h1.-fs20',
-            'price' => '.price, .product-price, [itemprop="price"], div span.-prxs',
-            'description' => '.description, .product-description, [itemprop="description"]',
-            'colors' => '.color, .product-color, [data-color]',
-            'sizes' => '.size, .product-size, [data-size]',
+            'name' => 'div h1.-fs20, h1[data-pl="product-title"]',
+            'price' => 'div span.-prxs',
+            'description' => '.markup.-mhm.-pvl.-oxa.-sc',
+            'colors' => '.itm-sel',
+            'sizes' => '.vl',
             'images' => 'img.product-image, .product-gallery img, [data-image]'
         ];
         
@@ -364,31 +364,28 @@ class WebScraper
     private function extractImages(): array
     {
         $images = [];
+        $images = array_merge($images, $this->extractImageElements($this->selectors['images']));
+        $images = array_merge($images, $this->extractImagesFromJsonLd());
         
-        // Try from selectors
-        $imageElements = $this->extractImageElements($this->selectors['images']);
-        $images = array_merge($images, $imageElements);
-        
-        // Try common image patterns
-        if (empty($images)) {
-            // Look for img tags with product-related classes
-            $imageElements = $this->extractImageElements('img[class*="product"], img[class*="gallery"], img[class*="main"]');
-            $images = array_merge($images, $imageElements);
+        if ($images === []) {
+            $images = array_merge(
+                $images,
+                $this->extractImageElements('img[class*="product"], img[class*="gallery"], img[class*="main"]')
+            );
         }
         
-        // Try to find images in meta tags (Open Graph)
-        if (empty($images)) {
+        if ($images === []) {
             $ogImage = $this->extractMetaImage();
             if ($ogImage) {
                 $images[] = $ogImage;
             }
         }
         
-        // Remove duplicates and resolve relative URLs
-        $images = array_unique($images);
+        $images = array_values(array_filter($images, static fn ($u): bool => is_string($u) && $u !== ''));
         $images = array_map([$this, 'resolveUrl'], $images);
+        $images = array_values(array_unique($images));
         
-        return array_values($images);
+        return $images;
     }
     
     /**
@@ -400,32 +397,182 @@ class WebScraper
     private function extractImageElements(string $selector): array
     {
         $images = [];
-        $xpathQuery = $this->cssToXPath($selector);
-        $nodes = $this->xpath->query($xpathQuery);
-        
-        if ($nodes && $nodes->length > 0) {
-            foreach ($nodes as $node) {
-                // Try to get src attribute
-                $src = $node->getAttribute('src');
-                if ($src) {
-                    $images[] = $src;
-                }
-                
-                // Try data-src for lazy loading
-                $dataSrc = $node->getAttribute('data-src');
-                if ($dataSrc) {
-                    $images[] = $dataSrc;
-                }
-                
-                // Try data-original
-                $dataOriginal = $node->getAttribute('data-original');
-                if ($dataOriginal) {
-                    $images[] = $dataOriginal;
+        $selectorList = array_map('trim', explode(',', $selector));
+        foreach ($selectorList as $sel) {
+            if ($sel === '') {
+                continue;
+            }
+            $xpathQuery = $this->cssToXPath($sel);
+            $nodes = $this->xpath->query($xpathQuery);
+            if ($nodes && $nodes->length > 0) {
+                foreach ($nodes as $node) {
+                    if (!$node instanceof \DOMElement) {
+                        continue;
+                    }
+                    $images = array_merge($images, $this->collectImageUrlsFromElement($node));
                 }
             }
         }
         
         return $images;
+    }
+    
+    /**
+     * @return list<string>
+     */
+    private function collectImageUrlsFromElement(\DOMElement $node): array
+    {
+        $urls = [];
+        foreach (['src', 'data-src', 'data-lazy', 'data-lazy-src', 'data-lazyload', 'data-original'] as $attr) {
+            $v = $node->getAttribute($attr);
+            if ($v !== '') {
+                $urls[] = $v;
+            }
+        }
+        $srcset = $node->getAttribute('srcset');
+        if ($srcset !== '') {
+            $urls = array_merge($urls, $this->parseSrcsetToUrls($srcset));
+        }
+        
+        return $urls;
+    }
+    
+    /**
+     * @return list<string>
+     */
+    private function parseSrcsetToUrls(string $srcset): array
+    {
+        $out = [];
+        if ($srcset === '') {
+            return $out;
+        }
+        $candidates = preg_split('/\s*,\s*/', $srcset) ?: [];
+        foreach ($candidates as $cand) {
+            $cand = trim($cand);
+            if ($cand === '') {
+                continue;
+            }
+            $parts = preg_split('/\s+/', $cand, 2, PREG_SPLIT_NO_EMPTY);
+            if ($parts === false || $parts === []) {
+                continue;
+            }
+            $url = $parts[0] ?? '';
+            if ($url === '') {
+                continue;
+            }
+            if (str_starts_with($url, '//')) {
+                $url = 'https:' . $url;
+            }
+            $out[] = $url;
+        }
+        
+        return $out;
+    }
+    
+    /**
+     * @return list<string>
+     */
+    private function extractImagesFromJsonLd(): array
+    {
+        $scripts = $this->xpath->query('//script[@type="application/ld+json"]');
+        if ($scripts === false || $scripts->length === 0) {
+            return [];
+        }
+        $all = [];
+        for ($i = 0; $i < $scripts->length; $i++) {
+            $item = $scripts->item($i);
+            if ($item === null) {
+                continue;
+            }
+            $text = trim($item->textContent ?? '');
+            if ($text === '') {
+                continue;
+            }
+            $data = json_decode($text, true);
+            if (!is_array($data)) {
+                continue;
+            }
+            $all = array_merge($all, $this->collectProductImagesFromJsonLd($data));
+        }
+        
+        return $all;
+    }
+    
+    /**
+     * @param array<string, mixed> $data
+     * @return list<string>
+     */
+    private function collectProductImagesFromJsonLd(array $data): array
+    {
+        $images = [];
+        if ($this->jsonLdTypeIs($data, 'Product') && !empty($data['image'])) {
+            $images = array_merge($images, $this->normalizeJsonLdImageValue($data['image']));
+        }
+        foreach ($data as $v) {
+            if (is_array($v)) {
+                $images = array_merge($images, $this->collectProductImagesFromJsonLd($v));
+            }
+        }
+        
+        return $images;
+    }
+    
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function jsonLdTypeIs(array $data, string $type): bool
+    {
+        if (!isset($data['@type'])) {
+            return false;
+        }
+        $t = $data['@type'];
+        if (is_string($t)) {
+            return $t === $type;
+        }
+        if (is_array($t)) {
+            return in_array($type, $t, true);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * @return list<string>
+     */
+    private function normalizeJsonLdImageValue(mixed $image): array
+    {
+        if (is_string($image)) {
+            if (str_starts_with($image, 'http://') || str_starts_with($image, 'https://')) {
+                return [$image];
+            }
+            return [];
+        }
+        if (is_int($image) || is_float($image)) {
+            return [];
+        }
+        if (!is_array($image)) {
+            return [];
+        }
+        if (array_is_list($image)) {
+            $out = [];
+            foreach ($image as $it) {
+                $out = array_merge($out, $this->normalizeJsonLdImageValue($it));
+            }
+            return $out;
+        }
+        if ($this->jsonLdTypeIs($image, 'ImageObject') || isset($image['contentUrl']) || isset($image['url'])) {
+            if (isset($image['contentUrl'])) {
+                return $this->normalizeJsonLdImageValue($image['contentUrl']);
+            }
+            if (isset($image['url'])) {
+                return $this->normalizeJsonLdImageValue($image['url']);
+            }
+            if (isset($image['thumbnailUrl'])) {
+                return $this->normalizeJsonLdImageValue($image['thumbnailUrl']);
+            }
+        }
+    
+        return [];
     }
     
     /**
@@ -638,6 +785,22 @@ class WebScraper
             }
 
             return $tag . '[' . implode(' and ', $conditions) . ']';
+        }
+        
+        // Chained classes only: .a.b, .markup.-mhm.-pvl.-oxa.-sc (no tag name)
+        if (str_starts_with($selector, '.') && substr_count($selector, '.') > 1) {
+            $tokens = array_values(array_filter(
+                explode('.', $selector),
+                static fn (string $t): bool => $t !== ''
+            ));
+            if (count($tokens) >= 2) {
+                $conditions = [];
+                foreach ($tokens as $className) {
+                    $conditions[] = "contains(concat(' ', normalize-space(@class), ' '), ' {$className} ')";
+                }
+
+                return '*[' . implode(' and ', $conditions) . ']';
+            }
         }
         
         // Just class: .class
