@@ -60,7 +60,11 @@ $path2 = TextToImage::run([
 //     'type' => 'circle',
 // ]);
 
+    dump(
+        $path1
+    );
 ?>
+
 
 <div style="background-color:rgb(10, 85, 106); text-align: center;">
     <img src="<?= $path1['url']; ?>" alt="Text to Image">
