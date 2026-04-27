@@ -10,6 +10,7 @@ use DOMXPath;
 use Exception;
 use InvalidArgumentException;
 use RuntimeException;
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\WebScraper\ChromiumWebScraperEngine;
 use Tamedevelopers\Support\WebScraper\DomWebScraperEngine;
 use Tamedevelopers\Support\WebScraper\WebScraperEngineInterface;
@@ -76,6 +77,15 @@ class WebScraper
      * @var array Scraping errors
      */
     private array $errors;
+
+    /** @var array<string, bool>|null */
+    private static ?array $currencyCodeSet = null;
+
+    /** @var array<string, string>|null */
+    private static ?array $currencySymbolToCode = null;
+
+    /** @var array<string, string>|null */
+    private static ?array $currencyNameToCode = null;
     
     private WebScraperEngineInterface $engine;
     
@@ -115,12 +125,12 @@ class WebScraper
         $this->engine = $this->createEngineFromConfig($config);
         
         // Set default selectors (can be customized)
-        $this->selectors = $config['selectors'] ?? [
-            'name' => 'div h1.-fs20, .title--wrap--UUHae_g h1',
-            'price' => 'div span.-prxs, .price-default--current--F8OlYIo, .ux-textspans',
-            'description' => '.markup.-mhm.-pvl.-oxa.-sc, .description--wrap--LscZ0He',
+        $this->selectors = [
+            'name' => 'div h1.-fs20, .title--wrap--UUHae_g h1, h1.dark-gray, h1[itemprop="name"]',
+            'price' => 'div span.-prxs, .price-default--current--F8OlYIo, .ux-textspans, .price, span.price, [itemprop="price"]',
+            'description' => '.markup.-mhm.-pvl.-oxa.-sc, .description--wrap--LscZ0He, [itemprop="description"], p.description',
             'colors' => '.itm-sel',
-            'sizes' => '.vl',
+            'sizes' => '.vl, [data-testid="variant-group-0"] .ld_A0 span, .pl_selectiontile-text100 label font',
             'images' => 'img.product-image, .product-gallery img, [data-image]'
         ];
         
@@ -144,6 +154,8 @@ class WebScraper
      */
     public function setUrl(string $url): self
     {
+        $url = Str::trim($url);
+
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
             throw new InvalidArgumentException("Invalid URL provided: $url");
         }
@@ -654,19 +666,19 @@ class WebScraper
     private function normalizeToIso4217(string $raw): string
     {
         $t = strtoupper(trim($raw));
-        if (preg_match('/^[A-Z]{3}$/', $t)) {
+        $this->buildCurrencyLookups();
+        if (preg_match('/^[A-Z]{3}$/', $t) && isset(self::$currencyCodeSet[$t])) {
             return $t;
         }
         $t = (string) preg_replace('/\s+/', ' ', $t);
         if (preg_match('/\b([A-Z]{3})\b/u', $t, $m)) {
-            return $m[1];
+            $code = $m[1];
+            if (isset(self::$currencyCodeSet[$code])) {
+                return $code;
+            }
         }
-        $words = [
-            'DOLLAR' => 'USD', 'DOLLARS' => 'USD', 'US DOLLAR' => 'USD', 'EURO' => 'EUR', 'EUROS' => 'EUR',
-            'POUND' => 'GBP', 'YEN' => 'JPY', 'PESO' => 'MXN', 'PESOS' => 'MXN', 'KRONA' => 'SEK', 'KRONER' => 'NOK',
-        ];
-        if (isset($words[$t])) {
-            return $words[$t];
+        if (isset(self::$currencyNameToCode[$t])) {
+            return self::$currencyNameToCode[$t];
         }
         return '';
     }
@@ -676,29 +688,12 @@ class WebScraper
         if ($raw === '') {
             return '';
         }
-        if (preg_match('/\b(USD|EUR|GBP|JPY|CNY|BRL|AUD|CAD|INR|NGN|MXN|CHF|AED|SEK|NOK|DKK|PLN|ZAR|THB|MYR|IDR|PHP|KRW|HKD|SGD|NZD|TRY|RUB|COP|CLP|ARS|VND|EGP|PKR|BDT|RON|HUF|CZK|ILS|QAR|KWD|OMR|BHD|SAR|XOF|XAF)\b/iu', $raw, $m)) {
-            return strtoupper($m[1]);
-        }
-        if (str_starts_with(ltrim($raw), '€') || str_contains($raw, ' €')) {
-            return 'EUR';
-        }
-        if (preg_match('/^\s*£/u', $raw)) {
-            return 'GBP';
-        }
-        if (preg_match('/^\s*(US\$\s*|\$)(?![A-Za-z])/u', $raw) && !str_contains($raw, 'A$') && !str_contains($raw, 'AU$')) {
-            return 'USD';
-        }
-        if (preg_match('/^\s*R\$/u', $raw)) {
-            return 'BRL';
-        }
-        if (preg_match('/^\s*₹/u', $raw) || (str_contains($raw, '₹') && !preg_match('/\b(USD|EUR|GBP)\b/i', $raw))) {
-            return 'INR';
-        }
-        if (str_contains($raw, '¥')) {
-            if (str_contains($raw, '元') || str_contains($raw, 'CNY') || str_contains($raw, 'RMB') || str_contains($raw, '人民币')) {
-                return 'CNY';
+        $this->buildCurrencyLookups();
+        if (preg_match('/\b([A-Z]{3})\b/iu', $raw, $m)) {
+            $code = strtoupper($m[1]);
+            if (isset(self::$currencyCodeSet[$code])) {
+                return $code;
             }
-            return 'JPY';
         }
         if (str_contains($raw, 'A$') || str_contains($raw, 'AU$') || str_contains($raw, 'AUD')) {
             return 'AUD';
@@ -706,13 +701,86 @@ class WebScraper
         if (str_contains($raw, 'C$') || str_contains($raw, 'CA$') || str_contains($raw, 'CAD')) {
             return 'CAD';
         }
+        if (preg_match('/^\s*R\$/u', $raw)) {
+            return 'BRL';
+        }
+        if (str_contains($raw, '¥')) {
+            if (str_contains($raw, '元') || str_contains($raw, 'CNY') || str_contains($raw, 'RMB') || str_contains($raw, '人民币')) {
+                return 'CNY';
+            }
+            return 'JPY';
+        }
+        if (preg_match('/^\s*(US\$\s*|\$)(?![A-Za-z])/u', $raw) && !str_contains($raw, 'A$') && !str_contains($raw, 'AU$')) {
+            return 'USD';
+        }
+        if (str_starts_with(ltrim($raw), '€') || str_contains($raw, ' €')) {
+            return 'EUR';
+        }
+        if (preg_match('/^\s*£/u', $raw)) {
+            return 'GBP';
+        }
+        if (preg_match('/^\s*₹/u', $raw) || (str_contains($raw, '₹') && !preg_match('/\b(USD|EUR|GBP)\b/i', $raw))) {
+            return 'INR';
+        }
         if (preg_match('/\b₦/u', $raw)) {
             return 'NGN';
         }
-        if (str_contains($raw, 'RMB') || str_contains($raw, 'CNY') || (str_contains($raw, '元') && str_contains($raw, 'CN'))) {
-            return 'CNY';
+        if (is_array(self::$currencySymbolToCode)) {
+            foreach (self::$currencySymbolToCode as $symbol => $code) {
+                if ($symbol !== '' && str_contains($raw, $symbol)) {
+                    return $code;
+                }
+            }
         }
         return '';
+    }
+
+    /**
+     * Build ISO code, symbol, and name maps from NumberToWords::allCurrency().
+     */
+    private function buildCurrencyLookups(): void
+    {
+        if (self::$currencyCodeSet !== null && self::$currencySymbolToCode !== null && self::$currencyNameToCode !== null) {
+            return;
+        }
+        $catalog = NumberToWords::allCurrency();
+        if (!is_array($catalog)) {
+            self::$currencyCodeSet = [];
+            self::$currencySymbolToCode = [];
+            self::$currencyNameToCode = [];
+            return;
+        }
+
+        $codeSet = [];
+        $symbolMap = [];
+        $nameMap = [];
+        foreach ($catalog as $code => $meta) {
+            if (!is_string($code) || $code === '') {
+                continue;
+            }
+            $iso = strtoupper(trim($code));
+            $codeSet[$iso] = true;
+
+            if (is_array($meta)) {
+                $name = trim((string) ($meta['name'] ?? ''));
+                if ($name !== '') {
+                    $nameMap[strtoupper($name)] = $iso;
+                }
+                $symbol = trim((string) ($meta['symbol'] ?? ''));
+                if ($symbol !== '') {
+                    // Keep first mapping to avoid unstable overrides on shared symbols like "$".
+                    if (!isset($symbolMap[$symbol])) {
+                        $symbolMap[$symbol] = $iso;
+                    }
+                }
+            }
+        }
+
+        uksort($symbolMap, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+
+        self::$currencyCodeSet = $codeSet;
+        self::$currencySymbolToCode = $symbolMap;
+        self::$currencyNameToCode = $nameMap;
     }
     
     private function cleanDescriptionPlain(string $d): string

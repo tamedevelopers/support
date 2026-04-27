@@ -11,12 +11,16 @@ $aliexpress = 'https://www.aliexpress.com/item/1005010595606666.html';
 
 dd(
     (new WebScraper)
-        ->setUrl($jumia2)
+        ->setUrl("
+            $aliexpress
+        
+        ")
         ->setSelectors([
-            'title' => 'h1',
-            'price' => 'span.price',
-            'description' => 'p.description',
+            // 'title' => 'h1',
+            // 'price' => 'span.price',
+            // 'description' => 'p.description',
         ])
+        ->setEngine('dom') //chromium|dom
         ->fetch()
         ->getData()
 );

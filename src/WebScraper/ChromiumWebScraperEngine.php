@@ -44,6 +44,13 @@ final class ChromiumWebScraperEngine implements WebScraperEngineInterface
         }
         $launch['customFlags'] = array_values(array_merge($launch['customFlags'] ?? [], [
             '--disable-dev-shm-usage',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--no-zygote',
+            '--disable-software-rasterizer',
+            '--disable-crash-reporter',
+            '--crash-dumps-dir=/tmp',
+            '--max_old_space_size=512',
         ]));
 
         $navTimeout = (int) ($options['navigation_timeout_ms'] ?? 45000);
