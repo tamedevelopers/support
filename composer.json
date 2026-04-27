@@ -45,7 +45,7 @@
     "suggest": {
         "aws/aws-sdk-php": "Required to use the `AWS` class and helper (^3.371)",
         "dompdf/dompdf": "Required to use the `PDF` class and helper (^3.0)",
-        "chrome-php/chrome": "Required for high-performance Chrome PDF generation (^1.11)",
+        "chrome-php/chrome": "Required for ChromePdf and WebScraper `engine` => `chromium` (^1.11)",
         "chrome-php/wrench": "Required for WebSocket communication with Chrome (^1.7)",
         "ext-sockets": "PHP extension required by chrome-php for headless Chromium IPC",
         "setasign/fpdi": "ChromePdf merge/watermark/encryption/PDF/A via FPDI (^2.6). Docs: https://manuals.setasign.com/fpdi-manual/",

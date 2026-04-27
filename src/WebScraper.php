@@ -10,8 +10,16 @@ use DOMXPath;
 use Exception;
 use InvalidArgumentException;
 use RuntimeException;
+use Tamedevelopers\Support\WebScraper\ChromiumWebScraperEngine;
+use Tamedevelopers\Support\WebScraper\DomWebScraperEngine;
+use Tamedevelopers\Support\WebScraper\WebScraperEngineInterface;
 
-
+/**
+ * Product scraper. Choose how HTML is obtained via {@see $config} key {@code engine}:
+ * {@code dom} (default) = cURL + libxml, or {@code chromium} = headless Chrome (requires {@code chrome-php/chrome},
+ * same stack as {@see \Tamedevelopers\Support\ChromePdf\ChromePdf}). Parsing and selectors are unchanged; only the
+ * fetch step is pluggable.
+ */
 class WebScraper
 {
     /**
@@ -69,10 +77,32 @@ class WebScraper
      */
     private array $errors;
     
+    private WebScraperEngineInterface $engine;
+    
+    /**
+     * Options passed to {@see WebScraperEngineInterface::fetch()}.
+     *
+     * @var array<string, mixed>
+     */
+    private array $engineOptions;
+    
+    private string $lastFetchEngine = 'dom';
+    
+    private string $lastFetchFinalUrl = '';
+    
+    private int $lastFetchHttpStatus = 0;
+    
     /**
      * Constructor
      * 
-     * @param array $config Optional configuration settings
+     * @param array $config {
+     *   @var array<string, string>   $selectors
+     *   @var 'dom'|'chromium'|'chrome'|WebScraperEngineInterface  $engine  Fetch backend (default: dom)
+     *   @var array<string, mixed>   $engine_options  Passed to the engine (e.g. navigation_timeout_ms, binary, user_agent, verify_ssl)
+     *   @var bool   $cache_enabled
+     *   @var string $cache_dir
+     *   @var int    $cache_ttl
+     * }
      */
     public function __construct(array $config = [])
     {
@@ -81,6 +111,8 @@ class WebScraper
         $this->errors = [];
         $this->productData = [];
         $this->baseUrl = '';
+        $this->engineOptions = is_array($config['engine_options'] ?? null) ? $config['engine_options'] : [];
+        $this->engine = $this->createEngineFromConfig($config);
         
         // Set default selectors (can be customized)
         $this->selectors = $config['selectors'] ?? [
@@ -123,6 +155,62 @@ class WebScraper
     }
     
     /**
+     * Use the DOM/cURL engine (default) or Chromium, or a custom {@see WebScraperEngineInterface}.
+     *
+     * @param 'dom'|'chromium'|'chrome'|WebScraperEngineInterface $engine
+     * @param array<string, mixed> $options Replaces engine options for subsequent {@see fetch()} calls
+     */
+    public function setEngine(string|WebScraperEngineInterface $engine, array $options = []): self
+    {
+        if (is_string($engine)) {
+            $this->engine = $this->createEngineByName($engine);
+        } else {
+            $this->engine = $engine;
+        }
+        if ($options !== []) {
+            $this->engineOptions = $options;
+        }
+        return $this;
+    }
+    
+    public function getEngine(): WebScraperEngineInterface
+    {
+        return $this->engine;
+    }
+    
+    /**
+     * @return array<string, mixed>
+     */
+    public function getEngineOptions(): array
+    {
+        return $this->engineOptions;
+    }
+    
+    /**
+     * @param array<string, mixed> $config
+     */
+    private function createEngineFromConfig(array $config): WebScraperEngineInterface
+    {
+        $e = $config['engine'] ?? 'dom';
+        if ($e instanceof WebScraperEngineInterface) {
+            return $e;
+        }
+        if (is_string($e)) {
+            return $this->createEngineByName($e);
+        }
+        return new DomWebScraperEngine();
+    }
+    
+    private function createEngineByName(string $name): WebScraperEngineInterface
+    {
+        $n = strtolower(trim($name));
+        if (in_array($n, ['chromium', 'chrome', 'headless-chromium'], true)) {
+            return new ChromiumWebScraperEngine();
+        }
+        return new DomWebScraperEngine();
+    }
+    
+    /**
      * Set custom selectors for scraping
      * 
      * @param array $selectors Associative array of CSS selectors (use "name" for the product title; "title" is an alias and maps to "name")
@@ -161,36 +249,16 @@ class WebScraper
                 }
             }
             
-            // Initialize cURL
-            $ch = curl_init();
-            curl_setopt_array($ch, [
-                CURLOPT_URL => $this->url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                CURLOPT_TIMEOUT => 30,
-                CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_SSL_VERIFYHOST => false,
-                CURLOPT_ENCODING => '',
-                CURLOPT_MAXREDIRS => 10
-            ]);
-            
-            $this->html = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $curlError = curl_error($ch);
-            unset($ch);
-            
-            // Handle errors
-            if ($curlError) {
-                throw new RuntimeException("cURL Error: " . $curlError);
-            }
-            
-            if ($httpCode !== 200) {
-                throw new RuntimeException("HTTP Error: $httpCode - Failed to fetch $this->url");
-            }
-            
-            if (empty($this->html)) {
-                throw new RuntimeException("No content received from $this->url");
+            $result = $this->engine->fetch($this->url, $this->engineOptions);
+            $this->html = $result->html;
+            $this->lastFetchEngine = $result->engineName;
+            $this->lastFetchFinalUrl = $result->finalUrl;
+            $this->lastFetchHttpStatus = $result->httpStatus;
+            if ($this->lastFetchFinalUrl !== '') {
+                $pu = @parse_url($this->lastFetchFinalUrl);
+                if (!empty($pu['scheme']) && !empty($pu['host'])) {
+                    $this->baseUrl = $pu['scheme'] . '://' . $pu['host'];
+                }
             }
             
             // Load HTML
@@ -223,6 +291,7 @@ class WebScraper
         $this->productData = [
             'name' => $this->extractName(),
             'price' => $this->extractPrice(),
+            'currency' => '',
             'description' => $this->extractDescription(),
             'colors' => $this->extractColors(),
             'sizes' => $this->extractSizes(),
@@ -230,7 +299,11 @@ class WebScraper
             'main_image' => '',
             'url' => $this->url,
             'scraped_at' => date('Y-m-d H:i:s'),
-            'raw_data' => []
+            'raw_data' => [
+                'engine' => $this->lastFetchEngine,
+                'final_url' => $this->lastFetchFinalUrl,
+                'http_status' => $this->lastFetchHttpStatus,
+            ],
         ];
         
         // Set main image as first image if available
@@ -239,6 +312,7 @@ class WebScraper
         }
         
         $this->applyOpenGraphTitleFallback();
+        $this->applyStructuredDataEnrichment();
         
         return $this;
     }
@@ -266,6 +340,429 @@ class WebScraper
             }
         }
 
+    }
+    
+    /**
+     * Fills name, description, price, and ISO 4217 currency from JSON-LD, microdata, and Open Graph product tags
+     * when selection/CSS misses them.
+     */
+    private function applyStructuredDataEnrichment(): void
+    {
+        $sources = [];
+        $ld = $this->extractProductFieldsFromJsonLd();
+        if ($ld['name'] !== '' || $ld['description'] !== '' || $ld['price'] !== '' || $ld['currency'] !== '') {
+            $sources[] = 'json-ld';
+            if (($this->productData['name'] ?? '') === '' && $ld['name'] !== '') {
+                $this->productData['name'] = $this->decodeHtmlText($ld['name']);
+            }
+            if (($this->productData['description'] ?? '') === '' && $ld['description'] !== '') {
+                $this->productData['description'] = $this->cleanDescriptionPlain($ld['description']);
+            }
+            if (($this->productData['price'] ?? '') === '' && $ld['price'] !== '') {
+                $this->productData['price'] = $this->formatNormalizedPrice($ld['price']);
+            }
+            if (($this->productData['currency'] ?? '') === '' && $ld['currency'] !== '') {
+                $this->productData['currency'] = $this->normalizeToIso4217($ld['currency']);
+            }
+        }
+        $md = $this->extractProductFieldsFromMicrodata();
+        if ($md['price'] !== '' || $md['description'] !== '' || $md['currency'] !== '') {
+            $sources[] = 'microdata';
+            if (($this->productData['description'] ?? '') === '' && $md['description'] !== '') {
+                $this->productData['description'] = $this->cleanDescriptionPlain($md['description']);
+            }
+            if (($this->productData['price'] ?? '') === '' && $md['price'] !== '') {
+                $this->productData['price'] = $this->formatNormalizedPrice($md['price']);
+            }
+            if (($this->productData['currency'] ?? '') === '' && $md['currency'] !== '') {
+                $this->productData['currency'] = $this->normalizeToIso4217($md['currency']);
+            }
+        }
+        if (($this->productData['price'] ?? '') === '') {
+            $ogp = $this->getMetaByProperty('og:price:amount');
+            if ($ogp === '') {
+                $ogp = $this->getMetaByProperty('product:price:amount');
+            }
+            if ($ogp !== '') {
+                $sources[] = 'og:price';
+                $this->productData['price'] = $this->formatNormalizedPrice($ogp);
+            }
+        }
+        if (($this->productData['currency'] ?? '') === '') {
+            $ogc = $this->getMetaByProperty('og:price:currency');
+            if ($ogc === '') {
+                $ogc = $this->getMetaByProperty('product:price:currency');
+            }
+            if ($ogc === '') {
+                $ogc = $this->getMetaItemprop('priceCurrency');
+            }
+            if ($ogc !== '') {
+                $sources[] = 'og:meta-currency';
+                $this->productData['currency'] = $this->normalizeToIso4217($ogc);
+            }
+        }
+        if (($this->productData['currency'] ?? '') === '' && isset($this->selectors['currency'])
+            && is_string($this->selectors['currency']) && $this->selectors['currency'] !== '') {
+            $cs = $this->extractText($this->selectors['currency']);
+            if ($cs !== '') {
+                $sources[] = 'selector:currency';
+                $this->productData['currency'] = $this->normalizeToIso4217($cs);
+            }
+        }
+        if (($this->productData['currency'] ?? '') === '') {
+            $rawPrice = $this->extractText($this->selectors['price']);
+            $cc = $this->inferCurrencyFromPriceText($rawPrice);
+            if ($cc !== '') {
+                $sources[] = 'price-text';
+                $this->productData['currency'] = $cc;
+            }
+        }
+        if ($sources !== []) {
+            $ex = $this->productData['raw_data']['enrichment'] ?? [];
+            if (!is_array($ex)) {
+                $ex = [];
+            }
+            $this->productData['raw_data']['enrichment'] = array_values(array_unique(array_merge($ex, $sources)));
+        }
+    }
+    
+    /**
+     * @return array{name: string, description: string, price: string, currency: string}
+     */
+    private function extractProductFieldsFromJsonLd(): array
+    {
+        $out = ['name' => '', 'description' => '', 'price' => '', 'currency' => ''];
+        $scripts = $this->xpath->query('//script[@type="application/ld+json"]');
+        if ($scripts === false) {
+            return $out;
+        }
+        for ($i = 0; $i < $scripts->length; $i++) {
+            $item = $scripts->item($i);
+            if ($item === null) {
+                continue;
+            }
+            $text = trim($item->textContent ?? '');
+            if ($text === '') {
+                continue;
+            }
+            $data = json_decode($text, true);
+            if (!is_array($data)) {
+                continue;
+            }
+            $this->mergeJsonLdProductFields($data, $out);
+        }
+        return $out;
+    }
+    
+    /**
+     * @param array<string, mixed> $data
+     * @param array{name: string, description: string, price: string, currency: string} $out
+     */
+    private function mergeJsonLdProductFields(mixed $data, array &$out): void
+    {
+        if (!is_array($data)) {
+            return;
+        }
+        if ($this->jsonLdIsProduct($data)) {
+            if ($out['name'] === '' && !empty($data['name']) && is_string($data['name'])) {
+                $out['name'] = $data['name'];
+            }
+            if (!empty($data['description']) && is_string($data['description'])) {
+                $d = $data['description'];
+                if (strlen($d) > strlen($out['description']) || $out['description'] === '') {
+                    $out['description'] = $d;
+                }
+            }
+            if ($out['price'] === '' && !empty($data['offers'])) {
+                $p = $this->extractPriceFromJsonLdOffer($data['offers']);
+                if ($p !== '') {
+                    $out['price'] = $p;
+                }
+            }
+            if ($out['currency'] === '' && !empty($data['offers'])) {
+                $c = $this->jsonLdExtractOfferCurrency($data['offers']);
+                if ($c !== '') {
+                    $out['currency'] = $c;
+                }
+            }
+        }
+        if (isset($data['@graph']) && is_array($data['@graph'])) {
+            foreach ($data['@graph'] as $g) {
+                $this->mergeJsonLdProductFields($g, $out);
+            }
+        }
+        if (isset($data['mainEntity']) && is_array($data['mainEntity'])) {
+            $this->mergeJsonLdProductFields($data['mainEntity'], $out);
+        }
+        if (isset($data['itemListElement']) && is_array($data['itemListElement'])) {
+            foreach ($data['itemListElement'] as $el) {
+                if (is_array($el) && isset($el['item'])) {
+                    $this->mergeJsonLdProductFields($el['item'], $out);
+                } else {
+                    $this->mergeJsonLdProductFields($el, $out);
+                }
+            }
+        }
+    }
+    
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function jsonLdIsProduct(array $data): bool
+    {
+        if (!isset($data['@type'])) {
+            return false;
+        }
+        $t = $data['@type'];
+        $list = is_string($t) ? [$t] : (is_array($t) ? $t : []);
+        foreach ($list as $one) {
+            if (!is_string($one)) {
+                continue;
+            }
+            if ($one === 'Product' || str_ends_with($one, 'Product') || $one === 'http://schema.org/Product' || $one === 'https://schema.org/Product') {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    private function extractPriceFromJsonLdOffer(mixed $offers): string
+    {
+        if ($offers === null) {
+            return '';
+        }
+        if (is_array($offers) && array_is_list($offers)) {
+            foreach ($offers as $o) {
+                $p = $this->extractPriceFromJsonLdOffer($o);
+                if ($p !== '') {
+                    return $p;
+                }
+            }
+            return '';
+        }
+        if (!is_array($offers)) {
+            return is_scalar($offers) ? (string) $offers : '';
+        }
+        if (isset($offers['lowPrice']) && (is_string($offers['lowPrice']) || is_int($offers['lowPrice']) || is_float($offers['lowPrice']))) {
+            return (string) $offers['lowPrice'];
+        }
+        if (isset($offers['price'])) {
+            $price = $offers['price'];
+            if (is_string($price) || is_int($price) || is_float($price)) {
+                return (string) $price;
+            }
+            if (is_array($price) && isset($price['value'])) {
+                return (string) $price['value'];
+            }
+        }
+        if (isset($offers['@type']) && is_string($offers['@type']) && $offers['@type'] === 'AggregateOffer' && isset($offers['lowPrice'])) {
+            return (string) $offers['lowPrice'];
+        }
+        if (isset($offers['offers'])) {
+            return $this->extractPriceFromJsonLdOffer($offers['offers']);
+        }
+        return '';
+    }
+    
+    private function jsonLdExtractOfferCurrency(mixed $offers): string
+    {
+        if ($offers === null) {
+            return '';
+        }
+        if (is_array($offers) && array_is_list($offers)) {
+            foreach ($offers as $o) {
+                $c = $this->jsonLdExtractOfferCurrency($o);
+                if ($c !== '') {
+                    return $c;
+                }
+            }
+            return '';
+        }
+        if (!is_array($offers)) {
+            return '';
+        }
+        if (isset($offers['priceCurrency']) && (is_string($offers['priceCurrency']) || is_int($offers['priceCurrency']))) {
+            return (string) $offers['priceCurrency'];
+        }
+        if (isset($offers['offers'])) {
+            return $this->jsonLdExtractOfferCurrency($offers['offers']);
+        }
+        return '';
+    }
+    
+    /**
+     * @return array{price: string, description: string, currency: string}
+     */
+    private function extractProductFieldsFromMicrodata(): array
+    {
+        $out = ['price' => '', 'description' => '', 'currency' => ''];
+        $n = $this->xpath->query("//*[contains(concat(' ', @itemprop, ' '), ' price ') or @itemprop='price']");
+        if ($n && $n->length > 0) {
+            for ($i = 0; $i < $n->length; $i++) {
+                $node = $n->item($i);
+                if ($node instanceof \DOMElement) {
+                    $c = $node->getAttribute('content');
+                    if ($c !== '') {
+                        $out['price'] = $c;
+                        break;
+                    }
+                    $c = trim($node->textContent);
+                    if ($c !== '' && preg_match('/[0-9]/', $c)) {
+                        $out['price'] = $c;
+                        break;
+                    }
+                }
+            }
+        }
+        if ($out['description'] === '') {
+            $n = $this->xpath->query("//*[@itemprop='description']");
+            if ($n && $n->length > 0) {
+                $t = $n->item(0);
+                if ($t !== null) {
+                    $d = $t instanceof \DOMElement
+                        ? (trim($t->getAttribute('content')) !== '' ? $t->getAttribute('content') : $t->textContent)
+                        : $t->textContent;
+                    $d = is_string($d) ? $d : '';
+                    if ($d !== '') {
+                        $out['description'] = $d;
+                    }
+                }
+            }
+        }
+        $n = $this->xpath->query("//*[@itemprop='priceCurrency']");
+        if ($n && $n->length > 0) {
+            for ($i = 0; $i < $n->length; $i++) {
+                $node = $n->item($i);
+                if ($node instanceof \DOMElement) {
+                    $c = $node->getAttribute('content');
+                    if ($c === '') {
+                        $c = trim($node->getAttribute('value'));
+                    }
+                    if ($c === '') {
+                        $c = trim($node->textContent);
+                    }
+                    if ($c !== '') {
+                        $out['currency'] = $c;
+                        break;
+                    }
+                }
+            }
+        }
+        return $out;
+    }
+    
+    private function normalizeToIso4217(string $raw): string
+    {
+        $t = strtoupper(trim($raw));
+        if (preg_match('/^[A-Z]{3}$/', $t)) {
+            return $t;
+        }
+        $t = (string) preg_replace('/\s+/', ' ', $t);
+        if (preg_match('/\b([A-Z]{3})\b/u', $t, $m)) {
+            return $m[1];
+        }
+        $words = [
+            'DOLLAR' => 'USD', 'DOLLARS' => 'USD', 'US DOLLAR' => 'USD', 'EURO' => 'EUR', 'EUROS' => 'EUR',
+            'POUND' => 'GBP', 'YEN' => 'JPY', 'PESO' => 'MXN', 'PESOS' => 'MXN', 'KRONA' => 'SEK', 'KRONER' => 'NOK',
+        ];
+        if (isset($words[$t])) {
+            return $words[$t];
+        }
+        return '';
+    }
+    
+    private function inferCurrencyFromPriceText(string $raw): string
+    {
+        if ($raw === '') {
+            return '';
+        }
+        if (preg_match('/\b(USD|EUR|GBP|JPY|CNY|BRL|AUD|CAD|INR|NGN|MXN|CHF|AED|SEK|NOK|DKK|PLN|ZAR|THB|MYR|IDR|PHP|KRW|HKD|SGD|NZD|TRY|RUB|COP|CLP|ARS|VND|EGP|PKR|BDT|RON|HUF|CZK|ILS|QAR|KWD|OMR|BHD|SAR|XOF|XAF)\b/iu', $raw, $m)) {
+            return strtoupper($m[1]);
+        }
+        if (str_starts_with(ltrim($raw), '€') || str_contains($raw, ' €')) {
+            return 'EUR';
+        }
+        if (preg_match('/^\s*£/u', $raw)) {
+            return 'GBP';
+        }
+        if (preg_match('/^\s*(US\$\s*|\$)(?![A-Za-z])/u', $raw) && !str_contains($raw, 'A$') && !str_contains($raw, 'AU$')) {
+            return 'USD';
+        }
+        if (preg_match('/^\s*R\$/u', $raw)) {
+            return 'BRL';
+        }
+        if (preg_match('/^\s*₹/u', $raw) || (str_contains($raw, '₹') && !preg_match('/\b(USD|EUR|GBP)\b/i', $raw))) {
+            return 'INR';
+        }
+        if (str_contains($raw, '¥')) {
+            if (str_contains($raw, '元') || str_contains($raw, 'CNY') || str_contains($raw, 'RMB') || str_contains($raw, '人民币')) {
+                return 'CNY';
+            }
+            return 'JPY';
+        }
+        if (str_contains($raw, 'A$') || str_contains($raw, 'AU$') || str_contains($raw, 'AUD')) {
+            return 'AUD';
+        }
+        if (str_contains($raw, 'C$') || str_contains($raw, 'CA$') || str_contains($raw, 'CAD')) {
+            return 'CAD';
+        }
+        if (preg_match('/\b₦/u', $raw)) {
+            return 'NGN';
+        }
+        if (str_contains($raw, 'RMB') || str_contains($raw, 'CNY') || (str_contains($raw, '元') && str_contains($raw, 'CN'))) {
+            return 'CNY';
+        }
+        return '';
+    }
+    
+    private function cleanDescriptionPlain(string $d): string
+    {
+        $d = strip_tags($d);
+        $d = html_entity_decode($d, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $d = preg_replace('/\s+/', ' ', $d) ?? $d;
+        return trim($d);
+    }
+    
+    /**
+     * @see extractPrice() uses the same normalization for numeric price strings
+     */
+    private function formatNormalizedPrice(string $price): string
+    {
+        if ($price === '') {
+            return '';
+        }
+        $price = preg_replace('/[^0-9.,]/', '', $price) ?? '';
+        if ($price === '') {
+            return '';
+        }
+        if (strpos($price, ',') !== false && strpos($price, '.') === false) {
+            $price = str_replace(',', '', $price);
+        } elseif (strpos($price, ',') !== false && strpos($price, '.') !== false) {
+            $price = str_replace(',', '', $price);
+        } elseif (preg_match('/^\d+\.\d{3}$/', $price)) {
+            $price = str_replace('.', '', $price);
+        } elseif (strpos($price, '.') !== false) {
+            $parts = explode('.', $price);
+            if (count($parts) == 2) {
+                $price = $parts[0] . '.' . str_pad($parts[1], 2, '0', STR_PAD_RIGHT);
+            }
+        }
+        if (is_numeric($price) && strpos((string) $price, '.') === false) {
+            $price = $price . '.00';
+        }
+        return trim((string) $price);
+    }
+    
+    private function getMetaItemprop(string $name): string
+    {
+        $n = $this->xpath->query(
+            "//meta[translate(@itemprop,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='"
+            . strtolower($name) . "']/@content"
+        );
+        if ($n && $n->length > 0) {
+            return trim($n->item(0)->nodeValue ?? '');
+        }
+        return '';
     }
     
     private function getMetaByProperty(string $property): string
@@ -303,45 +800,10 @@ class WebScraper
     private function extractPrice(): string
     {
         $price = $this->extractText($this->selectors['price']);
-        
-        if (!$price) {
+        if ($price === '') {
             return '';
         }
-        
-        // Remove currency symbols and non-numeric characters except decimal points and commas
-        $price = preg_replace('/[^0-9.,]/', '', $price);
-        
-        // Handle Nigerian Naira format (₦ 7,200)
-        // Check if it has comma as thousand separator
-        if (strpos($price, ',') !== false && strpos($price, '.') === false) {
-            // Remove commas (thousand separators)
-            $price = str_replace(',', '', $price);
-        } 
-        // Handle format like "7,200.50"
-        else if (strpos($price, ',') !== false && strpos($price, '.') !== false) {
-            // Remove commas (thousand separators) but keep decimal point
-            $price = str_replace(',', '', $price);
-        }
-        // Handle format like "7.200" (dot as thousand separator - European format)
-        else if (preg_match('/^\d+\.\d{3}$/', $price)) {
-            // This is likely thousand separator, not decimal
-            $price = str_replace('.', '', $price);
-        }
-        // Handle format with decimal like "7200.50"
-        else if (strpos($price, '.') !== false) {
-            // Keep as is, but ensure 2 decimal places
-            $parts = explode('.', $price);
-            if (count($parts) == 2) {
-                $price = $parts[0] . '.' . str_pad($parts[1], 2, '0');
-            }
-        }
-        
-        // Add .00 if no decimal part
-        if (is_numeric($price) && strpos($price, '.') === false) {
-            $price = $price . '.00';
-        }
-        
-        return trim($price);
+        return $this->formatNormalizedPrice($price);
     }
     
     /**
@@ -1002,6 +1464,14 @@ class WebScraper
     public function getPrice(): string
     {
         return $this->productData['price'] ?? '';
+    }
+    
+    /**
+     * ISO 4217 code when detected (e.g. USD, EUR), or empty string.
+     */
+    public function getCurrency(): string
+    {
+        return $this->productData['currency'] ?? '';
     }
     
     /**
