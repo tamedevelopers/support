@@ -12,7 +12,7 @@ $aliexpress = 'https://www.aliexpress.com/item/1005010595606666.html';
 dd(
     (new WebScraper)
         ->setUrl("
-            $aliexpress
+            $ebay
         
         ")
         ->setSelectors([

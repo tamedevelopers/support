@@ -287,10 +287,39 @@ class WebScraper
             
         } catch (Exception $e) {
             $this->errors[] = $e->getMessage();
-            throw new RuntimeException("Failed to fetch content: " . $e->getMessage());
+            $this->setFetchFailureResult($e->getMessage());
         }
         
         return $this;
+    }
+
+    /**
+     * Build a safe empty payload when fetch is blocked/fails, instead of throwing.
+     */
+    private function setFetchFailureResult(string $errorMessage): void
+    {
+        $status = 0;
+        if (preg_match('/HTTP Error:\s*(\d{3})/i', $errorMessage, $m) === 1) {
+            $status = (int) $m[1];
+        }
+
+        $this->lastFetchHttpStatus = $status;
+        if ($this->lastFetchFinalUrl === '') {
+            $this->lastFetchFinalUrl = $this->url ?? '';
+        }
+
+        $this->html = '';
+        $this->dom->loadHTML('<!doctype html><html><head></head><body></body></html>', LIBXML_NOERROR);
+        $this->xpath = new DOMXPath($this->dom);
+        $this->scrape();
+
+        $this->productData['raw_data']['fetch_error'] = $errorMessage;
+        $this->productData['raw_data']['blocked'] = true;
+        $this->productData['raw_data']['block_signals'] = array_values(array_unique(array_merge(
+            (array) ($this->productData['raw_data']['block_signals'] ?? []),
+            ['fetch:error']
+        )));
+        $this->productData['raw_data']['block_reason'] = $errorMessage;
     }
     
     /**
@@ -325,8 +354,116 @@ class WebScraper
         
         $this->applyOpenGraphTitleFallback();
         $this->applyStructuredDataEnrichment();
+        $this->applyBlockSignals();
         
         return $this;
+    }
+
+    /**
+     * Detects anti-bot/challenge pages and stores signals in raw_data for easier debugging.
+     */
+    private function applyBlockSignals(): void
+    {
+        $signals = $this->detectBlockSignals();
+        $this->productData['raw_data']['blocked'] = $signals['is_blocked'];
+        $this->productData['raw_data']['block_signals'] = $signals['signals'];
+        $this->productData['raw_data']['block_reason'] = $signals['reason'];
+    }
+
+    /**
+     * @return array{is_blocked: bool, signals: list<string>, reason: string}
+     */
+    private function detectBlockSignals(): array
+    {
+        $signals = [];
+        $htmlLower = strtolower($this->html ?? '');
+
+        $title = '';
+        $titleNodes = $this->xpath->query('//title');
+        if ($titleNodes && $titleNodes->length > 0) {
+            $title = trim((string) $titleNodes->item(0)?->textContent);
+        }
+        $titleLower = strtolower($title);
+
+        $titleMatches = [
+            'captcha',
+            'access denied',
+            'attention required',
+            'verify you are human',
+            'bot challenge',
+            'robot check',
+            'just a moment',
+            'request blocked',
+            'temporarily blocked',
+        ];
+        foreach ($titleMatches as $needle) {
+            if ($titleLower !== '' && str_contains($titleLower, $needle)) {
+                $signals[] = "title:{$needle}";
+            }
+        }
+
+        $htmlMatches = [
+            'cf-challenge',
+            'cloudflare',
+            '/cdn-cgi/challenge-platform',
+            'captcha',
+            'g-recaptcha',
+            'hcaptcha',
+            'perimeterx',
+            'px-captcha',
+            'datadome',
+            'distil_r_captcha',
+            'access denied',
+            'verify you are human',
+            'automated queries',
+            'unusual traffic',
+            'robot check',
+            'service unavailable',
+            'request blocked',
+            'blocked due to unusual activity',
+        ];
+        foreach ($htmlMatches as $needle) {
+            if (str_contains($htmlLower, $needle)) {
+                $signals[] = "html:{$needle}";
+            }
+        }
+
+        $emptyCoreCount = 0;
+        foreach (['name', 'price', 'description'] as $field) {
+            $val = trim((string) ($this->productData[$field] ?? ''));
+            if ($val === '') {
+                $emptyCoreCount++;
+            }
+        }
+        if ($emptyCoreCount >= 2) {
+            $signals[] = 'data:core_fields_missing';
+        }
+        if (empty($this->productData['images'])) {
+            $signals[] = 'data:images_missing';
+        }
+        if (($this->lastFetchHttpStatus >= 400) || $this->lastFetchHttpStatus === 0) {
+            $signals[] = 'http:status=' . (string) $this->lastFetchHttpStatus;
+        }
+
+        $signals = array_values(array_unique($signals));
+        $isBlocked = false;
+        foreach ($signals as $signal) {
+            if (str_starts_with($signal, 'title:') || str_starts_with($signal, 'html:') || str_starts_with($signal, 'http:')) {
+                $isBlocked = true;
+                break;
+            }
+        }
+        if (!$isBlocked && in_array('data:core_fields_missing', $signals, true) && in_array('data:images_missing', $signals, true)) {
+            $isBlocked = true;
+        }
+
+        $reason = $isBlocked ? implode(', ', array_slice($signals, 0, 5)) : '';
+
+        return [
+            'is_blocked' => $isBlocked,
+            'signals' => $signals,
+            'reason' => $reason,
+        ];
     }
     
     /**

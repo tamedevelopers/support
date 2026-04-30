@@ -13,11 +13,13 @@ $files = [
 ];
 
 $output = ChromePdf::create()
-    // ->fromUrl('https://lhkexpress.com')
+    // ->fromUrl('http://localhost/lhkexpress/')
+    ->fromUrl('https://lhkexpress.com')
+    // ->fromUrl('http://www.google.com')
     // ->fromFile('upload/template.html')
-    ->fromHtml('<html><body><h1>Hello World</h1></body></html>')
+    // ->fromHtml('<html><body><h1>Hello World</h1></body></html>')
     ->margin(20)
-    ->createFromElement('.body')
+    // ->createFromElement('.body')
     // ->textWatermark('CONFIDENTIAL')
     // ->clickableLinks(false)
     // ->encrypt(

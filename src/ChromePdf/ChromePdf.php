@@ -297,6 +297,14 @@ final class ChromePdf
     }
 
     /**
+     * Alias of {@see hideElements()} for callers that want a "remove class/selector" semantic name.
+     */
+    public function removeClass(...$cssSelectors): self
+    {
+        return $this->hideElements(...$cssSelectors);
+    }
+
+    /**
      * @param PaperFormat|string $format Named size ({@code A4}, {@code letter}, {@code Legal}, etc.) or a {@see PaperFormat} case
      */
     public function paper(PaperFormat|string $format): self
@@ -616,6 +624,8 @@ final class ChromePdf
         try {
             $page = $browser->createPage();
             $this->applyColorSchemeToPage($page);
+            // $this->applyDesktopViewportEmulation($page);
+            // $this->applyPrintMediaEmulationForLinkMetrics($page);
 
             match ($this->sourceMode) {
                 'url' => $this->loadFromUrlWithBlocking($page),
@@ -987,10 +997,6 @@ final class ChromePdf
     }
 
     /**
-     * Batches prefers-color-scheme emulation, optional auto-dark override, and client hints in one pass.
-     * Skips duplicate CDP work when the target session already has the same scheme applied.
-     */
-    /**
      * Link hit-testing must match the same {@code print} layout Blink uses for {@code Page.printToPDF}. Measuring in
      * the default screen media misses {@code @media print} rules, fixed/sticky reflow, and width/pagination — which
      * skews coordinates for large link sets.
@@ -1064,6 +1070,37 @@ final class ChromePdf
                     'Sec-CH-Prefers-Color-Scheme' => $this->colorScheme->value,
                 ]);
             }
+        } catch (Throwable) {
+        }
+    }
+
+    /**
+     * Forces desktop viewport/device hints so responsive breakpoints stay in large-screen mode.
+     */
+    private function applyDesktopViewportEmulation(Page $page): void
+    {
+        if ($this->sourceMode !== 'url') {
+            return;
+        }
+
+        $session = $page->getSession();
+
+        try {
+            $session->sendMessageSync(new Message('Emulation.setDeviceMetricsOverride', [
+                'width' => $this->desktopViewportWidth,
+                'height' => $this->desktopViewportHeight,
+                'deviceScaleFactor' => 1,
+                'mobile' => false,
+                'screenWidth' => $this->desktopViewportWidth,
+                'screenHeight' => $this->desktopViewportHeight,
+            ]));
+        } catch (Throwable) {
+        }
+
+        try {
+            $session->sendMessageSync(new Message('Emulation.setTouchEmulationEnabled', [
+                'enabled' => false,
+            ]));
         } catch (Throwable) {
         }
     }
