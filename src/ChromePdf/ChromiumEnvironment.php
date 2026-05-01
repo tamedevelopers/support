@@ -11,6 +11,12 @@ use HeadlessChromium\AutoDiscover;
  */
 final class ChromiumEnvironment
 {
+
+    /**
+     * Check if the environment is running in a Docker container.
+     *
+     * @return bool
+     */
     public function isDocker(): bool
     {
         if (@is_file(base_path('.dockerenv'))) {
@@ -26,27 +32,49 @@ final class ChromiumEnvironment
         return is_string($cgroup) && str_contains($cgroup, 'docker');
     }
 
+    /**
+     * Check if the environment is running on Windows.
+     *
+     * @return bool
+     */
     public function isWindows(): bool
     {
         return PHP_OS_FAMILY === 'Windows';
     }
 
+    /**
+     * Check if the environment is running on Linux.
+     *
+     * @return bool
+     */
     public function isLinux(): bool
     {
         return PHP_OS_FAMILY === 'Linux';
     }
 
+    /**
+     * Check if the environment is running on macOS.
+     *
+     * @return bool
+     */
     public function isDarwin(): bool
     {
         return PHP_OS_FAMILY === 'Darwin';
     }
 
+    /**
+     * Check if the environment is running on Windows and not in a Docker container.
+     *
+     * @return bool
+     */
     public function isWindowAndNotDocker(): bool
     {
         return $this->isWindows() && !$this->isDocker();
     }
 
     /**
+     * Get the launch options for the Chromium browser.
+     *
      * @return array<string, mixed>
      */
     public function getLaunchOptions(): array
@@ -79,6 +107,8 @@ final class ChromiumEnvironment
 
     /**
      * Returns an executable path, or null to let {@see \HeadlessChromium\BrowserFactory} auto-discover.
+     *
+     * @return string|null
      */
     public function resolveChromeBinary(): ?string
     {
@@ -134,6 +164,12 @@ final class ChromiumEnvironment
         return null;
     }
 
+    /**
+     * Check if the path is an executable path.
+     *
+     * @param string $path
+     * @return bool
+     */
     private function isExecutablePath(string $path): bool
     {
         if (!is_file($path)) {

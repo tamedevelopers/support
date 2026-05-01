@@ -20,6 +20,7 @@ use Tamedevelopers\Support\ChromePdf\Internal\FileUri;
 use Tamedevelopers\Support\ChromePdf\Internal\FlattenLinksScript;
 use Tamedevelopers\Support\ChromePdf\Internal\PreloaderRemovalScript;
 use Tamedevelopers\Support\ChromePdf\PdfOutput;
+use Tamedevelopers\Support\ChromePdf\Traits\ChromeBinaryTrait;
 use Tamedevelopers\Support\ChromePdf\Traits\ChromePdfDocumentTrait;
 use Tamedevelopers\Support\ChromePdf\Traits\FontManagerTrait;
 use Tamedevelopers\Support\Server;
@@ -64,13 +65,10 @@ use Throwable;
 final class ChromePdf
 {
     use ChromePdfDocumentTrait, 
-        FontManagerTrait;
+        FontManagerTrait,
+        ChromeBinaryTrait;
 
-
-    private ?string $sourceMode = null;
-
-    private ?string $sourceValue = null;
-
+    /** The CSS selector. */
     private ?string $selector = null;
 
     /** @var list<string>|null Non-empty CSS selectors whose matching elements are removed from the DOM before capture. */
@@ -96,8 +94,6 @@ final class ChromePdf
 
     /** @var Theme|null merged CSS from {@see theme()}, {@see css()}, and {@see cssFile()} */
     private ?Theme $styles = null;
-
-    private ?string $chromiumBinary = null;
 
     private bool $autoInjectFonts = true;
 
@@ -133,11 +129,6 @@ final class ChromePdf
     private int $stabilityTimeoutMs = 2200;
 
     /**
-     * When true, Chromium ignores TLS certificate errors (useful for intranet HTTPS during development).
-     */
-    private bool $ignoreCertificateErrors = false;
-
-    /**
      * When true (default), runs client-side removal of common cookie/consent banners before PDF capture.
      * Does not change HTTP cookies — only strips DOM overlays (known CMPs + a small fixed-position heuristic).
      */
@@ -155,29 +146,10 @@ final class ChromePdf
     private bool $postProcessLocalSources = false;
 
     /**
-     * Maps to BrowserFactory {@code enableImages} ({@code --blink-settings=imagesEnabled=false} when false).
-     * Default true — call {@see loadRemoteImages(true)} to load remote bitmap/CSS images.
-     */
-    private bool $enableRemoteImageLoading = true;
-
-    /**
      *  Delete file passed to fromFile
      */
     private bool $deleteUploadedFile = false;
-
-    private int $desktopViewportWidth = 1920;
-
-    private int $desktopViewportHeight = 1080;
-
-    private const DESKTOP_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-        . '(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
-
-    private static ?Browser $sharedBrowser = null;
-
-    /** @see browserLaunchKey() */
-    private static ?string $sharedBrowserLaunchKey = null;
-
-    private static bool $shutdownHandlerRegistered = false;
+    
 
     /** Avoids redundant {@code Emulation.*} CDP work on the same target session when the scheme is unchanged. */
     private static ?string $lastColorSchemeEmulationSignature = null;
@@ -285,7 +257,6 @@ final class ChromePdf
         return $this;
     }
 
-
     /**
      * Remove every element that matches any of the given CSS selectors from the live document before PDF capture.
      */
@@ -294,14 +265,6 @@ final class ChromePdf
         $this->hideSelectors = !empty($cssSelectors) ? Str::flatten($cssSelectors) : null;
 
         return $this;
-    }
-
-    /**
-     * Alias of {@see hideElements()} for callers that want a "remove class/selector" semantic name.
-     */
-    public function removeClass(...$cssSelectors): self
-    {
-        return $this->hideElements(...$cssSelectors);
     }
 
     /**
@@ -444,6 +407,12 @@ final class ChromePdf
         return $this;
     }
 
+    /**
+     * Set the Chromium binary path.
+     *
+     * @param string|null $absolutePath
+     * @return self
+     */
     public function chromiumBinary(?string $absolutePath): self
     {
         $env = new ChromiumEnvironment();
@@ -455,6 +424,7 @@ final class ChromePdf
 
         return $this;
     }
+
     public function autoInjectUnicodeFonts(bool $enabled = true): self
     {
         $this->autoInjectFonts = $enabled;
@@ -481,25 +451,6 @@ final class ChromePdf
         $this->prioritizeSpeed = $enable;
 
         return $this;
-    }
-
-    /**
-     * Controls whether Chromium loads images (required for {@code http(s)://} in {@code img src} and CSS background images).
-     * Default is {@code false}; pass {@code true} to opt in. Web fonts and document text are not gated by this flag.
-     */
-    public function loadRemoteImages(bool $enable = true): self
-    {
-        $this->enableRemoteImageLoading = $enable;
-
-        return $this;
-    }
-
-    /**
-     * Alias for {@see loadRemoteImages()}.
-     */
-    public function absoluteImageLinks(bool $enable = true): self
-    {
-        return $this->loadRemoteImages($enable);
     }
 
     /**
@@ -554,13 +505,6 @@ final class ChromePdf
         return $this;
     }
 
-    public function ignoreCertificateErrors(bool $enable = true): self
-    {
-        $this->ignoreCertificateErrors = $enable;
-
-        return $this;
-    }
-
     /**
      * Enable or disable stripping cookie / consent UI from the document before printing.
      * When enabled, uses known consent-manager selectors plus a conservative overlay heuristic.
@@ -609,6 +553,11 @@ final class ChromePdf
         return $this;
     }
 
+    /**
+     * Generate the PDF.
+     *
+     * @return PdfOutput
+     */
     public function generate(): PdfOutput
     {
         if ($this->sourceMode === null || $this->sourceValue === null) {
@@ -624,8 +573,6 @@ final class ChromePdf
         try {
             $page = $browser->createPage();
             $this->applyColorSchemeToPage($page);
-            // $this->applyDesktopViewportEmulation($page);
-            // $this->applyPrintMediaEmulationForLinkMetrics($page);
 
             match ($this->sourceMode) {
                 'url' => $this->loadFromUrlWithBlocking($page),
@@ -762,136 +709,10 @@ final class ChromePdf
     }
 
     /**
-     * @return array{0: string, 1: array<string, mixed>}
+     * Should stabilize after load.
+     *
+     * @return bool
      */
-    private function buildBrowserLaunchConfig(): array
-    {
-        $env = new ChromiumEnvironment();
-        $binary = $this->chromiumBinary ?? $env->resolveChromeBinary();
-        $launch = $env->getLaunchOptions();
-        if ($this->ignoreCertificateErrors) {
-            $launch['ignoreCertificateErrors'] = true;
-        }
-        $launch['enableImages'] = $this->shouldEnableChromiumImages();
-        $launch['keepAlive'] = true;
-        if ($this->sourceMode === 'url') {
-            // Set desktop hints at browser startup to reduce per-page emulation overhead.
-            $launch['windowSize'] = [$this->desktopViewportWidth, $this->desktopViewportHeight];
-            $launch['userAgent'] = self::DESKTOP_USER_AGENT;
-        }
-
-        return [$binary, $launch];
-    }
-
-    private function browserLaunchKey(): string
-    {
-        [$binary, $launch] = $this->buildBrowserLaunchConfig();
-
-        $this->headlessRestrictEnv($launch);
-
-        return implode("\0", [
-            (string) $binary,
-            ($launch['enableImages'] ?? true) ? '1' : '0',
-            ($launch['ignoreCertificateErrors'] ?? false) ? '1' : '0',
-            (string) ($launch['userAgent'] ?? ''),
-            (string) ($launch['windowSize'][0] ?? ''),
-            (string) ($launch['windowSize'][1] ?? ''),
-        ]);
-    }
-
-    private static function registerShutdownHandlerOnce(): void
-    {
-        if (self::$shutdownHandlerRegistered) {
-            return;
-        }
-        register_shutdown_function(static function (): void {
-            self::shutdown();
-        });
-        self::$shutdownHandlerRegistered = true;
-    }
-
-    private function acquireSharedBrowser(): Browser
-    {
-        self::registerShutdownHandlerOnce();
-
-        $key = $this->browserLaunchKey();
-
-        if (self::$sharedBrowser !== null && self::$sharedBrowserLaunchKey === $key) {
-            return self::$sharedBrowser;
-        }
-
-        if (self::$sharedBrowser !== null) {
-            try {
-                self::$sharedBrowser->close();
-            } catch (Throwable) {
-            }
-            self::$sharedBrowser = null;
-            self::$sharedBrowserLaunchKey = null;
-        }
-
-        [$binary, $launch] = $this->buildBrowserLaunchConfig();
-
-        $this->headlessRestrictEnv($launch);
-        
-        $factory = new BrowserFactory($binary);
-        self::$sharedBrowser = $factory->createBrowser($launch);
-        self::$sharedBrowserLaunchKey = $key;
-
-        return self::$sharedBrowser;
-    }
-
-    /**
-     * chrome-php only forwards {@code noSandbox} and {@code customFlags} to Chromium — an {@code args} key is ignored
-     * (see {@code HeadlessChromium\Browser\BrowserProcess::getArgsFromOptions()}).
-     */
-    private function headlessRestrictEnv(array &$launch): void
-    {
-        if ($launch === []) {
-            return;
-        }
-
-        $launch['noSandbox'] = true;
-
-        $launch['customFlags'] = array_values(array_merge($launch['customFlags'] ?? [], [
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--no-zygote',
-            '--disable-software-rasterizer',
-            '--disable-crash-reporter',
-            '--crash-dumps-dir=/tmp',
-            '--max_old_space_size=512', // Reduce memory usage
-
-            // Speed optimizations
-            '--disable-gpu', // Disable GPU (faster in headless)
-            '--disable-extensions',
-            '--disable-plugins',
-            '--disable-default-apps',
-            '--disable-sync',
-            '--disable-translate',
-            '--disable-features=TranslateUI,BlinkGenPropertyTrees',
-            '--disable-component-extensions-with-background-pages',
-            '--disable-client-side-phishing-detection',
-            '--disable-popup-blocking',
-            '--disable-prompt-on-repost',
-            '--disable-hang-monitor',
-            '--disable-ipc-flooding-protection',
-            '--disable-throttle-iframe-legacy',
-            '--disable-accelerated-2d-canvas',
-            '--disable-accelerated-jpeg-decoding',
-            '--disable-accelerated-mjpeg-decode',
-            '--disable-accelerated-video-decode',
-
-            // flags to reduce file system interactions
-            '--disable-features=WinRetrieveSuggestionsOnlyOnDemand',
-            '--disable-background-networking',
-            '--disk-cache-size=1',
-            '--media-cache-size=1',
-        ]));
-
-        $launch['ignoreCertificateErrors'] = $this->ignoreCertificateErrors;
-        $launch['keepAlive'] = true;
-    }
-
     private function shouldStabilizeAfterLoad(): bool
     {
         if (!$this->stabilizeBeforeCapture) {
@@ -901,6 +722,11 @@ final class ChromePdf
         return $this->sourceMode === 'url' || $this->postProcessLocalSources;
     }
 
+    /**
+     * Should strip cookies after load.
+     *
+     * @return bool
+     */
     private function shouldStripCookiesAfterLoad(): bool
     {
         if (!$this->stripCookiePopupsBeforePdf) {
@@ -933,11 +759,6 @@ final class ChromePdf
             );
         } catch (Throwable) {
         }
-    }
-
-    private function shouldEnableChromiumImages(): bool
-    {
-        return $this->enableRemoteImageLoading;
     }
 
     /**
@@ -996,6 +817,10 @@ final class ChromePdf
         $this->hideSelectors = null;
     }
 
+    /**
+     * Batches prefers-color-scheme emulation, optional auto-dark override, and client hints in one pass.
+     * Skips duplicate CDP work when the target session already has the same scheme applied.
+     */
     /**
      * Link hit-testing must match the same {@code print} layout Blink uses for {@code Page.printToPDF}. Measuring in
      * the default screen media misses {@code @media print} rules, fixed/sticky reflow, and width/pagination — which
@@ -1070,37 +895,6 @@ final class ChromePdf
                     'Sec-CH-Prefers-Color-Scheme' => $this->colorScheme->value,
                 ]);
             }
-        } catch (Throwable) {
-        }
-    }
-
-    /**
-     * Forces desktop viewport/device hints so responsive breakpoints stay in large-screen mode.
-     */
-    private function applyDesktopViewportEmulation(Page $page): void
-    {
-        if ($this->sourceMode !== 'url') {
-            return;
-        }
-
-        $session = $page->getSession();
-
-        try {
-            $session->sendMessageSync(new Message('Emulation.setDeviceMetricsOverride', [
-                'width' => $this->desktopViewportWidth,
-                'height' => $this->desktopViewportHeight,
-                'deviceScaleFactor' => 1,
-                'mobile' => false,
-                'screenWidth' => $this->desktopViewportWidth,
-                'screenHeight' => $this->desktopViewportHeight,
-            ]));
-        } catch (Throwable) {
-        }
-
-        try {
-            $session->sendMessageSync(new Message('Emulation.setTouchEmulationEnabled', [
-                'enabled' => false,
-            ]));
         } catch (Throwable) {
         }
     }

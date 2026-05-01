@@ -12,14 +12,14 @@ $aliexpress = 'https://www.aliexpress.com/item/1005010595606666.html';
 dd(
     (new WebScraper)
         ->setUrl("
-            $ebay
-        
+            $aliexpress
         ")
         ->setSelectors([
             // 'title' => 'h1',
             // 'price' => 'span.price',
             // 'description' => 'p.description',
         ])
+        // ->chromiumBinary(base_path('chrome-win64/chrome.exe'))
         ->setEngine('dom') //chromium|dom
         ->fetch()
         ->getData()

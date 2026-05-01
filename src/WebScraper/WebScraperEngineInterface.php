@@ -19,4 +19,5 @@ interface WebScraperEngineInterface
      * @param array<string, mixed> $options Engine-specific options (timeouts, binary path, etc.)
      */
     public function fetch(string $url, array $options = []): WebScraperFetchResult;
+    
 }

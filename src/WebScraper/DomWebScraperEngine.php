@@ -11,11 +11,24 @@ use RuntimeException;
  */
 final class DomWebScraperEngine implements WebScraperEngineInterface
 {
+
+    /**
+     * Get the name of the engine.
+     *
+     * @return string
+     */
     public function getName(): string
     {
         return 'dom';
     }
 
+    /**
+     * Fetch the HTML from the URL.
+     *
+     * @param string $url
+     * @param array $options
+     * @return WebScraperFetchResult
+     */
     public function fetch(string $url, array $options = []): WebScraperFetchResult
     {
         $ch = curl_init();

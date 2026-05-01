@@ -10,7 +10,9 @@ use DOMXPath;
 use Exception;
 use InvalidArgumentException;
 use RuntimeException;
+use Tamedevelopers\Support\ChromePdf\ChromiumEnvironment;
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Traits\TameTrait;
 use Tamedevelopers\Support\WebScraper\ChromiumWebScraperEngine;
 use Tamedevelopers\Support\WebScraper\DomWebScraperEngine;
 use Tamedevelopers\Support\WebScraper\WebScraperEngineInterface;
@@ -23,6 +25,14 @@ use Tamedevelopers\Support\WebScraper\WebScraperEngineInterface;
  */
 class WebScraper
 {
+    use TameTrait;
+
+
+    /** 
+     * @var string|null The Chromium binary path.
+     */
+    private ?string $chromiumBinary = null;
+    
     /**
      * @var string The target URL to scrape
      */
@@ -102,6 +112,7 @@ class WebScraper
     
     private int $lastFetchHttpStatus = 0;
     
+    
     /**
      * Constructor
      * 
@@ -121,7 +132,14 @@ class WebScraper
         $this->errors = [];
         $this->productData = [];
         $this->baseUrl = '';
-        $this->engineOptions = is_array($config['engine_options'] ?? null) ? $config['engine_options'] : [];
+
+        $this->engineOptions = $config['engine_options'] ?? [
+            'navigation_timeout_ms' => 30000,
+            'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'verify_ssl' => true,
+            'proxy' => null,
+        ];
+
         $this->engine = $this->createEngineFromConfig($config);
         
         // Set default selectors (can be customized)
@@ -165,6 +183,24 @@ class WebScraper
 
         return $this;
     }
+
+    /**
+     * Set the Chromium binary path.
+     *
+     * @param string|null $absolutePath
+     * @return self
+     */
+    public function chromiumBinary(?string $absolutePath): self
+    {
+        $env = new ChromiumEnvironment();
+        if($env->isWindowAndNotDocker()) {
+            $absolutePath = self::stringReplacer($absolutePath);
+        }
+        
+        $this->chromiumBinary = $absolutePath;
+
+        return $this;
+    }
     
     /**
      * Use the DOM/cURL engine (default) or Chromium, or a custom {@see WebScraperEngineInterface}.
@@ -182,15 +218,23 @@ class WebScraper
         if ($options !== []) {
             $this->engineOptions = $options;
         }
+
         return $this;
     }
     
+    /**
+     * Get the engine.
+     *
+     * @return WebScraperEngineInterface
+     */
     public function getEngine(): WebScraperEngineInterface
     {
         return $this->engine;
     }
     
     /**
+     * Get the engine options.
+     * 
      * @return array<string, mixed>
      */
     public function getEngineOptions(): array
@@ -213,12 +257,19 @@ class WebScraper
         return new DomWebScraperEngine();
     }
     
+    /**
+     * Create an engine by name.
+     *
+     * @param string $name
+     * @return WebScraperEngineInterface
+     */
     private function createEngineByName(string $name): WebScraperEngineInterface
     {
         $n = strtolower(trim($name));
         if (in_array($n, ['chromium', 'chrome', 'headless-chromium'], true)) {
-            return new ChromiumWebScraperEngine();
+            return new ChromiumWebScraperEngine($this->chromiumBinary);
         }
+
         return new DomWebScraperEngine();
     }
     
@@ -312,7 +363,7 @@ class WebScraper
         $this->dom->loadHTML('<!doctype html><html><head></head><body></body></html>', LIBXML_NOERROR);
         $this->xpath = new DOMXPath($this->dom);
         $this->scrape();
-
+        
         $this->productData['raw_data']['fetch_error'] = $errorMessage;
         $this->productData['raw_data']['blocked'] = true;
         $this->productData['raw_data']['block_signals'] = array_values(array_unique(array_merge(
@@ -365,6 +416,7 @@ class WebScraper
     private function applyBlockSignals(): void
     {
         $signals = $this->detectBlockSignals();
+
         $this->productData['raw_data']['blocked'] = $signals['is_blocked'];
         $this->productData['raw_data']['block_signals'] = $signals['signals'];
         $this->productData['raw_data']['block_reason'] = $signals['reason'];
@@ -675,6 +727,12 @@ class WebScraper
         return false;
     }
     
+    /**
+     * Extract price from JSON-LD offer.
+     *
+     * @param mixed $offers
+     * @return string
+     */
     private function extractPriceFromJsonLdOffer(mixed $offers): string
     {
         if ($offers === null) {
@@ -713,6 +771,12 @@ class WebScraper
         return '';
     }
     
+    /**
+     * Extract currency from JSON-LD offer.
+     *
+     * @param mixed $offers
+     * @return string
+     */
     private function jsonLdExtractOfferCurrency(mixed $offers): string
     {
         if ($offers === null) {
@@ -800,6 +864,12 @@ class WebScraper
         return $out;
     }
     
+    /**
+     * Normalize to ISO 4217 currency code.
+     *
+     * @param string $raw
+     * @return string
+     */
     private function normalizeToIso4217(string $raw): string
     {
         $t = strtoupper(trim($raw));
@@ -820,6 +890,12 @@ class WebScraper
         return '';
     }
     
+    /**
+     * Infer currency from price text.
+     *
+     * @param string $raw
+     * @return string
+     */
     private function inferCurrencyFromPriceText(string $raw): string
     {
         if ($raw === '') {
@@ -920,6 +996,12 @@ class WebScraper
         self::$currencyNameToCode = $nameMap;
     }
     
+    /**
+     * Clean description plain.
+     *
+     * @param string $d
+     * @return string
+     */
     private function cleanDescriptionPlain(string $d): string
     {
         $d = strip_tags($d);
@@ -958,6 +1040,12 @@ class WebScraper
         return trim((string) $price);
     }
     
+    /**
+     * Get meta itemprop.
+     *
+     * @param string $name
+     * @return string
+     */
     private function getMetaItemprop(string $name): string
     {
         $n = $this->xpath->query(
@@ -970,6 +1058,12 @@ class WebScraper
         return '';
     }
     
+    /**
+     * Get meta by property.
+     *
+     * @param string $property
+     * @return string
+     */
     private function getMetaByProperty(string $property): string
     {
         $n = $this->xpath->query("//meta[translate(@property,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='" . strtolower($property) . "']/@content");
@@ -981,6 +1075,12 @@ class WebScraper
         return '';
     }
     
+    /**
+     * Decode HTML text.
+     *
+     * @param string $s
+     * @return string
+     */
     private function decodeHtmlText(string $s): string
     {
         return trim(html_entity_decode($s, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
