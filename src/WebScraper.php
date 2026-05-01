@@ -10,9 +10,9 @@ use DOMXPath;
 use Exception;
 use InvalidArgumentException;
 use RuntimeException;
-use Tamedevelopers\Support\ChromePdf\ChromiumEnvironment;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Traits\TameTrait;
+use Tamedevelopers\Support\ChromePdf\ChromiumEnvironment;
 use Tamedevelopers\Support\WebScraper\ChromiumWebScraperEngine;
 use Tamedevelopers\Support\WebScraper\DomWebScraperEngine;
 use Tamedevelopers\Support\WebScraper\WebScraperEngineInterface;
@@ -49,9 +49,9 @@ class WebScraper
     private string $html;
     
     /**
-     * @var DOMDocument DOM document instance for HTML parsing
+     * @var null|DOMDocument DOM document instance for HTML parsing
      */
-    private DOMDocument $dom;
+    private ?DOMDocument $dom = null;
     
     /**
      * @var DOMXPath XPath instance for querying HTML elements
@@ -124,42 +124,53 @@ class WebScraper
      *   @var string $cache_dir
      *   @var int    $cache_ttl
      * }
+     * @param string|null $url Optional URL to set immediately
+     * @param string|null $baseUrl Optional base URL for resolving relative image paths (defaults to URL's domain)
      */
-    public function __construct(array $config = [])
+    public function __construct(array $config = [], $url = null, $baseUrl = null)
     {
-        $this->dom = new DOMDocument();
-        libxml_use_internal_errors(true);
-        $this->errors = [];
-        $this->productData = [];
-        $this->baseUrl = '';
+        // If URL is provided in constructor, set it and derive base URL if not explicitly provided
+        if(!empty($url)){
+            $this->url = $url;
+            $this->baseUrl = $baseUrl ?? parse_url($url, PHP_URL_SCHEME) . '://' . parse_url($url, PHP_URL_HOST);
+        }
 
-        $this->engineOptions = $config['engine_options'] ?? [
-            'navigation_timeout_ms' => 30000,
-            'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'verify_ssl' => true,
-            'proxy' => null,
-        ];
-
-        $this->engine = $this->createEngineFromConfig($config);
-        
-        // Set default selectors (can be customized)
-        $this->selectors = [
-            'name' => 'div h1.-fs20, .title--wrap--UUHae_g h1, h1.dark-gray, h1[itemprop="name"]',
-            'price' => 'div span.-prxs, .price-default--current--F8OlYIo, .ux-textspans, .price, span.price, [itemprop="price"]',
-            'description' => '.markup.-mhm.-pvl.-oxa.-sc, .description--wrap--LscZ0He, [itemprop="description"], p.description',
-            'colors' => '.itm-sel',
-            'sizes' => '.vl, [data-testid="variant-group-0"] .ld_A0 span, .pl_selectiontile-text100 label font',
-            'images' => 'img.product-image, .product-gallery img, [data-image]'
-        ];
-        
-        // Cache configuration
-        $this->cacheEnabled = $config['cache_enabled'] ?? false;
-        $this->cacheDir = $config['cache_dir'] ?? __DIR__ . '/cache/scraper/';
-        $this->cacheTTL = $config['cache_ttl'] ?? 3600;
-        
-        // Initialize cache directory if needed
-        if ($this->cacheEnabled && !is_dir($this->cacheDir)) {
-            mkdir($this->cacheDir, 0755, true);
+        // Initialize properties and engine
+        if(!($this->dom instanceof DOMDocument)) {
+            $this->dom = new DOMDocument();
+            libxml_use_internal_errors(true);
+    
+            $this->errors = [];
+            $this->productData = [];
+    
+            $this->engineOptions = $config['engine_options'] ?? [
+                'navigation_timeout_ms' => 30000,
+                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'verify_ssl' => true,
+                'proxy' => null,
+            ];
+    
+            $this->engine = $this->createEngineFromConfig($config);
+            
+            // Set default selectors (can be customized)
+            $this->selectors = [
+                'name' => 'div h1.-fs20, .title--wrap--UUHae_g h1, h1.dark-gray, h1[itemprop="name"]',
+                'price' => 'div span.-prxs, .price-default--current--F8OlYIo, .ux-textspans, .price, span.price, [itemprop="price"]',
+                'description' => '.markup.-mhm.-pvl.-oxa.-sc, .description--wrap--LscZ0He, [itemprop="description"], p.description',
+                'colors' => '.itm-sel',
+                'sizes' => '.vl, [data-testid="variant-group-0"] .ld_A0 span, .pl_selectiontile-text100 label font',
+                'images' => 'img.product-image, .product-gallery img, [data-image]'
+            ];
+            
+            // Cache configuration
+            $this->cacheEnabled = $config['cache_enabled'] ?? false;
+            $this->cacheDir = $config['cache_dir'] ?? __DIR__ . '/cache/scraper/';
+            $this->cacheTTL = $config['cache_ttl'] ?? 3600;
+            
+            // Initialize cache directory if needed
+            if ($this->cacheEnabled && !is_dir($this->cacheDir)) {
+                mkdir($this->cacheDir, 0755, true);
+            }
         }
     }
     
@@ -170,18 +181,30 @@ class WebScraper
      * @return self Returns instance for method chaining
      * @throws InvalidArgumentException If URL is invalid
      */
-    public function setUrl(string $url): self
+    public static function setUrl(string $url): self
     {
         $url = Str::trim($url);
 
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
             throw new InvalidArgumentException("Invalid URL provided: $url");
         }
-        
-        $this->url = $url;
-        $this->baseUrl = parse_url($url, PHP_URL_SCHEME) . '://' . parse_url($url, PHP_URL_HOST);
 
-        return $this;
+        return new self(
+            [], 
+            $url, 
+            parse_url($url, PHP_URL_SCHEME) . '://' . parse_url($url, PHP_URL_HOST)
+        );
+    }
+
+    /**
+     * Alias for {@see setUrl()} to allow fluent static calls.
+     *
+     * @param string $url
+     * @return self
+     */
+    public static function url(string $url): self
+    {
+        return self::setUrl($url);
     }
 
     /**
