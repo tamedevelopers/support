@@ -16,6 +16,7 @@ final class CombinedPostProcessScript
      * @param bool $includeFloating removes chats / floating buttons / back-to-top controls
      * @param bool $waitForImages when true, polls {@code document.images} for completeness (local file/html sources)
      * @param int $imageWaitMs cap for image-readiness poll
+     * @param int $webFontsReadyRaceMs when >0, race {@code document.fonts.ready} with this cap (remote URL captures)
      */
     public static function asExpression(
         bool $includeStability,
@@ -28,12 +29,14 @@ final class CombinedPostProcessScript
         int $paintSettleMs = 50,
         bool $includeFloating = false,
         bool $waitForImages = false,
-        int $imageWaitMs = 2000
+        int $imageWaitMs = 2000,
+        int $webFontsReadyRaceMs = 0
     ): string {
         $max = max(400, min(20000, $stabilityBudgetMs));
         $race = max(50, min(30000, $fontRaceMs));
         $paint = max(0, min(80, $paintSettleMs));
         $imgCap = max(200, min(8000, $imageWaitMs));
+        $fontReadyCap = max(0, min(30000, $webFontsReadyRaceMs));
 
         $payload = [
             'theme' => $themeCss,
@@ -97,6 +100,17 @@ final class CombinedPostProcessScript
 
         if ($includeStability) {
             $js .= "await " . PageStabilityScript::asSettleExpression($max, $leanStability) . ";";
+        }
+
+        if ($fontReadyCap > 0) {
+            $js .= "try {"
+                . "if (document.fonts && typeof document.fonts.ready !== 'undefined') {"
+                . "await Promise.race(["
+                . "document.fonts.ready,"
+                . "new Promise(function (r) { setTimeout(r, {$fontReadyCap}); })"
+                . "]);"
+                . "}"
+                . "} catch (eFr) {}";
         }
 
         if ($includeFloating) {
