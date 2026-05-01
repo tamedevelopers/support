@@ -38,7 +38,6 @@ trait FontPathTrait{
 
         $isUnicode = self::needsUnicodeFont($textForFont);
 
-        $bundledSc = self::firstReadableBundled($weight === 'bold' ? 'NotoSansSC-Bold.ttf' : 'NotoSansSC-Medium.ttf');
         $bundledLatin = self::firstReadableBundled($weight === 'bold' ? 'Inter-Bold.ttf' : 'Inter-Medium.ttf');
 
         // Script-specific fonts (NotoSansSC does not cover Arabic — avoid blank Arabic initials)
@@ -73,8 +72,11 @@ trait FontPathTrait{
                     return $resolved;
                 }
             }
-            if (self::textContainsCjkScript($textForFont) && $bundledSc !== null) {
-                return $bundledSc;
+            if (self::textContainsCjkScript($textForFont)) {
+                $resolved = self::firstReadableFont(self::cjkFontCandidates($weight));
+                if ($resolved !== null) {
+                    return $resolved;
+                }
             }
         }
 
@@ -138,7 +140,8 @@ trait FontPathTrait{
      * Bundled fallbacks under Traits/icons/fonts/ when no system font is readable.
      *
      * These are NOT OS defaults — ship them with your app if you need consistent results everywhere:
-     * - Inter + NotoSansSC (Latin + Simplified Chinese) — typical minimum
+     * - Inter + optional CJK: system fonts are tried first; bundled NotoSansSC is last resort (full files are large).
+     * - Smaller deploy: add subset TTFs named *-subset.ttf (see {@see cjkFontCandidates}) or set TAME_SUPPORT_CJK_FONT_* env.
      * - Optional: NotoSansCJK-{Regular,Bold}.ttc (Google Noto CJK, one file ~70MB+), NotoNaskhArabic, unifont.ttf
      *
      * @return list<string>
@@ -151,7 +154,11 @@ trait FontPathTrait{
         foreach (self::iconsFontsDirectories() as $d) {
             if (self::textContainsCjkScript($textForFont)) {
                 $out[] = $d . ($bold ? 'NotoSansCJK-Bold.ttc' : 'NotoSansCJK-Regular.ttc');
-                $out[] = $d . ($bold ? 'NotoSansSC-Bold.ttf' : 'NotoSansSC-Medium.ttf');
+                foreach (($bold
+                    ? ['DroidSansFallback.ttf', 'NotoSansSC-Bold-subset.ttf', 'NotoSansSC-Bold.ttf']
+                    : ['DroidSansFallback.ttf', 'NotoSansSC-Medium-subset.ttf', 'NotoSansSC-Medium.ttf', 'NotoSansSC-Regular-subset.ttf', 'NotoSansSC-Regular.ttf']) as $cjkFile) {
+                    $out[] = $d . $cjkFile;
+                }
             }
 
             if (self::textContainsArabicScript($textForFont)) {
@@ -191,11 +198,11 @@ trait FontPathTrait{
     }
 
     /**
-     * OS-installed font paths (optional; may be missing on Docker/minimal images).
+     * OS-installed Unicode/CJK-capable fonts, ordered by preferred weight match.
      *
      * @return list<string>
      */
-    private static function systemFallbackOrdered(string $weight, bool $unicodeFirst): array
+    private static function systemUnicodeFontOrdered(string $weight): array
     {
         $bold = $weight === 'bold';
 
@@ -220,14 +227,58 @@ trait FontPathTrait{
             '/System/Library/Fonts/PingFang.ttc',
         ];
 
+        return $bold
+            ? array_merge($unicodeBold, $unicodeRegular)
+            : array_merge($unicodeRegular, $unicodeBold);
+    }
+
+    /**
+     * CJK rendering: env override → OS fonts → bundled subset (if present) → full NotoSansSC.
+     * Google Fonts CSS URLs cannot be used with GD/Imagick; use downloaded TTF/OTF or subset files.
+     *
+     * @return list<string>
+     */
+    private static function cjkFontCandidates(string $weight): array
+    {
+        $bold = $weight === 'bold';
+        $out = [];
+
+        $envKey = $bold ? 'TAME_SUPPORT_CJK_FONT_BOLD' : 'TAME_SUPPORT_CJK_FONT_REGULAR';
+        $envPath = getenv($envKey);
+        if (is_string($envPath) && $envPath !== '' && @is_readable($envPath)) {
+            $out[] = $envPath;
+        }
+
+        $out = array_merge($out, self::systemUnicodeFontOrdered($weight));
+
+        $relativeNames = $bold
+            ? ['DroidSansFallback.ttf', 'NotoSansSC-Bold-subset.ttf', 'NotoSansSC-Bold.ttf']
+            : ['DroidSansFallback.ttf', 'NotoSansSC-Medium-subset.ttf', 'NotoSansSC-Medium.ttf', 'NotoSansSC-Regular-subset.ttf', 'NotoSansSC-Regular.ttf'];
+
+        foreach ($relativeNames as $rel) {
+            foreach (self::bundledRelativePaths($rel) as $p) {
+                $out[] = $p;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * OS-installed font paths (optional; may be missing on Docker/minimal images).
+     *
+     * @return list<string>
+     */
+    private static function systemFallbackOrdered(string $weight, bool $unicodeFirst): array
+    {
+        $bold = $weight === 'bold';
+
+        $unicodeOrdered = self::systemUnicodeFontOrdered($weight);
+
         $winFontsBold = ['C:\\Windows\\Fonts\\arialbd.ttf', 'C:\\Windows\\Fonts\\segoeuib.ttf'];
         $winFontsRegular = ['C:\\Windows\\Fonts\\arial.ttf', 'C:\\Windows\\Fonts\\segoeui.ttf'];
         $unixFontsBold = ['/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/Library/Fonts/Arial Bold.ttf'];
         $unixFontsRegular = ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', '/Library/Fonts/Arial.ttf'];
-
-        $unicodeOrdered = $bold
-            ? array_merge($unicodeBold, $unicodeRegular)
-            : array_merge($unicodeRegular, $unicodeBold);
 
         $latinOrdered = $bold
             ? array_merge($winFontsBold, $unixFontsBold, $winFontsRegular, $unixFontsRegular)

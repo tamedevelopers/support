@@ -47,18 +47,18 @@ $path2 = TextToImage::run([
 //     'gradient' => 'forest',
 // ]);
 
-// $path5 = $ntoimage->run([
-//     'name' => '王小明',
-//     'font_weight' => 'normal',
-//     'bg_color' => [147, 51, 234],
-//     'text_color' => '#ffffff',
-// ]);
+$path5 = $ntoimage->run([
+    'name' => '王小明',
+    'font_weight' => 'normal',
+    'bg_color' => [147, 51, 234],
+    'text_color' => '#ffffff',
+]);
 
-// $path6 = $ntoimage->run([
-//     'name' => 'آية. مليون.',
-//     'font_weight' => 'normal',
-//     'type' => 'circle',
-// ]);
+$path6 = $ntoimage->run([
+    'name' => 'آية. مليون.',
+    'font_weight' => 'normal',
+    'type' => 'circle',
+]);
 
     dump(
         $path1
@@ -69,6 +69,8 @@ $path2 = TextToImage::run([
 <div style="background-color:rgb(10, 85, 106); text-align: center;">
     <img src="<?= $path1['url']; ?>" alt="Text to Image">
     <img src="<?= $path2['url']; ?>" alt="Text to Image">
+    <img src="<?= $path5['url']; ?>" alt="Text to Image">
+    <img src="<?= $path6['url']; ?>" alt="Text to Image">
 </div>
 
 
