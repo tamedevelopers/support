@@ -12,10 +12,20 @@ trait FontPathTrait{
 
     use TameTrait;
 
-    static private $fontNonLatin = [
-        'bold' => 'NotoSansSC-Medium.ttf', // NotoSansSC-Bold.ttf
-        'medium' => 'NotoSansSC-Medium.ttf',
-    ];
+    /**
+     * Single bundled Regular/Medium faces for SC (bold request uses faux bold in {@see TextToImage}).
+     *
+     * @return list<string>
+     */
+    private static function bundledCjkFilenames(): array
+    {
+        // DroidSansFallback: ~4MB TTF with broad CJK (GD-friendly). Prefer before huge NotoSansSC.
+        return [
+            'DroidSansFallback.ttf',
+            'NotoSansSC-Medium.ttf',
+            'NotoSansSC-Regular.ttf',
+        ];
+    }
 
     /**
      * Try to resolve a readable TTF/TTC font path. Use provided path if valid; otherwise try system fonts.
@@ -29,80 +39,125 @@ trait FontPathTrait{
      */
     public static function resolveFontPath($path = null, $weight = null, $textForFont = null)
     {
+        return self::resolveFontPathWithMeta($path, $weight, $textForFont)[0];
+    }
+
+    /**
+     * Like {@see resolveFontPath} but exposes whether callers should emulate bold when only a Regular/Medium file is bundled.
+     *
+     * @return array{0: null|string, 1: bool} [fontPath, useSyntheticBold]
+     */
+    public static function resolveFontPathWithMeta($path = null, $weight = null, $textForFont = null): array
+    {
         if (empty($textForFont)) {
             $textForFont = '';
         }
 
-        $weight = Str::lower($weight);
+        $weight = Str::lower((string) $weight);
         $weight = in_array($weight, ['normal', 'bold'], true) ? $weight : 'bold';
-        $isBold = $weight === 'bold';
+        $isBoldRequest = $weight === 'bold';
 
         // If user provided a readable path, use it as-is
         if (is_string($path) && $path !== '' && @is_readable($path)) {
-            return $path;
+            return [$path, false];
         }
 
         $isUnicode = self::needsUnicodeFont($textForFont);
 
-        $bundledSc = self::firstReadableBundled(
-            $isBold ? self::$fontNonLatin['bold'] : self::$fontNonLatin['medium']
-        );
-        $bundledLatin = self::firstReadableBundled($isBold ? 'Inter-Bold.ttf' : 'Inter-Medium.ttf');
+        $bundledSc = self::firstReadableBundledCandidates(self::bundledCjkFilenames());
+        $bundledLatin = self::firstReadableBundled($isBoldRequest ? 'Inter-Bold.ttf' : 'Inter-Medium.ttf');
 
-        // Script-specific fonts (NotoSansSC does not cover Arabic — avoid blank Arabic initials)
+        // Script-specific fonts (NotoSansSC does not cover Arabic — bundle NotoSansArabic* etc.)
         if ($isUnicode) {
             if (self::textContainsArabicScript($textForFont) && self::textContainsCjkScript($textForFont)) {
                 $resolved = self::firstReadableFont(self::panUnicodeFontCandidates($weight));
                 if ($resolved !== null) {
-                    return $resolved;
+                    return [$resolved, false];
                 }
             }
             if (self::textContainsArabicScript($textForFont)) {
                 $resolved = self::firstReadableFont(self::arabicFontCandidates($weight));
                 if ($resolved !== null) {
-                    return $resolved;
+                    return [
+                        $resolved,
+                        self::shouldUseSyntheticBoldForResolvedPath($isBoldRequest, $resolved),
+                    ];
                 }
             }
             if (self::textContainsHebrewScript($textForFont)) {
                 $resolved = self::firstReadableFont(self::hebrewFontCandidates($weight));
                 if ($resolved !== null) {
-                    return $resolved;
+                    return [
+                        $resolved,
+                        self::shouldUseSyntheticBoldForResolvedPath($isBoldRequest, $resolved),
+                    ];
                 }
             }
             if (self::textContainsThaiScript($textForFont)) {
                 $resolved = self::firstReadableFont(self::thaiFontCandidates($weight));
                 if ($resolved !== null) {
-                    return $resolved;
+                    return [
+                        $resolved,
+                        self::shouldUseSyntheticBoldForResolvedPath($isBoldRequest, $resolved),
+                    ];
                 }
             }
             if (self::textContainsDevanagariScript($textForFont)) {
                 $resolved = self::firstReadableFont(self::devanagariFontCandidates($weight));
                 if ($resolved !== null) {
-                    return $resolved;
+                    return [
+                        $resolved,
+                        self::shouldUseSyntheticBoldForResolvedPath($isBoldRequest, $resolved),
+                    ];
+                }
+            }
+            if (self::textContainsGeorgianScript($textForFont)) {
+                $resolved = self::firstReadableFont(self::georgianFontCandidates());
+                if ($resolved !== null) {
+                    return [
+                        $resolved,
+                        self::shouldUseSyntheticBoldForResolvedPath($isBoldRequest, $resolved),
+                    ];
                 }
             }
             if (self::textContainsCjkScript($textForFont) && $bundledSc !== null) {
-                return $bundledSc;
+                return [
+                    $bundledSc,
+                    self::shouldUseSyntheticBoldForResolvedPath($isBoldRequest, $bundledSc),
+                ];
+            }
+            // Cyrillic/Greek/other non-Latin — never NotoSans-Regular for CJK (it has no Han / poor CJK coverage).
+            if (! self::textContainsCjkScript($textForFont)) {
+                $bundledSans = self::firstReadableBundled('NotoSans-Regular.ttf');
+                if ($bundledSans !== null) {
+                    return [
+                        $bundledSans,
+                        self::shouldUseSyntheticBoldForResolvedPath($isBoldRequest, $bundledSans),
+                    ];
+                }
             }
         }
 
         if ($bundledLatin !== null) {
-            return $bundledLatin;
+            return [$bundledLatin, false];
         }
 
         foreach (self::systemFallbackOrdered($weight, $isUnicode) as $cand) {
             if (@is_readable($cand)) {
-                return $cand;
+                return [$cand, false];
             }
         }
 
         // Optional fonts in Traits/icons/fonts/ when the OS has nothing readable
         $bundled = self::firstReadableFont(self::bundledIconsFontFallbacks($weight, $textForFont));
         if ($bundled !== null) {
-            return $bundled;
+            return [
+                $bundled,
+                self::shouldUseSyntheticBoldForResolvedPath($isBoldRequest, $bundled),
+            ];
         }
 
-        return null;
+        return [null, false];
     }
 
     /**
@@ -131,6 +186,21 @@ trait FontPathTrait{
         return $paths;
     }
 
+    /**
+     * @param list<string> $relativeNames basename order (first match wins)
+     */
+    private static function firstReadableBundledCandidates(array $relativeNames): ?string
+    {
+        foreach ($relativeNames as $rel) {
+            $found = self::firstReadableBundled($rel);
+            if ($found !== null) {
+                return $found;
+            }
+        }
+
+        return null;
+    }
+
     private static function firstReadableBundled(string $relative): ?string
     {
         foreach (self::bundledRelativePaths($relative) as $p) {
@@ -143,11 +213,74 @@ trait FontPathTrait{
     }
 
     /**
+     * True when bundled face is intentionally single-weight Regular/Medium and bold was requested.
+     */
+    private static function shouldUseSyntheticBoldForResolvedPath(bool $isBoldRequest, ?string $path): bool
+    {
+        return $isBoldRequest && $path !== null && self::bundledRegularFaceBasename(Str::lower(basename($path)));
+    }
+
+    /**
+     * @return list<string> lower-case basenames of bundled Regular/Medium files (not separate Bold.otf).
+     */
+    private static function syntheticBoldBundledBasenames(): array
+    {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        $names = [];
+        foreach (array_merge(
+            [
+                'NotoSansArabicUI-Regular.ttf',
+                'NotoSansArabic-Regular.ttf',
+                'NotoNaskhArabic-Regular.ttf',
+                'NotoSansThaiUI-Regular.ttf',
+                'NotoSansThai-Regular.ttf',
+                'NotoSansHebrew-Regular.ttf',
+                'NotoSansGeorgian-Regular.ttf',
+                'NotoSansDevanagari-Regular.ttf',
+                'NotoSans-Regular.ttf',
+            ],
+            self::bundledCjkFilenames(),
+        ) as $f) {
+            $names[] = Str::lower($f);
+        }
+        foreach (['NotoSansArabicUI-Regular.otf', 'NotoSansArabic-Regular.otf'] as $f) {
+            $names[] = Str::lower($f);
+        }
+
+        $cached = $names;
+
+        return $cached;
+    }
+
+    private static function bundledRegularFaceBasename(string $lowerBasename): bool
+    {
+        return in_array($lowerBasename, self::syntheticBoldBundledBasenames(), true)
+            || str_contains($lowerBasename, 'unifont');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function georgianFontCandidates(): array
+    {
+        $bundled = self::bundledRelativePaths('NotoSansGeorgian-Regular.ttf');
+
+        return array_merge($bundled, [
+            'C:\\Windows\\Fonts\\sylfaen.ttf',
+            '/usr/share/fonts/truetype/noto/NotoSansGeorgian-Regular.ttf',
+        ]);
+    }
+
+    /**
      * Bundled fallbacks under Traits/icons/fonts/ when no system font is readable.
      *
      * These are NOT OS defaults — ship them with your app if you need consistent results everywhere:
-     * - Inter + NotoSansSC (Latin + Simplified Chinese) — typical minimum
-     * - Optional: NotoSansCJK-{Regular,Bold}.ttc (Google Noto CJK, one file ~70MB+), NotoNaskhArabic, unifont.ttf
+     * - Inter + DroidSansFallback.ttf (compact CJK) or NotoSansSC + bundled Noto for other scripts; faux bold in renderer when needed
+     * - Optional: NotoSansCJK-{Regular,Bold}.ttc (large), separate Bold.ttf per script if you dislike synthetic bold
      *
      * @return list<string>
      */
@@ -159,36 +292,59 @@ trait FontPathTrait{
         foreach (self::iconsFontsDirectories() as $d) {
             if (self::textContainsCjkScript($textForFont)) {
                 $out[] = $d . ($bold ? 'NotoSansCJK-Bold.ttc' : 'NotoSansCJK-Regular.ttc');
-                $out[] = $d . ($bold ? self::$fontNonLatin['bold'] : self::$fontNonLatin['medium']);
+                foreach (($bold ? array_merge(self::bundledCjkFilenames(), ['NotoSansSC-Bold.ttf']) : self::bundledCjkFilenames()) as $cjkFace) {
+                    $out[] = $d . $cjkFace;
+                }
             }
 
             if (self::textContainsArabicScript($textForFont)) {
-                foreach (($bold
-                    ? ['NotoNaskhArabic-Bold.ttf', 'NotoSansArabic-Bold.ttf']
-                    : ['NotoNaskhArabic-Regular.ttf', 'NotoSansArabic-Regular.ttf']) as $f) {
+                foreach (($bold ? array_merge(
+                    ['NotoSansArabicUI-Regular.ttf', 'NotoSansArabic-Regular.ttf', 'NotoNaskhArabic-Regular.ttf'],
+                    ['NotoNaskhArabic-Bold.ttf', 'NotoSansArabic-Bold.ttf']
+                ) : [
+                    'NotoSansArabicUI-Regular.ttf',
+                    'NotoSansArabic-Regular.ttf',
+                    'NotoNaskhArabic-Regular.ttf',
+                ]) as $f) {
                     $out[] = $d . $f;
                 }
             }
 
             if (self::textContainsHebrewScript($textForFont)) {
-                $out[] = $d . ($bold ? 'NotoSansHebrew-Bold.ttf' : 'NotoSansHebrew-Regular.ttf');
+                foreach (($bold ? [
+                    'NotoSansHebrew-Regular.ttf',
+                    'NotoSansHebrew-Bold.ttf',
+                ] : ['NotoSansHebrew-Regular.ttf']) as $f) {
+                    $out[] = $d . $f;
+                }
             }
 
             if (self::textContainsThaiScript($textForFont)) {
-                $out[] = $d . ($bold ? 'NotoSansThai-Bold.ttf' : 'NotoSansThai-Regular.ttf');
+                foreach (($bold ? array_merge(
+                    ['NotoSansThaiUI-Regular.ttf', 'NotoSansThai-Regular.ttf'],
+                    ['NotoSansThai-Bold.ttf']
+                ) : ['NotoSansThaiUI-Regular.ttf', 'NotoSansThai-Regular.ttf']) as $f) {
+                    $out[] = $d . $f;
+                }
             }
 
             if (self::textContainsDevanagariScript($textForFont)) {
-                $out[] = $d . ($bold ? 'NotoSansDevanagari-Bold.ttf' : 'NotoSansDevanagari-Regular.ttf');
+                foreach (($bold ? [
+                    'NotoSansDevanagari-Regular.ttf',
+                    'NotoSansDevanagari-Bold.ttf',
+                ] : ['NotoSansDevanagari-Regular.ttf']) as $f) {
+                    $out[] = $d . $f;
+                }
             }
 
             foreach (['unifont.ttf', 'Unifont.ttf', 'GNUUnifont.ttf'] as $f) {
                 $out[] = $d . $f;
             }
 
-            foreach (($bold
-                ? ['NotoSans-Bold.ttf', 'NotoSans-SemiBold.ttf', 'NotoSans-Medium.ttf']
-                : ['NotoSans-Regular.ttf', 'NotoSans-Medium.ttf']) as $f) {
+            foreach (($bold ? array_merge(
+                ['NotoSans-Regular.ttf', 'NotoSans-Medium.ttf'],
+                ['NotoSans-Bold.ttf', 'NotoSans-SemiBold.ttf']
+            ) : ['NotoSans-Regular.ttf', 'NotoSans-Medium.ttf']) as $f) {
                 $out[] = $d . $f;
             }
 
@@ -287,15 +443,18 @@ trait FontPathTrait{
     private static function arabicFontCandidates(string $weight): array
     {
         $bold = $weight === 'bold';
+        $bundledRegularUi = self::bundledRelativePaths('NotoSansArabicUI-Regular.ttf');
+        $bundledRegular = array_merge(
+            self::bundledRelativePaths('NotoSansArabic-Regular.ttf'),
+            self::bundledRelativePaths('NotoNaskhArabic-Regular.ttf'),
+        );
+        $bundledBold = array_merge(
+            self::bundledRelativePaths('NotoSansArabic-Bold.ttf'),
+            self::bundledRelativePaths('NotoNaskhArabic-Bold.ttf'),
+        );
         $bundled = $bold
-            ? array_merge(
-                self::bundledRelativePaths('NotoNaskhArabic-Bold.ttf'),
-                self::bundledRelativePaths('NotoSansArabic-Bold.ttf')
-            )
-            : array_merge(
-                self::bundledRelativePaths('NotoNaskhArabic-Regular.ttf'),
-                self::bundledRelativePaths('NotoSansArabic-Regular.ttf')
-            );
+            ? array_merge($bundledRegularUi, $bundledRegular, $bundledBold)
+            : array_merge($bundledRegularUi, $bundledRegular);
 
         return $bold ? array_merge($bundled, [
             'C:\\Windows\\Fonts\\tradbdo.ttf',
@@ -332,20 +491,22 @@ trait FontPathTrait{
     private static function hebrewFontCandidates(string $weight): array
     {
         $bold = $weight === 'bold';
+        $bundledReg = self::bundledRelativePaths('NotoSansHebrew-Regular.ttf');
 
-        return $bold ? [
+        return $bold ? array_merge($bundledReg, [
             'C:\\Windows\\Fonts\\davidbd.ttf',
             'C:\\Windows\\Fonts\\segoeuib.ttf',
             'C:\\Windows\\Fonts\\arialbd.ttf',
             '/usr/share/fonts/truetype/noto/NotoSansHebrew-Bold.ttf',
+            '/usr/share/fonts/truetype/noto/NotoSansHebrew-Regular.ttf',
             '/usr/share/fonts/truetype/freefont/FreeSansBold.ttf',
-        ] : [
+        ]) : array_merge($bundledReg, [
             'C:\\Windows\\Fonts\\david.ttf',
             'C:\\Windows\\Fonts\\segoeui.ttf',
             'C:\\Windows\\Fonts\\arial.ttf',
             '/usr/share/fonts/truetype/noto/NotoSansHebrew-Regular.ttf',
             '/usr/share/fonts/truetype/freefont/FreeSans.ttf',
-        ];
+        ]);
     }
 
     /**
@@ -354,16 +515,21 @@ trait FontPathTrait{
     private static function thaiFontCandidates(string $weight): array
     {
         $bold = $weight === 'bold';
+        $bundledUi = self::bundledRelativePaths('NotoSansThaiUI-Regular.ttf');
+        $bundledReg = array_merge(
+            self::bundledRelativePaths('NotoSansThai-Regular.ttf'),
+        );
 
-        return $bold ? [
+        return $bold ? array_merge($bundledUi, $bundledReg, [
             'C:\\Windows\\Fonts\\tahomabd.ttf',
             'C:\\Windows\\Fonts\\LeelawUI.ttf',
             '/usr/share/fonts/truetype/noto/NotoSansThai-Bold.ttf',
-        ] : [
+            '/usr/share/fonts/truetype/noto/NotoSansThai-Regular.ttf',
+        ]) : array_merge($bundledUi, $bundledReg, [
             'C:\\Windows\\Fonts\\tahoma.ttf',
             'C:\\Windows\\Fonts\\LeelawUI.ttf',
             '/usr/share/fonts/truetype/noto/NotoSansThai-Regular.ttf',
-        ];
+        ]);
     }
 
     /**
@@ -372,16 +538,17 @@ trait FontPathTrait{
     private static function devanagariFontCandidates(string $weight): array
     {
         $bold = $weight === 'bold';
+        $bundledReg = self::bundledRelativePaths('NotoSansDevanagari-Regular.ttf');
 
-        return $bold ? [
+        return $bold ? array_merge($bundledReg, [
             'C:\\Windows\\Fonts\\mangalb.ttf',
             'C:\\Windows\\Fonts\\NirmalaB.ttf',
             '/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf',
-        ] : [
+        ]) : array_merge($bundledReg, [
             'C:\\Windows\\Fonts\\mangal.ttf',
             'C:\\Windows\\Fonts\\Nirmala.ttf',
             '/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf',
-        ];
+        ]);
     }
 
     public static function textContainsArabicScript(string $text): bool
@@ -417,6 +584,13 @@ trait FontPathTrait{
         $text = Str::trim($text);
 
         return $text !== '' && (bool) preg_match('/\p{Han}|\p{Hiragana}|\p{Katakana}|\p{Hangul}/u', $text);
+    }
+
+    public static function textContainsGeorgianScript(string $text): bool
+    {
+        $text = Str::trim($text);
+
+        return $text !== '' && (bool) preg_match('/\p{Georgian}/u', $text);
     }
 
     /**

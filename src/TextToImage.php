@@ -178,7 +178,7 @@ class TextToImage
         $initials = self::computeInitials($name);
 
         // Render text (TTF preferred); choose font that supports the script (e.g. CJK)
-        $fontPath = self::resolveFontPath(
+        [$fontPath, $fontSyntheticBold] = self::resolveFontPathWithMeta(
             $opts['font_path'],
             (string) ($opts['font_weight'] ?? 'bold'),
             $initials
