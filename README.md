@@ -742,11 +742,21 @@ $path = TextToImage::run([
 $dataUri = TextToImage::run([
     'name'       => 'Tamedevelopers Support',
     'size'       => 512,
-    'type'       => 'gradient', // circle, radius, square, gradient, diagonal
+    'type'       => 'gradient',
     'bg_color'   => '#4A5568',
     'text_color' => [255, 255, 255],
-    'output'     => 'data',    // save, view, download, data
 ]);
+
+or
+TextToImage::name('John Doe')
+    ->size(512)
+    ->fontWeight('normal')
+    ->bgColor('#4A5568')
+    ->textColor([255, 255, 255])
+    ->type('octagram')
+    ->shape('split')
+    ->gradient('ocean')
+    ->render();
 
 // $dataUri['path'], dataUri['url'], dataUri['data']
 

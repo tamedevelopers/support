@@ -26,6 +26,9 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
  * - Option `transparent`: when true, pixels outside the clip `type` are full PNG transparency; text uses alpha-aware
  *   drawing so `text_color` may include opacity (`#RRGGBBAA`, `rgba(...)`, `[r,g,b,a]`) like the rest of the image
  * - Output: save to file, stream to browser (inline or download), or return as data URI
+ *
+ * Fluent usage: {@see name()} then chain setters ({@see size()}, {@see type()}, …) and finish with
+ * {@see render()}
  */
 class TextToImage
 {
@@ -36,8 +39,170 @@ class TextToImage
      * distance from center to the clip (matches circle’s size/2) like triangle with Rc = size/2.
      */
     private const REULEAUX_PENTAGON_RC_FACTOR = 2.3892892185171;
-    
-    
+
+
+    /**
+     * Options accumulated for {@see render()} (overridable by the `$overrides` argument there).
+     *
+     * @var array<string, mixed>
+     */
+    private array $builder = [];
+
+    /**
+     * @param string|null $name Optional default `name` (see also {@see name()}).
+     */
+    public function __construct(?string $name = null)
+    {
+        if (!empty($name)) {
+            $this->builder['name'] = Str::trim($name);
+        }
+    }
+
+    /**
+     * Start a fluent build with a display name (initials are derived from this string).
+     */
+    public static function name(string $name): self
+    {
+        return new self(Str::trim($name));
+    }
+
+    public function size(int $size): self
+    {
+        $this->builder['size'] = $size;
+
+        return $this;
+    }
+
+    /**
+     * Clip shape: circle | radius | square | reuleaux3 | reuleaux | hexagon | decagram | octagram
+     */
+    public function type(string $type): self
+    {
+        $this->builder['type'] = $type;
+
+        return $this;
+    }
+
+    /**
+     * Shape: diagonal | stripe | ring | gloss | corner | split (solid fills only, no stroke seam)
+     */
+    public function shape(?string $shape): self
+    {
+        $this->builder['shape'] = $shape;
+
+        return $this;
+    }
+
+    /**
+     * Gradient: preset gradient fill. null = solid bg_color only.
+     * Presets: cosmic | aurora | forest | ocean | sunset | sunrise | rainbow | gradient | vertical | horizontal | radial
+     */
+    public function gradient(?string $gradient): self
+    {
+        $this->builder['gradient'] = $gradient;
+
+        return $this;
+    }
+
+    public function radius(?int $radius): self
+    {
+        $this->builder['radius'] = $radius;
+
+        return $this;
+    }
+
+    /**
+     * @param string|array<int> $color hex, rgb string, or [r,g,b] / [r,g,b,a]
+     */
+    public function bgColor(string|array $color): self
+    {
+        $this->builder['bg_color'] = $color;
+
+        return $this;
+    }
+
+    /**
+     * @param string|array<int> $color
+     */
+    public function textColor(string|array $color): self
+    {
+        $this->builder['text_color'] = $color;
+
+        return $this;
+    }
+
+    public function fontPath(?string $path): self
+    {
+        $this->builder['font_path'] = $path;
+
+        return $this;
+    }
+
+    public function fontSize(?int $size = 256): self
+    {
+        $this->builder['font_size'] = $size;
+
+        return $this;
+    }
+
+    public function fontWeight(string $weight): self
+    {
+        $this->builder['font_weight'] = $weight;
+
+        return $this;
+    }
+
+    public function output(string $output): self
+    {
+        $this->builder['output'] = $output;
+
+        return $this;
+    }
+
+    public function destination(null|string $path): self
+    {
+        $this->builder['destination'] = $path;
+
+        return $this;
+    }
+
+    /**
+     * When true, appends a unique suffix to the filename (same as option `generate`).
+     */
+    public function unique(bool $on = true): self
+    {
+        $this->builder['generate'] = $on;
+
+        return $this;
+    }
+
+    public function transparent(bool $on = true): self
+    {
+        $this->builder['transparent'] = $on;
+
+        return $this;
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    public function options(array $options): self
+    {
+        $this->builder = array_merge($this->builder, $options);
+
+        return $this;
+    }
+
+    /**
+     * Run generation using chained option values merged with `$overrides` (overrides win on key conflicts).
+     *
+     * @param array<string, mixed> $overrides
+     */
+    public function render(array $overrides = []): array
+    {
+        return self::generate(array_merge($this->builder, $overrides));
+    }
+
     /**
      * Create an avatar image based on a name or text.
      *
@@ -59,11 +224,19 @@ class TextToImage
      * - transparent: boolean (default false). When true, area outside the clip shape is fully transparent in the PNG
      *   and text is drawn with `imagecolorallocatealpha` so `text_color` alpha is respected (default: opaque).
      *
-     * @param array $options
+     * @param array<string, mixed> $options
      * @return array Returns destination path for 'save', data URI for 'data', null when streaming
      * @throws Exception
      */
-    public static function run(array $options = [])
+    public static function run(array $options = []): array
+    {
+        return self::generate($options);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    private static function generate(array $options = []): array
     {
         if (!function_exists('imagecreatetruecolor')) {
             throw new CustomException('GD library is required (imagecreatetruecolor missing).');
