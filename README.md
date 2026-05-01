@@ -729,7 +729,7 @@ $sanitizer->sanitize($text);        // sanitize all in a go!
 | output      | `string`      | `'save'`   | Method of return. Supports `save` (path), `view` (stream), `download` (stream), or `data` (base64)            |
 | destination | `string\|null`| `null`     | File path or directory to save the image. Defaults ('storage/avatars')                                         |
 | generate    | `bool`        | `false`    | When `true`, appends a unique random suffix to the filename to prevent overwriting                            |
-| transparent | `bool`        | `false`    | When `true`, pixels outside the clip shape are PNG-transparent; text can use alpha via `text_color`.          |
+| transparent | `bool`        | `false`    | When `true`, pixels outside the clip are PNG-transparent and **letters are punched out** of the badge (see-through holes). When `false`, `text_color` is drawn normally. |
 
 
 ### run

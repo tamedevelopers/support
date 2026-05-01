@@ -23,8 +23,9 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
  *   first char of each; one word → two chars). Larger values use a prefix of `name` (e.g. Paid, Unpaid).
  * - Font: automatically uses a Unicode/CJK-capable font when the name contains non-ASCII characters
  * - Custom background and text color
- * - Option `transparent`: when true, pixels outside the clip `type` are full PNG transparency; text uses alpha-aware
- *   drawing so `text_color` may include opacity (`#RRGGBBAA`, `rgba(...)`, `[r,g,b,a]`) like the rest of the image
+ * - Option `transparent`: when true, pixels outside the clip `type` are full PNG transparency, and glyphs are punched
+ *   through the badge (`destination-out` style) so lettering is truly transparent (`text_color` is not painted as a fill).
+ *   When `transparent` is false, text is drawn with `text_color` as usual.
  * - Output: save to file, stream to browser (inline or download), or return as data URI
  *
  * Fluent usage: {@see name()} then chain setters ({@see size()}, {@see type()}, …) and finish with
@@ -238,8 +239,8 @@ class TextToImage
      * - generate: boolean (default false). When true, appends a unique suffix to filename to avoid overwriting.
      * - text_length: int (1–6, default 2). UTF-8 length of text drawn; default uses classic initials; larger values
      *   use the first N characters of `name` (preserves casing for labels like Paid / Unpaid).
-     * - transparent: boolean (default false). When true, area outside the clip shape is fully transparent in the PNG
-     *   and text is drawn with `imagecolorallocatealpha` so `text_color` alpha is respected (default: opaque).
+     * - transparent: boolean (default false). When true, area outside the clip is fully transparent and text is cut out
+     *   of the badge (true alpha holes). When false, `text_color` is painted as usual.
      *
      * @param array<string, mixed> $options
      * @return array Returns destination path for 'save', data URI for 'data', null when streaming
@@ -356,9 +357,8 @@ class TextToImage
 
         // Allocate colors
         $bgCol = imagecolorallocate($img, $br[0], $br[1], $br[2]);
-        $txGdAlpha = $trimOutsideClip ? self::gdAlphaFromColorInput($opts['text_color']) : 0;
         $txCol = $trimOutsideClip
-            ? imagecolorallocatealpha($img, $bt[0], $bt[1], $bt[2], $txGdAlpha)
+            ? null
             : imagecolorallocate($img, $bt[0], $bt[1], $bt[2]);
 
         // Fill clip (solid or gradient only). Shape overlays run later — immediately before painting initials.
@@ -428,8 +428,12 @@ class TextToImage
             if ($shapeType !== null) {
                 self::applyShapeOverlay($img, $type, $size, $br, $radius, $shapeType);
             }
-            imagealphablending($img, true);
-            imagettftext($img, $fontSize, 0, $x, $y, $txCol, $fontPath, $initials);
+            if ($trimOutsideClip) {
+                self::applyTtfTextKnockout($img, $initials, $fontPath, $fontSize, $x, $y, $bbox, $size);
+            } else {
+                imagealphablending($img, true);
+                imagettftext($img, $fontSize, 0, $x, $y, (int) $txCol, $fontPath, $initials);
+            }
         } else {
             // Fallback: built-in font
             $font = 5; // largest built-in font
@@ -440,8 +444,12 @@ class TextToImage
             if ($shapeType !== null) {
                 self::applyShapeOverlay($img, $type, $size, $br, $radius, $shapeType);
             }
-            imagealphablending($img, true);
-            imagestring($img, $font, $x, $y, $initials, $txCol);
+            if ($trimOutsideClip) {
+                self::applyBuiltinTextKnockout($img, $initials, $font, $x, $y, $size, $textWidth, $textHeight);
+            } else {
+                imagealphablending($img, true);
+                imagestring($img, $font, $x, $y, $initials, (int) $txCol);
+            }
         }
 
         if ($trimOutsideClip) {
@@ -1447,48 +1455,8 @@ class TextToImage
     }
 
     /**
-     * GD alpha for text when `transparent` is true: 0 = opaque, 127 = fully transparent.
-     * Reads opacity from `#RRGGBBAA`, `rgba(r,g,b,a)`, or `[r,g,b,a]` (a = 0..1 float or 0..255 byte).
-     *
-     * @param string|array $color
-     */
-    private static function gdAlphaFromColorInput($color): int
-    {
-        if (is_array($color) && count($color) >= 4 && is_numeric($color[3])) {
-            $af = (float) $color[3];
-            if ($af > 1.0) {
-                $ai = max(0, min(255, (int) round($af)));
-
-                return (int) max(0, min(127, round((255 - $ai) / 255 * 127)));
-            }
-
-            return (int) max(0, min(127, round((1.0 - max(0.0, min(1.0, $af))) * 127)));
-        }
-        if (is_string($color)) {
-            $c = trim($color);
-            if (preg_match('/^#([0-9a-f]{8})$/i', $c, $m)) {
-                $aa = hexdec(substr($m[1], 6, 2));
-
-                return (int) max(0, min(127, round((255 - $aa) / 255 * 127)));
-            }
-            if (preg_match('/^rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(\d*\.?\d+)\s*\)$/i', $c, $m)) {
-                $a = (float) $m[1];
-                if ($a > 1.0) {
-                    $a = max(0.0, min(255.0, $a)) / 255.0;
-                } else {
-                    $a = max(0.0, min(1.0, $a));
-                }
-
-                return (int) max(0, min(127, round((1.0 - $a) * 127)));
-            }
-        }
-
-        return 0;
-    }
-
-    /**
      * Convert color input to [r,g,b]. Accepts '#RRGGBB', '#RRGGBBAA', '#RGB', 'rgb(r,g,b)', 'rgba(r,g,b,a)', or [r,g,b].
-     * Alpha is ignored for backgrounds (GD fill uses full opacity for shapes). Text alpha uses {@see gdAlphaFromColorInput}.
+     * Alpha in `rgba` / `#RRGGBBAA` / `[r,g,b,a]` is ignored for extracting RGB channels (fills use opaque colours).
      * @param string|array $color
      * @return array{0:int,1:int,2:int}
      */
@@ -1604,6 +1572,145 @@ class TextToImage
         $maxY = max($yValues);
 
         return [max(0, $maxX - $minX), max(0, $maxY - $minY), $minX, $minY];
+    }
+
+    /**
+     * Decode truecolor GD pixel integer: alpha in high byte (0 = opaque glyph, 127 = transparent).
+     *
+     * @return array{0:int,1:int,2:int,3:int} r,g,b,a
+     */
+    private static function gdUnpackPixel(int $pixel): array
+    {
+        return [
+            ($pixel >> 16) & 0xFF,
+            ($pixel >> 8) & 0xFF,
+            $pixel & 0xFF,
+            ($pixel >> 24) & 127,
+        ];
+    }
+
+    private static function gdPackPixel(int $r, int $g, int $b, int $alpha127): int
+    {
+        return (($alpha127 & 0x7F) << 24) | (($r & 0xFF) << 16) | (($g & 0xFF) << 8) | ($b & 0xFF);
+    }
+
+    /**
+     * Porter-Duff style knockout: reduce destination opacity where mask has glyph ink (antialiased edges preserved).
+     *
+     * @param resource|\GdImage $dst
+     * @param resource|\GdImage $glyphMask Mask drawn opaque where text sits; elsewhere fully transparent.
+     */
+    private static function applyKnockoutFromMask($dst, $glyphMask, int $x0, int $y0, int $x1, int $y1): void
+    {
+        imagesavealpha($dst, true);
+        imagealphablending($dst, false);
+
+        for ($py = $y0; $py <= $y1; $py++) {
+            for ($px = $x0; $px <= $x1; $px++) {
+                $pm = imagecolorat($glyphMask, $px, $py);
+                $coverage = 127 - (($pm >> 24) & 127);
+                if ($coverage <= 0) {
+                    continue;
+                }
+
+                $pd = imagecolorat($dst, $px, $py);
+                [$r, $g, $b, $aDst] = self::gdUnpackPixel($pd);
+
+                $opacityDst = (127 - $aDst) / 127.0;
+                $opacityGlyph = $coverage / 127.0;
+                $newOpacity = max(0.0, min(1.0, $opacityDst * (1.0 - $opacityGlyph)));
+                $newAlpha = 127 - (int) round($newOpacity * 127);
+
+                imagesetpixel($dst, $px, $py, self::gdPackPixel($r, $g, $b, max(0, min(127, $newAlpha))));
+            }
+        }
+    }
+
+    /**
+     * @param array<int, int|float> $bbox {@see imagettfbbox()} coordinates
+     *
+     * @param resource|\GdImage $dst
+     */
+    private static function applyTtfTextKnockout(
+        $dst,
+        string $text,
+        string $fontPath,
+        float $fontSize,
+        int $textX,
+        int $textY,
+        array $bbox,
+        int $canvasSize,
+        int $margin = 6
+    ): void {
+        $xs = [
+            (int) round((float) $bbox[0] + $textX),
+            (int) round((float) $bbox[2] + $textX),
+            (int) round((float) $bbox[4] + $textX),
+            (int) round((float) $bbox[6] + $textX),
+        ];
+        $ys = [
+            (int) round((float) $bbox[1] + $textY),
+            (int) round((float) $bbox[3] + $textY),
+            (int) round((float) $bbox[5] + $textY),
+            (int) round((float) $bbox[7] + $textY),
+        ];
+
+        $mask = imagecreatetruecolor($canvasSize, $canvasSize);
+        if ($mask === false) {
+            return;
+        }
+
+        imagesavealpha($mask, true);
+        $tran = imagecolorallocatealpha($mask, 0, 0, 0, 127);
+        imagefill($mask, 0, 0, $tran);
+        imagealphablending($mask, true);
+        $opaqueWhite = imagecolorallocate($mask, 255, 255, 255);
+        imagettftext($mask, $fontSize, 0, $textX, $textY, $opaqueWhite, $fontPath, $text);
+        imagealphablending($mask, false);
+
+        $x0 = max(0, min($xs) - $margin);
+        $x1 = min($canvasSize - 1, max($xs) + $margin);
+        $y0 = max(0, min($ys) - $margin);
+        $y1 = min($canvasSize - 1, max($ys) + $margin);
+
+        self::applyKnockoutFromMask($dst, $mask, $x0, $y0, $x1, $y1);
+        imagedestroy($mask);
+    }
+
+    /**
+     * @param resource|\GdImage $dst
+     */
+    private static function applyBuiltinTextKnockout(
+        $dst,
+        string $text,
+        int $font,
+        int $textX,
+        int $textY,
+        int $canvasSize,
+        int $textWidth,
+        int $textHeight,
+        int $margin = 3
+    ): void {
+        $mask = imagecreatetruecolor($canvasSize, $canvasSize);
+        if ($mask === false) {
+            return;
+        }
+
+        imagesavealpha($mask, true);
+        $tran = imagecolorallocatealpha($mask, 0, 0, 0, 127);
+        imagefill($mask, 0, 0, $tran);
+        imagealphablending($mask, true);
+        $opaqueWhite = imagecolorallocate($mask, 255, 255, 255);
+        imagestring($mask, $font, $textX, $textY, $text, $opaqueWhite);
+        imagealphablending($mask, false);
+
+        $x0 = max(0, $textX - $margin);
+        $x1 = min($canvasSize - 1, $textX + $textWidth + $margin);
+        $y0 = max(0, $textY - $margin);
+        $y1 = min($canvasSize - 1, $textY + $textHeight + $margin);
+
+        self::applyKnockoutFromMask($dst, $mask, $x0, $y0, $x1, $y1);
+        imagedestroy($mask);
     }
 
     /**
