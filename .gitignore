@@ -1,6 +1,6 @@
 /vendor
 /storage
-# /upload
+/upload
 /config
 /lang
 /zimage
