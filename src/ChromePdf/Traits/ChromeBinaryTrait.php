@@ -91,54 +91,41 @@ trait ChromeBinaryTrait
 
         $launch['noSandbox'] = true;
 
-        $env = new ChromiumEnvironment();
-        /** @var list<string> $extras */
-        $extras = [];
+        $launch['customFlags'] = array_values(array_merge($launch['customFlags'] ?? [], [
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--no-zygote',
+            '--disable-software-rasterizer',
+            '--disable-crash-reporter',
+            '--crash-dumps-dir=/tmp',
+            '--max_old_space_size=512', // Reduce memory usage
 
-        // Docker / containers: tighter flags (prior behaviour). Typical Linux VMs and Windows dev hosts keep zygote +
-        // software raster fallback — disabling those everywhere caused sparse/blank paints on GPU-less servers.
-        if ($env->isDocker()) {
-            array_push(
-                $extras,
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--no-zygote',
-                '--disable-software-rasterizer',
-                '--disable-accelerated-2d-canvas',
-            );
-        }
+            // Speed optimizations
+            '--disable-gpu', // Disable GPU (faster in headless)
+            '--disable-extensions',
+            '--disable-plugins',
+            '--disable-default-apps',
+            '--disable-sync',
+            '--disable-translate',
+            '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+            '--disable-component-extensions-with-background-pages',
+            '--disable-client-side-phishing-detection',
+            '--disable-popup-blocking',
+            '--disable-prompt-on-repost',
+            '--disable-hang-monitor',
+            '--disable-ipc-flooding-protection',
+            '--disable-throttle-iframe-legacy',
+            '--disable-accelerated-2d-canvas',
+            '--disable-accelerated-jpeg-decoding',
+            '--disable-accelerated-mjpeg-decode',
+            '--disable-accelerated-video-decode',
 
-        $launch['customFlags'] = array_values(array_merge(
-            $launch['customFlags'] ?? [],
-            $extras,
-            [
-                '--disable-crash-reporter',
-                '--crash-dumps-dir=/tmp',
-                '--max_old_space_size=512',
-
-                // Speed optimizations (shared)
-                '--disable-gpu',
-                '--disable-extensions',
-                '--disable-plugins',
-                '--disable-default-apps',
-                '--disable-sync',
-                '--disable-translate',
-                '--disable-features=TranslateUI,BlinkGenPropertyTrees',
-                '--disable-component-extensions-with-background-pages',
-                '--disable-client-side-phishing-detection',
-                '--disable-popup-blocking',
-                '--disable-prompt-on-repost',
-                '--disable-hang-monitor',
-                '--disable-ipc-flooding-protection',
-                '--disable-throttle-iframe-legacy',
-                '--disable-accelerated-jpeg-decoding',
-                '--disable-accelerated-mjpeg-decode',
-                '--disable-accelerated-video-decode',
-
-                '--disable-features=WinRetrieveSuggestionsOnlyOnDemand',
-                // Omit --disable-background-networking / tiny caches: they worsen slow-VPS hydration vs localhost.
-            ]
-        ));
+            // flags to reduce file system interactions
+            '--disable-features=WinRetrieveSuggestionsOnlyOnDemand',
+            '--disable-background-networking',
+            '--disk-cache-size=1',
+            '--media-cache-size=1',
+        ]));
 
         $launch['ignoreCertificateErrors'] = $this->ignoreCertificateErrors;
         $launch['keepAlive'] = true;

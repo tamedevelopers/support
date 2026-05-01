@@ -84,6 +84,7 @@ final class ChromiumEnvironment
             // Fail fast; chrome-php default is 30s — avoid long stalls when Chrome is missing or blocked
             'startupTimeout' => 30,
             'customFlags' => [
+                '--disable-background-networking',
                 '--no-first-run',
                 '--disable-extensions',
                 '--mute-audio',
