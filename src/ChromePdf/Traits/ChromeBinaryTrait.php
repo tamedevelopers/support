@@ -91,41 +91,52 @@ trait ChromeBinaryTrait
 
         $launch['noSandbox'] = true;
 
-        $launch['customFlags'] = array_values(array_merge($launch['customFlags'] ?? [], [
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--no-zygote',
-            '--disable-software-rasterizer',
-            '--disable-crash-reporter',
-            '--crash-dumps-dir=/tmp',
-            '--max_old_space_size=512', // Reduce memory usage
+        $env = new ChromiumEnvironment();
 
-            // Speed optimizations
-            '--disable-gpu', // Disable GPU (faster in headless)
-            '--disable-extensions',
-            '--disable-plugins',
-            '--disable-default-apps',
-            '--disable-sync',
-            '--disable-translate',
-            '--disable-features=TranslateUI,BlinkGenPropertyTrees',
-            '--disable-component-extensions-with-background-pages',
-            '--disable-client-side-phishing-detection',
-            '--disable-popup-blocking',
-            '--disable-prompt-on-repost',
-            '--disable-hang-monitor',
-            '--disable-ipc-flooding-protection',
-            '--disable-throttle-iframe-legacy',
-            '--disable-accelerated-2d-canvas',
-            '--disable-accelerated-jpeg-decoding',
-            '--disable-accelerated-mjpeg-decode',
-            '--disable-accelerated-video-decode',
+        /** @var list<string> $dockerHeavy */
+        $dockerHeavy = [];
+        if ($env->isDocker()) {
+            array_push(
+                $dockerHeavy,
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--no-zygote',
+                '--disable-software-rasterizer',
+                '--disable-accelerated-2d-canvas',
+            );
+        }
 
-            // flags to reduce file system interactions
-            '--disable-features=WinRetrieveSuggestionsOnlyOnDemand',
-            '--disable-background-networking',
-            '--disk-cache-size=1',
-            '--media-cache-size=1',
-        ]));
+        // Omit Docker-only raster/zygote flags and tiny caches on hosts: they skew headless Linux output vs desktop Chrome
+        // without changing PHP navigation timeouts. Skip --disable-background-networking — bad for flaky subresources.
+        $launch['customFlags'] = array_values(array_merge(
+            $launch['customFlags'] ?? [],
+            $dockerHeavy,
+            [
+                '--disable-crash-reporter',
+                '--crash-dumps-dir=/tmp',
+                '--max_old_space_size=512',
+
+                '--disable-gpu',
+                '--disable-extensions',
+                '--disable-plugins',
+                '--disable-default-apps',
+                '--disable-sync',
+                '--disable-translate',
+                '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+                '--disable-component-extensions-with-background-pages',
+                '--disable-client-side-phishing-detection',
+                '--disable-popup-blocking',
+                '--disable-prompt-on-repost',
+                '--disable-hang-monitor',
+                '--disable-ipc-flooding-protection',
+                '--disable-throttle-iframe-legacy',
+                '--disable-accelerated-jpeg-decoding',
+                '--disable-accelerated-mjpeg-decode',
+                '--disable-accelerated-video-decode',
+
+                '--disable-features=WinRetrieveSuggestionsOnlyOnDemand',
+            ]
+        ));
 
         $launch['ignoreCertificateErrors'] = $this->ignoreCertificateErrors;
         $launch['keepAlive'] = true;
@@ -223,6 +234,8 @@ trait ChromeBinaryTrait
 
         $this->headlessRestrictEnv($launch);
 
+        $flagSig = hash('sha256', implode('|', array_values($launch['customFlags'] ?? [])));
+
         return implode("\0", [
             (string) $binary,
             ($launch['enableImages'] ?? true) ? '1' : '0',
@@ -230,6 +243,7 @@ trait ChromeBinaryTrait
             (string) ($launch['userAgent'] ?? ''),
             (string) ($launch['windowSize'][0] ?? ''),
             (string) ($launch['windowSize'][1] ?? ''),
+            $flagSig,
         ]);
     }
 

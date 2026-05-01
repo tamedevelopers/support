@@ -41,8 +41,9 @@ use Throwable;
  * Post-navigation work (fonts, optional settle, CMP strip, optional injected CSS) runs in one {@code evaluate()} via
  * {@see CombinedPostProcessScript} to cut WebSocket round-trips. Local {@see fromFile()}/{@see fromHtml()} use
  * {@code DOMContentLoaded} and short budgets for navigation/setHtml.
- * Large remote pages are supported; URL captures use request filtering to avoid tracker-induced timeouts (pattern
- * blocks common tag managers / analytics so the main document can reach {@code DOMContentLoaded} sooner).
+ * {@see fromUrl()} does **not** enable CDP {@code Fetch} interception by default (call
+ * {@see enableUrlFetchSubresourceFiltering(true)} to restore legacy tracker/image blocking); skipping it avoids brittle
+ * half-rendered PDFs under production websocket throughput while keeping the same navigation/stability timeouts.
  * Common full-page preloaders get one fast {@code evaluate()} pass right after {@code DOMContentLoaded} (no
  * {@code load} wait; no in-page {@code MutationObserver} during hydration — that pattern was far too expensive).
  * For trusted HTML you control, {@see withoutDefaultPostProcessing()} skips stabilize + cookie passes to cut wall time.
@@ -56,8 +57,8 @@ use Throwable;
  * typically drops PDF link annotations from that pass — that is separate from {@see clickableLinks()}.
  *
  * Remote images: Chromium image loading is **off** by default (bitmap/CSS images from the network are skipped).
- * Call {@see loadRemoteImages(true)} when you need {@code http(s)://} in {@code img}/CSS. Auto font {@code @font-face}
- * maps are applied in-page only when {@code document.body} text matches CJK / Arabic / Cyrillic ranges (see {@see CombinedPostProcessScript}).
+ * Call {@see loadRemoteImages(true)} when you need {@code http(s)://} in {@code img}/CSS. Supplemental unicode
+ * {@code @font-face} injection runs from {@see CombinedPostProcessScript} when needed.
  *
  * Document extras (merge, native header/footer, watermark, encryption, PDF/A, metadata) live on
  * {@see Traits\ChromePdfDocumentTrait} and are composed into this class for maintainability.
@@ -149,7 +150,13 @@ final class ChromePdf
      *  Delete file passed to fromFile
      */
     private bool $deleteUploadedFile = false;
-    
+
+    /**
+     * When true, {@see fromUrl()} uses CDP {@code Fetch.requestPaused} to block trackers/media/optional bitmaps.
+     * Default {@code false} for reliable renders on Linux headless; does not lengthen navigation timeouts.
+     */
+    private bool $urlFetchSubresourceFilteringEnabled = false;
+
 
     /** Avoids redundant {@code Emulation.*} CDP work on the same target session when the scheme is unchanged. */
     private static ?string $lastColorSchemeEmulationSignature = null;
@@ -531,6 +538,18 @@ final class ChromePdf
     public function postProcessLocalSources(bool $enable = true): self
     {
         $this->postProcessLocalSources = $enable;
+
+        return $this;
+    }
+
+    /**
+     * Enables per-request CDP {@code Fetch} filtering during {@see fromUrl()} (trackers, optional image blocking via
+     * {@see loadRemoteImages()}). Off by default; turn on only if you need the old optimisation and accept stricter coupling
+     * to websocket timing.
+     */
+    public function enableUrlFetchSubresourceFiltering(bool $enable = true): self
+    {
+        $this->urlFetchSubresourceFilteringEnabled = $enable;
 
         return $this;
     }
@@ -920,6 +939,12 @@ final class ChromePdf
 
     private function loadFromUrlWithBlocking(Page $page): void
     {
+        if (!$this->urlFetchSubresourceFilteringEnabled) {
+            $this->loadFromUrl($page);
+
+            return;
+        }
+
         $teardown = $this->enableUrlRequestBlocking($page);
         try {
             $this->loadFromUrl($page);
@@ -988,14 +1013,9 @@ final class ChromePdf
         if ($resourceType === 'Image' && !$loadRemoteImages) {
             return true;
         }
-        if ($resourceType === 'Font') {
-            if ($url === '' || str_starts_with($url, 'file:') || str_starts_with($url, 'data:') || str_starts_with($url, 'blob:')) {
-                return false;
-            }
-            if (preg_match('#^https?://#i', $url) === 1) {
-                return true;
-            }
-        }
+
+        // Never block Font: many sites render body copy only after webfont load; blocking here caused sparse PDFs in
+        // headless environments without improving navigation timing meaningfully.
 
         return false;
     }
