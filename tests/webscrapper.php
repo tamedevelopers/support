@@ -10,8 +10,7 @@ $ebay = 'https://www.ebay.com/itm/386936766515?epid=25041703781&itmmeta=01KQ5CQ2
 $aliexpress = 'https://www.aliexpress.com/item/1005010595606666.html';
 
 dd(
-    (new WebScraper)
-        ->setUrl("
+    WebScraper::setUrl("
             $aliexpress
         ")
         ->setSelectors([
