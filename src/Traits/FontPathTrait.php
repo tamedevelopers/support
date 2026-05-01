@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\TextToImage;
 use Tamedevelopers\Support\Traits\TameTrait;
 
 
@@ -161,7 +162,7 @@ trait FontPathTrait{
     }
 
     /**
-     * Packaged font directories: preferred {@see Traits/icons/fonts}, alternate {@see src/icons/fonts}.
+     * Packaged font directories: preferred {@see src/icons/fonts}.
      *
      * @return list<string>
      */
