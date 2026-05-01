@@ -4,13 +4,8 @@ use Tamedevelopers\Support\TextToImage;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-$ntoimage = new TextToImage();
 
 
-// Shapes: diagonal | stripe | ring | gloss | corner | split (solid fills only, no stroke seam)
-// 1) Square + diagonal + cosmic gradient
-
-// Type: circle | radius | square | reuleaux3 | reuleaux | hexagon | decagram | octagram
 $path1 = TextToImage::name('John Doe')
     ->fontSize(70)
     ->fontWeight('normal')
@@ -31,12 +26,18 @@ $path2 = TextToImage::name('GitHub Microsoft')
     ->shape('diagonal')
     ->render();
 
-// $path3 = $ntoimage->run([
-//     'name' => 'Tamedevelopers Peterson Moore',
-//     'font_weight' => 'bold',
-//     'text_color' => '#26012b',
-//     'gradient' => 'aurora',
-// ]);
+$path3 = TextToImage::name('Unpaid')
+    ->fontWeight('bold')
+    // ->bgColor('#000000')
+    ->textColor('transparent')
+    ->type('circle')
+    ->textLength(6)
+    ->shape('diagonal')
+    ->gradient('aurora')
+    ->render();
+
+
+$ntoimage = new TextToImage();
 
 // $path4 = $ntoimage->run([
 //     'name' => 'Facebook',
@@ -67,13 +68,13 @@ $path6 = $ntoimage->run([
 <div style="background-color:rgb(10, 85, 106); text-align: center;">
     <img src="<?= $path1['url']; ?>" alt="Text to Image">
     <img src="<?= $path2['url']; ?>" alt="Text to Image">
+    <img src="<?= $path3['url']; ?>" alt="Text to Image">
     <img src="<?= $path5['url']; ?>" alt="Text to Image">
     <img src="<?= $path6['url']; ?>" alt="Text to Image">
 </div>
 
 
 <!-- 
-<img src="<?= $path3['url']; ?>" alt="Text to Image">
 <img src="<?= $path4['url']; ?>" alt="Text to Image">
 <img src="<?= $path5['url']; ?>" alt="Text to Image">
 <img src="<?= $path6['url']; ?>" alt="Text to Image"> -->

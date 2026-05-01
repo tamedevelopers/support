@@ -708,9 +708,10 @@ $sanitizer->sanitize($text);        // sanitize all in a go!
 - Generate initial-based avatar images similar to Google profile placeholders.
 - Supports all languages (Latin, CJK, Arabic, etc.) with automatic font resolution.
 - Precision alignment and various background patterns.
+- Optionally draw up to **6** UTF-8 characters (`text_length`) for short labels such as Paid / Unpaid, not only two-letter initials.
 
 ### TextToImage Options
-- The `run()` method accepts an array of configuration options. 
+- The `run()` method accepts an array of configuration options. Fluent builds use chained setters and end with `render()` (same keys as below).
 - Below is a detailed breakdown of every possible parameter you can pass to customize the output.
 
 | Option      | Type          | Default    | Description                                                                                                   |
@@ -724,9 +725,11 @@ $sanitizer->sanitize($text);        // sanitize all in a go!
 | font_path   | `string\|null`| `null`     | Absolute path to a custom `.ttf` font file                                                                    |
 | font_size   | `int\|null`   | `null`     | The font size in pts. Calculates the best fit automatically if null                                           |
 | font_weight | `string`      | `'normal'` | Font weight for auto-selecting system fonts. Supports `normal` or `bold`                                      |
+| text_length | `int`  | `2`        | UTF-8 length of text drawn (`1`–`6`). `2` keeps classic initials; `3`–`6` uses the first `N` characters of `name` (casing preserved), e.g. `Paid`, `Unpaid`. |
 | output      | `string`      | `'save'`   | Method of return. Supports `save` (path), `view` (stream), `download` (stream), or `data` (base64)            |
 | destination | `string\|null`| `null`     | File path or directory to save the image. Defaults ('storage/avatars')                                         |
 | generate    | `bool`        | `false`    | When `true`, appends a unique random suffix to the filename to prevent overwriting                            |
+| transparent | `bool`        | `false`    | When `true`, pixels outside the clip shape are PNG-transparent; text can use alpha via `text_color`.          |
 
 
 ### run
@@ -738,7 +741,7 @@ $path = TextToImage::run([
     'name' => 'John Doe'
 ]);
 
-// Advanced configuration
+// Old usage
 $dataUri = TextToImage::run([
     'name'       => 'Tamedevelopers Support',
     'size'       => 512,
@@ -747,7 +750,14 @@ $dataUri = TextToImage::run([
     'text_color' => [255, 255, 255],
 ]);
 
-or
+// Short labels (up to 6 UTF-8 characters; default text_length is 2 for classic initials)
+$pillPaid = TextToImage::run([
+    'name' => 'Paid',
+    'text_length' => 4,
+    'type' => 'radius',
+]);
+$pillUnpaid = TextToImage::name('Unpaid')->textLength(6)->type('circle')->render();
+
 TextToImage::name('John Doe')
     ->size(512)
     ->fontWeight('normal')
@@ -758,7 +768,7 @@ TextToImage::name('John Doe')
     ->gradient('ocean')
     ->render();
 
-// $dataUri['path'], dataUri['url'], dataUri['data']
+// $dataUri['path'], $dataUri['url'], $dataUri['data']
 
 echo "<img src='{$dataUri['url']}' alt='Avatar'>";
 ```

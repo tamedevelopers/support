@@ -19,8 +19,8 @@ use Tamedevelopers\Support\Traits\FontPathTrait;
  *   (hexagon = flat-top regular hex; octagram = 8-point compound of two squares; decagram = regular {10/3}, nonzero fill)
  * - Optional overlay `shape`: diagonal | stripe | ring | gloss | corner | split — fills only. After fill/gradient, before initials.
  * - Optional `gradient` presets (null = solid `bg_color` only)
- * - Initials: first character(s) from name – supports all languages (English, Chinese, Japanese,
- *   Arabic, etc.); two words → first char of each; one word → first two characters
+ * - Avatar text: controlled by `text_length` (1–6 UTF-8 chars). Default `2` keeps classic initials (two words →
+ *   first char of each; one word → two chars). Larger values use a prefix of `name` (e.g. Paid, Unpaid).
  * - Font: automatically uses a Unicode/CJK-capable font when the name contains non-ASCII characters
  * - Custom background and text color
  * - Option `transparent`: when true, pixels outside the clip `type` are full PNG transparency; text uses alpha-aware
@@ -40,6 +40,10 @@ class TextToImage
      */
     private const REULEAUX_PENTAGON_RC_FACTOR = 2.3892892185171;
 
+    /** Maximum UTF-8 characters drawn for {@see deriveAvatarText()} (option `text_length`). */
+    private const AVATAR_TEXT_LENGTH_MAX = 6;
+
+    private const AVATAR_TEXT_LENGTH_DEFAULT = 2;
 
     /**
      * Options accumulated for {@see render()} (overridable by the `$overrides` argument there).
@@ -184,6 +188,17 @@ class TextToImage
     }
 
     /**
+     * How many UTF-8 characters to render from `name` .
+     * Use `2` (default) for classic initials; use `3`–`6` for short labels (e.g. Paid, Unpaid).
+     */
+    public function textLength(int $length): self
+    {
+        $this->builder['text_length'] = max(1, min($length, self::AVATAR_TEXT_LENGTH_MAX));
+
+        return $this;
+    }
+
+    /**
      * @param array<string, mixed> $options
      */
     public function options(array $options): self
@@ -221,6 +236,8 @@ class TextToImage
      * - output: string ('save'|'view'|'download'|'data') default 'save'
      * - destination: string (required only when output='save')
      * - generate: boolean (default false). When true, appends a unique suffix to filename to avoid overwriting.
+     * - text_length: int (1–6, default 2). UTF-8 length of text drawn; default uses classic initials; larger values
+     *   use the first N characters of `name` (preserves casing for labels like Paid / Unpaid).
      * - transparent: boolean (default false). When true, area outside the clip shape is fully transparent in the PNG
      *   and text is drawn with `imagecolorallocatealpha` so `text_color` alpha is respected (default: opaque).
      *
@@ -258,6 +275,7 @@ class TextToImage
             'destination' => null,     // file path or directory; if directory, slug.png will be appended
             'generate'  => false,    // when true, append a unique suffix to filename
             'transparent' => false, // when true, trim square canvas to clip (transparent outside shape)
+            'text_length' => self::AVATAR_TEXT_LENGTH_DEFAULT,
         ], $options);
 
         // set default data
@@ -280,14 +298,13 @@ class TextToImage
             $opts['output'] = 'save';
         }
 
-        $name = Str::trim($opts['name']);
-        if ($name === '') {
+        $rawName = Str::trim($opts['name']);
+        if ($rawName === '') {
             throw new CustomException('Option "name" is required.');
         }
 
-        // Use first two letters as initials
-        $name = self::collectFirstTwoLetters($name);
-
+        $avatarTextLength = self::normalizeAvatarTextLength($opts['text_length'] ?? null);
+        $initials = self::deriveAvatarText($rawName, $avatarTextLength);
 
         $size = max(32, (int)$opts['size']);
         $radius = $opts['radius'] !== null ? (int) $opts['radius'] : max(4, (int)round($size / 6));
@@ -346,9 +363,6 @@ class TextToImage
 
         // Fill clip (solid or gradient only). Shape overlays run later — immediately before painting initials.
         self::drawBackground($img, $type, $size, $bgCol, $br, $radius, $gradientType);
-
-        // Compute initials (supports all scripts: Latin, CJK, Arabic, etc.)
-        $initials = self::computeInitials($name);
 
         // Render text (TTF preferred); choose font that supports the script (e.g. CJK)
         [$fontPath, $fontSyntheticBold] = self::resolveFontPathWithMeta(
@@ -439,7 +453,7 @@ class TextToImage
 
         $isGenerate = $opts['generate'] ?? false;
         $suffix     = $isGenerate ? ('-' . substr(sha1(uniqid((string) mt_rand(), true)), 0, 15)) : '';
-        $fileName   = self::sanitizeFilename($name);
+        $fileName   = self::sanitizeFilename($rawName);
         $fileName   = $isGenerate ? "{$fileName}{$suffix}.png" : "{$fileName}.png";
 
         switch ($output) {
@@ -1609,6 +1623,46 @@ class TextToImage
                 }
             }
         }
+    }
+
+    private static function normalizeAvatarTextLength(mixed $value): int
+    {
+        if ($value === null || $value === '' || $value === false) {
+            return self::AVATAR_TEXT_LENGTH_DEFAULT;
+        }
+        if (! is_numeric($value)) {
+            return self::AVATAR_TEXT_LENGTH_DEFAULT;
+        }
+        $n = (int) $value;
+        if ($n < 1) {
+            return self::AVATAR_TEXT_LENGTH_DEFAULT;
+        }
+
+        return min($n, self::AVATAR_TEXT_LENGTH_MAX);
+    }
+
+    /**
+     * Builds the string drawn on the avatar. For length 2, uses {@see collectFirstTwoLetters} + {@see computeInitials}.
+     * For length 3–6, uses the first N UTF-8 characters of the trimmed name (casing preserved).
+     */
+    private static function deriveAvatarText(string $trimmedName, int $maxChars): string
+    {
+        if ($trimmedName === '') {
+            return 'NA';
+        }
+        if ($maxChars === 1) {
+            $c = mb_substr($trimmedName, 0, 1, 'UTF-8');
+            $out = self::firstCharUpper($c);
+
+            return $out !== '' ? $out : 'NA';
+        }
+        if ($maxChars === 2) {
+            $prepared = self::collectFirstTwoLetters($trimmedName);
+
+            return self::computeInitials($prepared);
+        }
+
+        return mb_substr($trimmedName, 0, $maxChars, 'UTF-8') ?: 'NA';
     }
 
     /**
