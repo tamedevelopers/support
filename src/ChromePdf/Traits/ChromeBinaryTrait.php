@@ -22,10 +22,10 @@ trait ChromeBinaryTrait
     private ?string $chromiumBinary = null;
 
     /** The desktop viewport width. */
-    private int $desktopViewportWidth = 1920;
+    private int $desktopViewportWidth = 1080;
 
     /** The desktop viewport height. */
-    private int $desktopViewportHeight = 1080;
+    private int $desktopViewportHeight = 1920;
 
     /** @see registerShutdownHandlerOnce() */
     private static bool $shutdownHandlerRegistered = false;
@@ -92,12 +92,14 @@ trait ChromeBinaryTrait
         $launch['noSandbox'] = true;
 
         $env = new ChromiumEnvironment();
+        /** @var list<string> $extras */
+        $extras = [];
 
-        /** @var list<string> $dockerHeavy */
-        $dockerHeavy = [];
+        // Docker / containers: tighter flags (prior behaviour). Typical Linux VMs and Windows dev hosts keep zygote +
+        // software raster fallback — disabling those everywhere caused sparse/blank paints on GPU-less servers.
         if ($env->isDocker()) {
             array_push(
-                $dockerHeavy,
+                $extras,
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--no-zygote',
@@ -106,16 +108,15 @@ trait ChromeBinaryTrait
             );
         }
 
-        // Omit Docker-only raster/zygote flags and tiny caches on hosts: they skew headless Linux output vs desktop Chrome
-        // without changing PHP navigation timeouts. Skip --disable-background-networking — bad for flaky subresources.
         $launch['customFlags'] = array_values(array_merge(
             $launch['customFlags'] ?? [],
-            $dockerHeavy,
+            $extras,
             [
                 '--disable-crash-reporter',
                 '--crash-dumps-dir=/tmp',
                 '--max_old_space_size=512',
 
+                // Speed optimizations (shared)
                 '--disable-gpu',
                 '--disable-extensions',
                 '--disable-plugins',
@@ -135,6 +136,7 @@ trait ChromeBinaryTrait
                 '--disable-accelerated-video-decode',
 
                 '--disable-features=WinRetrieveSuggestionsOnlyOnDemand',
+                // Omit --disable-background-networking / tiny caches: they worsen slow-VPS hydration vs localhost.
             ]
         ));
 
@@ -234,8 +236,6 @@ trait ChromeBinaryTrait
 
         $this->headlessRestrictEnv($launch);
 
-        $flagSig = hash('sha256', implode('|', array_values($launch['customFlags'] ?? [])));
-
         return implode("\0", [
             (string) $binary,
             ($launch['enableImages'] ?? true) ? '1' : '0',
@@ -243,7 +243,6 @@ trait ChromeBinaryTrait
             (string) ($launch['userAgent'] ?? ''),
             (string) ($launch['windowSize'][0] ?? ''),
             (string) ($launch['windowSize'][1] ?? ''),
-            $flagSig,
         ]);
     }
 

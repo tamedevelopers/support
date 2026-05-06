@@ -30,12 +30,15 @@ use Throwable;
 /**
  * Fluent builder for HTML → PDF via headless Chromium (chrome-php/chrome).
  *
- * Defaults: {@see prioritizeSpeed()} (no images), {@see waitForWindowLoadEvent()} false (DOMContentLoaded — avoids
- * hanging on pages where {@code load} is delayed by analytics or long-lived requests), and {@see stabilizeBeforeCapture()}.
- * Raise {@see navigationTimeoutMs()} if a site is legitimately slow; {@see waitForWindowLoadEvent(true)} when you need
- * every subresource before capture. Cold Chromium startup is often 1–3s on its own.
+ * Defaults: {@see prioritizeSpeed()} tightens stability budgets but still loads remote bitmaps when {@see loadRemoteImages()}
+ * is enabled (trait default {@code true}). {@see waitForWindowLoadEvent()} **true** for {@see fromUrl()} only
+ * ({@code window} {@code load}), post-nav settle, capped {@code document.fonts.ready}, and {@code img} completeness + lazy
+ * viewport nudge so URL PDFs are not captured half-loaded. File/html stay on strict {@code DOMContentLoaded}.
  *
- * Use {@see maximumQuality()} for full images and longer navigation/stability budgets.
+ * Use {@see maximumQuality()} for longer stability/image/font budgets without changing the default URL load strategy much.
+ *
+ * Before {@code Page.printToPDF}, the default path may set emulated media to {@code screen} (see {@see preferPrintStylesheetForPdf()}).
+ * Page layout width/height follow **Chromium defaults** (no CDP device-metrics override, no forced launch {@code windowSize}).
  *
  * A single Chromium process is reused across {@see generate()} calls (see {@see shutdown()} to release it).
  * Post-navigation work (fonts, optional settle, CMP strip, optional injected CSS) runs in one {@code evaluate()} via
@@ -56,9 +59,8 @@ use Throwable;
  * unchanged). Note: an FPDI/TCPDF rebuild (watermark, encrypt, PDF/A, document metadata) re-embeds page pixels and
  * typically drops PDF link annotations from that pass — that is separate from {@see clickableLinks()}.
  *
- * Remote images: Chromium image loading is **off** by default (bitmap/CSS images from the network are skipped).
- * Call {@see loadRemoteImages(true)} when you need {@code http(s)://} in {@code img}/CSS. Supplemental unicode
- * {@code @font-face} injection runs from {@see CombinedPostProcessScript} when needed.
+ * Remote images: trait default loads network bitmap/CSS images ({@see loadRemoteImages()}). Pass {@code false} there to skip.
+ * Supplemental unicode {@code @font-face} injection runs from {@see CombinedPostProcessScript} when needed.
  *
  * Document extras (merge, native header/footer, watermark, encryption, PDF/A, metadata) live on
  * {@see Traits\ChromePdfDocumentTrait} and are composed into this class for maintainability.
@@ -101,28 +103,60 @@ final class ChromePdf
     private bool $printBackground = true;
 
     /**
+     * Passed to Chromium {@code Page.printToPDF} {@code scale} (fraction of nominal size). {@code 1} is normal; raster-heavy
+     * pages can try {@code 1.05}–{@code 1.15}; values {@code > 1} grow file size and layout footprint.
+     */
+    private float $pdfPrintScale = 1.0;
+
+    /**
+     * When {@code true}, Chromium may honor CSS {@code @page} / page size rules instead of only {@see paper()}.
+     */
+    private bool $pdfPreferCssPageSize = false;
+
+    /**
+     * When {@code true} (default), {@see generate()} calls {@code Emulation.setEmulatedMedia} with {@code screen} right
+     * before {@code Page.printToPDF} so layout and colours follow desktop {@code screen} rules (not muted {@code print} CSS).
+     * Turn off with {@see preferPrintStylesheetForPdf()}.
+     */
+    private bool $useScreenStylesForPdf = true;
+
+    /**
      * Max time to wait for the initial navigation (ms). Not aggressively capped — short values cause false timeouts
      * on sites where the {@code load} event or network is slow in headless mode.
      */
     private int $navigationTimeoutMs = 30000;
 
     /**
-     * When true (default): no image download; stability budgets stay tighter than {@see maximumQuality()}.
+     * When {@code true} (default): stability/post-process budgets stay tighter than {@see maximumQuality()}.
      */
     private bool $prioritizeSpeed = true;
 
     private ColorScheme $colorScheme = ColorScheme::NoPreference;
 
     /**
-     * When true, waits for the window {@code load} event (can hang or timeout if trackers never finish).
-     * Default false uses DOMContentLoaded, which matches most fast real-world loads; use {@see stabilizeBeforeCapture()}.
+     * When true (default), {@see fromUrl()} waits for {@code window} {@code load}. File/html sources ignore this.
      */
-    private bool $waitForWindowLoadEvent = false;
+    private bool $waitForWindowLoadEvent = true;
 
     /**
      * When true (default), runs an async settle step (document complete, strip common loaders, paint) before PDF.
      */
     private bool $stabilizeBeforeCapture = true;
+
+    /**
+     * After {@see fromUrl()} navigation, in-page {@code setTimeout} (ms) before preloader strip — cheap hydration buffer.
+     */
+    private int $urlPostNavigationSettleMs = 395;
+
+    /**
+     * For {@see fromUrl()} post-process: race {@code document.fonts.ready}. {@code 0} off, {@code -1} auto (tied to {@see prioritizeSpeed()}).
+     */
+    private int $webFontsReadyRaceMsCap = -1;
+
+    /**
+     * When {@see enableUrlFetchSubresourceFiltering()} is on: allow remote {@code @font-face} (recommended true).
+     */
+    private bool $enableRemoteFontLoading = true;
 
     /**
      * Budget for {@see stabilizeBeforeCapture()} (ms); capped lower when {@see prioritizeSpeed()} is on.
@@ -171,7 +205,7 @@ final class ChromePdf
     private static ?array $cachedAutoFontFaceMap = null;
 
     private const FETCH_BLOCK_CACHE_CAP = 4096;
-    private const PDF_CACHE_VERSION = 'pdf-cache-v1';
+    private const PDF_CACHE_VERSION = 'pdf-cache-v2';
 
     /** Pre-compiled pattern for tracker URLs (hot path in {@see computeFetchShouldBlock()}). */
     private const FETCH_TRACKER_URL_PATTERN = '/analytics|doubleclick|googlesyndication|googletagmanager|google-analytics|gtag\\/|facebook\\.com\\/tr|hotjar|segment\\.(io|com)|fullstory|clarity\\.ms|mixpanel|sentry\\.io|intercom|zendesk|newrelic|pardot|hs-scripts|hs-analytics|adsystem|quantserve|taboola|outbrain|moatads|criteo/i';
@@ -285,15 +319,10 @@ final class ChromePdf
     }
 
     /**
-     * Width and height (CSS px) used as the desktop browser layout viewport for {@see fromUrl()} before PDF paper
-     * sizing. Defaults to 1920×1080.
-     * 
-     * Minimum dimensions: 320×240 (typical mobile breakpoint)
-     * Maximum dimensions: 8192×8192 (Chromium limit)
-     * 
-     * @param int $width Viewport width in CSS pixels (320-8192)
-     * @param int $height Viewport height in CSS pixels (240-8192)
-     * @throws ConversionFailedException When dimensions are outside valid ranges
+     * Stored dimensions only — **does not resize** Chromium; layout follows the browser’s default tab/window sizing.
+     * Kept as a fluent no-op shim for callers that chained this historically.
+     *
+     * @throws ConversionFailedException When dimensions are outside valid ranges (320×240–8192×8192)
      */
     public function desktopViewport(int $width, int $height): self
     {
@@ -446,6 +475,37 @@ final class ChromePdf
         return $this;
     }
 
+    /**
+     * Chromium PDF scale factor ({@code 0.1}–{@code 2}). Default {@code 1}.
+     */
+    public function pdfPrintScale(float $scale): self
+    {
+        $this->pdfPrintScale = max(0.1, min(2.0, $scale));
+
+        return $this;
+    }
+
+    /**
+     * Let the page CSS {@code @page} / size rules influence print layout when supported (Chromium flag).
+     */
+    public function preferCssPageSize(bool $enable = true): self
+    {
+        $this->pdfPreferCssPageSize = $enable;
+
+        return $this;
+    }
+
+    /**
+     * Prefer strict {@code @media print} styling for PDF (often flatter colours / different width). Default behaviour
+     * uses {@code screen} media before {@code printToPDF} to match desktop tab appearance.
+     */
+    public function preferPrintStylesheetForPdf(bool $enable = true): self
+    {
+        $this->useScreenStylesForPdf = !$enable;
+
+        return $this;
+    }
+
     public function navigationTimeoutMs(int $milliseconds): self
     {
         $this->navigationTimeoutMs = max(500, $milliseconds);
@@ -461,11 +521,44 @@ final class ChromePdf
     }
 
     /**
-     * Full images and uncapped navigation timeout (within your {@see navigationTimeoutMs()}).
+     * Full images and longer post-process budgets (within your {@see navigationTimeoutMs()}).
      */
     public function maximumQuality(bool $enable = true): self
     {
         $this->prioritizeSpeed = !$enable;
+        if ($enable) {
+            $this->urlPostNavigationSettleMs = max($this->urlPostNavigationSettleMs, 480);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Remote {@code @font-face} when CDP Fetch filtering is enabled ({@see enableUrlFetchSubresourceFiltering()}).
+     */
+    public function loadRemoteFonts(bool $enable = true): self
+    {
+        $this->enableRemoteFontLoading = $enable;
+
+        return $this;
+    }
+
+    /**
+     * Cap for {@code document.fonts.ready} during {@see fromUrl()} post-process. {@code null} restores auto; {@code 0} disables.
+     */
+    public function waitForWebFontsReady(?int $maxRaceMilliseconds = null): self
+    {
+        $this->webFontsReadyRaceMsCap = $maxRaceMilliseconds ?? -1;
+
+        return $this;
+    }
+
+    /**
+     * Fixed pause in the loaded document after URL navigation (ms). Set {@code 0} to skip.
+     */
+    public function urlPostNavigationSettleMs(int $milliseconds): self
+    {
+        $this->urlPostNavigationSettleMs = max(0, min(12000, $milliseconds));
 
         return $this;
     }
@@ -620,6 +713,10 @@ final class ChromePdf
                 $this->flattenLinksForPrint($page);
             }
 
+            if ($this->useScreenStylesForPdf) {
+                $this->applyScreenMediaForPrintToPdf($page);
+            }
+
             $pdf = $page->pdf($this->buildPdfPrintOptions());
             $navCap = $this->effectiveNavigationTimeoutMs();
 
@@ -695,15 +792,13 @@ final class ChromePdf
         $opts = [
             'landscape' => $this->landscape,
             'printBackground' => $this->printBackground,
+            'scale' => $this->pdfPrintScale,
+            'preferCSSPageSize' => $this->pdfPreferCssPageSize,
         ];
 
-        if ($this->sourceMode === 'url') {
-            $opts['paperWidth'] = PaperFormat::Legal->widthInches();
-            $opts['paperHeight'] = PaperFormat::Legal->heightInches();
-        } else {
-            $opts['paperWidth'] = $this->paper->widthInches();
-            $opts['paperHeight'] = $this->paper->heightInches();
-        }
+        // Use {@see paper()} for all sources (URLs previously forced Legal — wrong vs A4 / custom sizes and hurt clarity).
+        $opts['paperWidth'] = $this->paper->widthInches();
+        $opts['paperHeight'] = $this->paper->heightInches();
 
         $inch = match ($this->pdfMarginMode) {
             'default' => 1.0 / 2.54,
@@ -837,15 +932,10 @@ final class ChromePdf
     }
 
     /**
-     * Batches prefers-color-scheme emulation, optional auto-dark override, and client hints in one pass.
-     * Skips duplicate CDP work when the target session already has the same scheme applied.
+     * Last-step switch to {@code screen} media so {@code printToPDF} paints like a desktop tab (rich colours, breakpoints),
+     * without injecting theme CSS. Respects {@see colorScheme()} when set.
      */
-    /**
-     * Link hit-testing must match the same {@code print} layout Blink uses for {@code Page.printToPDF}. Measuring in
-     * the default screen media misses {@code @media print} rules, fixed/sticky reflow, and width/pagination — which
-     * skews coordinates for large link sets.
-     */
-    private function applyPrintMediaEmulationForLinkMetrics(Page $page): void
+    private function applyScreenMediaForPrintToPdf(Page $page): void
     {
         $session = $page->getSession();
         $features = [];
@@ -854,7 +944,7 @@ final class ChromePdf
         }
         try {
             $session->sendMessageSync(new Message('Emulation.setEmulatedMedia', [
-                'media' => 'print',
+                'media' => 'screen',
                 'features' => $features,
             ]));
         } catch (Throwable) {
@@ -960,8 +1050,9 @@ final class ChromePdf
     {
         $session = $page->getSession();
         $loadRemoteImages = $this->shouldEnableChromiumImages();
-        $handler = function (array $params) use ($session, $loadRemoteImages): void {
-            $this->handleFetchRequestPaused($session, $params, $loadRemoteImages);
+        $loadRemoteFonts = $this->enableRemoteFontLoading;
+        $handler = function (array $params) use ($session, $loadRemoteImages, $loadRemoteFonts): void {
+            $this->handleFetchRequestPaused($session, $params, $loadRemoteImages, $loadRemoteFonts);
         };
         $session->on('method:Fetch.requestPaused', $handler);
         $session->sendMessageSync(new Message('Fetch.enable', [
@@ -979,7 +1070,7 @@ final class ChromePdf
         };
     }
 
-    private function handleFetchRequestPaused(Session $session, array $params, bool $loadRemoteImages): void
+    private function handleFetchRequestPaused(Session $session, array $params, bool $loadRemoteImages, bool $loadRemoteFonts): void
     {
         $requestId = $params['requestId'] ?? '';
         if ($requestId === '') {
@@ -987,14 +1078,14 @@ final class ChromePdf
         }
         $url = $params['request']['url'] ?? '';
         $resourceType = $params['resourceType'] ?? '';
-        $cacheKey = $url . "\0" . $resourceType . "\0" . ($loadRemoteImages ? '1' : '0');
+        $cacheKey = $url . "\0" . $resourceType . "\0" . ($loadRemoteImages ? '1' : '0') . "\0" . ($loadRemoteFonts ? '1' : '0');
         if (isset(self::$fetchBlockCache[$cacheKey])) {
             $this->respondToFetchPausedAsync($session, $requestId, self::$fetchBlockCache[$cacheKey]);
 
             return;
         }
 
-        $block = $this->computeFetchShouldBlock($url, $resourceType, $loadRemoteImages);
+        $block = $this->computeFetchShouldBlock($url, $resourceType, $loadRemoteImages, $loadRemoteFonts);
         if (count(self::$fetchBlockCache) >= self::FETCH_BLOCK_CACHE_CAP) {
             self::$fetchBlockCache = array_slice(self::$fetchBlockCache, -2048, null, true);
         }
@@ -1002,7 +1093,7 @@ final class ChromePdf
         $this->respondToFetchPausedAsync($session, $requestId, $block);
     }
 
-    private function computeFetchShouldBlock(string $url, string $resourceType, bool $loadRemoteImages): bool
+    private function computeFetchShouldBlock(string $url, string $resourceType, bool $loadRemoteImages, bool $loadRemoteFonts): bool
     {
         if ($url !== '' && preg_match(self::FETCH_TRACKER_URL_PATTERN, $url) === 1) {
             return true;
@@ -1013,9 +1104,14 @@ final class ChromePdf
         if ($resourceType === 'Image' && !$loadRemoteImages) {
             return true;
         }
-
-        // Never block Font: many sites render body copy only after webfont load; blocking here caused sparse PDFs in
-        // headless environments without improving navigation timing meaningfully.
+        if ($resourceType === 'Font' && !$loadRemoteFonts) {
+            if ($url === '' || str_starts_with($url, 'file:') || str_starts_with($url, 'data:') || str_starts_with($url, 'blob:')) {
+                return false;
+            }
+            if (preg_match('#^https?://#i', $url) === 1) {
+                return true;
+            }
+        }
 
         return false;
     }
@@ -1044,6 +1140,25 @@ final class ChromePdf
             $this->navigationLifecycleEvent(),
             $this->effectiveNavigationTimeoutMs()
         );
+
+        $this->applyUrlPostNavigationSettle($page);
+    }
+
+    private function applyUrlPostNavigationSettle(Page $page): void
+    {
+        if ($this->sourceMode !== 'url' || $this->urlPostNavigationSettleMs <= 0) {
+            return;
+        }
+
+        $ms = $this->urlPostNavigationSettleMs;
+        $evalCap = min(15000, max(1200, $ms + 2500));
+
+        try {
+            $page->evaluate(
+                '(async function () { await new Promise(function (r) { setTimeout(r, ' . $ms . '); }); })();'
+            )->getReturnValue($evalCap);
+        } catch (Throwable) {
+        }
     }
 
     private function loadFromFile(Page $page): void
@@ -1092,21 +1207,34 @@ final class ChromePdf
         $fontRaceMs = $isLocal ? ($speed ? 400 : 500) : ($speed ? 1400 : 2000);
         $budget = $this->effectiveStabilityTimeoutMs();
 
-        $waitForImages = $isLocal;
-        $imageWaitMs = $speed ? 3500 : 7000;
+        $imgsOn = $this->shouldEnableChromiumImages();
+        $waitForImages = $isLocal || ($this->sourceMode === 'url' && $imgsOn);
+        $imageWaitMs = $speed
+            ? ($isLocal ? 3500 : 3800)
+            : ($isLocal ? 7000 : 5600);
+        $nudgeLazyViewport = !$isLocal && $waitForImages && $this->sourceMode === 'url';
+        $paintSettleMs = $speed ? 12 : 50;
+        if ($nudgeLazyViewport) {
+            $paintSettleMs = max($paintSettleMs, $speed ? 26 : 52);
+        }
+        $webFontsReadyRaceMs = !$isLocal ? $this->resolveWebFontsReadyRaceMsForUrlCapture() : 0;
+        // Avoid stacking two fonts.ready budgets on URLs when webFontsReadyRaceMs handles it.
+        $fontRaceForScript = $isLocal ? $fontRaceMs : ($webFontsReadyRaceMs > 0 ? 0 : $fontRaceMs);
 
         $expr = $this->cachedCombinedPostProcessExpression(
             $includeStability,
             $includeCookies,
             $budget,
-            $fontRaceMs,
+            $fontRaceForScript,
             $themeCss,
             $fontFaceMap,
             $speed,
-            $speed ? 12 : 50,
+            $paintSettleMs,
             $includeFloating,
             $waitForImages,
-            $imageWaitMs
+            $imageWaitMs,
+            $webFontsReadyRaceMs,
+            $nudgeLazyViewport
         );
 
         // Derive timeout from enabled work so local image waits do not exceed the eval timeout budget.
@@ -1124,6 +1252,18 @@ final class ChromePdf
         } else {
             $timeoutMs = $speed ? 5000 : 9000;
         }
+
+        if (!$isLocal && $waitForImages) {
+            $timeoutMs = min(120000, $timeoutMs + $imageWaitMs + 3500);
+        }
+
+        $urlFontBudgetMs = !$isLocal
+            ? ($webFontsReadyRaceMs > 0 ? $webFontsReadyRaceMs : $fontRaceMs)
+            : 0;
+        if ($urlFontBudgetMs > 0) {
+            $timeoutMs = min(120000, $timeoutMs + $urlFontBudgetMs + 2500);
+        }
+
         $page->evaluate($expr)->getReturnValue($timeoutMs);
     }
 
@@ -1196,6 +1336,23 @@ final class ChromePdf
         return '<!DOCTYPE html><html><head>' . $injection . '</head><body>' . $html . '</body></html>';
     }
 
+    private function resolveWebFontsReadyRaceMsForUrlCapture(): int
+    {
+        if ($this->sourceMode !== 'url') {
+            return 0;
+        }
+
+        if ($this->webFontsReadyRaceMsCap === 0) {
+            return 0;
+        }
+
+        if ($this->webFontsReadyRaceMsCap > 0) {
+            return min(30000, max(50, $this->webFontsReadyRaceMsCap));
+        }
+
+        return $this->prioritizeSpeed ? 1400 : 3200;
+    }
+
     /**
      * Cache auto font-face map across requests; font discovery is environment-wide, not document-specific.
      *
@@ -1239,7 +1396,9 @@ final class ChromePdf
         int $paintSettleMs,
         bool $includeFloating,
         bool $waitForImages,
-        int $imageWaitMs
+        int $imageWaitMs,
+        int $webFontsReadyRaceMs,
+        bool $nudgeLazyViewport
     ): string {
         $keyPayload = [
             'v' => self::PDF_CACHE_VERSION,
@@ -1255,6 +1414,8 @@ final class ChromePdf
             'floating' => $includeFloating,
             'waitImages' => $waitForImages,
             'imageWait' => $imageWaitMs,
+            'webFontsRace' => $webFontsReadyRaceMs,
+            'lazyNudge' => $nudgeLazyViewport,
         ];
         $cacheKey = hash('sha256', json_encode($keyPayload) ?: serialize($keyPayload));
 
@@ -1280,7 +1441,9 @@ final class ChromePdf
             $paintSettleMs,
             $includeFloating,
             $waitForImages,
-            $imageWaitMs
+            $imageWaitMs,
+            $webFontsReadyRaceMs,
+            $nudgeLazyViewport
         );
 
         self::$combinedExpressionCache[$cacheKey] = $expr;

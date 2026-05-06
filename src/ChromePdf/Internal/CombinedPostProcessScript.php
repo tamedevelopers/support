@@ -14,8 +14,10 @@ final class CombinedPostProcessScript
      * @param bool $leanStability forwarded to {@see PageStabilityScript::asSettleExpression()} when stability runs
      * @param int $paintSettleMs extra delay after font / rAF paint (0–80); lower for {@code prioritizeSpeed}
      * @param bool $includeFloating removes chats / floating buttons / back-to-top controls
-     * @param bool $waitForImages when true, polls {@code document.images} for completeness (local file/html sources)
+     * @param bool $waitForImages when true, polls {@code document.images} for completeness (incl. {@code fromUrl()} when images load)
      * @param int $imageWaitMs cap for image-readiness poll
+     * @param int $webFontsReadyRaceMs when > 0, race {@code document.fonts.ready} (remote URLs; capped, no DOMContentLoaded change)
+     * @param bool $nudgeLazyViewport quick bottom-then-top scroll to trigger lazy {@code img} / observer loads before the image poll
      */
     public static function asExpression(
         bool $includeStability,
@@ -28,12 +30,16 @@ final class CombinedPostProcessScript
         int $paintSettleMs = 50,
         bool $includeFloating = false,
         bool $waitForImages = false,
-        int $imageWaitMs = 2000
+        int $imageWaitMs = 2000,
+        int $webFontsReadyRaceMs = 0,
+        bool $nudgeLazyViewport = false
     ): string {
         $max = max(400, min(20000, $stabilityBudgetMs));
         $race = max(50, min(30000, $fontRaceMs));
         $paint = max(0, min(80, $paintSettleMs));
         $imgCap = max(200, min(8000, $imageWaitMs));
+        // One fonts.ready race: URL path may set webFontsReadyRaceMs; legacy fontRaceMs still applies for locals.
+        $fontReadyCap = max(0, min(30000, max(max(0, min(30000, $webFontsReadyRaceMs)), $race)));
 
         $payload = [
             'theme' => $themeCss,
@@ -55,6 +61,21 @@ final class CombinedPostProcessScript
             . "}";
 
         $js .= "appendStyle(__theme, 'pdf-theme');";
+
+        if ($nudgeLazyViewport) {
+            $js .= "try {"
+                . "var se = document.scrollingElement || document.documentElement || document.body;"
+                . "var sh = Math.max(se && se.scrollHeight ? se.scrollHeight : 0, document.body && document.body.scrollHeight ? document.body.scrollHeight : 0, document.documentElement && document.documentElement.scrollHeight ? document.documentElement.scrollHeight : 0);"
+                . "var ih = window.innerHeight || 0;"
+                . "var yMax = Math.max(0, sh - ih);"
+                . "if (yMax > 80) {"
+                . "window.scrollTo(0, yMax);"
+                . "await new Promise(function (r) { setTimeout(r, 160); });"
+                . "window.scrollTo(0, 0);"
+                . "await new Promise(function (r) { setTimeout(r, 80); });"
+                . "}"
+                . "} catch (eNudge) {}";
+        }
 
         $js .= "var txt = (document.body && document.body.innerText) ? document.body.innerText.substring(0, 10000) : '';";
         $js .= "if(/[\\u3040-\\u9fff]/.test(txt) && __fonts.cjk) appendStyle(__fonts.cjk, 'pdf-font-cjk');";
@@ -97,6 +118,17 @@ final class CombinedPostProcessScript
 
         if ($includeStability) {
             $js .= "await " . PageStabilityScript::asSettleExpression($max, $leanStability) . ";";
+        }
+
+        if ($fontReadyCap > 0) {
+            $js .= "try {"
+                . "if (document.fonts && typeof document.fonts.ready !== 'undefined') {"
+                . "await Promise.race(["
+                . "document.fonts.ready,"
+                . "new Promise(function (r) { setTimeout(r, {$fontReadyCap}); })"
+                . "]);"
+                . "}"
+                . "} catch (eFr) {}";
         }
 
         if ($includeFloating) {
