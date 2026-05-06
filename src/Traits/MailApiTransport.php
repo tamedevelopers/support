@@ -468,6 +468,7 @@ trait MailApiTransport{
                         call_user_func($callable, (object)[
                             'status' => $e->getCode(),
                             'message' => $e->getMessage(),
+                            'transport' => $this->smtpData['transport'], 
                             'mid' => null,
                             'to' => $email
                         ]);
@@ -607,6 +608,7 @@ trait MailApiTransport{
             call_user_func($callable, (object)[
                 'status' => 200,
                 'message' => 'Sent via AWS SES SDK',
+                'transport' => $this->smtpData['transport'], 
                 'mid' => $result['MessageId'] ?? null,
                 'to' => $email,
                 'response' => $result
@@ -696,7 +698,8 @@ trait MailApiTransport{
         if(is_callable($callable)){
             call_user_func($callable, (object)[
                 'status' => 200,
-                'message' => "Sent via API - {$this->transport}",
+                'message' => "Sent via API - [{$this->transport}]",
+                'transport' => $this->smtpData['transport'], 
                 'mid' => null,
                 'to' => $email,
                 'response' => $response

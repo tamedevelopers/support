@@ -44,11 +44,6 @@ trait MailSMTPTransport{
                     if(!Tame()->emailValidator($fromEmail, false)){
                         throw new \Exception("Invalid From-Email address: {$fromEmail}", 511);
                     }
-
-                    // Important: Clear state first to prevent BCC/CC from leaking to the next recipient
-                    $this->mailer->clearAllRecipients();
-                    $this->mailer->clearAttachments();
-                    $this->mailer->clearCustomHeaders();
                         
                     $this->mailer->setFrom($fromEmail, $this->from['name']);
                     $this->mailer->addAddress($email);
@@ -72,7 +67,6 @@ trait MailSMTPTransport{
                     }
 
                     // Connect
-                    // $this->mailer->SMTPConnect();
                     if (!$this->mailer->send()) {
                         throw new \Exception($this->mailer->ErrorInfo, 500);
                     }
@@ -80,15 +74,20 @@ trait MailSMTPTransport{
                     // get message id
                     $mid = $this->mailer->getLastMessageID();
                     
-                    // Post-Send Cleanup
-                    // $this->mailer->SMTPClose();
+                    // Delete attachments
                     $this->deleteAttachment();
+
+                    // Important: Clear state first to prevent BCC/CC from leaking to the next recipient
+                    // $this->mailer->clearAllRecipients();
+                    // $this->mailer->clearAttachments();
+                    // $this->mailer->clearCustomHeaders();
                     
-                    // $this->mail->ErrorInfo
+                    // Return the response to the caller
                     if(is_callable($callable)){
                         call_user_func($callable, (object) [
                             'status'    => 200, 
-                            'message'   => "Sent", 
+                            'message'   => "Sent via [{$this->smtpData['transport']}]", 
+                            'transport' => $this->smtpData['transport'], 
                             'mid'       => $mid, 
                             'to'        => $email
                         ]);
@@ -98,6 +97,7 @@ trait MailSMTPTransport{
                         call_user_func($callable, (object) [
                             'status'    => $e->getCode(), 
                             'message'   => $e->getMessage(), 
+                            'transport' => $this->smtpData['transport'], 
                             'mid'       => null, 
                             'to'        => $email
                         ]);

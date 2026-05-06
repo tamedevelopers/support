@@ -636,12 +636,17 @@ trait MailTrait{
         // Priority Logic: (Priority: Instance > Global Runtime > Config File)
         // We treat 'this->transport' as the source of truth if it was set via fluent method
         $this->transport = $this->configureTransport(
-            $this->transport ?? $globalRuntime['transport'] ?? $mailConfig['default'] ?? $defaultKey
+            $this->transport 
+            ?? $globalRuntime['transport'] 
+            ?? $mailConfig['default'] 
+            ?? $defaultKey
         );
         
         // If no data found, then we assume the data does'nt exists
         // inside of the mail.mailers.$providerKey[data], we revert back to default
-        $defaultMailerData = config("mail.mailers.{$this->transport}") ?? config("mail.mailers.{$defaultKey}");
+        $defaultMailerData = config("mail.mailers.{$this->transport}") 
+            ?? config("mail.mailers.{$defaultKey}")
+            ?? [];
 
         // should be changed by setters
         $setterConfig = Server::config('mail');
