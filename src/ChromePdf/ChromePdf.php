@@ -6,7 +6,7 @@ namespace Tamedevelopers\Support\ChromePdf;
 
 use HeadlessChromium\Communication\Message;
 use HeadlessChromium\Communication\Session;
-use HeadlessChromium\Page;
+use HeadlessChromium\Page; 
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\ChromePdf\ChromiumEnvironment;
 use Tamedevelopers\Support\ChromePdf\ColorScheme;
