@@ -575,7 +575,7 @@ final class ChromePdf
 
     /**
      * {@code prefers-color-scheme} emulation. Pass {@see ColorScheme} or a string: {@code light}, {@code dark},
-     * {@code no-preference} (aliases: none, system, default, auto). Unknown strings use {@see ColorScheme::NoPreference}.
+     * {@code no-preference} (aliases: none, system, default, auto)
      */
     public function colorScheme(ColorScheme|string $scheme): self
     {
@@ -901,6 +901,11 @@ final class ChromePdf
         return min($maxMs, max($minMs, $this->prioritizeSpeed ? min($base, 8000) : $base));
     }
 
+    private function isOperationTimeout(Throwable $e): bool
+    {
+        return str_contains($e->getMessage(), 'Operation timed out after');
+    }
+
     private function flattenLinksForPrint(Page $page): void
     {
         $page->evaluate(FlattenLinksScript::asExpression())->getReturnValue(
@@ -1177,8 +1182,14 @@ final class ChromePdf
     {
         $html = $this->sourceValue;
         $this->injectionCssForPostProcess = '';
+        
         $merged = self::mergeCssIntoHtmlDocument($html, $this->buildThemeCssOnly(), null);
-        $page->setHtml($merged, 500, Page::DOM_CONTENT_LOADED);
+
+        // Align with loadFromFile(): sub-1s budgets often false-timeout on large HTML/SVG or slow headless Chrome when
+        // waiting for DOMContentLoaded after setHtml (external CSS/fonts delay the lifecycle).
+        $setHtmlTimeoutMs = min(10000, max(1300, $this->effectiveNavigationTimeoutMs()));
+
+        $page->setHtml($merged, $setHtmlTimeoutMs, Page::DOM_CONTENT_LOADED);
     }
 
     /**
@@ -1264,7 +1275,21 @@ final class ChromePdf
             $timeoutMs = min(120000, $timeoutMs + $urlFontBudgetMs + 2500);
         }
 
-        $page->evaluate($expr)->getReturnValue($timeoutMs);
+        try {
+            $page->evaluate($expr)->getReturnValue($timeoutMs);
+        } catch (Throwable $e) {
+            // Under temporary CPU/network pressure, one evaluate() pass can exceed tight budgets (commonly ~9s).
+            // Retry once with a relaxed cap instead of failing the entire conversion.
+            if (!$this->isOperationTimeout($e)) {
+                throw $e;
+            }
+
+            $retryTimeoutMs = min(
+                120000,
+                max($timeoutMs + 8000, (int) max(14000, $this->effectiveNavigationTimeoutMs()))
+            );
+            $page->evaluate($expr)->getReturnValue($retryTimeoutMs);
+        }
     }
 
     /**

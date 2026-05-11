@@ -14,6 +14,7 @@
         "php": ">=8.1",
         "ext-ctype": "*",
         "ext-mbstring": "*",
+        "ext-sockets": "*",
         "symfony/var-dumper": "^6.0 || ^7.0",
         "symfony/console": "^6.0 || ^7.0",
         "symfony/http-foundation": "^6.0 || ^7.0",
@@ -36,7 +37,6 @@
         ]
     },
     "require-dev": {
-        "ext-sockets": "*",
         "chrome-php/chrome": "^1.11",
         "chrome-php/wrench": "^1.7",
         "setasign/fpdi": "^2.6",
@@ -47,7 +47,6 @@
         "dompdf/dompdf": "Required to use the `PDF` class and helper (^3.0)",
         "chrome-php/chrome": "Required for ChromePdf and WebScraper `engine` => `chromium` (^1.11)",
         "chrome-php/wrench": "Required for WebSocket communication with Chrome (^1.7)",
-        "ext-sockets": "PHP extension required by chrome-php for headless Chromium IPC",
         "setasign/fpdi": "ChromePdf merge/watermark/encryption/PDF/A via FPDI (^2.6). Docs: https://manuals.setasign.com/fpdi-manual/",
         "tecnickcom/tcpdf": "Required with fpdi for \\setasign\\Fpdi\\Tcpdf\\Fpdi (merge, encryption, PDF/A). FPDI docs: https://github.com/Setasign/FPDI — install both;"
     },
