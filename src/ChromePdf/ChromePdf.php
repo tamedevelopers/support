@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\ChromePdf;
 
-use HeadlessChromium\Browser;
-use HeadlessChromium\BrowserFactory;
 use HeadlessChromium\Communication\Message;
 use HeadlessChromium\Communication\Session;
 use HeadlessChromium\Page;
