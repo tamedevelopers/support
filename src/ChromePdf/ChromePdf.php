@@ -36,7 +36,8 @@ use Throwable;
  * Use {@see maximumQuality()} for longer stability/image/font budgets without changing the default URL load strategy much.
  *
  * Before {@code Page.printToPDF}, the default path may set emulated media to {@code screen} (see {@see preferPrintStylesheetForPdf()}).
- * Page layout width/height follow **Chromium defaults** (no CDP device-metrics override, no forced launch {@code windowSize}).
+ * Optional {@see documentSize()} sets both PDF paper dimensions and {@code Emulation.setDeviceMetricsOverride} layout size;
+ * {@see desktopViewport()} sets layout (and URL launch window size) the same way.
  *
  * A single Chromium process is reused across {@see generate()} calls (see {@see shutdown()} to release it).
  * Post-navigation work (fonts, optional settle, CMP strip, optional injected CSS) runs in one {@code evaluate()} via
@@ -76,6 +77,25 @@ final class ChromePdf
     private ?array $hideSelectors = null;
 
     private PaperFormat $paper = PaperFormat::A4;
+
+    /**
+     * When non-null, {@see buildPdfPrintOptions()} uses these inches instead of {@see $paper} dimensions.
+     * Set by {@see documentSize()}; cleared by {@see paper()}.
+     */
+    private ?float $customPdfWidthInches = null;
+
+    private ?float $customPdfHeightInches = null;
+
+    /**
+     * After {@see desktopViewport()} or {@see documentSize()}, applies {@code Emulation.setDeviceMetricsOverride}
+     * so layout matches stored width/height (including {@see fromHtml()} / {@see fromFile()}, not only {@see fromUrl()}).
+     */
+    private bool $useDeviceMetricsViewport = false;
+
+    /**
+     * Optional base URL / directory for resolving relative assets when using {@see fromHtml()} only.
+     */
+    private ?string $htmlAssetBaseRaw = null;
 
     private bool $landscape = false;
 
@@ -263,11 +283,19 @@ final class ChromePdf
         return $this;
     }
 
-    public function fromHtml(string $html): self
+    /**
+     * @param string|null $assetBase Optional URL ({@code https://…}), {@code file://…}, or filesystem path
+     *        (file or directory) merged as {@code <base href>} when the fragment does not already define {@code <base>}.
+     *        Directory paths should exist; file paths use their parent directory. Enables relative and typical absolute
+     *        web paths when the document is not loaded from a real URL.
+     */
+    public function fromHtml(string $html, ?string $assetBase = null): self
     {
         $this->resetSource();
         $this->sourceMode = 'html';
         $this->sourceValue = $html;
+        $t = $assetBase !== null ? Str::trim($assetBase) : '';
+        $this->htmlAssetBaseRaw = $t !== '' ? $t : null;
 
         return $this;
     }
@@ -312,13 +340,60 @@ final class ChromePdf
     public function paper(PaperFormat|string $format): self
     {
         $this->paper = $format instanceof PaperFormat ? $format : PaperFormat::parse($format);
+        $this->customPdfWidthInches = null;
+        $this->customPdfHeightInches = null;
 
         return $this;
     }
 
     /**
-     * Stored dimensions only — **does not resize** Chromium; layout follows the browser’s default tab/window sizing.
-     * Kept as a fluent no-op shim for callers that chained this historically.
+     * Layout viewport and PDF page size from CSS pixels or print units ({@code px}, {@code in}, {@code cm}, {@code mm}).
+     * Bare numbers and {@code Npx} follow the same 96 px = 1 in rule as {@see margin()}.
+     *
+     * When set, updates {@see desktopViewportWidth}/{@see desktopViewportHeight} and overrides {@see paper()} dimensions
+     * for {@code printToPDF} until {@see paper()} is called again.
+     *
+     * @throws ConversionFailedException When dimensions are outside valid ranges (320×240–8192×8192) after conversion
+     */
+    public function documentSize(int|string $width, int|string $height): self
+    {
+        [$wPx, $wIn] = self::parseLayoutDimensionToPixelsAndInches($width);
+        [$hPx, $hIn] = self::parseLayoutDimensionToPixelsAndInches($height);
+
+        $minWidth = 320;
+        $minHeight = 240;
+        $maxDimension = 8192;
+
+        $isWidthInvalid = $wPx < $minWidth || $wPx > $maxDimension;
+        $isHeightInvalid = $hPx < $minHeight || $hPx > $maxDimension;
+
+        if ($isWidthInvalid || $isHeightInvalid) {
+            $invalidParams = [];
+            if ($isWidthInvalid) {
+                $invalidParams[] = sprintf('width=%d (allowed: %d-%d)', $wPx, $minWidth, $maxDimension);
+            }
+            if ($isHeightInvalid) {
+                $invalidParams[] = sprintf('height=%d (allowed: %d-%d)', $hPx, $minHeight, $maxDimension);
+            }
+
+            throw new ConversionFailedException(
+                sprintf('Invalid documentSize dimensions: %s', implode(', ', $invalidParams))
+            );
+        }
+
+        $this->desktopViewportWidth = $wPx;
+        $this->desktopViewportHeight = $hPx;
+        $this->customPdfWidthInches = $wIn;
+        $this->customPdfHeightInches = $hIn;
+        $this->useDeviceMetricsViewport = true;
+
+        return $this;
+    }
+
+    /**
+     * Stored dimensions — for {@see fromUrl()} they configure launch {@code windowSize}; for all sources, after
+     * {@see desktopViewport()} or {@see documentSize()}, {@code Emulation.setDeviceMetricsOverride} matches layout to
+     * these pixel dimensions before capture.
      *
      * @throws ConversionFailedException When dimensions are outside valid ranges (320×240–8192×8192)
      */
@@ -353,6 +428,7 @@ final class ChromePdf
         
         $this->desktopViewportWidth = $width;
         $this->desktopViewportHeight = $height;
+        $this->useDeviceMetricsViewport = true;
 
         return $this;
     }
@@ -683,6 +759,7 @@ final class ChromePdf
         try {
             $page = $browser->createPage();
             $this->applyColorSchemeToPage($page);
+            $this->applyViewportDeviceMetricsIfConfigured($page);
 
             match ($this->sourceMode) {
                 'url' => $this->loadFromUrlWithBlocking($page),
@@ -785,6 +862,53 @@ final class ChromePdf
         throw new ConversionFailedException(sprintf('Unrecognized margin format: %s', $s));
     }
 
+    /**
+     * @return array{0: int, 1: float} Rounded CSS pixels and exact inches for {@code printToPDF}.
+     *
+     * @throws ConversionFailedException
+     */
+    private static function parseLayoutDimensionToPixelsAndInches(int|string $value): array
+    {
+        if (is_int($value)) {
+            $px = max(1, $value);
+
+            return [$px, max(0.0, (float) $px) / 96.0];
+        }
+
+        $s = Str::trim($value);
+        if ($s === '') {
+            throw new ConversionFailedException('Empty document dimension value.');
+        }
+
+        if (preg_match('/^([\d.]+)\s*px$/i', $s, $m) === 1) {
+            $px = (int) max(1.0, (float) $m[1]);
+
+            return [$px, (float) $px / 96.0];
+        }
+        if (preg_match('/^([\d.]+)\s*in$/i', $s, $m) === 1) {
+            $inches = max(0.0, (float) $m[1]);
+
+            return [(int) max(1, (int) round($inches * 96.0)), $inches];
+        }
+        if (preg_match('/^([\d.]+)\s*cm$/i', $s, $m) === 1) {
+            $inches = max(0.0, (float) $m[1]) / 2.54;
+
+            return [(int) max(1, (int) round($inches * 96.0)), $inches];
+        }
+        if (preg_match('/^([\d.]+)\s*mm$/i', $s, $m) === 1) {
+            $inches = max(0.0, (float) $m[1]) / 25.4;
+
+            return [(int) max(1, (int) round($inches * 96.0)), $inches];
+        }
+        if (preg_match('/^([\d.]+)$/', $s, $m) === 1) {
+            $px = (int) max(1.0, (float) $m[1]);
+
+            return [$px, (float) $px / 96.0];
+        }
+
+        throw new ConversionFailedException(sprintf('Unrecognized document dimension format: %s', $s));
+    }
+
     private function buildPdfPrintOptions(): array
     {
         $opts = [
@@ -794,9 +918,14 @@ final class ChromePdf
             'preferCSSPageSize' => $this->pdfPreferCssPageSize,
         ];
 
-        // Use {@see paper()} for all sources (URLs previously forced Legal — wrong vs A4 / custom sizes and hurt clarity).
-        $opts['paperWidth'] = $this->paper->widthInches();
-        $opts['paperHeight'] = $this->paper->heightInches();
+        // Use {@see paper()} or {@see documentSize()} dimensions for printToPDF.
+        if ($this->customPdfWidthInches !== null && $this->customPdfHeightInches !== null) {
+            $opts['paperWidth'] = $this->customPdfWidthInches;
+            $opts['paperHeight'] = $this->customPdfHeightInches;
+        } else {
+            $opts['paperWidth'] = $this->paper->widthInches();
+            $opts['paperHeight'] = $this->paper->heightInches();
+        }
 
         $inch = match ($this->pdfMarginMode) {
             'default' => 1.0 / 2.54,
@@ -932,6 +1061,7 @@ final class ChromePdf
         $this->sourceValue = null;
         $this->injectionCssForPostProcess = null;
         $this->hideSelectors = null;
+        $this->htmlAssetBaseRaw = null;
     }
 
     /**
@@ -963,6 +1093,23 @@ final class ChromePdf
         }
         try {
             $page->evaluate('document.documentElement.offsetHeight')->getReturnValue(1500);
+        } catch (Throwable) {
+        }
+    }
+
+    private function applyViewportDeviceMetricsIfConfigured(Page $page): void
+    {
+        if (!$this->useDeviceMetricsViewport) {
+            return;
+        }
+
+        try {
+            $page->getSession()->sendMessageSync(new Message('Emulation.setDeviceMetricsOverride', [
+                'width' => $this->desktopViewportWidth,
+                'height' => $this->desktopViewportHeight,
+                'deviceScaleFactor' => 1,
+                'mobile' => false,
+            ]));
         } catch (Throwable) {
         }
     }
@@ -1176,12 +1323,54 @@ final class ChromePdf
         );
     }
 
+    /**
+     * @throws ConversionFailedException
+     */
+    private function resolveHtmlAssetBaseHref(string $raw): string
+    {
+        $s = Str::trim($raw);
+        if ($s === '') {
+            throw new ConversionFailedException('HTML asset base is empty.');
+        }
+
+        if (preg_match('#^https?://#i', $s) === 1) {
+            return $s;
+        }
+
+        if (preg_match('#^file:#i', $s) === 1) {
+            return $s;
+        }
+
+        $path = self::stringReplacer($s);
+        $real = realpath($path);
+        if ($real === false) {
+            throw new ConversionFailedException(sprintf('HTML asset base path could not be resolved: %s', $raw));
+        }
+
+        try {
+            $uri = FileUri::fromPath($real);
+        } catch (\InvalidArgumentException $e) {
+            throw new ConversionFailedException($e->getMessage(), (int) $e->getCode(), $e);
+        }
+
+        if (is_dir($real)) {
+            return rtrim($uri, '/') . '/';
+        }
+
+        return rtrim(FileUri::fromPath(dirname($real)), '/') . '/';
+    }
+
     private function loadFromHtml(Page $page): void
     {
         $html = $this->sourceValue;
         $this->injectionCssForPostProcess = '';
-        
-        $merged = self::mergeCssIntoHtmlDocument($html, $this->buildThemeCssOnly(), null);
+
+        $baseHref = null;
+        if ($this->htmlAssetBaseRaw !== null) {
+            $baseHref = $this->resolveHtmlAssetBaseHref($this->htmlAssetBaseRaw);
+        }
+
+        $merged = self::mergeCssIntoHtmlDocument($html, $this->buildThemeCssOnly(), $baseHref);
 
         // Align with loadFromFile(): sub-1s budgets often false-timeout on large HTML/SVG or slow headless Chrome when
         // waiting for DOMContentLoaded after setHtml (external CSS/fonts delay the lifecycle).
@@ -1337,7 +1526,7 @@ final class ChromePdf
     private static function mergeCssIntoHtmlDocument(string $html, string $css, ?string $baseHref): string
     {
         $injectParts = [];
-        if ($baseHref !== null && $baseHref !== '') {
+        if ($baseHref !== null && $baseHref !== '' && preg_match('/<base\b/i', $html) !== 1) {
             $injectParts[] = '<base href="' . htmlspecialchars($baseHref, ENT_QUOTES | ENT_HTML5, 'UTF-8') . '">';
         }
         if ($css !== '') {

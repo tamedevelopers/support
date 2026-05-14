@@ -20,6 +20,7 @@ $output = ChromePdf::create()
     ->margin(20)
     ->createFromElement('.body')
     ->textWatermark('CONFIDENTIAL')
+    ->documentSize('4in', '6in')
     // ->clickableLinks(false)
     // ->encrypt(
     //     userPassword: 'user', 
