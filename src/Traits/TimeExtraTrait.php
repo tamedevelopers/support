@@ -11,8 +11,9 @@ use Tamedevelopers\Support\Time;
 
 /**
  * Trait TimeExtraTrait
- *
  * Adds date boundaries, comparisons, and difference helpers to Time.
+ * 
+ * @method mixed startOfWeek()
  */
 trait TimeExtraTrait
 {
@@ -55,9 +56,9 @@ trait TimeExtraTrait
      * Helper to return a cloned instance with a new timestamp set.
      *
      * @param int $timestamp Unix timestamp to set on the clone
-     * @return self Cloned instance with timestamp applied
+     * @return static Cloned instance with timestamp applied
      */
-    private function cloneWithTimestamp(int $timestamp): static
+    private function cloneWithTimestamp(int $timestamp)
     {
         $clone = $this->clone();
         $clone->date = $timestamp;
@@ -71,8 +72,6 @@ trait TimeExtraTrait
 
     /**
      * Set time to 00:00:00 of the current day.
-     *
-     * @return self
      */
     public function startOfDay(): static
     {
@@ -83,8 +82,6 @@ trait TimeExtraTrait
 
     /**
      * Set time to 23:59:59 of the current day.
-     *
-     * @return self
      */
     public function endOfDay(): static
     {
@@ -95,8 +92,6 @@ trait TimeExtraTrait
 
     /**
      * Beginning of the week (Monday 00:00:00).
-     *
-     * @return self
      */
     public function startOfWeek(): static
     {
@@ -107,13 +102,12 @@ trait TimeExtraTrait
             $dt->modify("-{$daysBack} days");
         }
         $dt->setTime(0, 0, 0);
+
         return $this->cloneWithTimestamp((int) $dt->getTimestamp());
     }
 
     /**
      * End of the week (Sunday 23:59:59).
-     *
-     * @return self
      */
     public function endOfWeek(): static
     {
@@ -121,26 +115,24 @@ trait TimeExtraTrait
         $dt = $this->dtInTz((int) $start->date);
         $dt->modify('+6 days');
         $dt->setTime(23, 59, 59);
+
         return $this->cloneWithTimestamp((int) $dt->getTimestamp());
     }
 
     /**
      * First day of current month at 00:00:00.
-     *
-     * @return self
      */
     public function startOfMonth(): static
     {
         $dt = $this->dtInTz((int) $this->date);
         $dt->setDate((int) $dt->format('Y'), (int) $dt->format('m'), 1);
         $dt->setTime(0, 0, 0);
+
         return $this->cloneWithTimestamp((int) $dt->getTimestamp());
     }
 
     /**
      * Last day of current month at 23:59:59.
-     *
-     * @return self
      */
     public function endOfMonth(): static
     {
@@ -148,32 +140,31 @@ trait TimeExtraTrait
         $lastDay = (int) $dt->format('t');
         $dt->setDate((int) $dt->format('Y'), (int) $dt->format('m'), $lastDay);
         $dt->setTime(23, 59, 59);
+
         return $this->cloneWithTimestamp((int) $dt->getTimestamp());
     }
 
     /**
      * January 1st, 00:00:00.
-     *
-     * @return self
      */
     public function startOfYear(): static
     {
         $dt = $this->dtInTz((int) $this->date);
         $dt->setDate((int) $dt->format('Y'), 1, 1);
         $dt->setTime(0, 0, 0);
+
         return $this->cloneWithTimestamp((int) $dt->getTimestamp());
     }
 
     /**
      * December 31st, 23:59:59.
-     *
-     * @return self
      */
     public function endOfYear(): static
     {
         $dt = $this->dtInTz((int) $this->date);
         $dt->setDate((int) $dt->format('Y'), 12, 31);
         $dt->setTime(23, 59, 59);
+
         return $this->cloneWithTimestamp((int) $dt->getTimestamp());
     }
 
@@ -279,6 +270,61 @@ trait TimeExtraTrait
     // ---------------------------
     // Difference calculations
     // ---------------------------
+
+    /**
+     * Absolute number of full years difference (calendar aware).
+     *
+     * @param mixed $otherDate A date-like value to compare against
+     * @return int Number of years difference (absolute)
+     */
+    public function diffInYears($otherDate): int
+    {
+        $ts = $this->normalizeToTimestamp($otherDate);
+        $a = $this->dtInTz((int) $this->date);
+        $b = $this->dtInTz($ts);
+        return (int) $a->diff($b)->y;
+    }
+
+    /**
+     * Absolute number of full decades difference (calendar aware).
+     *
+     * @param mixed $otherDate A date-like value to compare against
+     * @return int Number of decades difference (absolute)
+     */
+    public function diffInDecades($otherDate): int
+    {
+        // Reuses your calendar-aware year difference
+        return (int) floor($this->diffInYears($otherDate) / 10);
+    }
+
+    /**
+     * Absolute number of full months difference (calendar aware).
+     *
+     * @param mixed $otherDate A date-like value to compare against
+     * @return int Number of months difference (absolute)
+     */
+    public function diffInMonths($otherDate): int
+    {
+        $ts = $this->normalizeToTimestamp($otherDate);
+        $a = $this->dtInTz((int) $this->date);
+        $b = $this->dtInTz($ts);
+        $interval = $a->diff($b);
+        
+        // Total months = (years * 12) + months
+        return ($interval->y * 12) + $interval->m;
+    }
+
+    /**
+     * Absolute number of full weeks difference.
+     *
+     * @param mixed $otherDate A date-like value to compare against
+     * @return int Number of weeks difference (absolute)
+     */
+    public function diffInWeeks($otherDate): int
+    {
+        // Reuses your calendar-aware day difference to guarantee accuracy
+        return (int) floor($this->diffInDays($otherDate) / 7);
+    }
 
     /**
      * Absolute number of full days difference (calendar aware).
