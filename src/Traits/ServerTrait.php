@@ -238,7 +238,7 @@ trait ServerTrait{
             }
         }
 
-        // setting default path to doc root
+        // strategy for nested non-framework structural roots
         $projectRootPath = $documentRoot;
 
         if (strpos($currentScript, $documentRoot) === 0) {
