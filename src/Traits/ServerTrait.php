@@ -230,6 +230,11 @@ trait ServerTrait{
 
             if(strpos($currentScript, $path) !== false){
                 $currentScript = Str::replace($path, '', $currentScript);
+
+                // STRICT CHECK: Only back out if $documentRoot is exactly $currentScript + '/public'
+                if (rtrim($documentRoot, '/') === rtrim($currentScript, '/') . '/public') {
+                    $documentRoot = dirname($documentRoot);
+                }
             }
         }
 
