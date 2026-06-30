@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Capsule;
 
+use Closure;
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
-use Tamedevelopers\Support\Capsule\File;
 
 class Manager{
     

@@ -14,6 +14,12 @@ use Tamedevelopers\Support\Server;
  * @property bool $isPaginate
  * @property bool $isBuilder
  * @property mixed $builder
+ * 
+ * @method mixed getArrayableItems($items)
+ * @method mixed prepareValueAndOperator($value, $operator, $useDefault = false)
+ * @method mixed evaluateWhere($item, $key, $operator = null, $value = null)
+ * @method mixed valueForSort($value, $callback)
+ * @method mixed dataGet($target, string $key, $default = null)
  */
 trait RelatedTrait{
 
@@ -202,7 +208,7 @@ trait RelatedTrait{
      */
     public function reverse()
     {
-        return new self(array_reverse($this->items, true));
+        return new static(array_reverse($this->items, true));
     }
 
     /**
@@ -214,7 +220,7 @@ trait RelatedTrait{
      */
     public function pad(int $size, $value)
     {
-        return new self(array_pad($this->items, $size, $value));
+        return new static(array_pad($this->items, $size, $value));
     }
 
     /**
@@ -235,7 +241,7 @@ trait RelatedTrait{
             $keys = array_pad($keys, count($this->items), null);
         }
 
-        return new self(array_combine($keys, $this->items));
+        return new static(array_combine($keys, $this->items));
     }
 
     /**
@@ -253,7 +259,7 @@ trait RelatedTrait{
             }
         }
 
-        return new self($results);
+        return new static($results);
     }
 
     /**
@@ -263,7 +269,7 @@ trait RelatedTrait{
      */
     public function flatten()
     {
-        return new self(Str::flatten($this->items));
+        return new static(Str::flatten($this->items));
     }
 
     /**
@@ -284,7 +290,7 @@ trait RelatedTrait{
             $zipped[] = $row;
         }
 
-        return new self($zipped);
+        return new static($zipped);
     }
 
     /**
@@ -295,7 +301,7 @@ trait RelatedTrait{
      */
     public function merge($items)
     {
-        return new self(array_merge($this->items, $items));
+        return new static(array_merge($this->items, $items));
     }
 
     /**
@@ -316,7 +322,7 @@ trait RelatedTrait{
             }
         }
 
-        return new self($array);
+        return new static($array);
     }
 
     /**
@@ -335,7 +341,7 @@ trait RelatedTrait{
             }
         }
 
-        return new self($this->items);
+        return new static($this->items);
     }
 
     /**
@@ -350,7 +356,7 @@ trait RelatedTrait{
             $size = 10;
         }
 
-        return new self(array_chunk($this->items, $size));
+        return new static(array_chunk($this->items, $size));
     }
 
     /**
@@ -360,7 +366,7 @@ trait RelatedTrait{
      */
     public function keys()
     {
-        return new self(array_keys($this->items));
+        return new static(array_keys($this->items));
     }
 
     /**
@@ -370,7 +376,7 @@ trait RelatedTrait{
      */
     public function values()
     {
-        return new self(array_values($this->items));
+        return new static(array_values($this->items));
     }
 
     /**
@@ -381,7 +387,7 @@ trait RelatedTrait{
      */
     public function filter(callable $callback)
     {
-        return new self(array_filter($this->items, $callback, ARRAY_FILTER_USE_BOTH));
+        return new static(array_filter($this->items, $callback, ARRAY_FILTER_USE_BOTH));
     }
 
     /**
@@ -402,7 +408,7 @@ trait RelatedTrait{
             return ! $callback($item, $key);
         }, ARRAY_FILTER_USE_BOTH);
 
-        return new self($results);
+        return new static($results);
     }
 
     /**
@@ -425,7 +431,7 @@ trait RelatedTrait{
             return $this->evaluateWhere($item, $key, $operator, $value);
         });
 
-        return new self($results);
+        return new static($results);
     }
 
     /**
@@ -750,7 +756,7 @@ trait RelatedTrait{
 
         // If no keys provided, return as-is
         if (empty($keys)) {
-            return new self($this->items);
+            return new static($this->items);
         }
 
         $selected = [];
@@ -776,7 +782,7 @@ trait RelatedTrait{
             $selected[$outerKey] = $result;
         }
 
-        return new self($selected);
+        return new static($selected);
     }
 
     /**
@@ -787,7 +793,7 @@ trait RelatedTrait{
      */
     public function map(callable $callback)
     {
-        return new self(array_map($callback, $this->items));
+        return new static(array_map($callback, $this->items));
     }
 
     /**
@@ -819,7 +825,7 @@ trait RelatedTrait{
             }
         }
 
-        return new self($results);
+        return new static($results);
     }
 
     /**
@@ -884,7 +890,7 @@ trait RelatedTrait{
             }
         }
 
-        return new self($results);
+        return new static($results);
     }
 
     /**
@@ -912,7 +918,7 @@ trait RelatedTrait{
             $results[] = $value;
         }
 
-        return new self($results);
+        return new static($results);
     }
 
     /**
@@ -933,7 +939,7 @@ trait RelatedTrait{
             $results[$groupKey][] = $item;
         }
 
-        return new self($results);
+        return new static($results);
     }
 
     /**
@@ -980,7 +986,7 @@ trait RelatedTrait{
             ? uasort($items, $callback)
             : asort($items, $callback ?? SORT_REGULAR);
 
-        return new self($items);
+        return new static($items);
     }
 
     /**
@@ -1002,7 +1008,7 @@ trait RelatedTrait{
                     : $valueB <=> $valueA;
         });
 
-        return new self($sorted);
+        return new static($sorted);
     }
 
     /**
@@ -1027,7 +1033,7 @@ trait RelatedTrait{
             return 0;
         });
 
-        return new self($sorted);
+        return new static($sorted);
     }
 
     /**
@@ -1047,7 +1053,7 @@ trait RelatedTrait{
             uasort($items, fn($a, $b) => $this->valueForSort($b, $callback) <=> $this->valueForSort($a, $callback));
         }
 
-        return new self($items);
+        return new static($items);
     }
 
     /**
@@ -1066,7 +1072,7 @@ trait RelatedTrait{
             krsort($items);
         }
 
-        return new self($items);
+        return new static($items);
     }
 
     /**
@@ -1092,7 +1098,7 @@ trait RelatedTrait{
             $resolvedKey = is_callable($key) ? $key($item) : $this->dataGet($item, $key);
             $results[$resolvedKey] = $item;
         }
-        return new self($results);
+        return new static($results);
     }
 
     /**
@@ -1104,7 +1110,7 @@ trait RelatedTrait{
      */
     public function slice(int $offset, ?int $length = null)
     {
-        return new self(array_slice($this->items, $offset, $length, true));
+        return new static(array_slice($this->items, $offset, $length, true));
     }
 
     /**
@@ -1131,7 +1137,7 @@ trait RelatedTrait{
             if ($callback($item, $key)) break;
             $results[$key] = $item;
         }
-        return new self($results);
+        return new static($results);
     }
 
     /**
@@ -1153,7 +1159,7 @@ trait RelatedTrait{
      */
     public function concat($items)
     {
-        return new self(array_merge($this->items, $this->getArrayableItems($items)));
+        return new static(array_merge($this->items, $this->getArrayableItems($items)));
     }
 
     /**
@@ -1164,7 +1170,7 @@ trait RelatedTrait{
      */
     public function union($items)
     {
-        return new self($this->items + $this->getArrayableItems($items));
+        return new static($this->items + $this->getArrayableItems($items));
     }
 
     /**
@@ -1174,7 +1180,7 @@ trait RelatedTrait{
      */
     public function toBase()
     {
-        return new self($this->items);
+        return new static($this->items);
     }
 
     /**
@@ -1208,18 +1214,139 @@ trait RelatedTrait{
             $results = $tmp;
         }
 
-        return new self($results);
+        return new static($results);
     }
 
     /**
-     * Join the collection items into a string with separator.
+     * Join the collection items into a string with a separator and an optional final separator.
+     *
+     * @param string $glue
+     * @param string $finalGlue
+     * @return string
+     */
+    public function join(string $glue = ',', string $finalGlue = '')
+    {
+        if ($this->isEmpty()) {
+            return '';
+        }
+
+        if ($finalGlue === '') {
+            return implode($glue, $this->items);
+        }
+
+        if ($this->count() === 1) {
+            return (string) $this->first();
+        }
+
+        $finalItem = array_pop($this->items);
+
+        return $this->implode($glue) . $finalGlue . $finalItem;
+    }
+
+    /**
+     * Alias for join() method.
      *
      * @param string $glue
      * @return string
      */
-    public function join(string $glue = ',')
+    public function implode(string $glue = ''): string
     {
         return implode($glue, $this->items);
+    }
+
+    /**
+     * Split a string by a string into a collection wrapper.
+     *
+     * @param string $delimiter
+     * @param string $string
+     * @param int $limit
+     * @return self
+     */
+    public static function explode(string $delimiter, string $string, int $limit = PHP_INT_MAX)
+    {
+        return new static(explode($delimiter, $string, $limit));
+    }
+
+    /**
+     * Split a collection into a certain number of groups.
+     *
+     * @param int $numberOfGroups
+     * @return self
+     */
+    public function split(int $numberOfGroups)
+    {
+        if ($this->isEmpty()) {
+            return new static([]);
+        }
+
+        $count = $this->count();
+        $groupSize = (int) ceil($count / $numberOfGroups);
+
+        return $this->chunk($groupSize);
+    }
+
+    /**
+     * Map a collection and flatten the result by a single level.
+     *
+     * @param callable $callback
+     * @return self
+     */
+    public function flatMap(callable $callback)
+    {
+        return $this->map($callback)->collapse();
+    }
+
+    /**
+     * Interleave the collection with the given items.
+     *
+     * @param mixed $items
+     * @return self
+     */
+    public function interleave($items)
+    {
+        $items = $items instanceof self ? $items->all() : (array) $items;
+        $results = [];
+        
+        $array1 = array_values($this->items);
+        $array2 = array_values($items);
+        
+        $count = max(count($array1), count($array2));
+        
+        for ($i = 0; $i < $count; $i++) {
+            if (isset($array1[$i])) {
+                $results[] = $array1[$i];
+            }
+            if (isset($array2[$i])) {
+                $results[] = $array2[$i];
+            }
+        }
+        
+        return new static($results);
+    }
+
+    /**
+     * Get the items with the specified keys or everything except them dynamically.
+     * Diff variations are vital for collections.
+     * 
+     * @param mixed $items
+     * @return self
+     */
+    public function diff($items)
+    {
+        $compare = $items instanceof self ? $items->all() : (array) $items;
+        return new static(array_diff($this->items, $compare));
+    }
+
+    /**
+     * Get the items with keys missing from the given items.
+     *
+     * @param mixed $items
+     * @return self
+     */
+    public function diffKeys($items)
+    {
+        $compare = $items instanceof self ? $items->all() : (array) $items;
+        return new static(array_diff_key($this->items, $compare));
     }
 
     /**
@@ -1232,7 +1359,7 @@ trait RelatedTrait{
         // Ensure uniqueness based on the entire array (if needed)
         $uniqueItems = array_map("unserialize", array_unique(array_map("serialize", $this->items)));
 
-        return new self($uniqueItems);
+        return new static($uniqueItems);
     }
 
     /**
@@ -1256,7 +1383,7 @@ trait RelatedTrait{
      */
     public function forget(...$keys)
     {
-        return new self(Str::forgetArrayKeys($this->items, $keys));
+        return new static(Str::forgetArrayKeys($this->items, $keys));
     }
 
     /**
@@ -1268,7 +1395,7 @@ trait RelatedTrait{
      */
     public function changeKeyCase(string $key, $case = null)
     {
-        return new self(Str::changeKeyCase($this->items, $key, $case));
+        return new static(Str::changeKeyCase($this->items, $key, $case));
     }
 
     /**
@@ -1293,7 +1420,7 @@ trait RelatedTrait{
         $items = $this->items;
         shuffle($items);
         
-        return new self($items);
+        return new static($items);
     }
 
     /**
@@ -1314,7 +1441,7 @@ trait RelatedTrait{
             }
         }
 
-        return [new self($matches), new self($nonMatches)];
+        return [new static($matches), new static($nonMatches)];
     }
 
     /**
@@ -1354,7 +1481,7 @@ trait RelatedTrait{
         if ($chunk) {
             $chunks[] = $chunk;
         }
-        return new self($chunks);
+        return new static($chunks);
     }
 
     /**
@@ -1375,7 +1502,7 @@ trait RelatedTrait{
             $position++;
         }
 
-        return new self($results);
+        return new static($results);
     }
 
     /**
@@ -1390,7 +1517,7 @@ trait RelatedTrait{
         $offset = ($page - 1) * $perPage;
         $items = array_slice($this->items, $offset, $perPage, true);
 
-        return new self($items);
+        return new static($items);
     }
 
     /**
@@ -1408,7 +1535,7 @@ trait RelatedTrait{
         for ($i = 0; $i < $count; $i++) {
             $results[$keys[$i]] = $callback($this->items[$keys[$i]], $array[$i]);
         }
-        return new self($results);
+        return new static($results);
     }
 
     /**
@@ -1427,7 +1554,7 @@ trait RelatedTrait{
             }
             $results[$group]++;
         }
-        return new self($results);
+        return new static($results);
     }
 
     /**
@@ -1448,7 +1575,7 @@ trait RelatedTrait{
             }
         }
 
-        return new self($duplicates);
+        return new static($duplicates);
     }
 
     /**
@@ -1465,7 +1592,7 @@ trait RelatedTrait{
             $shuffled[$key] = $this->items[$key];
         }
 
-        return new self($shuffled);
+        return new static($shuffled);
     }
 
     /**
@@ -1586,7 +1713,7 @@ trait RelatedTrait{
     /**
      * Get Database Builder Instance
      *  
-     * @return \Tamedevelopers\Database\Schema\Builder
+     * @return \Tamedevelopers\Database\Schema\Builder|mixed
      */
     public function builder()
     {

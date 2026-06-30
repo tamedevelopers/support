@@ -10,7 +10,7 @@ use Tamedevelopers\Support\Capsule\Manager;
 
 class DebugManager{
     
-    public static $whoops;
+    public static mixed $whoops;
 
     /**
      * Boot the DebugManager.

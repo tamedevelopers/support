@@ -46,7 +46,6 @@ class CommandHelper
     
     /**
      * Checking for incoming CLI type
-     * @param bool
      */
     protected function isConsole(): bool
     {
@@ -55,7 +54,6 @@ class CommandHelper
     
     /**
      * Alias for `isConsole()` method
-     * @param bool
      */
     protected function runningInConsole(): bool
     {
@@ -159,8 +157,6 @@ class CommandHelper
     
     /**
      * Extracts all flags available from command
-     * 
-     * @param string $key 
      * @return array
      */
     protected function flags()
@@ -352,7 +348,7 @@ class CommandHelper
     /**
      * Prompt the user for free text input.
      */
-    protected function ask($question, $default = null, $required = false): string
+    protected function ask(string $question, $default = null, $required = false): string
     {
         $question = $this->ensureQuestionMark($question);
 

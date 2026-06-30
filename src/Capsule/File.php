@@ -351,7 +351,6 @@ class File {
                 'css'   => 'text/css',
                 'scss'  => 'text/x-scss',
                 'less'  => 'text/x-less',
-                'csv'   => 'text/csv',
                 'conf'  => 'text/plain',
                 'ini'   => 'text/plain',
                 'env'   => 'text/plain',
