@@ -7,9 +7,11 @@ use Exception;
 class ExchangeRateHostEngine extends CachedEngine
 {
     protected string $baseUrl = 'https://api.exchangerate.host/latest?base=EUR';
+    protected ?string $apiKey = null;
 
-    public function __construct()
+    public function __construct(?string $apiKey = null)
     {
+        $this->apiKey = $apiKey;
         parent::__construct('exchangerate.host');
     }
 
@@ -29,8 +31,13 @@ class ExchangeRateHostEngine extends CachedEngine
 
     protected function fetchFromApi(): array
     {
+        $url = $this->baseUrl;
+        if (!empty($this->apiKey)) {
+            $url .= '&access_key=' . urlencode($this->apiKey);
+        }
+
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $this->baseUrl);
+        curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
         $response = curl_exec($ch);
