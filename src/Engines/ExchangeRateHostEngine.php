@@ -32,7 +32,7 @@ class ExchangeRateHostEngine extends CachedEngine
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $this->baseUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
         $response = curl_exec($ch);
         unset($ch);
 
@@ -42,15 +42,23 @@ class ExchangeRateHostEngine extends CachedEngine
 
         $data = json_decode($response, true);
 
-        if (isset($data['result']) && $data['result'] === 'error') {
-            throw new Exception("ExchangeRateHost Error: " . ($data['error-type'] ?? 'Unknown error'));
+        if (!is_array($data)) {
+            throw new Exception("ExchangeRateHost API returned invalid JSON.");
         }
 
-        if (!isset($data['rates'])) {
+        if (isset($data['success']) && $data['success'] === false) {
+            $message = $data['error']['info'] 
+                ?? $data['error']['type'] 
+                ?? 'Unknown ExchangeRateHost error.';
+            
+            throw new Exception("ExchangeRateHost Error: {$message}");
+        }
+
+        if (!isset($data['rates']) || !is_array($data['rates'])) {
             throw new Exception("Invalid response structure from ExchangeRateHost API.");
         }
 
-        file_put_contents($this->cacheFile, json_encode($data));
+        file_put_contents($this->cacheFile, json_encode(['rates' => $data['rates']]));
 
         return $data['rates'];
     }
