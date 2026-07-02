@@ -358,7 +358,6 @@ class WebScraper
             if ($this->cacheEnabled) {
                 $this->saveToCache();
             }
-            
         } catch (Exception $e) {
             $this->errors[] = $e->getMessage();
             $this->setFetchFailureResult($e->getMessage());
@@ -405,6 +404,7 @@ class WebScraper
     {
         $this->productData = [
             'name' => $this->extractName(),
+            'company' => $this->extractCompany(),
             'price' => $this->extractPrice(),
             'currency' => '',
             'description' => $this->extractDescription(),
@@ -1118,6 +1118,32 @@ class WebScraper
     {
         $name = $this->extractText($this->selectors['name']);
         return $name ? htmlspecialchars_decode(trim($name)) : '';
+    }
+
+    /**
+     * Extract company name from the URL domain
+     * @return string Company name or empty string if not found
+     */
+    private function extractCompany(): string
+    {
+        if (empty($this->url)) {
+            return ''; 
+        }
+
+        // Parse host from URL (e.g., "www.aliexpress.com" or "shop.ebay.co.uk")
+        $host = parse_url($this->url, PHP_URL_HOST);
+        if (empty($host)) {
+            return ''; 
+        }
+
+        // Remove "www." prefix if it exists
+        $host = preg_replace('/^www\./i', '', $host);
+        
+        // Isolate the primary domain name part before the first dot
+        $domainPart = explode('.', $host)[0] ?? '';
+
+        // Fallback to capitalizing the first letter (e.g., "aliexpress" -> "Aliexpress")
+        return ucfirst($domainPart);
     }
     
     /**

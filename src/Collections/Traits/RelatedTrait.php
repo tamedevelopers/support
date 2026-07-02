@@ -504,8 +504,8 @@ trait RelatedTrait{
         }
 
         // With callback: return the first item matching the callback
-        foreach ($this->items as $item) {
-            if ($callback($item)) {
+        foreach ($this->items as $key => $item) {
+            if ($callback($item, $key)) {
                 return $item;
             }
         }
