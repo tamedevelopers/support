@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 use Exception;
+use Tamedevelopers\Support\Engines\ErApiEngine;
 use Tamedevelopers\Support\Engines\ExchangeEngineInterface;
+use Tamedevelopers\Support\Engines\FallbackExchangeEngine;
+use Tamedevelopers\Support\Engines\FloatRatesEngine;
 
 class Exchange
 {
@@ -14,9 +17,12 @@ class Exchange
     /**
      * Inject the desired conversion engine.
      */
-    public function __construct(ExchangeEngineInterface $engine)
+    public function __construct()
     {
-        $this->engine = $engine;
+        $this->engine = new FallbackExchangeEngine([
+            new ErApiEngine(),
+            new FloatRatesEngine(),
+        ]);
     }
 
     /**
