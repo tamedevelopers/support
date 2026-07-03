@@ -1,28 +1,29 @@
 <?php 
 
-use Tamedevelopers\Support\Env;
-use Tamedevelopers\Support\PDF;
-use Tamedevelopers\Support\Str;
-use Tamedevelopers\Support\Zip;
-use Tamedevelopers\Support\Hash;
-use Tamedevelopers\Support\Mail;
-use Tamedevelopers\Support\Tame;
-use Tamedevelopers\Support\Time;
-use Tamedevelopers\Support\View;
 use Tamedevelopers\Support\Asset;
-use Tamedevelopers\Support\Cookie;
-use Tamedevelopers\Support\Server;
-use Tamedevelopers\Support\Country;
-use Tamedevelopers\Support\Utility;
-use Tamedevelopers\Support\Translator;
-use Tamedevelopers\Support\NumberToWords;
-use Tamedevelopers\Support\TextSanitizer;
-use Tamedevelopers\Support\Capsule\Manager;
-use Tamedevelopers\Support\Process\Session;
 use Tamedevelopers\Support\AutoloadRegister;
 use Tamedevelopers\Support\Capsule\FileCache;
-use Tamedevelopers\Support\Process\HttpRequest;
+use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Collections\Collection;
+use Tamedevelopers\Support\Cookie;
+use Tamedevelopers\Support\Country;
+use Tamedevelopers\Support\Env;
+use Tamedevelopers\Support\Exchange;
+use Tamedevelopers\Support\Hash;
+use Tamedevelopers\Support\Mail;
+use Tamedevelopers\Support\NumberToWords;
+use Tamedevelopers\Support\PDF;
+use Tamedevelopers\Support\Process\HttpRequest;
+use Tamedevelopers\Support\Process\Session;
+use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\TextSanitizer;
+use Tamedevelopers\Support\Time;
+use Tamedevelopers\Support\Translator;
+use Tamedevelopers\Support\Utility;
+use Tamedevelopers\Support\View;
+use Tamedevelopers\Support\Zip;
 
 
 if (! function_exists('Tame_isAppFramework')) {
@@ -292,7 +293,7 @@ if (! function_exists('autoload_register')) {
     /**
      * Autoload function to load class and files in a given folder
      *
-     * @param string|array $baseDirectory 
+     * @param string|array $directory 
      * - The directory path to load
      * - Do not include the root path, as The Application already have a copy of your path
      * - e.g 'classes' or ['app/main', 'includes']
@@ -302,6 +303,18 @@ if (! function_exists('autoload_register')) {
     function autoload_register(string|array $directory)
     {
         (new AutoloadRegister)->load($directory);
+    }
+}
+
+if (! function_exists('TameExchange')) {
+    /**
+     * Currency rates exchange
+     * 
+     * @return \Tamedevelopers\Support\Exchange
+     */
+    function TameExchange()
+    {
+        return new Exchange();
     }
 }
 

@@ -328,6 +328,11 @@ Support Package For PHP, Laravel and PHP Frameworks
     * [Usage](#hash-usage)
     * [make](#hash-make) 
     * [check](#hash-check)
+* [Exchange](#exchange)
+    * [Usage](#exchange-usage)
+    * [setEngine](#exchange-setEngine) 
+    * [rate](#exchange-rate) 
+    * [convert](#exchange-convert)
 * [Asset](#Asset)
     * [Asset config](#asset-config)
         * [Asset Cache](#asset-cache)
@@ -1459,6 +1464,58 @@ $oldPassword = "$2y$10$Frh7yG3.qnGdQ9Hd8OK/y.aBWXFLiFD3IWqUjIWWodUhzIVF3DpT6";
 Hash::check('testPassword', $oldPassword);
 // or native
 password_verify('testPassword', $oldPassword);
+```
+
+## Exchange
+
+Simple usage examples for the `Exchange` helper and available engines.
+
+```php
+use Tamedevelopers\Support\Exchange;
+
+// Default: `Exchange` is pre-wired to use the fallback chain.
+$exchange = new Exchange();
+// or
+TameExchange();
+
+$exchange->setEngine($fallback);
+
+// Get rate and convert
+echo $exchange->rate('USD', 'EUR') . PHP_EOL;      // e.g. 0.8773
+echo $exchange->convert('USD', 'EUR', 100.0) . PHP_EOL; // converted amount
+```
+
+### Exchange-setEngine
+```php
+use Tamedevelopers\Support\Engines\OpenExchangeEngine;
+use Tamedevelopers\Support\Engines\ExchangeRateHostEngine;
+
+$exchange = TameExchange();
+
+$exchange->setEngine(
+    new ExchangeRateHostEngine('YOUR_ACCESS_KEY')
+);
+// or - can use chainable method
+
+$exchange->highExchange(); //free and has high exchange rate
+$exchange->openExchange($apiKey);
+$exchange->exchangeRate($apiKey);
+```
+
+### Exchange-rate
+```php
+$exchange = TameExchange();
+
+$exchange->rate('USD', 'EUR'); //0.87726993595929
+```
+
+### Exchange-convert
+```php
+$exchange = TameExchange();
+
+$exchange->convert('USD', 'GHS', 1); //11.3703
+// or 
+$exchange->convert('USD', 'GHS', 1000, true); //11,370.28
 ```
 
 ## Asset
