@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 use Exception;
-use Tamedevelopers\Support\Engines\ErApiEngine;
 use Tamedevelopers\Support\Engines\EcbEngine;
+use Tamedevelopers\Support\Engines\ErApiEngine;
 use Tamedevelopers\Support\Engines\ExchangeEngineInterface;
+use Tamedevelopers\Support\Engines\ExchangeRateHostEngine;
 use Tamedevelopers\Support\Engines\FallbackExchangeEngine;
 use Tamedevelopers\Support\Engines\FloatRatesEngine;
 use Tamedevelopers\Support\Engines\NbpEngine;
+use Tamedevelopers\Support\Engines\OpenExchangeEngine;
 
 class Exchange
 {
@@ -37,6 +39,44 @@ class Exchange
         $this->engine = $engine;
         
         return $this;
+    }
+
+    /**
+     * Set the exchange rate engine to FloatRates.
+     * - Supports Higher Exchange rates
+     * @link https://www.floatrates.com
+     */
+    public function highExchange(): self
+    {
+        return $this->setEngine(
+            new FloatRatesEngine()
+        );
+    }
+
+    /**
+     * Set the exchange rate engine to OpenExchangeRates.
+     *
+     * @link https://openexchangerates.org
+     * @param  string|null  $apiKey
+     */
+    public function openExchange(?string $apiKey = null): self
+    {
+        return $this->setEngine(
+            new OpenExchangeEngine($apiKey)
+        );
+    }
+
+    /**
+     * Set the exchange rate engine to ExchangeRateHost.
+     *
+     * @link https://exchangerate.host/
+     * @param  string|null  $apiKey
+     */
+    public function exchangeRate(?string $apiKey = null): self
+    {
+        return $this->setEngine(
+            new ExchangeRateHostEngine($apiKey)
+        );
     }
 
     /**

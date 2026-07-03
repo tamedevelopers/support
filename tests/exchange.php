@@ -10,11 +10,12 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 $exchange = new Exchange();
 
-// $exchange->setEngine(
-//     new ExchangeRateHostEngine('sss')
-// );
+// $exchange->highExchange();
+// $exchange->openExchange($apiKey);
+// $exchange->exchangeRate($apiKey);
 
 dd(
+    $exchange->rate('USD', 'NGN'),
     $exchange->convert('USD', 'NGN', 1),
     $exchange->convert('USD', 'GHS', 1),
 );
