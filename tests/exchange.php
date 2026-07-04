@@ -17,6 +17,6 @@ $exchange = new Exchange();
 dd(
     TameExchange()->rate('USD', 'EUR'),
     $exchange->rate('USD', 'NGN'),
-    $exchange->convert('USD', 'NGN', 1),
+    $exchange->convert('NGN', 'ANG', 10000),
     $exchange->convert('USD', 'GHS', 1, true),
 );
