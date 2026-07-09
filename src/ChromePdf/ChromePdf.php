@@ -326,8 +326,6 @@ final class ChromePdf
 
     /**
      * Remove every element that matches any of the given CSS selectors from the live document before PDF capture.
-     * 
-     * @param mixed $cssSelectors
      */
     public function hideElements(...$cssSelectors): self
     {
@@ -739,66 +737,6 @@ final class ChromePdf
         }
 
         return $this;
-    }
-
-    /**
-     * Navigate the configured URL with the same Chromium path as {@see generate()} (without PDF capture).
-     * Used by {@see \Tamedevelopers\Support\WebScraper\ChromiumWebScraperEngine} so scraping shares ChromePdf reliability.
-     *
-     * @return array{html: string, finalUrl: string}
-     */
-    public function capturePageContent(): array
-    {
-        if ($this->sourceMode !== 'url' || $this->sourceValue === null) {
-            throw new ConversionFailedException(
-                'Call fromUrl() before capturePageContent().'
-            );
-        }
-
-        $browser = $this->acquireSharedBrowser();
-        $page = null;
-
-        try {
-            $page = $browser->createPage();
-            $this->applyColorSchemeToPage($page);
-            $this->applyViewportDeviceMetricsIfConfigured($page);
-            $this->loadFromUrlWithBlocking($page);
-            $this->runImmediatePreloaderStripIfApplicable($page);
-
-            $evalTimeout = min(15000, max(2500, (int) ($this->effectiveNavigationTimeoutMs() / 2)));
-            $evaluation = $page->evaluate(
-                'document.documentElement != null ? document.documentElement.outerHTML : (document.body != null ? document.body.innerHTML : "")'
-            );
-            $html = (string) $evaluation->getReturnValue($evalTimeout);
-
-            if ($html === '') {
-                throw new ConversionFailedException('Chromium returned empty HTML for ' . $this->sourceValue);
-            }
-
-            $finalUrl = $this->sourceValue;
-            if (method_exists($page, 'getCurrentUrl')) {
-                try {
-                    $u = (string) $page->getCurrentUrl();
-                    if ($u !== '') {
-                        $finalUrl = $u;
-                    }
-                } catch (Throwable) {
-                }
-            }
-
-            return ['html' => $html, 'finalUrl' => $finalUrl];
-        } catch (ConversionFailedException $e) {
-            throw $e;
-        } catch (Throwable $e) {
-            throw new ConversionFailedException($e->getMessage(), (int) $e->getCode(), $e);
-        } finally {
-            if ($page !== null) {
-                try {
-                    $page->close();
-                } catch (Throwable) {
-                }
-            }
-        }
     }
 
     /**

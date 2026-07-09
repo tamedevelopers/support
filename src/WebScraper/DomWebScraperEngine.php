@@ -36,7 +36,7 @@ final class DomWebScraperEngine implements WebScraperEngineInterface
             ? (string) $options['user_agent']
             : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
-        $curlOptions = [
+        curl_setopt_array($ch, [
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
@@ -47,14 +47,7 @@ final class DomWebScraperEngine implements WebScraperEngineInterface
             CURLOPT_SSL_VERIFYPEER => (bool) ($options['verify_ssl'] ?? false),
             CURLOPT_SSL_VERIFYHOST => ($options['verify_ssl'] ?? false) ? 2 : 0,
             CURLOPT_ENCODING => '',
-        ];
-
-        // Production Fix: Automatically utilize proxy strings if passed to engine config
-        if (!empty($options['proxy'])) {
-            $curlOptions[CURLOPT_PROXY] = $options['proxy'];
-        }
-
-        curl_setopt_array($ch, $curlOptions);
+        ]);
 
         $extraHeaders = $options['http_headers'] ?? null;
         if (is_array($extraHeaders) && $extraHeaders !== []) {
@@ -66,7 +59,7 @@ final class DomWebScraperEngine implements WebScraperEngineInterface
         $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $effective = (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
         $curlError = curl_error($ch);
-        unset($ch);
+        curl_close($ch);
 
         if ($raw === false) {
             throw new RuntimeException('cURL Error: ' . ($curlError !== '' ? $curlError : 'Request failed'));
@@ -77,9 +70,7 @@ final class DomWebScraperEngine implements WebScraperEngineInterface
             throw new RuntimeException('cURL Error: ' . $curlError);
         }
 
-        // Return the payload on Cloudflare 403 blocks instead of throwing 
-        // to let the built-in block detector process it safely
-        if ($httpCode !== 200 && !str_contains(strtolower($html), 'cloudflare')) {
+        if ($httpCode !== 200) {
             throw new RuntimeException("HTTP Error: {$httpCode} - Failed to fetch {$url}");
         }
 

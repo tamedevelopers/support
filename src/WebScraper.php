@@ -15,13 +15,13 @@ use Tamedevelopers\Support\Traits\TameTrait;
 use Tamedevelopers\Support\ChromePdf\ChromiumEnvironment;
 use Tamedevelopers\Support\WebScraper\ChromiumWebScraperEngine;
 use Tamedevelopers\Support\WebScraper\DomWebScraperEngine;
-use Tamedevelopers\Support\WebScraper\WebScraperFetchResult;
 use Tamedevelopers\Support\WebScraper\WebScraperEngineInterface;
 
 /**
- * Product scraper. By default HTML is fetched with automatic engine fallback: cURL/DOM first (no extra deps,
- * shared-hosting friendly), then headless Chromium when the page is blocked or yields no product data (same stack as
- * {@see \Tamedevelopers\Support\ChromePdf\ChromePdf}). Override with {@see setEngine()} or config key {@code engine}.
+ * Product scraper. Choose how HTML is obtained via {@see $config} key {@code engine}:
+ * {@code dom} (default) = cURL + libxml, or {@code chromium} = headless Chrome (requires {@code chrome-php/chrome},
+ * same stack as {@see \Tamedevelopers\Support\ChromePdf\ChromePdf}). Parsing and selectors are unchanged; only the
+ * fetch step is pluggable.
  */
 class WebScraper
 {
@@ -111,11 +111,6 @@ class WebScraper
     private string $lastFetchFinalUrl = '';
     
     private int $lastFetchHttpStatus = 0;
-
-    /**
-     * When true (default), {@see fetch()} tries DOM/cURL first and falls back to Chromium when needed.
-     */
-    private bool $autoEngine = true;
     
     
     /**
@@ -123,7 +118,7 @@ class WebScraper
      * 
      * @param array $config {
      *   @var array<string, string>   $selectors
-     *   @var 'auto'|'dom'|'chromium'|'chrome'|WebScraperEngineInterface  $engine  Fetch backend (default: auto)
+     *   @var 'dom'|'chromium'|'chrome'|WebScraperEngineInterface  $engine  Fetch backend (default: dom)
      *   @var array<string, mixed>   $engine_options  Passed to the engine (e.g. navigation_timeout_ms, binary, user_agent, verify_ssl)
      *   @var bool   $cache_enabled
      *   @var string $cache_dir
@@ -148,38 +143,14 @@ class WebScraper
             $this->errors = [];
             $this->productData = [];
     
-            // Human behavior defaults: Updated to modern Chrome version with complete anti-fingerprinting headers
             $this->engineOptions = $config['engine_options'] ?? [
-                'navigation_timeout_ms' => 12000,
-                'post_navigation_settle_ms' => 395,
-                'timeout' => 6,
-                'connect_timeout' => 4,
+                'navigation_timeout_ms' => 30000,
                 'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'verify_ssl' => true,
                 'proxy' => null,
-                'http_headers' => [
-                    'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                    'Accept-Language: en-US,en;q=0.9',
-                    'Cache-Control: max-age=0',
-                    'Sec-Ch-Ua: "Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"',
-                    'Sec-Ch-Ua-Mobile: ?0',
-                    'Sec-Ch-Ua-Platform: "Windows"',
-                    'Sec-Fetch-Dest: document',
-                    'Sec-Fetch-Mode: navigate',
-                    'Sec-Fetch-Site: none',
-                    'Sec-Fetch-User: ?1',
-                    'Upgrade-Insecure-Requests: 1'
-                ]
             ];
     
-            $engineConfig = $config['engine'] ?? 'auto';
-            if ($this->isAutoEngineConfig($engineConfig)) {
-                $this->autoEngine = true;
-                $this->engine = new DomWebScraperEngine();
-            } else {
-                $this->autoEngine = false;
-                $this->engine = $this->createEngineFromConfig($config);
-            }
+            $this->engine = $this->createEngineFromConfig($config);
             
             // Set default selectors (can be customized)
             $this->selectors = [
@@ -194,7 +165,7 @@ class WebScraper
             // Cache configuration
             $this->cacheEnabled = $config['cache_enabled'] ?? false;
             $this->cacheDir = $config['cache_dir'] ?? __DIR__ . '/cache/scraper/';
-            $this->cacheTTL = $config['cache_ttl'] ?? 86400;
+            $this->cacheTTL = $config['cache_ttl'] ?? 3600;
             
             // Initialize cache directory if needed
             if ($this->cacheEnabled && !is_dir($this->cacheDir)) {
@@ -255,23 +226,17 @@ class WebScraper
     }
     
     /**
-     * Use automatic DOM→Chromium fallback (default), a single engine, or a custom {@see WebScraperEngineInterface}.
+     * Use the DOM/cURL engine (default) or Chromium, or a custom {@see WebScraperEngineInterface}.
      *
-     * @param 'auto'|'dom'|'chromium'|'chrome'|WebScraperEngineInterface $engine
+     * @param 'dom'|'chromium'|'chrome'|WebScraperEngineInterface $engine
      * @param array<string, mixed> $options Replaces engine options for subsequent {@see fetch()} calls
      */
     public function setEngine(string|WebScraperEngineInterface $engine, array $options = []): self
     {
-        if (is_string($engine) && $this->isAutoEngineConfig($engine)) {
-            $this->autoEngine = true;
-            $this->engine = new DomWebScraperEngine();
+        if (is_string($engine)) {
+            $this->engine = $this->createEngineByName($engine);
         } else {
-            $this->autoEngine = false;
-            if (is_string($engine)) {
-                $this->engine = $this->createEngineByName($engine);
-            } else {
-                $this->engine = $engine;
-            }
+            $this->engine = $engine;
         }
         if ($options !== []) {
             $this->engineOptions = $options;
@@ -305,26 +270,14 @@ class WebScraper
      */
     private function createEngineFromConfig(array $config): WebScraperEngineInterface
     {
-        $e = $config['engine'] ?? 'auto';
+        $e = $config['engine'] ?? 'dom';
         if ($e instanceof WebScraperEngineInterface) {
             return $e;
         }
-        if (is_string($e) && !$this->isAutoEngineConfig($e)) {
+        if (is_string($e)) {
             return $this->createEngineByName($e);
         }
         return new DomWebScraperEngine();
-    }
-
-    /**
-     * @param mixed $engine
-     */
-    private function isAutoEngineConfig(mixed $engine): bool
-    {
-        if (!is_string($engine)) {
-            return false;
-        }
-
-        return in_array(strtolower(trim($engine)), ['auto', ''], true);
     }
     
     /**
@@ -382,11 +335,24 @@ class WebScraper
                 }
             }
             
-            if ($this->autoEngine) {
-                $this->fetchWithAutoEngine();
-            } else {
-                $this->processFetchResult($this->engine->fetch($this->url, $this->engineOptions));
+            $result = $this->engine->fetch($this->url, $this->engineOptions);
+            $this->html = $result->html;
+            $this->lastFetchEngine = $result->engineName;
+            $this->lastFetchFinalUrl = $result->finalUrl;
+            $this->lastFetchHttpStatus = $result->httpStatus;
+            if ($this->lastFetchFinalUrl !== '') {
+                $pu = @parse_url($this->lastFetchFinalUrl);
+                if (!empty($pu['scheme']) && !empty($pu['host'])) {
+                    $this->baseUrl = $pu['scheme'] . '://' . $pu['host'];
+                }
             }
+            
+            // Load HTML
+            $this->dom->loadHTML(mb_convert_encoding($this->html, 'HTML-ENTITIES', 'UTF-8'), LIBXML_NOERROR);
+            $this->xpath = new DOMXPath($this->dom);
+            
+            // Scrape the content
+            $this->scrape();
             
             // Save to cache
             if ($this->cacheEnabled) {
@@ -398,159 +364,6 @@ class WebScraper
         }
         
         return $this;
-    }
-
-    /**
-     * DOM/cURL first (fast probe), then Chromium via the same path as {@see \Tamedevelopers\Support\ChromePdf\ChromePdf}.
-     */
-    private function fetchWithAutoEngine(): void
-    {
-        $enginesTried = [];
-        $domResult = null;
-        $chromiumAvailable = class_exists(\HeadlessChromium\BrowserFactory::class);
-
-        try {
-            $enginesTried[] = 'dom';
-            $domResult = (new DomWebScraperEngine())->fetch($this->url, $this->domEngineOptions());
-
-            if (!$this->htmlIndicatesBotChallenge($domResult->html)) {
-                $this->processFetchResult($domResult, $enginesTried);
-
-                if (!$this->shouldRetryWithChromium()) {
-                    return;
-                }
-            }
-        } catch (Exception $e) {
-            $this->errors[] = 'dom: ' . $e->getMessage();
-        }
-
-        if (!$chromiumAvailable) {
-            if ($domResult !== null) {
-                $this->processFetchResult($domResult, $enginesTried);
-            } elseif ($domResult === null) {
-                throw new RuntimeException(
-                    'DOM fetch failed and Chromium fallback requires chrome-php/chrome (composer require chrome-php/chrome).'
-                );
-            }
-
-            return;
-        }
-
-        try {
-            $enginesTried[] = 'chromium';
-            $chromiumResult = (new ChromiumWebScraperEngine($this->chromiumBinary))
-                ->fetch($this->url, $this->chromiumEngineOptions());
-            $this->processFetchResult($chromiumResult, $enginesTried);
-        } catch (Exception $e) {
-            $this->errors[] = 'chromium: ' . $e->getMessage();
-            if ($domResult !== null) {
-                $this->processFetchResult($domResult, $enginesTried);
-            } else {
-                throw $e;
-            }
-        }
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function domEngineOptions(): array
-    {
-        $opts = $this->engineOptions;
-        $opts['timeout'] = min(max(3, (int) ($opts['timeout'] ?? 6)), 6);
-        $opts['connect_timeout'] = min(max(2, (int) ($opts['connect_timeout'] ?? 4)), 4);
-
-        return $opts;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function chromiumEngineOptions(): array
-    {
-        $opts = $this->engineOptions;
-        $opts['navigation_timeout_ms'] = min(max(5000, (int) ($opts['navigation_timeout_ms'] ?? 12000)), 12000);
-
-        return $opts;
-    }
-
-    /**
-     * Load fetched HTML into the DOM, scrape fields, and record fetch metadata.
-     *
-     * @param list<string> $enginesTried
-     */
-    private function processFetchResult(WebScraperFetchResult $result, array $enginesTried = []): void
-    {
-        $this->html = $result->html;
-        $this->lastFetchEngine = $result->engineName;
-        $this->lastFetchFinalUrl = $result->finalUrl;
-        $this->lastFetchHttpStatus = $result->httpStatus;
-        if ($this->lastFetchFinalUrl !== '') {
-            $pu = @parse_url($this->lastFetchFinalUrl);
-            if (!empty($pu['scheme']) && !empty($pu['host'])) {
-                $this->baseUrl = $pu['scheme'] . '://' . $pu['host'];
-            }
-        }
-
-        $this->dom->loadHTML(mb_convert_encoding($this->html, 'HTML-ENTITIES', 'UTF-8'), LIBXML_NOERROR);
-        $this->xpath = new DOMXPath($this->dom);
-        $this->scrape($enginesTried);
-    }
-
-    /**
-     * Decide whether Chromium should be attempted after a DOM fetch + scrape pass.
-     */
-    private function shouldRetryWithChromium(): bool
-    {
-        if ($this->htmlIndicatesBotChallenge($this->html)) {
-            return true;
-        }
-
-        $signals = $this->detectBlockSignals();
-        if ($signals['is_blocked']) {
-            return true;
-        }
-
-        $emptyCore = 0;
-        foreach (['name', 'price', 'description'] as $field) {
-            if (trim((string) ($this->productData[$field] ?? '')) === '') {
-                $emptyCore++;
-            }
-        }
-
-        return $emptyCore >= 2 && empty($this->productData['images']);
-    }
-
-    /**
-     * Fast HTML-only check for anti-bot interstitials before paying for a Chromium launch.
-     */
-    private function htmlIndicatesBotChallenge(string $html): bool
-    {
-        $htmlLower = strtolower($html);
-        $needles = [
-            'cf-challenge',
-            'cloudflare',
-            '/cdn-cgi/challenge-platform',
-            'just a moment',
-            'please wait',
-            'checking your browser',
-            'verify you are human',
-            'attention required',
-            'captcha',
-            'g-recaptcha',
-            'hcaptcha',
-            'robot check',
-            'access denied',
-            'request blocked',
-        ];
-
-        foreach ($needles as $needle) {
-            if (str_contains($htmlLower, $needle)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -584,11 +397,10 @@ class WebScraper
     
     /**
      * Scrape product information from the HTML
-     *
-     * @param list<string> $enginesTried
+     * 
      * @return self Returns instance for method chaining
      */
-    private function scrape(array $enginesTried = []): self
+    private function scrape(): self
     {
         $this->productData = [
             'name' => $this->extractName(),
@@ -604,7 +416,6 @@ class WebScraper
             'scraped_at' => date('Y-m-d H:i:s'),
             'raw_data' => [
                 'engine' => $this->lastFetchEngine,
-                'engines_tried' => $enginesTried,
                 'final_url' => $this->lastFetchFinalUrl,
                 'http_status' => $this->lastFetchHttpStatus,
             ],
@@ -657,8 +468,6 @@ class WebScraper
             'bot challenge',
             'robot check',
             'just a moment',
-            'please wait',
-            'loading please wait',
             'request blocked',
             'temporarily blocked',
         ];
@@ -687,9 +496,6 @@ class WebScraper
             'service unavailable',
             'request blocked',
             'blocked due to unusual activity',
-            'please wait',
-            'loading please wait',
-            'checking your browser',
         ];
         foreach ($htmlMatches as $needle) {
             if (str_contains($htmlLower, $needle)) {
