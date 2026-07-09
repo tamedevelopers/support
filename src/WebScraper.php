@@ -143,11 +143,25 @@ class WebScraper
             $this->errors = [];
             $this->productData = [];
     
+            // Human behavior defaults: Updated to modern Chrome version with complete anti-fingerprinting headers
             $this->engineOptions = $config['engine_options'] ?? [
                 'navigation_timeout_ms' => 30000,
                 'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'verify_ssl' => true,
                 'proxy' => null,
+                'http_headers' => [
+                    'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                    'Accept-Language: en-US,en;q=0.9',
+                    'Cache-Control: max-age=0',
+                    'Sec-Ch-Ua: "Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"',
+                    'Sec-Ch-Ua-Mobile: ?0',
+                    'Sec-Ch-Ua-Platform: "Windows"',
+                    'Sec-Fetch-Dest: document',
+                    'Sec-Fetch-Mode: navigate',
+                    'Sec-Fetch-Site: none',
+                    'Sec-Fetch-User: ?1',
+                    'Upgrade-Insecure-Requests: 1'
+                ]
             ];
     
             $this->engine = $this->createEngineFromConfig($config);
@@ -165,7 +179,7 @@ class WebScraper
             // Cache configuration
             $this->cacheEnabled = $config['cache_enabled'] ?? false;
             $this->cacheDir = $config['cache_dir'] ?? __DIR__ . '/cache/scraper/';
-            $this->cacheTTL = $config['cache_ttl'] ?? 3600;
+            $this->cacheTTL = $config['cache_ttl'] ?? 86400;
             
             // Initialize cache directory if needed
             if ($this->cacheEnabled && !is_dir($this->cacheDir)) {
@@ -336,6 +350,7 @@ class WebScraper
             }
             
             $result = $this->engine->fetch($this->url, $this->engineOptions);
+
             $this->html = $result->html;
             $this->lastFetchEngine = $result->engineName;
             $this->lastFetchFinalUrl = $result->finalUrl;

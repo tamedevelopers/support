@@ -58,15 +58,63 @@ final class ChromiumWebScraperEngine implements WebScraperEngineInterface
             );
         }
 
-        $browser = $this->acquireSharedBrowser();
+        // Use the exact class instantiation pattern your PDF system uses
+        $env = new ChromiumEnvironment();
+        $binary = $this->chromiumBinary ?? $env->resolveChromeBinary();
+        $factory = new BrowserFactory($binary);
 
-        $navTimeout = (int) ($options['navigation_timeout_ms'] ?? 45000);
-        $evalTimeout = (int) ($options['evaluate_timeout_ms'] 
-            ?? min(90_000, max(10_000, (int) ($navTimeout * 1.5))));
+        // Core array configuration mimicking the PDF launch environment properties
+        $launchOptions = [
+            'headless'       => true,
+            'startupTimeout' => 30,
+            'noSandbox'      => true,
+            'keepAlive'      => true,
+            'windowSize'     => [1920, 1080],
+            'userAgent'      => $options['user_agent'] ?? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+            'customFlags'    => [
+                '--disable-blink-features=AutomationControlled',
+                '--no-first-run',
+                '--disable-extensions',
+                '--disable-setuid-sandbox',
+                '--no-zygote',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                // Additional stealth flags to counter fingerprinting blocks
+                '--lang=en-US,en;q=0.9',
+                '--disable-browser-side-navigation',
+                '--disable-features=IsolateOrigins,site-per-process',
+            ],
+        ];
+
+        // Add proxy server arguments if provided in options
+        if (!empty($options['proxy'])) {
+            $launchOptions['customArgs'][] = '--proxy-server=' . $options['proxy'];
+        } else {
+            // Smart Fallback Detection: Check if a local Tor routing proxy is alive on the host machine
+            // $torSocket = @fsockopen('127.0.0.1', 9050, $errno, $errstr, 0.5);
+            // if ($torSocket) {
+            //     $launchOptions['customFlags'][] = '--proxy-server=socks5://127.0.0.1:9050';
+            //     fclose($torSocket);
+            // } elseif ($envProxy = getenv('HTTP_PROXY') ?: getenv('http_proxy')) {
+            //     // Fall back to system-wide profile proxy configurations if present
+            //     $launchOptions['customFlags'][] = '--proxy-server=' . $envProxy;
+            // }
+        }
+
+        // Run your environment alignment method to safe-check remaining keys
+        if (method_exists($env, 'headlessRestrictEnv')) {
+            $env->headlessRestrictEnv($launchOptions);
+        }
+
+        // Create the custom container-safe browser process
+        $browser = $factory->createBrowser($launchOptions);
+        $finalUrl = '';
 
         try {
             $page = $browser->createPage();
+
             $page->navigate($url)->waitForNavigation(Page::LOAD, 30000);
+
             $evaluation = $page->evaluate(
                 'document.documentElement != null ? document.documentElement.outerHTML : (document.body != null ? document.body.innerHTML : "")'
             );
@@ -74,7 +122,7 @@ final class ChromiumWebScraperEngine implements WebScraperEngineInterface
 
             if (method_exists($page, 'getCurrentUrl')) {
                 try {
-                    $finalUrl = (string) $page->getCurrentUrl(min(30_000, $evalTimeout));
+                    $finalUrl = (string) $page->getCurrentUrl();
                 } catch (Throwable) {
                 }
             }
@@ -98,7 +146,7 @@ final class ChromiumWebScraperEngine implements WebScraperEngineInterface
         return new WebScraperFetchResult($html, $finalUrl, 200, $this->getName());
     }
 
-     /**
+    /**
      * Closes the shared Chromium process started by {@see generate()}. Call on long-running workers when PDF
      * generation is finished, or rely on the registered PHP shutdown handler.
      */

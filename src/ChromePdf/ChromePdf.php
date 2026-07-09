@@ -326,6 +326,8 @@ final class ChromePdf
 
     /**
      * Remove every element that matches any of the given CSS selectors from the live document before PDF capture.
+     * 
+     * @param mixed $cssSelectors
      */
     public function hideElements(...$cssSelectors): self
     {

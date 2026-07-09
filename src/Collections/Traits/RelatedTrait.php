@@ -664,8 +664,8 @@ trait RelatedTrait{
                 if (is_string($value)) {
                     // Case-insensitive string check
                     $found = false;
-                    foreach ($this->items as $item) {
-                        if (is_string($item) && strcasecmp($item, $value) === 0) {
+                    foreach ($this->items as $itm) {
+                        if (is_string($itm) && strcasecmp($itm, $value) === 0) {
                             $found = true;
                             break;
                         }
@@ -793,7 +793,11 @@ trait RelatedTrait{
      */
     public function map(callable $callback)
     {
-        return new static(array_map($callback, $this->items));
+        $keys = array_keys($this->items);
+
+        $results = array_map($callback, $this->items, $keys);
+
+        return new static(array_combine($keys, $results));
     }
 
     /**
@@ -934,7 +938,7 @@ trait RelatedTrait{
         foreach ($this->items as $item) {
             $groupKey = is_callable($key)
                 ? $key($item)
-                : (is_array($item) ? ($item[$key] ?? null) : null);
+                : (is_array($item) ? ($item[$key] ?? null) : ($item->{$key} ?? null));
 
             $results[$groupKey][] = $item;
         }
@@ -1356,8 +1360,8 @@ trait RelatedTrait{
      */
     public function unique()
     {
-        // Ensure uniqueness based on the entire array (if needed)
-        $uniqueItems = array_map("unserialize", array_unique(array_map("serialize", $this->items)));
+        // SORT_REGULAR allows array-to-array comparison without string serialization
+        $uniqueItems = array_unique($this->items, SORT_REGULAR);
 
         return new static($uniqueItems);
     }
@@ -1728,17 +1732,17 @@ trait RelatedTrait{
      */ 
     private function convertOnInit(mixed $items = null)
     {
-        // For ORM Database Proxies and Paginate Data
         // Convert to an array
+        // For ORM Database Proxies and Paginate Data
         if(self::$isBuilder){
             $this->items = $items;
         } elseif($this->isValidJson($items)) {
             $this->items = json_decode($items, true);
         } elseif($this->isNotValidArray($items)){
             $this->items = json_decode(json_encode($items), true);
-        } 
-
-        $this->items = $items;
+        } else{
+            $this->items = $items;
+        }
     }
 
     /**
