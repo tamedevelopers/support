@@ -5,36 +5,39 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\WebScraper;
 
 use RuntimeException;
+use Tamedevelopers\Support\ChromePdf\Internal\ChromiumStealthScript;
 
 /**
  * Classic fetch: cURL downloads the first response; no JavaScript execution.
  */
 final class DomWebScraperEngine implements WebScraperEngineInterface
 {
-
-    /**
-     * Get the name of the engine.
-     *
-     * @return string
-     */
     public function getName(): string
     {
         return 'dom';
     }
 
     /**
-     * Fetch the HTML from the URL.
-     *
-     * @param string $url
-     * @param array $options
-     * @return WebScraperFetchResult
+     * @param array<string, mixed> $options
      */
     public function fetch(string $url, array $options = []): WebScraperFetchResult
     {
         $ch = curl_init();
         $userAgent = is_string($options['user_agent'] ?? null) && ($options['user_agent'] ?? '') !== ''
             ? (string) $options['user_agent']
-            : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+            : ChromiumStealthScript::chromeUserAgent();
+
+        $headers = [
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language: en-US,en;q=0.9',
+            'Cache-Control: no-cache',
+            'Upgrade-Insecure-Requests: 1',
+        ];
+        $extraHeaders = $options['http_headers'] ?? null;
+        if (is_array($extraHeaders) && $extraHeaders !== []) {
+            /** @var list<string> $extraHeaders */
+            $headers = array_merge($headers, $extraHeaders);
+        }
 
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
@@ -42,18 +45,13 @@ final class DomWebScraperEngine implements WebScraperEngineInterface
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS => 10,
             CURLOPT_USERAGENT => $userAgent,
-            CURLOPT_TIMEOUT => (int) ($options['timeout'] ?? 30),
-            CURLOPT_CONNECTTIMEOUT => (int) ($options['connect_timeout'] ?? 15),
+            CURLOPT_TIMEOUT => (int) ($options['timeout'] ?? 8),
+            CURLOPT_CONNECTTIMEOUT => (int) ($options['connect_timeout'] ?? 4),
             CURLOPT_SSL_VERIFYPEER => (bool) ($options['verify_ssl'] ?? false),
             CURLOPT_SSL_VERIFYHOST => ($options['verify_ssl'] ?? false) ? 2 : 0,
             CURLOPT_ENCODING => '',
+            CURLOPT_HTTPHEADER => $headers,
         ]);
-
-        $extraHeaders = $options['http_headers'] ?? null;
-        if (is_array($extraHeaders) && $extraHeaders !== []) {
-            /** @var list<string> $extraHeaders */
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $extraHeaders);
-        }
 
         $raw = curl_exec($ch);
         $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -71,7 +69,10 @@ final class DomWebScraperEngine implements WebScraperEngineInterface
         }
 
         if ($httpCode !== 200) {
-            throw new RuntimeException("HTTP Error: {$httpCode} - Failed to fetch {$url}");
+            $challengeStatus = in_array($httpCode, [403, 429, 503], true);
+            if (!$challengeStatus || $html === '') {
+                throw new RuntimeException("HTTP Error: {$httpCode} - Failed to fetch {$url}");
+            }
         }
 
         if ($html === '') {

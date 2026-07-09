@@ -13,6 +13,7 @@ use RuntimeException;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Traits\TameTrait;
 use Tamedevelopers\Support\ChromePdf\ChromiumEnvironment;
+use Tamedevelopers\Support\ChromePdf\Internal\ChromiumStealthScript;
 use Tamedevelopers\Support\WebScraper\ChromiumWebScraperEngine;
 use Tamedevelopers\Support\WebScraper\DomWebScraperEngine;
 use Tamedevelopers\Support\WebScraper\WebScraperEngineInterface;
@@ -111,6 +112,9 @@ class WebScraper
     private string $lastFetchFinalUrl = '';
     
     private int $lastFetchHttpStatus = 0;
+
+    /** When false, DOM is used first and Chromium is tried if price/currency are missing. */
+    private bool $engineExplicitlySet = false;
     
     
     /**
@@ -144,8 +148,13 @@ class WebScraper
             $this->productData = [];
     
             $this->engineOptions = $config['engine_options'] ?? [
-                'navigation_timeout_ms' => 30000,
-                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'navigation_timeout_ms' => 4000,
+                'cloudflare_wait_ms' => 1500,
+                'price_hydration_wait_ms' => 600,
+                'evaluate_timeout_ms' => 3800,
+                'timeout' => 8,
+                'connect_timeout' => 4,
+                'user_agent' => ChromiumStealthScript::chromeUserAgent(),
                 'verify_ssl' => true,
                 'proxy' => null,
             ];
@@ -154,12 +163,12 @@ class WebScraper
             
             // Set default selectors (can be customized)
             $this->selectors = [
-                'name' => 'div h1.-fs20, .title--wrap--UUHae_g h1, h1.dark-gray, h1[itemprop="name"]',
-                'price' => 'div span.-prxs, .price-default--current--F8OlYIo, .ux-textspans, .price, span.price, [itemprop="price"]',
-                'description' => '.markup.-mhm.-pvl.-oxa.-sc, .description--wrap--LscZ0He, [itemprop="description"], p.description',
-                'colors' => '.itm-sel',
-                'sizes' => '.vl, [data-testid="variant-group-0"] .ld_A0 span, .pl_selectiontile-text100 label font',
-                'images' => 'img.product-image, .product-gallery img, [data-image]'
+                'name' => 'div h1.-fs20, .title--wrap--UUHae_g h1, h1.dark-gray, h1[itemprop="name"], h1.product-title, h1[data-pl="product-title"], .pdp-product-name h1, .x-item-title__mainTitle span',
+                'price' => 'div span.-prxs, .price-default--current--F8OlYIo, .ux-textspans, .price, span.price, [itemprop="price"], .product-price-value, [data-pl="product-price"], .x-price-primary, .notranslate.price, .price--current',
+                'description' => '.markup.-mhm.-pvl.-oxa.-sc, .description--wrap--LscZ0He, [itemprop="description"], p.description, .product-description, #product-description, .detail-desc-decorate-richtext',
+                'colors' => '.itm-sel, [data-pl="product-sku"] [class*="sku-item"], .sku-property-item, [class*="color"] button[title], [data-testid*="color"]',
+                'sizes' => '.vl, [data-testid="variant-group-0"] .ld_A0 span, .pl_selectiontile-text100 label font, [data-pl="product-sku"] [class*="sku-item"], .sku-property-item, [data-testid*="size"]',
+                'images' => 'img.product-image, .product-gallery img, [data-image], .images-view-item img, .ux-image-carousel-item img'
             ];
             
             // Cache configuration
@@ -233,6 +242,7 @@ class WebScraper
      */
     public function setEngine(string|WebScraperEngineInterface $engine, array $options = []): self
     {
+        $this->engineExplicitlySet = true;
         if (is_string($engine)) {
             $this->engine = $this->createEngineByName($engine);
         } else {
@@ -270,13 +280,23 @@ class WebScraper
      */
     private function createEngineFromConfig(array $config): WebScraperEngineInterface
     {
-        $e = $config['engine'] ?? 'dom';
+        $this->engineExplicitlySet = array_key_exists('engine', $config);
+        $e = $config['engine'] ?? null;
         if ($e instanceof WebScraperEngineInterface) {
             return $e;
         }
         if (is_string($e)) {
             return $this->createEngineByName($e);
         }
+
+        return $this->autoSelectEngine();
+    }
+
+    /**
+     * Default fetch backend when no engine is configured: fast cURL + libxml.
+     */
+    private function autoSelectEngine(): WebScraperEngineInterface
+    {
         return new DomWebScraperEngine();
     }
     
@@ -334,25 +354,9 @@ class WebScraper
                     return $this;
                 }
             }
-            
-            $result = $this->engine->fetch($this->url, $this->engineOptions);
-            $this->html = $result->html;
-            $this->lastFetchEngine = $result->engineName;
-            $this->lastFetchFinalUrl = $result->finalUrl;
-            $this->lastFetchHttpStatus = $result->httpStatus;
-            if ($this->lastFetchFinalUrl !== '') {
-                $pu = @parse_url($this->lastFetchFinalUrl);
-                if (!empty($pu['scheme']) && !empty($pu['host'])) {
-                    $this->baseUrl = $pu['scheme'] . '://' . $pu['host'];
-                }
-            }
-            
-            // Load HTML
-            $this->dom->loadHTML(mb_convert_encoding($this->html, 'HTML-ENTITIES', 'UTF-8'), LIBXML_NOERROR);
-            $this->xpath = new DOMXPath($this->dom);
-            
-            // Scrape the content
-            $this->scrape();
+
+            $this->fetchWithEngine($this->engine);
+            $this->autoSwitchEngineIfNeeded();
             
             // Save to cache
             if ($this->cacheEnabled) {
@@ -364,6 +368,63 @@ class WebScraper
         }
         
         return $this;
+    }
+
+    /**
+     * Fetch HTML with the given engine, load the DOM, and scrape product fields.
+     */
+    private function fetchWithEngine(WebScraperEngineInterface $engine): void
+    {
+        $result = $engine->fetch($this->url, $this->engineOptions);
+        $this->html = $result->html;
+        $this->lastFetchEngine = $result->engineName;
+        $this->lastFetchFinalUrl = $result->finalUrl;
+        $this->lastFetchHttpStatus = $result->httpStatus;
+        if ($this->lastFetchFinalUrl !== '') {
+            $pu = @parse_url($this->lastFetchFinalUrl);
+            if (!empty($pu['scheme']) && !empty($pu['host'])) {
+                $this->baseUrl = $pu['scheme'] . '://' . $pu['host'];
+            }
+        }
+
+        $this->dom->loadHTML(mb_convert_encoding($this->html, 'HTML-ENTITIES', 'UTF-8'), LIBXML_NOERROR);
+        $this->xpath = new DOMXPath($this->dom);
+        $this->scrape();
+    }
+
+    /**
+     * When no engine was explicitly chosen, retry with Chromium if core commerce fields are missing.
+     */
+    private function autoSwitchEngineIfNeeded(): void
+    {
+        if ($this->engineExplicitlySet || $this->lastFetchEngine === 'chromium') {
+            return;
+        }
+
+        $price = trim((string) ($this->productData['price'] ?? ''));
+        $currency = trim((string) ($this->productData['currency'] ?? ''));
+        if ($price !== '' && $currency !== '') {
+            return;
+        }
+
+        try {
+            $initialEngine = $this->lastFetchEngine;
+            $this->fetchWithEngine($this->createEngineByName('chromium'));
+            $raw = $this->productData['raw_data'] ?? [];
+            if (!is_array($raw)) {
+                $raw = [];
+            }
+            $raw['engine_auto_switched'] = true;
+            $raw['engine_initial'] = $initialEngine;
+            $this->productData['raw_data'] = $raw;
+        } catch (Exception $e) {
+            $raw = $this->productData['raw_data'] ?? [];
+            if (!is_array($raw)) {
+                $raw = [];
+            }
+            $raw['engine_auto_switch_error'] = $e->getMessage();
+            $this->productData['raw_data'] = $raw;
+        }
     }
 
     /**
@@ -465,9 +526,11 @@ class WebScraper
             'access denied',
             'attention required',
             'verify you are human',
+            'performing security verification',
             'bot challenge',
             'robot check',
             'just a moment',
+            'checking your browser',
             'request blocked',
             'temporarily blocked',
         ];
@@ -573,6 +636,22 @@ class WebScraper
     private function applyStructuredDataEnrichment(): void
     {
         $sources = [];
+        $embedded = $this->extractProductFieldsFromEmbeddedJson();
+        if ($embedded['name'] !== '' || $embedded['description'] !== '' || $embedded['price'] !== '' || $embedded['currency'] !== '') {
+            $sources[] = 'embedded-json';
+            if (($this->productData['name'] ?? '') === '' && $embedded['name'] !== '') {
+                $this->productData['name'] = $this->decodeHtmlText($embedded['name']);
+            }
+            if (($this->productData['description'] ?? '') === '' && $embedded['description'] !== '') {
+                $this->productData['description'] = $this->cleanDescriptionPlain($embedded['description']);
+            }
+            if (($this->productData['price'] ?? '') === '' && $embedded['price'] !== '') {
+                $this->productData['price'] = $this->formatNormalizedPrice($embedded['price']);
+            }
+            if (($this->productData['currency'] ?? '') === '' && $embedded['currency'] !== '') {
+                $this->productData['currency'] = $this->normalizeToIso4217($embedded['currency']);
+            }
+        }
         $ld = $this->extractProductFieldsFromJsonLd();
         if ($ld['name'] !== '' || $ld['description'] !== '' || $ld['price'] !== '' || $ld['currency'] !== '') {
             $sources[] = 'json-ld';
@@ -648,6 +727,42 @@ class WebScraper
             }
             $this->productData['raw_data']['enrichment'] = array_values(array_unique(array_merge($ex, $sources)));
         }
+    }
+
+    /**
+     * @return array{name: string, description: string, price: string, currency: string}
+     */
+    private function extractProductFieldsFromEmbeddedJson(): array
+    {
+        $out = ['name' => '', 'description' => '', 'price' => '', 'currency' => ''];
+        $html = $this->html ?? '';
+        if ($html === '') {
+            return $out;
+        }
+
+        if (preg_match('/"priceCurrency"\s*:\s*"([A-Z]{3})"/', $html, $m) === 1) {
+            $out['currency'] = $m[1];
+        }
+        if (preg_match('/"(?:actMinPrice|skuAmount|minActivityAmount|priceAmount)"\s*:\s*\{[^}]*"value"\s*:\s*([0-9]+(?:\.[0-9]+)?)/', $html, $m) === 1) {
+            $out['price'] = $m[1];
+        }
+        if ($out['price'] === '' && preg_match('/"formattedPrice"\s*:\s*"([^"]+)"/', $html, $m) === 1) {
+            $out['price'] = $m[1];
+        }
+        if ($out['price'] === '' && preg_match('/"price"\s*:\s*"([0-9][0-9.,]*)"/', $html, $m) === 1) {
+            $out['price'] = $m[1];
+        }
+        if ($out['price'] === '' && preg_match('/"price"\s*:\s*([0-9]+(?:\.[0-9]+)?)/', $html, $m) === 1) {
+            $out['price'] = $m[1];
+        }
+        if ($out['currency'] === '' && preg_match('/"currency(?:Code)?"\s*:\s*"([A-Z]{3})"/', $html, $m) === 1) {
+            $out['currency'] = $m[1];
+        }
+        if (preg_match('/"(?:productTitle|subject)"\s*:\s*"((?:[^"\\\\]|\\\\.)*)"/', $html, $m) === 1) {
+            $out['name'] = stripcslashes($m[1]);
+        }
+
+        return $out;
     }
     
     /**

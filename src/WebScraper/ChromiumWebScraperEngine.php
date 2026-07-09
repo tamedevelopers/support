@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\WebScraper;
 
 use HeadlessChromium\BrowserFactory;
+use HeadlessChromium\Communication\Message;
 use HeadlessChromium\Page;
 use RuntimeException;
-use Tamedevelopers\Support\ChromePdf\ChromiumEnvironment;
+use Tamedevelopers\Support\ChromePdf\Internal\ChromiumStealthScript;
+use Tamedevelopers\Support\ChromePdf\Internal\ScraperPageScript;
 use Tamedevelopers\Support\ChromePdf\Traits\ChromeBinaryTrait;
 use Throwable;
 
@@ -17,35 +19,21 @@ use Throwable;
  * ({@code CHROME_PATH} / autodetect via {@see ChromiumEnvironment}).
  */
 final class ChromiumWebScraperEngine implements WebScraperEngineInterface
-{   
+{
     use ChromeBinaryTrait;
 
-    /**
-     * Create a new ChromiumWebScraperEngine instance.
-     *
-     * @param string|null $chromiumBinary
-     */
     public function __construct(?string $chromiumBinary = null)
     {
         $this->chromiumBinary = $chromiumBinary;
     }
 
-    /** 
-     * Get the name of the engine.
-     *
-     * @return string
-     */
     public function getName(): string
     {
         return 'chromium';
     }
 
     /**
-     * Fetch the HTML from the URL.
-     *
-     * @param string $url
-     * @param array $options
-     * @return WebScraperFetchResult
+     * @param array<string, mixed> $options
      */
     public function fetch(string $url, array $options = []): WebScraperFetchResult
     {
@@ -58,30 +46,35 @@ final class ChromiumWebScraperEngine implements WebScraperEngineInterface
             );
         }
 
-        $browser = $this->acquireSharedBrowser();
+        $cloudflareWait = (int) ($options['cloudflare_wait_ms'] ?? 1500);
+        $priceWait = (int) ($options['price_hydration_wait_ms'] ?? 600);
+        $evalTimeout = (int) ($options['evaluate_timeout_ms'] ?? ($cloudflareWait + $priceWait + 2000));
 
-        $navTimeout = (int) ($options['navigation_timeout_ms'] ?? 45000);
-        $evalTimeout = (int) ($options['evaluate_timeout_ms'] 
-            ?? min(90_000, max(10_000, (int) ($navTimeout * 1.5))));
+        $browser = $this->acquireSharedBrowser();
+        $finalUrl = $url;
+        $page = null;
+        $html = '';
 
         try {
             $page = $browser->createPage();
-            $page->navigate($url)->waitForNavigation(Page::LOAD, 30000);
-            $evaluation = $page->evaluate(
-                'document.documentElement != null ? document.documentElement.outerHTML : (document.body != null ? document.body.innerHTML : "")'
-            );
-            $html = (string) $evaluation->getReturnValue(90000);
+            $this->installStealthScript($page);
+
+            $page->navigate($url);
+
+            $html = (string) $page->evaluate(
+                ScraperPageScript::asExpression($cloudflareWait, $priceWait)
+            )->getReturnValue(min(4500, max(3200, $evalTimeout)));
 
             if (method_exists($page, 'getCurrentUrl')) {
                 try {
-                    $finalUrl = (string) $page->getCurrentUrl(min(30_000, $evalTimeout));
+                    $finalUrl = (string) $page->getCurrentUrl(2000);
                 } catch (Throwable) {
                 }
             }
         } finally {
-            if ($browser !== null) {
+            if ($page !== null) {
                 try {
-                    $browser->close();
+                    $page->close();
                 } catch (Throwable) {
                 }
             }
@@ -98,10 +91,17 @@ final class ChromiumWebScraperEngine implements WebScraperEngineInterface
         return new WebScraperFetchResult($html, $finalUrl, 200, $this->getName());
     }
 
-     /**
-     * Closes the shared Chromium process started by {@see generate()}. Call on long-running workers when PDF
-     * generation is finished, or rely on the registered PHP shutdown handler.
-     */
+    private function installStealthScript(Page $page): void
+    {
+        try {
+            $page->getSession()->sendMessageSync(new Message(
+                'Page.addScriptToEvaluateOnNewDocument',
+                ['source' => ChromiumStealthScript::source()]
+            ));
+        } catch (Throwable) {
+        }
+    }
+
     public static function shutdown(): void
     {
         if (self::$sharedBrowser !== null) {
@@ -113,5 +113,4 @@ final class ChromiumWebScraperEngine implements WebScraperEngineInterface
             self::$sharedBrowserLaunchKey = null;
         }
     }
-    
 }
