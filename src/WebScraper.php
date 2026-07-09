@@ -150,7 +150,10 @@ class WebScraper
     
             // Human behavior defaults: Updated to modern Chrome version with complete anti-fingerprinting headers
             $this->engineOptions = $config['engine_options'] ?? [
-                'navigation_timeout_ms' => 30000,
+                'navigation_timeout_ms' => 12000,
+                'post_navigation_settle_ms' => 395,
+                'timeout' => 6,
+                'connect_timeout' => 4,
                 'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'verify_ssl' => true,
                 'proxy' => null,
@@ -398,27 +401,33 @@ class WebScraper
     }
 
     /**
-     * DOM/cURL first, then Chromium when the page is blocked or yields no usable product data.
+     * DOM/cURL first (fast probe), then Chromium via the same path as {@see \Tamedevelopers\Support\ChromePdf\ChromePdf}.
      */
     private function fetchWithAutoEngine(): void
     {
         $enginesTried = [];
         $domResult = null;
+        $chromiumAvailable = class_exists(\HeadlessChromium\BrowserFactory::class);
 
         try {
             $enginesTried[] = 'dom';
-            $domResult = (new DomWebScraperEngine())->fetch($this->url, $this->engineOptions);
-            $this->processFetchResult($domResult, $enginesTried);
+            $domResult = (new DomWebScraperEngine())->fetch($this->url, $this->domEngineOptions());
 
-            if (!$this->shouldRetryWithChromium()) {
-                return;
+            if (!$this->htmlIndicatesBotChallenge($domResult->html)) {
+                $this->processFetchResult($domResult, $enginesTried);
+
+                if (!$this->shouldRetryWithChromium()) {
+                    return;
+                }
             }
         } catch (Exception $e) {
             $this->errors[] = 'dom: ' . $e->getMessage();
         }
 
-        if (!class_exists(\HeadlessChromium\BrowserFactory::class)) {
-            if ($domResult === null) {
+        if (!$chromiumAvailable) {
+            if ($domResult !== null) {
+                $this->processFetchResult($domResult, $enginesTried);
+            } elseif ($domResult === null) {
                 throw new RuntimeException(
                     'DOM fetch failed and Chromium fallback requires chrome-php/chrome (composer require chrome-php/chrome).'
                 );
@@ -430,7 +439,7 @@ class WebScraper
         try {
             $enginesTried[] = 'chromium';
             $chromiumResult = (new ChromiumWebScraperEngine($this->chromiumBinary))
-                ->fetch($this->url, $this->engineOptions);
+                ->fetch($this->url, $this->chromiumEngineOptions());
             $this->processFetchResult($chromiumResult, $enginesTried);
         } catch (Exception $e) {
             $this->errors[] = 'chromium: ' . $e->getMessage();
@@ -440,6 +449,29 @@ class WebScraper
                 throw $e;
             }
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function domEngineOptions(): array
+    {
+        $opts = $this->engineOptions;
+        $opts['timeout'] = min(max(3, (int) ($opts['timeout'] ?? 6)), 6);
+        $opts['connect_timeout'] = min(max(2, (int) ($opts['connect_timeout'] ?? 4)), 4);
+
+        return $opts;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function chromiumEngineOptions(): array
+    {
+        $opts = $this->engineOptions;
+        $opts['navigation_timeout_ms'] = min(max(5000, (int) ($opts['navigation_timeout_ms'] ?? 12000)), 12000);
+
+        return $opts;
     }
 
     /**

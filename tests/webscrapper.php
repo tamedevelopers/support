@@ -11,7 +11,7 @@ $aliexpress = 'https://www.aliexpress.com/item/1005010595606666.html';
 
 dd(
     WebScraper::setUrl("
-            $jumia2
+            $aliexpress
         ")
         ->setSelectors([
             // 'title' => 'h1',
