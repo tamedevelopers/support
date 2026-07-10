@@ -13,16 +13,15 @@ use RuntimeException;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Traits\TameTrait;
 use Tamedevelopers\Support\ChromePdf\ChromiumEnvironment;
-use Tamedevelopers\Support\ChromePdf\Internal\ChromiumStealthScript;
 use Tamedevelopers\Support\WebScraper\ChromiumWebScraperEngine;
 use Tamedevelopers\Support\WebScraper\DomWebScraperEngine;
+use Tamedevelopers\Support\WebScraper\WebScraperFetchResult;
 use Tamedevelopers\Support\WebScraper\WebScraperEngineInterface;
 
 /**
- * Product scraper. Choose how HTML is obtained via {@see $config} key {@code engine}:
- * {@code dom} (default) = cURL + libxml, or {@code chromium} = headless Chrome (requires {@code chrome-php/chrome},
- * same stack as {@see \Tamedevelopers\Support\ChromePdf\ChromePdf}). Parsing and selectors are unchanged; only the
- * fetch step is pluggable.
+ * Product scraper. By default HTML is fetched with automatic engine fallback: cURL/DOM first (no extra deps,
+ * shared-hosting friendly), then headless Chromium when the page is blocked or yields no product data (same stack as
+ * {@see \Tamedevelopers\Support\ChromePdf\ChromePdf}). Override with {@see setEngine()} or config key {@code engine}.
  */
 class WebScraper
 {
@@ -113,8 +112,10 @@ class WebScraper
     
     private int $lastFetchHttpStatus = 0;
 
-    /** When false, DOM is used first and Chromium is tried if price/currency are missing. */
-    private bool $engineExplicitlySet = false;
+    /**
+     * When true (default), {@see fetch()} tries DOM/cURL first and falls back to Chromium when needed.
+     */
+    private bool $autoEngine = true;
     
     
     /**
@@ -122,7 +123,7 @@ class WebScraper
      * 
      * @param array $config {
      *   @var array<string, string>   $selectors
-     *   @var 'dom'|'chromium'|'chrome'|WebScraperEngineInterface  $engine  Fetch backend (default: dom)
+     *   @var 'auto'|'dom'|'chromium'|'chrome'|WebScraperEngineInterface  $engine  Fetch backend (default: auto)
      *   @var array<string, mixed>   $engine_options  Passed to the engine (e.g. navigation_timeout_ms, binary, user_agent, verify_ssl)
      *   @var bool   $cache_enabled
      *   @var string $cache_dir
@@ -139,6 +140,10 @@ class WebScraper
             $this->baseUrl = $baseUrl ?? parse_url($url, PHP_URL_SCHEME) . '://' . parse_url($url, PHP_URL_HOST);
         }
 
+        dd(
+            $this->dom instanceof DOMDocument
+        );
+
         // Initialize properties and engine
         if(!($this->dom instanceof DOMDocument)) {
             $this->dom = new DOMDocument();
@@ -147,34 +152,57 @@ class WebScraper
             $this->errors = [];
             $this->productData = [];
     
+            // Human behavior defaults: Updated to modern Chrome version with complete anti-fingerprinting headers
             $this->engineOptions = $config['engine_options'] ?? [
-                'navigation_timeout_ms' => 4000,
-                'cloudflare_wait_ms' => 1500,
-                'price_hydration_wait_ms' => 600,
-                'evaluate_timeout_ms' => 3800,
-                'timeout' => 8,
-                'connect_timeout' => 4,
-                'user_agent' => ChromiumStealthScript::chromeUserAgent(),
+                'navigation_timeout_ms' => 4500,
+                'post_navigation_settle_ms' => 395,
+                'timeout' => 4,
+                'connect_timeout' => 3,
+                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                 'verify_ssl' => true,
                 'proxy' => null,
+                'http_headers' => [
+                    'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                    'Accept-Language: en-US,en;q=0.9',
+                    'Cache-Control: max-age=0',
+                    'Sec-Ch-Ua: "Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"',
+                    'Sec-Ch-Ua-Mobile: ?0',
+                    'Sec-Ch-Ua-Platform: "Windows"',
+                    'Sec-Fetch-Dest: document',
+                    'Sec-Fetch-Mode: navigate',
+                    'Sec-Fetch-Site: none',
+                    'Sec-Fetch-User: ?1',
+                    'Upgrade-Insecure-Requests: 1'
+                ]
             ];
     
-            $this->engine = $this->createEngineFromConfig($config);
+            $engineConfig = $config['engine'] ?? 'auto';
+            if ($this->isAutoEngineConfig($engineConfig)) {
+                $this->autoEngine = true;
+                $this->engine = new DomWebScraperEngine();
+            } else {
+                $this->autoEngine = false;
+                $this->engine = $this->createEngineFromConfig($config);
+            }
             
             // Set default selectors (can be customized)
             $this->selectors = [
-                'name' => 'div h1.-fs20, .title--wrap--UUHae_g h1, h1.dark-gray, h1[itemprop="name"], h1.product-title, h1[data-pl="product-title"], .pdp-product-name h1, .x-item-title__mainTitle span',
-                'price' => 'div span.-prxs, .price-default--current--F8OlYIo, .ux-textspans, .price, span.price, [itemprop="price"], .product-price-value, [data-pl="product-price"], .x-price-primary, .notranslate.price, .price--current',
-                'description' => '.markup.-mhm.-pvl.-oxa.-sc, .description--wrap--LscZ0He, [itemprop="description"], p.description, .product-description, #product-description, .detail-desc-decorate-richtext',
-                'colors' => '.itm-sel, [data-pl="product-sku"] [class*="sku-item"], .sku-property-item, [class*="color"] button[title], [data-testid*="color"]',
-                'sizes' => '.vl, [data-testid="variant-group-0"] .ld_A0 span, .pl_selectiontile-text100 label font, [data-pl="product-sku"] [class*="sku-item"], .sku-property-item, [data-testid*="size"]',
-                'images' => 'img.product-image, .product-gallery img, [data-image], .images-view-item img, .ux-image-carousel-item img'
+                'name' => 'div h1.-fs20, .title--wrap--UUHae_g h1, .title--title--O6xcB1q, h1.dark-gray, h1[itemprop="name"], .x-item-title__mainTitle, h1.x-item-title__mainTitle',
+                'price' => 'div span.-prxs, .price-default--current--F8OlYIo, .ux-textspans--PRICE, .ux-textspans, .x-price-primary, .x-price-approx__price, .price, span.price, [itemprop="price"]',
+                'description' => '.markup.-mhm.-pvl.-oxa.-sc, .description--wrap--LscZ0He, .description--content--uRf7yYZ, [itemprop="description"], p.description',
+                'colors' => '.itm-sel',
+                'sizes' => '.vl, [data-testid="variant-group-0"] .ld_A0 span, .pl_selectiontile-text100 label font',
+                'images' => 'img.product-image, .product-gallery img, [data-image], .main-image--wrap--nFuR5UU img, .ux-image-carousel-item img'
             ];
             
             // Cache configuration
             $this->cacheEnabled = $config['cache_enabled'] ?? false;
-            $this->cacheDir = $config['cache_dir'] ?? __DIR__ . '/cache/scraper/';
-            $this->cacheTTL = $config['cache_ttl'] ?? 3600;
+            $this->cacheDir = $config['cache_dir'] ?? storage_path('scraper');
+            $this->cacheTTL = $config['cache_ttl'] ?? 86400;
+
+            dd(
+                storage_path('scraper')
+            );
             
             // Initialize cache directory if needed
             if ($this->cacheEnabled && !is_dir($this->cacheDir)) {
@@ -235,18 +263,23 @@ class WebScraper
     }
     
     /**
-     * Use the DOM/cURL engine (default) or Chromium, or a custom {@see WebScraperEngineInterface}.
+     * Use automatic DOM→Chromium fallback (default), a single engine, or a custom {@see WebScraperEngineInterface}.
      *
-     * @param 'dom'|'chromium'|'chrome'|WebScraperEngineInterface $engine
+     * @param 'auto'|'dom'|'chromium'|'chrome'|WebScraperEngineInterface $engine
      * @param array<string, mixed> $options Replaces engine options for subsequent {@see fetch()} calls
      */
     public function setEngine(string|WebScraperEngineInterface $engine, array $options = []): self
     {
-        $this->engineExplicitlySet = true;
-        if (is_string($engine)) {
-            $this->engine = $this->createEngineByName($engine);
+        if (is_string($engine) && $this->isAutoEngineConfig($engine)) {
+            $this->autoEngine = true;
+            $this->engine = new DomWebScraperEngine();
         } else {
-            $this->engine = $engine;
+            $this->autoEngine = false;
+            if (is_string($engine)) {
+                $this->engine = $this->createEngineByName($engine);
+            } else {
+                $this->engine = $engine;
+            }
         }
         if ($options !== []) {
             $this->engineOptions = $options;
@@ -280,24 +313,26 @@ class WebScraper
      */
     private function createEngineFromConfig(array $config): WebScraperEngineInterface
     {
-        $this->engineExplicitlySet = array_key_exists('engine', $config);
-        $e = $config['engine'] ?? null;
+        $e = $config['engine'] ?? 'auto';
         if ($e instanceof WebScraperEngineInterface) {
             return $e;
         }
-        if (is_string($e)) {
+        if (is_string($e) && !$this->isAutoEngineConfig($e)) {
             return $this->createEngineByName($e);
         }
-
-        return $this->autoSelectEngine();
+        return new DomWebScraperEngine();
     }
 
     /**
-     * Default fetch backend when no engine is configured: fast cURL + libxml.
+     * @param mixed $engine
      */
-    private function autoSelectEngine(): WebScraperEngineInterface
+    private function isAutoEngineConfig(mixed $engine): bool
     {
-        return new DomWebScraperEngine();
+        if (!is_string($engine)) {
+            return false;
+        }
+
+        return in_array(strtolower(trim($engine)), ['auto', ''], true);
     }
     
     /**
@@ -354,13 +389,12 @@ class WebScraper
                     return $this;
                 }
             }
-
-            $this->fetchWithEngine($this->engine);
-            $this->autoSwitchEngineIfNeeded();
-
-            dd(
-                $this
-            );
+            
+            if ($this->autoEngine) {
+                $this->fetchWithAutoEngine();
+            } else {
+                $this->processFetchResult($this->engine->fetch($this->url, $this->engineOptions));
+            }
             
             // Save to cache
             if ($this->cacheEnabled) {
@@ -375,11 +409,86 @@ class WebScraper
     }
 
     /**
-     * Fetch HTML with the given engine, load the DOM, and scrape product fields.
+     * DOM/cURL first (fast probe), then Chromium via the same path as {@see \Tamedevelopers\Support\ChromePdf\ChromePdf}.
      */
-    private function fetchWithEngine(WebScraperEngineInterface $engine): void
+    private function fetchWithAutoEngine(): void
     {
-        $result = $engine->fetch($this->url, $this->engineOptions);
+        $enginesTried = [];
+        $domResult = null;
+        $chromiumAvailable = class_exists(\HeadlessChromium\BrowserFactory::class);
+
+        try {
+            $enginesTried[] = 'dom';
+            $domResult = (new DomWebScraperEngine())->fetch($this->url, $this->domEngineOptions());
+
+            if (!$this->htmlIndicatesBotChallenge($domResult->html)) {
+                $this->processFetchResult($domResult, $enginesTried);
+
+                if (!$this->shouldRetryWithChromium()) {
+                    return;
+                }
+            }
+        } catch (Exception $e) {
+            $this->errors[] = 'dom: ' . $e->getMessage();
+        }
+
+        if (!$chromiumAvailable) {
+            if ($domResult !== null) {
+                $this->processFetchResult($domResult, $enginesTried);
+            } elseif ($domResult === null) {
+                throw new RuntimeException(
+                    'DOM fetch failed and Chromium fallback requires chrome-php/chrome (composer require chrome-php/chrome).'
+                );
+            }
+
+            return;
+        }
+
+        try {
+            $enginesTried[] = 'chromium';
+            $chromiumResult = (new ChromiumWebScraperEngine($this->chromiumBinary))
+                ->fetch($this->url, $this->chromiumEngineOptions());
+            $this->processFetchResult($chromiumResult, $enginesTried);
+        } catch (Exception $e) {
+            $this->errors[] = 'chromium: ' . $e->getMessage();
+            if ($domResult !== null) {
+                $this->processFetchResult($domResult, $enginesTried);
+            } else {
+                throw $e;
+            }
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function domEngineOptions(): array
+    {
+        $opts = $this->engineOptions;
+        $opts['timeout'] = min(max(3, (int) ($opts['timeout'] ?? 4)), 4);
+        $opts['connect_timeout'] = min(max(2, (int) ($opts['connect_timeout'] ?? 3)), 3);
+
+        return $opts;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function chromiumEngineOptions(): array
+    {
+        $opts = $this->engineOptions;
+        $opts['navigation_timeout_ms'] = min(max(3000, (int) ($opts['navigation_timeout_ms'] ?? 4500)), 4500);
+
+        return $opts;
+    }
+
+    /**
+     * Load fetched HTML into the DOM, scrape fields, and record fetch metadata.
+     *
+     * @param list<string> $enginesTried
+     */
+    private function processFetchResult(WebScraperFetchResult $result, array $enginesTried = []): void
+    {
         $this->html = $result->html;
         $this->lastFetchEngine = $result->engineName;
         $this->lastFetchFinalUrl = $result->finalUrl;
@@ -393,42 +502,66 @@ class WebScraper
 
         $this->dom->loadHTML(mb_convert_encoding($this->html, 'HTML-ENTITIES', 'UTF-8'), LIBXML_NOERROR);
         $this->xpath = new DOMXPath($this->dom);
-        $this->scrape();
+        $this->scrape($enginesTried);
     }
 
     /**
-     * When no engine was explicitly chosen, retry with Chromium if core commerce fields are missing.
+     * Decide whether Chromium should be attempted after a DOM fetch + scrape pass.
      */
-    private function autoSwitchEngineIfNeeded(): void
+    private function shouldRetryWithChromium(): bool
     {
-        if ($this->engineExplicitlySet || $this->lastFetchEngine === 'chromium') {
-            return;
+        if ($this->htmlIndicatesBotChallenge($this->html)) {
+            return true;
         }
 
-        $price = trim((string) ($this->productData['price'] ?? ''));
-        $currency = trim((string) ($this->productData['currency'] ?? ''));
-        if ($price !== '' && $currency !== '') {
-            return;
+        $signals = $this->detectBlockSignals();
+        if ($signals['is_blocked']) {
+            return true;
         }
 
-        try {
-            $initialEngine = $this->lastFetchEngine;
-            $this->fetchWithEngine($this->createEngineByName('chromium'));
-            $raw = $this->productData['raw_data'] ?? [];
-            if (!is_array($raw)) {
-                $raw = [];
+        $emptyCore = 0;
+        foreach (['name', 'price', 'description'] as $field) {
+            if (trim((string) ($this->productData[$field] ?? '')) === '') {
+                $emptyCore++;
             }
-            $raw['engine_auto_switched'] = true;
-            $raw['engine_initial'] = $initialEngine;
-            $this->productData['raw_data'] = $raw;
-        } catch (Exception $e) {
-            $raw = $this->productData['raw_data'] ?? [];
-            if (!is_array($raw)) {
-                $raw = [];
-            }
-            $raw['engine_auto_switch_error'] = $e->getMessage();
-            $this->productData['raw_data'] = $raw;
         }
+
+        $hasName = trim((string) ($this->productData['name'] ?? '')) !== '';
+        $missingPrice = trim((string) ($this->productData['price'] ?? '')) === '';
+
+        return $emptyCore >= 2 && empty($this->productData['images']);
+    }
+
+    /**
+     * Fast HTML-only check for anti-bot interstitials before paying for a Chromium launch.
+     */
+    private function htmlIndicatesBotChallenge(string $html): bool
+    {
+        $htmlLower = strtolower($html);
+        $needles = [
+            'cf-challenge',
+            'cloudflare',
+            '/cdn-cgi/challenge-platform',
+            'just a moment',
+            'please wait',
+            'checking your browser',
+            'verify you are human',
+            'attention required',
+            'captcha',
+            'g-recaptcha',
+            'hcaptcha',
+            'robot check',
+            'access denied',
+            'request blocked',
+        ];
+
+        foreach ($needles as $needle) {
+            if (str_contains($htmlLower, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -462,10 +595,11 @@ class WebScraper
     
     /**
      * Scrape product information from the HTML
-     * 
+     *
+     * @param list<string> $enginesTried
      * @return self Returns instance for method chaining
      */
-    private function scrape(): self
+    private function scrape(array $enginesTried = []): self
     {
         $this->productData = [
             'name' => $this->extractName(),
@@ -481,6 +615,7 @@ class WebScraper
             'scraped_at' => date('Y-m-d H:i:s'),
             'raw_data' => [
                 'engine' => $this->lastFetchEngine,
+                'engines_tried' => $enginesTried,
                 'final_url' => $this->lastFetchFinalUrl,
                 'http_status' => $this->lastFetchHttpStatus,
             ],
@@ -488,7 +623,7 @@ class WebScraper
         
         // Set main image as first image if available
         if (!empty($this->productData['images'])) {
-            $this->productData['main_image'] = $this->productData['images'][0];
+            $this->productData['main_image'] = $this->extractBestMainImage();
         }
         
         $this->applyOpenGraphTitleFallback();
@@ -530,11 +665,11 @@ class WebScraper
             'access denied',
             'attention required',
             'verify you are human',
-            'performing security verification',
             'bot challenge',
             'robot check',
             'just a moment',
-            'checking your browser',
+            'please wait',
+            'loading please wait',
             'request blocked',
             'temporarily blocked',
         ];
@@ -563,6 +698,9 @@ class WebScraper
             'service unavailable',
             'request blocked',
             'blocked due to unusual activity',
+            'please wait',
+            'loading please wait',
+            'checking your browser',
         ];
         foreach ($htmlMatches as $needle) {
             if (str_contains($htmlLower, $needle)) {
@@ -640,22 +778,6 @@ class WebScraper
     private function applyStructuredDataEnrichment(): void
     {
         $sources = [];
-        $embedded = $this->extractProductFieldsFromEmbeddedJson();
-        if ($embedded['name'] !== '' || $embedded['description'] !== '' || $embedded['price'] !== '' || $embedded['currency'] !== '') {
-            $sources[] = 'embedded-json';
-            if (($this->productData['name'] ?? '') === '' && $embedded['name'] !== '') {
-                $this->productData['name'] = $this->decodeHtmlText($embedded['name']);
-            }
-            if (($this->productData['description'] ?? '') === '' && $embedded['description'] !== '') {
-                $this->productData['description'] = $this->cleanDescriptionPlain($embedded['description']);
-            }
-            if (($this->productData['price'] ?? '') === '' && $embedded['price'] !== '') {
-                $this->productData['price'] = $this->formatNormalizedPrice($embedded['price']);
-            }
-            if (($this->productData['currency'] ?? '') === '' && $embedded['currency'] !== '') {
-                $this->productData['currency'] = $this->normalizeToIso4217($embedded['currency']);
-            }
-        }
         $ld = $this->extractProductFieldsFromJsonLd();
         if ($ld['name'] !== '' || $ld['description'] !== '' || $ld['price'] !== '' || $ld['currency'] !== '') {
             $sources[] = 'json-ld';
@@ -732,42 +854,6 @@ class WebScraper
             $this->productData['raw_data']['enrichment'] = array_values(array_unique(array_merge($ex, $sources)));
         }
     }
-
-    /**
-     * @return array{name: string, description: string, price: string, currency: string}
-     */
-    private function extractProductFieldsFromEmbeddedJson(): array
-    {
-        $out = ['name' => '', 'description' => '', 'price' => '', 'currency' => ''];
-        $html = $this->html ?? '';
-        if ($html === '') {
-            return $out;
-        }
-
-        if (preg_match('/"priceCurrency"\s*:\s*"([A-Z]{3})"/', $html, $m) === 1) {
-            $out['currency'] = $m[1];
-        }
-        if (preg_match('/"(?:actMinPrice|skuAmount|minActivityAmount|priceAmount)"\s*:\s*\{[^}]*"value"\s*:\s*([0-9]+(?:\.[0-9]+)?)/', $html, $m) === 1) {
-            $out['price'] = $m[1];
-        }
-        if ($out['price'] === '' && preg_match('/"formattedPrice"\s*:\s*"([^"]+)"/', $html, $m) === 1) {
-            $out['price'] = $m[1];
-        }
-        if ($out['price'] === '' && preg_match('/"price"\s*:\s*"([0-9][0-9.,]*)"/', $html, $m) === 1) {
-            $out['price'] = $m[1];
-        }
-        if ($out['price'] === '' && preg_match('/"price"\s*:\s*([0-9]+(?:\.[0-9]+)?)/', $html, $m) === 1) {
-            $out['price'] = $m[1];
-        }
-        if ($out['currency'] === '' && preg_match('/"currency(?:Code)?"\s*:\s*"([A-Z]{3})"/', $html, $m) === 1) {
-            $out['currency'] = $m[1];
-        }
-        if (preg_match('/"(?:productTitle|subject)"\s*:\s*"((?:[^"\\\\]|\\\\.)*)"/', $html, $m) === 1) {
-            $out['name'] = stripcslashes($m[1]);
-        }
-
-        return $out;
-    }
     
     /**
      * @return array{name: string, description: string, price: string, currency: string}
@@ -792,8 +878,141 @@ class WebScraper
             if (!is_array($data)) {
                 continue;
             }
-            $this->mergeJsonLdProductFields($data, $out);
+            if (array_is_list($data)) {
+                foreach ($data as $node) {
+                    if (is_array($node)) {
+                        $this->mergeJsonLdProductFields($node, $out);
+                    }
+                }
+            } else {
+                $this->mergeJsonLdProductFields($data, $out);
+            }
         }
+        return $out;
+    }
+
+    /**
+     * Extract product fields from inline script blobs (AliExpress runParams, eBay modules, etc.).
+     *
+     * @return array{name: string, description: string, price: string, currency: string}
+     */
+    private function extractProductFieldsFromEmbeddedScripts(): array
+    {
+        $out = ['name' => '', 'description' => '', 'price' => '', 'currency' => ''];
+        $scripts = $this->xpath->query('//script[not(@src)]');
+        if ($scripts === false || $scripts->length === 0) {
+            return $out;
+        }
+
+        $blob = '';
+        for ($i = 0; $i < $scripts->length; $i++) {
+            $item = $scripts->item($i);
+            if ($item === null) {
+                continue;
+            }
+            $blob .= ' ' . ($item->textContent ?? '');
+        }
+
+        if ($blob === '') {
+            return $out;
+        }
+
+        $pricePatterns = [
+            '/"(?:actMinPrice|minActivityAmount|skuAmount|minAmount|salePrice|priceAmount)"\s*:\s*\{[^}]*"value"\s*:\s*([0-9]+(?:\.[0-9]+)?)/',
+            '/"(?:actMinPrice|minActivityAmount|skuAmount|minAmount|salePrice|priceAmount)"\s*:\s*\{[^}]*"amount"\s*:\s*([0-9]+(?:\.[0-9]+)?)/',
+            '/"(?:lowPrice|highPrice|price)"\s*:\s*([0-9]+(?:\.[0-9]+)?)/',
+            '/"currentPrice"\s*:\s*\{[^}]*"value"\s*:\s*([0-9]+(?:\.[0-9]+)?)/',
+            '/"convertedAmount"\s*:\s*\{[^}]*"value"\s*:\s*([0-9]+(?:\.[0-9]+)?)/',
+        ];
+        foreach ($pricePatterns as $pattern) {
+            if (preg_match($pattern, $blob, $m) === 1) {
+                $out['price'] = $m[1];
+                break;
+            }
+        }
+
+        if ($out['price'] === '' && preg_match('/"(?:formatedPrice|formattedPrice)"\s*:\s*"([^"]+)"/', $blob, $m) === 1) {
+            $out['price'] = $this->formatNormalizedPrice($m[1]);
+        }
+
+        $currencyPatterns = [
+            '/"(?:tradeCurrency|priceCurrency|currencyCode|currency)"\s*:\s*"([A-Za-z]{3})"/',
+            '/"currency"\s*:\s*"([A-Za-z]{3})"/',
+        ];
+        foreach ($currencyPatterns as $pattern) {
+            if (preg_match($pattern, $blob, $m) === 1) {
+                $out['currency'] = strtoupper($m[1]);
+                break;
+            }
+        }
+
+        if ($out['name'] === '' && preg_match('/"subject"\s*:\s*"([^"]{4,300})"/', $blob, $m) === 1) {
+            $out['name'] = $m[1];
+        }
+        if ($out['name'] === '' && preg_match('/"productTitle"\s*:\s*"([^"]{4,300})"/', $blob, $m) === 1) {
+            $out['name'] = $m[1];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Regex fallback for client-rendered price nodes (AliExpress, eBay, etc.).
+     *
+     * @return array{price: string, currency: string}
+     */
+    private function extractProductFieldsFromRenderedHtml(): array
+    {
+        $out = ['price' => '', 'currency' => ''];
+        $html = $this->html ?? '';
+        if ($html === '') {
+            return $out;
+        }
+
+        $candidates = [];
+        if (preg_match_all(
+            '/class="[^"]*(?:price-default--current|x-price-primary|ux-textspans--PRICE)[^"]*"[^>]*>([^<]+)</i',
+            $html,
+            $matches
+        ) >= 1) {
+            foreach ($matches[1] as $raw) {
+                $candidates[] = trim(html_entity_decode((string) $raw, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            }
+        }
+
+        if ($candidates === [] && preg_match_all(
+            '/\b([A-Z]{3})\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)\b/',
+            $html,
+            $matches,
+            PREG_SET_ORDER
+        ) >= 1) {
+            foreach ($matches as $match) {
+                $candidates[] = $match[1] . $match[2];
+            }
+        }
+
+        if ($candidates === [] && preg_match_all(
+            '/\b([A-Z]{3})([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)\b/',
+            $html,
+            $matches,
+            PREG_SET_ORDER
+        ) >= 1) {
+            foreach ($matches as $match) {
+                $candidates[] = $match[1] . $match[2];
+            }
+        }
+
+        foreach ($candidates as $raw) {
+            if ($raw === '' || !preg_match('/[0-9]/', $raw)) {
+                continue;
+            }
+            $out['price'] = $this->formatNormalizedPrice($raw);
+            $out['currency'] = $this->inferCurrencyFromPriceText($raw);
+            if ($out['price'] !== '') {
+                break;
+            }
+        }
+
         return $out;
     }
     
@@ -1044,6 +1263,12 @@ class WebScraper
             return '';
         }
         $this->buildCurrencyLookups();
+        if (preg_match('/\b([A-Z]{3})(?=[0-9])/i', $raw, $m)) {
+            $code = strtoupper($m[1]);
+            if (isset(self::$currencyCodeSet[$code])) {
+                return $code;
+            }
+        }
         if (preg_match('/\b([A-Z]{3})\b/iu', $raw, $m)) {
             $code = strtoupper($m[1]);
             if (isset(self::$currencyCodeSet[$code])) {
@@ -1307,29 +1532,11 @@ class WebScraper
      */
     private function extractColors(): array
     {
-        $colors = [];
+        $colors = $this->extractArray($this->selectors['colors']);
         
-        // 1. Try CSS selectors first
-        $colors = array_merge($colors, $this->extractArray($this->selectors['colors']));
-        
-        // 2. Extract from JSON-LD structured data
+        // Also try to extract from common attributes
         if (empty($colors)) {
-            $colors = array_merge($colors, $this->extractColorsFromJsonLd());
-        }
-        
-        // 3. Extract from microdata attributes
-        if (empty($colors)) {
-            $colors = array_merge($colors, $this->extractColorsFromMicrodata());
-        }
-        
-        // 4. Extract from data attributes
-        if (empty($colors)) {
-            $colors = array_merge($colors, $this->extractColorsFromAttributes());
-        }
-        
-        // 5. Extract from embedded JSON
-        if (empty($colors)) {
-            $colors = array_merge($colors, $this->extractColorsFromEmbeddedJson());
+            $colors = $this->extractColorsFromAttributes();
         }
         
         return array_unique(array_filter(array_map('trim', $colors)));
@@ -1342,32 +1549,53 @@ class WebScraper
      */
     private function extractSizes(): array
     {
-        $sizes = [];
+        $sizes = $this->extractArray($this->selectors['sizes']);
         
-        // 1. Try CSS selectors first
-        $sizes = array_merge($sizes, $this->extractArray($this->selectors['sizes']));
-        
-        // 2. Extract from JSON-LD structured data
+        // Also try to extract from common attributes
         if (empty($sizes)) {
-            $sizes = array_merge($sizes, $this->extractSizesFromJsonLd());
-        }
-        
-        // 3. Extract from microdata attributes
-        if (empty($sizes)) {
-            $sizes = array_merge($sizes, $this->extractSizesFromMicrodata());
-        }
-        
-        // 4. Extract from data attributes
-        if (empty($sizes)) {
-            $sizes = array_merge($sizes, $this->extractSizesFromAttributes());
-        }
-        
-        // 5. Extract from embedded JSON
-        if (empty($sizes)) {
-            $sizes = array_merge($sizes, $this->extractSizesFromEmbeddedJson());
+            $sizes = $this->extractSizesFromAttributes();
         }
         
         return array_unique(array_filter(array_map('trim', $sizes)));
+    }
+
+    /**
+     * Finds the highest quality product image from an array of URLs.
+     * @return string
+     */
+    private function extractBestMainImage(): string
+    {
+        $bestImage = '';
+        $maxResolution = 0;
+        $images = $this->productData['images'];
+
+        foreach ($images as $imageUrl) {
+            // 1. Skip small UI icons or gifs
+            if (str_contains($imageUrl, '.gif') || str_contains($imageUrl, '.png')) {
+                continue;
+            }
+
+            // 2. Use regex to find resolution patterns like 960x960 or 220x220
+            if (preg_match('/(\d+)x(\d+)/', $imageUrl, $matches)) {
+                $width = (int)$matches[1];
+                $height = (int)$matches[2];
+                $resolutionScore = $width * $height;
+
+                // Track the image with the largest resolution dimensions
+                if ($resolutionScore > $maxResolution) {
+                    $maxResolution = $resolutionScore;
+                    $bestImage = $imageUrl;
+                }
+            }
+            
+            // 3. Fallback: If no resolution pattern is found yet, hold the first image as a backup
+            if (empty($bestImage)) {
+                $bestImage = $imageUrl;
+            }
+        }
+
+        // Double fallback: if everything was a gif/png, return the first original element
+        return $bestImage ?: $images[0];
     }
 
     /**
@@ -1605,347 +1833,6 @@ class WebScraper
     }
 
     /**
-     * Extract color names from text
-     * 
-     * @param string $text
-     * @return array
-     */
-    private function extractColorNamesFromText(string $text): array
-    {
-        if ($text === '') {
-            return [];
-        }
-        
-        $commonColors = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'black', 'white', 'gray', 'grey', 'brown', 'navy', 'beige', 'gold', 'silver', 'bronze', 'maroon', 'turquoise', 'lime', 'cyan', 'magenta', 'olive', 'coral', 'khaki', 'indigo', 'violet'];
-        $colors = [];
-        $textLower = strtolower($text);
-        
-        foreach ($commonColors as $color) {
-            if (str_contains($textLower, $color)) {
-                $colors[] = ucfirst($color);
-            }
-        }
-        
-        return $colors;
-    }
-    
-    /**
-     * Extract size values from text
-     * 
-     * @param string $text
-     * @return array
-     */
-    private function extractSizeValuesFromText(string $text): array
-    {
-        if ($text === '') {
-            return [];
-        }
-        
-        $sizes = [];
-        // Match common size patterns: XS, S, M, L, XL, XXL, 0-20, 28-48, etc.
-        if (preg_match_all('/\b(XS|S|M|L|XL|XXL|XXXL|\d{1,2})\b/i', $text, $matches)) {
-            $sizes = array_map('strtoupper', $matches[1]);
-        }
-        
-        return $sizes;
-    }
-    
-    /**
-     * Filter size-like values from an array
-     * 
-     * @param array $values
-     * @return array
-     */
-    private function filterSizeValues(array $values): array
-    {
-        $sizePattern = '/^(XS|S|M|L|XL|XXL|XXXL|\d{1,2}|\d{1,2}\.[0-9])$/i';
-        $filtered = [];
-
-        if(!empty($values)){
-            foreach ($values as $value) {
-                $v = trim((string) $value);
-                if ($v !== '' && preg_match($sizePattern, $v)) {
-                    $filtered[] = strtoupper($v);
-                }
-            }
-        }
-        
-        return $filtered;
-    }
-    
-    /**
-     * Extract colors from JSON-LD structured data
-     * 
-     * @return array
-     */
-    private function extractColorsFromJsonLd(): array
-    {
-        $colors = [];
-        $scripts = $this->xpath->query('//script[@type="application/ld+json"]');
-        if ($scripts === false || $scripts->length === 0) {
-            return [];
-        }
-        
-        for ($i = 0; $i < $scripts->length; $i++) {
-            $item = $scripts->item($i);
-            if ($item === null) {
-                continue;
-            }
-            $text = trim($item->textContent ?? '');
-            if ($text === '') {
-                continue;
-            }
-            
-            // Handle JSON arrays
-            if (str_starts_with(trim($text), '[')) {
-                $data = json_decode($text, true);
-                if (is_array($data) && array_is_list($data)) {
-                    foreach ($data as $item) {
-                        if (is_array($item)) {
-                            $colors = array_merge($colors, $this->extractColorsFromJsonLdItem($item));
-                        }
-                    }
-                    continue;
-                }
-            }
-            
-            $data = json_decode($text, true);
-            if (is_array($data)) {
-                $colors = array_merge($colors, $this->extractColorsFromJsonLdItem($data));
-            }
-        }
-        
-        return $colors;
-    }
-    
-    /**
-     * Extract colors from a single JSON-LD item
-     * 
-     * @param array<string, mixed> $data
-     * @return array
-     */
-    private function extractColorsFromJsonLdItem(array $data): array
-    {
-        $colors = [];
-        
-        if (isset($data['color']) && is_string($data['color']) && $data['color'] !== '') {
-            $colors[] = $data['color'];
-        }
-        if (isset($data['availableColor']) && is_string($data['availableColor']) && $data['availableColor'] !== '') {
-            $colors[] = $data['availableColor'];
-        }
-        
-        if (isset($data['hasVariant']) && is_array($data['hasVariant'])) {
-            foreach ($data['hasVariant'] as $variant) {
-                if (is_array($variant)) {
-                    $colors = array_merge($colors, $this->extractColorsFromJsonLdItem($variant));
-                }
-            }
-        }
-        
-        if (isset($data['offers']) && is_array($data['offers'])) {
-            if (array_is_list($data['offers'])) {
-                foreach ($data['offers'] as $offer) {
-                    if (is_array($offer)) {
-                        $colors = array_merge($colors, $this->extractColorsFromJsonLdItem($offer));
-                    }
-                }
-            } else {
-                $colors = array_merge($colors, $this->extractColorsFromJsonLdItem($data['offers']));
-            }
-        }
-        
-        return $colors;
-    }
-    
-    /**
-     * Extract sizes from JSON-LD structured data
-     * 
-     * @return array
-     */
-    private function extractSizesFromJsonLd(): array
-    {
-        $sizes = [];
-        $scripts = $this->xpath->query('//script[@type="application/ld+json"]');
-        if ($scripts === false || $scripts->length === 0) {
-            return [];
-        }
-        
-        for ($i = 0; $i < $scripts->length; $i++) {
-            $item = $scripts->item($i);
-            if ($item === null) {
-                continue;
-            }
-            $text = trim($item->textContent ?? '');
-            if ($text === '') {
-                continue;
-            }
-            
-            // Handle JSON arrays
-            if (str_starts_with(trim($text), '[')) {
-                $data = json_decode($text, true);
-                if (is_array($data) && array_is_list($data)) {
-                    foreach ($data as $item) {
-                        if (is_array($item)) {
-                            $sizes = array_merge($sizes, $this->extractSizesFromJsonLdItem($item));
-                        }
-                    }
-                    continue;
-                }
-            }
-            
-            $data = json_decode($text, true);
-            if (is_array($data)) {
-                $sizes = array_merge($sizes, $this->extractSizesFromJsonLdItem($data));
-            }
-        }
-        
-        return $sizes;
-    }
-    
-    /**
-     * Extract sizes from a single JSON-LD item
-     * 
-     * @param array<string, mixed> $data
-     * @return array
-     */
-    private function extractSizesFromJsonLdItem(array $data): array
-    {
-        $sizes = [];
-        
-        if (isset($data['size']) && is_string($data['size']) && $data['size'] !== '') {
-            $sizes[] = $data['size'];
-        }
-        if (isset($data['availableSize']) && is_string($data['availableSize']) && $data['availableSize'] !== '') {
-            $sizes[] = $data['availableSize'];
-        }
-        
-        if (isset($data['hasVariant']) && is_array($data['hasVariant'])) {
-            foreach ($data['hasVariant'] as $variant) {
-                if (is_array($variant)) {
-                    $sizes = array_merge($sizes, $this->extractSizesFromJsonLdItem($variant));
-                }
-            }
-        }
-        
-        if (isset($data['offers']) && is_array($data['offers'])) {
-            if (array_is_list($data['offers'])) {
-                foreach ($data['offers'] as $offer) {
-                    if (is_array($offer)) {
-                        $sizes = array_merge($sizes, $this->extractSizesFromJsonLdItem($offer));
-                    }
-                }
-            } else {
-                $sizes = array_merge($sizes, $this->extractSizesFromJsonLdItem($data['offers']));
-            }
-        }
-        
-        return $sizes;
-    }
-    
-    /**
-     * Extract colors from microdata
-     * 
-     * @return array
-     */
-    private function extractColorsFromMicrodata(): array
-    {
-        $colors = [];
-        $n = $this->xpath->query("//*[@itemprop='color']");
-        if ($n && $n->length > 0) {
-            for ($i = 0; $i < $n->length; $i++) {
-                $node = $n->item($i);
-                if ($node instanceof \DOMElement) {
-                    $content = $node->getAttribute('content') ?: $node->textContent;
-                    if ($content !== '') {
-                        $colors[] = trim($content);
-                    }
-                }
-            }
-        }
-        
-        return $colors;
-    }
-    
-    /**
-     * Extract sizes from microdata
-     * 
-     * @return array
-     */
-    private function extractSizesFromMicrodata(): array
-    {
-        $sizes = [];
-        $n = $this->xpath->query("//*[@itemprop='size']");
-        if ($n && $n->length > 0) {
-            for ($i = 0; $i < $n->length; $i++) {
-                $node = $n->item($i);
-                if ($node instanceof \DOMElement) {
-                    $content = $node->getAttribute('content') ?: $node->textContent;
-                    if ($content !== '') {
-                        $sizes[] = trim($content);
-                    }
-                }
-            }
-        }
-        
-        return $sizes;
-    }
-    
-    /**
-     * Extract colors from embedded JSON patterns
-     * 
-     * @return array
-     */
-    private function extractColorsFromEmbeddedJson(): array
-    {
-        $colors = [];
-        $html = $this->html ?? '';
-        if ($html === '') {
-            return [];
-        }
-        
-        if (preg_match('/\"color(?:s)?\"\s*:\s*\[((?:[^\[\]]|\[[^\]]*\])*?)\]/i', $html, $m) === 1) {
-            $colorJson = json_decode('[' . $m[1] . ']', true);
-            if (is_array($colorJson)) {
-                $colors = array_merge($colors, $colorJson);
-            }
-        }
-        
-        if (preg_match_all('/\"color\"\s*:\s*\"([^\"]+)\"/i', $html, $matches) > 0) {
-            $colors = array_merge($colors, $matches[1]);
-        }
-        
-        return $colors;
-    }
-    
-    /**
-     * Extract sizes from embedded JSON patterns
-     * 
-     * @return array
-     */
-    private function extractSizesFromEmbeddedJson(): array
-    {
-        $sizes = [];
-        $html = $this->html ?? '';
-        if ($html === '') {
-            return [];
-        }
-        
-        if (preg_match('/\"size(?:s)?\"\s*:\s*\[((?:[^\[\]]|\[[^\]]*\])*?)\]/i', $html, $m) === 1) {
-            $sizeJson = json_decode('[' . $m[1] . ']', true);
-            if (is_array($sizeJson)) {
-                $sizes = array_merge($sizes, $this->filterSizeValues($sizeJson));
-            }
-        }
-        
-        if (preg_match_all('/\"size\"\s*:\s*\"([^\"]+)\"/i', $html, $matches) > 0) {
-            $sizes = array_merge($sizes, $this->filterSizeValues($matches[1]));
-        }
-        
-        return $sizes;
-    }
-
-    /**
      * Resolve relative URL to absolute
      * 
      * @param string $url URL to resolve
@@ -1976,25 +1863,13 @@ class WebScraper
     {
         $colors = [];
         
-        // Extract from data-color attributes
+        // Try to extract from data-color attributes
         $colorAttrs = $this->extractArrayFromAttribute('//*[@data-color]/@data-color');
         $colors = array_merge($colors, $colorAttrs);
         
-        // Extract from aria-label with color keywords
-        $ariaLabels = $this->extractArrayFromAttribute('//*[contains(@aria-label, "color")]/@aria-label');
-        $colors = array_merge($colors, $this->extractColorNamesFromText(implode(' ', $ariaLabels)));
-        
-        // Extract from title attributes
-        $titles = $this->extractArrayFromAttribute('//*[contains(@title, "color")]/@title');
-        $colors = array_merge($colors, $this->extractColorNamesFromText(implode(' ', $titles)));
-        
-        // Extract from data-value attributes on color elements
-        $dataValues = $this->extractArrayFromAttribute('//*[contains(@class, "color") or contains(@class, "swatch")]/@data-value');
-        $colors = array_merge($colors, $dataValues);
-        
-        // Extract from alt text on color-related images
-        $altTexts = $this->extractArrayFromAttribute('//img[contains(@alt, "color") or contains(@class, "color")]/@alt');
-        $colors = array_merge($colors, $this->extractColorNamesFromText(implode(' ', $altTexts)));
+        // Try to extract from color classes
+        $colorClasses = $this->extractArray('//*[contains(@class, "color")]/text()');
+        $colors = array_merge($colors, $colorClasses);
         
         return $colors;
     }
@@ -2008,25 +1883,13 @@ class WebScraper
     {
         $sizes = [];
         
-        // Extract from data-size attributes
+        // Try to extract from data-size attributes
         $sizeAttrs = $this->extractArrayFromAttribute('//*[@data-size]/@data-size');
         $sizes = array_merge($sizes, $sizeAttrs);
         
-        // Extract from data-value on size elements
-        $dataValues = $this->extractArrayFromAttribute('//*[contains(@class, "size") or contains(@class, "option")]/@data-value');
-        $sizes = array_merge($sizes, $this->filterSizeValues($dataValues));
-        
-        // Extract from title attributes on size elements
-        $titles = $this->extractArrayFromAttribute('//*[contains(@class, "size")]/@title');
-        $sizes = array_merge($sizes, $this->filterSizeValues($titles));
-        
-        // Extract from aria-label
-        $ariaLabels = $this->extractArrayFromAttribute('//*[contains(@aria-label, "size")]/@aria-label');
-        $sizes = array_merge($sizes, $this->extractSizeValuesFromText(implode(' ', $ariaLabels)));
-        
-        // Extract from data-variant or variant attributes
-        $variants = $this->extractArrayFromAttribute('//*[@data-variant or @data-product-option]/@data-value');
-        $sizes = array_merge($sizes, $this->filterSizeValues($variants));
+        // Try to extract from size classes
+        $sizeClasses = $this->extractArray('//*[contains(@class, "size")]/text()');
+        $sizes = array_merge($sizes, $sizeClasses);
         
         return $sizes;
     }
@@ -2255,36 +2118,6 @@ class WebScraper
             ['"', '"', "'", "'", '"', '"'],
             $selector
         );
-    }
-    
-    /**
-     * Get the last fetch engine used
-     * 
-     * @return string
-     */
-    public function getLastFetchEngine(): string
-    {
-        return $this->lastFetchEngine;
-    }
-    
-    /**
-     * Get the last fetch final URL (after redirects)
-     * 
-     * @return string
-     */
-    public function getLastFetchFinalUrl(): string
-    {
-        return $this->lastFetchFinalUrl;
-    }
-    
-    /**
-     * Get the last fetch HTTP status code
-     * 
-     * @return int
-     */
-    public function getLastFetchHttpStatus(): int
-    {
-        return $this->lastFetchHttpStatus;
     }
     
     /**

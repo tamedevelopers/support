@@ -12,7 +12,7 @@ $aliexpress = 'https://www.aliexpress.com/item/1005010595606666.html';
 
 dd(
     WebScraper::url("
-            $jumia
+            $ebay
         ")
         ->setSelectors([
             // 'title' => 'h1',
@@ -20,7 +20,7 @@ dd(
             // 'description' => 'p.description',
         ])
         // ->chromiumBinary(base_path('chrome-win64/chrome.exe'))
-        ->setEngine('chromium') //chromium|dom
+        // ->setEngine('chromium') //chromium|dom
         ->fetch()
         ->getData()
 );
