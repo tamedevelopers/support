@@ -6,13 +6,14 @@ namespace Tamedevelopers\Support;
 
 use BadMethodCallException;
 use DOMDocument;
+use DOMElement;
+use DOMNode;
 use DOMXPath;
 use Exception;
 use InvalidArgumentException;
 use RuntimeException;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Traits\TameTrait;
-use Tamedevelopers\Support\ChromePdf\ChromiumEnvironment;
 use Tamedevelopers\Support\WebScraper\ChromiumWebScraperEngine;
 use Tamedevelopers\Support\WebScraper\DomWebScraperEngine;
 use Tamedevelopers\Support\WebScraper\WebScraperEngineInterface;
@@ -43,13 +44,6 @@ class WebScraper
     private string $cacheDir = '';
     private int $cacheTTL = 3600;
     private array $errors = [];
-    
-    private WebScraperEngineInterface $engine;
-    private array $engineOptions = [];
-    private string $lastFetchEngine = 'dom';
-    private string $lastFetchFinalUrl = '';
-    private int $lastFetchHttpStatus = 0;
-    private bool $engineExplicitlySet = false;
 
     /** @var array<string, bool>|null */
     private static ?array $currencyCodeSet = null;
@@ -57,6 +51,13 @@ class WebScraper
     private static ?array $currencySymbolToCode = null;
     /** @var array<string, string>|null */
     private static ?array $currencyNameToCode = null;
+    
+    private WebScraperEngineInterface $engine;
+    private array $engineOptions = [];
+    private string $lastFetchEngine = 'dom';
+    private string $lastFetchFinalUrl = '';
+    private int $lastFetchHttpStatus = 0;
+    private bool $engineExplicitlySet = false;
 
     public function __construct(array $config = [], $url = null, $baseUrl = null)
     {
@@ -415,7 +416,7 @@ class WebScraper
     }
 
     /**
-     * Extract price - FIXED: prevents duplication and common formatting noise
+     * Extract price - normalized and cleaned to avoid duplicated or noisy values.
      */
     private function extractPrice(): string
     {
@@ -424,45 +425,59 @@ class WebScraper
             return '';
         }
 
-        return $this->normalizePriceValue($price);
+        return $this->formatNormalizedPrice($price);
+    }
+
+    private function formatNormalizedPrice(string $price): string
+    {
+        if ($price === '') {
+            return '';
+        }
+
+        $price = html_entity_decode($price, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $price = preg_replace('/\s+/', ' ', $price) ?? $price;
+        $price = preg_replace('/[^0-9,.-]/', '', $price) ?? '';
+        if ($price === '') {
+            return '';
+        }
+
+        $price = str_replace(',', '', $price);
+        $price = trim($price, '.');
+        if ($price === '') {
+            return '';
+        }
+
+        $parts = array_values(array_filter(explode('.', $price), static fn ($part): bool => trim((string) $part) !== ''));
+        if ($parts === []) {
+            return '';
+        }
+
+        $normalizedParts = [];
+        foreach ($parts as $part) {
+            $normalizedParts[] = $this->collapseRepeatedPrefix((string) $part);
+        }
+
+        $normalized = implode('.', array_filter($normalizedParts, static fn ($part): bool => $part !== ''));
+        if ($normalized === '') {
+            return '';
+        }
+
+        if (!str_contains($normalized, '.')) {
+            return $normalized . '.00';
+        }
+
+        return $normalized;
     }
 
     private function normalizePriceValue(string $value): string
     {
-        $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $value = preg_replace('/\s+/', ' ', $value) ?? $value;
-        $value = preg_replace('/[^0-9,.-]/', '', $value);
-
-        if ($value === '' || $value === '-' || $value === '.' || $value === ',') {
-            return '';
-        }
-
-        $value = trim($value, '.,');
-        $parts = explode('.', $value);
-        if (count($parts) > 1) {
-            $integerPart = $this->collapseRepeatedPrefix($parts[0]);
-            $fractionalParts = [];
-            foreach (array_slice($parts, 1) as $part) {
-                $candidate = $this->collapseRepeatedPrefix($part);
-                if ($candidate !== '') {
-                    $fractionalParts[] = $candidate;
-                }
-            }
-            $fractionalPart = $fractionalParts[0] ?? '';
-            if ($fractionalPart === '' && count($fractionalParts) > 1) {
-                $fractionalPart = $fractionalParts[count($fractionalParts) - 1];
-            }
-            return trim($integerPart . ($fractionalPart !== '' ? '.' . $fractionalPart : ''));
-        }
-
-        $value = str_replace(',', '', $value);
-        return trim($this->collapseRepeatedPrefix($value));
+        return $this->formatNormalizedPrice($value);
     }
 
     private function collapseRepeatedPrefix(string $value): string
     {
         $value = trim($value);
-        if ($value === '' || strlen($value) < 2) {
+        if ($value === '' || strlen($value) < 3) {
             return $value;
         }
 
@@ -485,31 +500,140 @@ class WebScraper
 
     private function extractCurrency(): string
     {
-        $curr = trim($this->extractText($this->selectors['currency']));
-        if (strlen($curr) === 3 && ctype_upper($curr)) {
-            return $curr;
+        $combined = trim((string) $this->extractText($this->selectors['currency']));
+        $priceText = trim((string) $this->extractText($this->selectors['price']));
+        if ($priceText !== '') {
+            $combined = $combined !== '' ? $combined . ' ' . $priceText : $priceText;
         }
 
-        // Try to extract from price text
-        if (preg_match('/([A-Z]{3})/', $this->productData['price'] ?? '', $m)) {
-            return $m[1];
+        $normalized = $this->normalizeToIso4217($combined);
+        if ($normalized !== '') {
+            return $normalized;
         }
 
-        // Common currency symbols
-        $price = $this->productData['price'] ?? '';
-        if (str_contains($price, '$')) {
-            return 'USD';
-        } elseif (str_contains($price, '€')) {
-            return 'EUR';
-        } elseif (str_contains($price, '£')) {
-            return 'GBP';
-        } elseif (str_contains($price, '₦')) {
-            return 'NGN';
-        } elseif (str_contains($price, '¥')) {
-            return 'JPY';
+        return $this->inferCurrencyFromPriceText($combined);
+    }
+
+    private function normalizeToIso4217(string $raw): string
+    {
+        $t = strtoupper(trim($raw));
+        $this->buildCurrencyLookups();
+        if (preg_match('/^[A-Z]{3}$/', $t) && isset(self::$currencyCodeSet[$t])) {
+            return $t;
+        }
+
+        $t = (string) preg_replace('/\s+/', ' ', $t);
+        if (preg_match('/\b([A-Z]{3})\b/u', $t, $m)) {
+            $code = $m[1];
+            if (isset(self::$currencyCodeSet[$code])) {
+                return $code;
+            }
+        }
+
+        if (isset(self::$currencyNameToCode[$t])) {
+            return self::$currencyNameToCode[$t];
         }
 
         return '';
+    }
+
+    private function inferCurrencyFromPriceText(string $raw): string
+    {
+        if ($raw === '') {
+            return '';
+        }
+
+        $this->buildCurrencyLookups();
+        if (preg_match('/\b([A-Z]{3})\b/iu', $raw, $m)) {
+            $code = strtoupper($m[1]);
+            if (isset(self::$currencyCodeSet[$code])) {
+                return $code;
+            }
+        }
+
+        if (str_contains($raw, 'A$') || str_contains($raw, 'AU$') || str_contains($raw, 'AUD')) {
+            return 'AUD';
+        }
+        if (str_contains($raw, 'C$') || str_contains($raw, 'CA$') || str_contains($raw, 'CAD')) {
+            return 'CAD';
+        }
+        if (preg_match('/^\s*R\$/u', $raw)) {
+            return 'BRL';
+        }
+        if (str_contains($raw, '¥')) {
+            if (str_contains($raw, '元') || str_contains($raw, 'CNY') || str_contains($raw, 'RMB') || str_contains($raw, '人民币')) {
+                return 'CNY';
+            }
+            return 'JPY';
+        }
+        if (preg_match('/^\s*(US\$\s*|\$)(?![A-Za-z])/u', $raw) && !str_contains($raw, 'A$') && !str_contains($raw, 'AU$')) {
+            return 'USD';
+        }
+        if (str_starts_with(ltrim($raw), '€') || str_contains($raw, ' €')) {
+            return 'EUR';
+        }
+        if (preg_match('/^\s*£/u', $raw)) {
+            return 'GBP';
+        }
+        if (preg_match('/^\s*₹/u', $raw) || (str_contains($raw, '₹') && !preg_match('/\b(USD|EUR|GBP)\b/i', $raw))) {
+            return 'INR';
+        }
+        if (preg_match('/\b₦/u', $raw)) {
+            return 'NGN';
+        }
+        if (is_array(self::$currencySymbolToCode)) {
+            foreach (self::$currencySymbolToCode as $symbol => $code) {
+                if ($symbol !== '' && str_contains($raw, $symbol)) {
+                    return $code;
+                }
+            }
+        }
+
+        return '';
+    }
+
+    private function buildCurrencyLookups(): void
+    {
+        if (self::$currencyCodeSet !== null && self::$currencySymbolToCode !== null && self::$currencyNameToCode !== null) {
+            return;
+        }
+
+        $catalog = NumberToWords::allCurrency();
+        if (!is_array($catalog)) {
+            self::$currencyCodeSet = [];
+            self::$currencySymbolToCode = [];
+            self::$currencyNameToCode = [];
+            return;
+        }
+
+        $codeSet = [];
+        $symbolMap = [];
+        $nameMap = [];
+        foreach ($catalog as $code => $meta) {
+            if (!is_string($code) || $code === '') {
+                continue;
+            }
+
+            $iso = strtoupper(trim($code));
+            $codeSet[$iso] = true;
+
+            if (is_array($meta)) {
+                $name = trim((string) ($meta['name'] ?? ''));
+                if ($name !== '') {
+                    $nameMap[strtoupper($name)] = $iso;
+                }
+                $symbol = trim((string) ($meta['symbol'] ?? ''));
+                if ($symbol !== '' && !isset($symbolMap[$symbol])) {
+                    $symbolMap[$symbol] = $iso;
+                }
+            }
+        }
+
+        uksort($symbolMap, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+
+        self::$currencyCodeSet = $codeSet;
+        self::$currencySymbolToCode = $symbolMap;
+        self::$currencyNameToCode = $nameMap;
     }
 
     private function extractDescription(): string
@@ -540,10 +664,12 @@ class WebScraper
                 if ($nodes && $nodes->length > 0) {
                     for ($i = 0; $i < $nodes->length; $i++) {
                         $node = $nodes->item($i);
-                        if ($node && $node->hasAttribute('src')) {
-                            $url = $node->getAttribute('src');
-                            if ($url !== '') {
-                                $images[] = $this->resolveUrl($url);
+                        if ($node instanceof DOMElement) {
+                            foreach (['src', 'data-src', 'data-lazy', 'data-lazy-src', 'data-original'] as $attr) {
+                                $url = $node->getAttribute($attr);
+                                if ($url !== '') {
+                                    $images[] = $this->resolveUrl($url);
+                                }
                             }
                         }
                     }
@@ -647,15 +773,12 @@ class WebScraper
         return $normalized;
     }
 
-    private function extractText(string $selector, ?\DOMNode $context = null): string
+    private function extractText(string $selector, ?DOMNode $context = null): string
     {
-        if ($selector === '') {
-            return '';
-        }
-
-        try {
-            $xpath = $this->cssToXPath($selector);
-            $nodes = $this->xpath->query($xpath, $context);
+        $selectors = array_values(array_filter(array_map('trim', explode(',', $selector)), static fn (string $value): bool => $value !== ''));
+        foreach ($selectors as $sel) {
+            $xpathQuery = $this->cssToXPath($sel);
+            $nodes = $this->xpath->query($xpathQuery, $context);
             if ($nodes && $nodes->length > 0) {
                 for ($i = 0; $i < $nodes->length; $i++) {
                     $value = trim((string) ($nodes->item($i)?->textContent ?? ''));
@@ -664,8 +787,6 @@ class WebScraper
                     }
                 }
             }
-        } catch (\Exception) {
-            // Invalid selector
         }
 
         return '';
@@ -673,31 +794,101 @@ class WebScraper
 
     private function cssToXPath(string $selector): string
     {
-        $selector = trim($selector);
-        if (str_contains($selector, ',')) {
-            $selectors = array_map('trim', explode(',', $selector));
-            $xpaths = array_map([$this, 'cssToXPath'], $selectors);
-            return implode(' | ', $xpaths);
+        $selector = $this->normalizeCssSelectorQuotes(trim($selector));
+
+        if ($selector === '') {
+            return '// *';
         }
 
-        // Simple CSS to XPath conversion
-        $xpath = '//';
-        
-        if (str_starts_with($selector, '.')) {
-            $class = substr($selector, 1);
-            $xpath .= "*[contains(@class, '$class')]";
-        } elseif (str_starts_with($selector, '#')) {
-            $id = substr($selector, 1);
-            $xpath .= "*[@id='$id']";
-        } elseif (str_contains($selector, '[')) {
-            $tag = strtok($selector, '[');
-            $attr = trim(str_replace(']', '', substr($selector, strlen($tag))), '[]');
-            $xpath .= ($tag ?: '*') . "[@$attr]";
-        } else {
-            $xpath .= $selector ?: '*';
+        $parts = preg_split('/\s+/', $selector, -1, PREG_SPLIT_NO_EMPTY);
+        if ($parts === false || $parts === []) {
+            return '// *';
         }
 
-        return $xpath;
+        $xpath = '';
+        foreach ($parts as $index => $part) {
+            $converted = $this->convertSimpleSelector($part);
+            if ($index === 0) {
+                $xpath = '//' . $converted;
+            } else {
+                $xpath .= '//' . $converted;
+            }
+        }
+
+        return $xpath === '' ? '//*' : $xpath;
+    }
+
+    private function convertSimpleSelector(string $selector): string
+    {
+        if (preg_match('/^([a-zA-Z][a-zA-Z0-9]*)(\.[a-zA-Z_-][a-zA-Z0-9_-]*)+$/', $selector, $matches)) {
+            $tag = $matches[1];
+            $classPart = substr($selector, strlen($tag));
+            $classes = array_values(array_filter(explode('.', ltrim($classPart, '.')), static fn (string $value): bool => $value !== ''));
+            $conditions = [];
+            foreach ($classes as $className) {
+                $conditions[] = "contains(concat(' ', normalize-space(@class), ' '), ' {$className} ')";
+            }
+            return $tag . '[' . implode(' and ', $conditions) . ']';
+        }
+
+        if (str_starts_with($selector, '.') && substr_count($selector, '.') > 1) {
+            $tokens = array_values(array_filter(explode('.', $selector), static fn (string $token): bool => $token !== ''));
+            if (count($tokens) >= 2) {
+                $conditions = [];
+                foreach ($tokens as $className) {
+                    $conditions[] = "contains(concat(' ', normalize-space(@class), ' '), ' {$className} ')";
+                }
+                return '*[' . implode(' and ', $conditions) . ']';
+            }
+        }
+
+        if (preg_match('/^\.([a-zA-Z_-][a-zA-Z0-9_-]*)$/', $selector, $matches)) {
+            return "*[contains(concat(' ', @class, ' '), ' {$matches[1]} ')]";
+        }
+
+        if (preg_match('/^([a-zA-Z][a-zA-Z0-9]*)#([a-zA-Z][a-zA-Z0-9_-]*)$/', $selector, $matches)) {
+            return "{$matches[1]}[@id='{$matches[2]}']";
+        }
+
+        if (preg_match('/^#([a-zA-Z][a-zA-Z0-9_-]*)$/', $selector, $matches)) {
+            return "*[@id='{$matches[1]}']";
+        }
+
+        if (preg_match('/^([a-zA-Z][a-zA-Z0-9]*)\[([A-Za-z_][A-Za-z0-9_:\-]*)\]$/u', $selector, $m)) {
+            return "{$m[1]}[@{$m[2]}]";
+        }
+        if (preg_match('/^([a-zA-Z][a-zA-Z0-9]*)\[([A-Za-z_][A-Za-z0-9_:\-]*)="((?:\\.|[^"\\])*)"\]$/u', $selector, $m)) {
+            $v = $this->escapeXpathStringLiteral($m[3]);
+            return "{$m[1]}[@{$m[2]}={$v}]";
+        }
+        if (preg_match("/^([a-zA-Z][a-zA-Z0-9]*)\\[([A-Za-z_][A-Za-z0-9_:\\-]*)='((?:\\\\'|[^'])*)'\\]$/u", $selector, $m)) {
+            $v = $this->escapeXpathStringLiteral(stripslashes($m[3]));
+            return "{$m[1]}[@{$m[2]}={$v}]";
+        }
+        if (preg_match('/^([a-zA-Z][a-zA-Z0-9]*)\[([A-Za-z_][A-Za-z0-9_:\-]*)=([^]\s\]]+)\]$/u', $selector, $m)) {
+            $v = $this->escapeXpathStringLiteral($m[3]);
+            return "{$m[1]}[@{$m[2]}={$v}]";
+        }
+
+        if (preg_match('/^[a-zA-Z][a-zA-Z0-9]*$/', $selector)) {
+            return $selector;
+        }
+
+        if (preg_match('/^\[([a-zA-Z_][A-Za-z0-9_:\-]*)(?:=([\'\"]?)([^\'\"]+)\2)?\]$/u', $selector, $matches)) {
+            $attr = $matches[1];
+            if (isset($matches[3]) && $matches[3] !== '') {
+                $v = $this->escapeXpathStringLiteral($matches[3]);
+                return "*[@{$attr}={$v}]";
+            }
+            return "*[@{$attr}]";
+        }
+
+        return "*[contains(concat(' ', @class, ' '), ' {$selector} ')]";
+    }
+
+    private function escapeXpathStringLiteral(string $value): string
+    {
+        return "'" . str_replace("'", "''", $value) . "'";
     }
 
     private function getMetaByProperty(string $property): string
