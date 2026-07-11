@@ -325,7 +325,7 @@ class WebScraper
             ]
         ];
 
-        $engineConfig = $config['engine'] ?? 'auto';
+        $engineConfig = $this->autoEngineConfig($config);
         if ($this->isAutoEngineConfig($engineConfig)) {
             $this->autoEngine = true;
             $this->engine = new DomWebScraperEngine();
@@ -340,7 +340,7 @@ class WebScraper
      */
     private function createEngineFromConfig(array $config): WebScraperEngineInterface
     {
-        $e = $config['engine'] ?? 'auto';
+        $e = $this->autoEngineConfig($config);
         if ($e instanceof WebScraperEngineInterface) {
             return $e;
         }
@@ -348,6 +348,14 @@ class WebScraper
             return $this->createEngineByName($e);
         }
         return new DomWebScraperEngine();
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    private function autoEngineConfig(array $config): string
+    {
+        return $config['engine'] ?? 'auto';
     }
 
     /**

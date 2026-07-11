@@ -4,7 +4,7 @@
 /config
 /lang
 /zimage
-/ebay_working_scrapper_and_crhomePDF
+/ebay_working_scrapper_and_chromePDF
 /.idea
 /.vscode
 /.github
@@ -14,5 +14,6 @@
 /bin
 /.htaccess
 /domains.json
+/scrapper.zip
 tame
 composer.lock
