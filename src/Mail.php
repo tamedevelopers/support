@@ -142,7 +142,7 @@ class Mail{
     /**
      * Set the from data.
      *
-     * @param array $subject
+     * @param array $from
      * @return $this
      */
     public function from($from)
@@ -296,7 +296,7 @@ class Mail{
      * Proceed sending email
      * 
      * @param callable $callable
-     * @return void
+     * @return void|mixed
      */
     public function send($callable = null)
     {

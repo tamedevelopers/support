@@ -98,12 +98,13 @@ class Exchange
      * @param string $from Currency code (e.g., 'USD')
      * @param string $to Currency code (e.g., 'EUR')
      * @param float $amount The amount to convert
+     * @param float|int $sum Additional added value
      * @param bool $format If amount should be formatted or not
      * 
      * @return float|string The converted amount
      * @throws Exception
      */
-    public function convert(string $from, string $to, float $amount, bool $format = false)
+    public function convert(string $from, string $to, float $amount, float|int $sum = 0, bool $format = false)
     {
         if ($amount < 0) {
             throw new Exception("Amount cannot be negative.");
@@ -113,9 +114,13 @@ class Exchange
             return $amount;
         }
 
-        $rate = $this->rate($from, $to);
+        try {
+            $rate = $this->rate($from, $to);
+        } catch (\Throwable $th) {
+            $rate = 0;
+        }
 
-        $total = round($amount * $rate, 4);
+        $total = round($amount * $rate, 4) + $sum;
 
         return $format ? number_format($total, 2) : $total;
     }

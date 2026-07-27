@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Traits;
 
-use Closure;
+
 use DateTime;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Time;
@@ -18,7 +18,9 @@ use Tamedevelopers\Support\Capsule\CustomException;
  *
  * Internal helpers used by the Time class for cloning, timezone handling,
  * and common operations. Public API is provided by Time and dynamic dispatch.
+ * 
  * @property mixed $staticData
+ * @method mixed format()
 */
 trait TimeTrait{
 
@@ -34,12 +36,12 @@ trait TimeTrait{
 
     /**
      * Added a base resolver to reuse the latest instance context
-     * @return \Time
+     * @return Time
      */
     private static function baseInstance()
     {
         if(!self::isTimeInstance()){
-            $instance = self::keepStaticBinding(new self());
+            $instance = self::keepStaticBinding(new static());
         } else{
             $instance = static::$staticData;
         }
@@ -51,8 +53,8 @@ trait TimeTrait{
      * Keep static binding in sync with latest produced clone
      * - Only if no static data available, bind it to the passed clone object
      *
-     * @param \Time $clone
-     * @return \Time
+     * @param Time $clone
+     * @return Time
      */
     private static function keepStaticBinding($clone)
     {
@@ -66,7 +68,7 @@ trait TimeTrait{
     /**
      * Clone a new instance of the owning class.
      *
-     * @return \Time A shallow clone of the current instance.
+     * @return Time A shallow clone of the current instance.
      */
     private function clone()
     {
@@ -94,7 +96,7 @@ trait TimeTrait{
     {
         // Ensure the comparison value is a TameTime instance
         if (!$time instanceof self) {
-            $time = new self($time);
+            $time = new static($time);
         }
 
         // Compare timestamps (Unix time) for accuracy and simplicity

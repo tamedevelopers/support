@@ -6,22 +6,16 @@ namespace Tamedevelopers\Support;
 
 use DateTime;
 use DateTimeZone;
-use Tamedevelopers\Support\Str;
-use Tamedevelopers\Support\Traits\TimeTrait;
-use Tamedevelopers\Support\Traits\TimeExtraTrait;
 use Tamedevelopers\Support\Capsule\TimeHelper;
+use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Traits\TimeExtraTrait;
+use Tamedevelopers\Support\Traits\TimeGetterTrait;
+use Tamedevelopers\Support\Traits\TimeTrait;
 
 /**
  * Class Time
- *
  * Time utility with dynamic static/instance method support.
- * - Supports setters like date(), now(), today(), yesterday()
- * - Add/subtract helpers: addSeconds/Minutes/Hours/Days/Weeks/Months/Years and sub*
- * - Formatting: format(), toDateTimeString(), toJsTimer(), timestamp()
- * - Range helper: dateRange()
- * - Text features/config: config(), greeting(), timeAgo()
  *
- * Magic methods routed via __call/__callStatic (documented for static analysis):
  * @method int second() Number of seconds since the stored time
  * @method int min() Number of minutes since the stored time
  * @method int hour() Number of hours since the stored time
@@ -33,20 +27,56 @@ use Tamedevelopers\Support\Capsule\TimeHelper;
  * @method array|string timeAgo(string|null $mode = null) Humanized time-ago; array for default, string for specific modes like "short"
  * @method string greeting(int|string $date = 'now') Greeting based on hour of $date in current timezone
  *
- * @method static int second()
- * @method static int min()
- * @method static int hour()
- * @method static int day()
- * @method static int week()
- * @method static int month()
- * @method static int year()
- * @method static array|int diff(string|null $unit = null)
- * @method static array|string timeAgo(string|null $mode = null)
- * @method static string greeting(int|string $date = 'now')
+ * @property int $year          - Full year (e.g., 2026)
+ * @property int $month         - Month number (1-12)
+ * @property int $day           - Day of month (1-31)
+ * @property int $hour          - Hour (0-23)
+ * @property int $minute        - Minute (0-59)
+ * @property int $second        - Second (0-59)
+ * 
+ * @property int $dayOfWeek     - Day of week (1-7, Monday=1)
+ * @property int $dayOfYear     - Day of year (1-366)
+ * @property int $weekOfYear    - Week of year (1-53)
+ * @property int $quarter       - Quarter of year (1-4)
+ * @property int $daysInMonth   - Days in month (28-31)
+ * 
+ * @property string $monthName  - Full month name (e.g., "January")
+ * @property string $shortMonth - Short month name (e.g., "Jan")
+ * @property string $dayName    - Full day name (e.g., "Monday")
+ * @property string $shortDay   - Short day name (e.g., "Mon")
+ * 
+ * @property string $amPm           - AM/PM indicator (e.g., "AM")
+ * @property string $timezoneName   - Timezone name (e.g., "UTC")
+ * @property string $timezoneOffset - Timezone offset (e.g., "+00:00")
+ * 
+ * @property bool $isToday     - Whether date is today
+ * @property bool $isTomorrow  - Whether date is tomorrow
+ * @property bool $isYesterday - Whether date is yesterday
+ * @property bool $isWeekend   - Whether date is weekend
+ * @property bool $isWeekday   - Whether date is weekday
+ * @property bool $isLeapYear  - Whether year is leap year
+ * @property bool $isPast      - Whether date is in past
+ * @property bool $isFuture    - Whether date is in future
+ * 
+ * @property int $age         - Age in years
+ * @property int $ageInDays   - Age in days
+ * 
+ * @property int $timestamp       - Unix timestamp
+ * @property string $dateString   - Date string (Y-m-d)
+ * @property string $timeString   - Time string (H:i:s)
+ * @property string $dateTime     - Date time string (Y-m-d H:i:s)
+ * @property string $rfc3339      - RFC 3339 formatted date (Y-m-d\TH:i:sP)
+ * 
+ * @property int $startOfDay   - Start of day timestamp (00:00:00)
+ * @property int $endOfDay     - End of day timestamp (23:59:59)
+ * @property int $startOfMonth - Start of month timestamp
+ * @property int $endOfMonth   - End of month timestamp
+ * @property int $startOfYear  - Start of year timestamp
+ * @property int $endOfYear    - End of year timestamp
  */
 final class Time {
 
-    use TimeTrait, TimeExtraTrait;
+    use TimeTrait, TimeGetterTrait, TimeExtraTrait;
 
     /**
      * For storing the time value.
@@ -319,7 +349,7 @@ final class Time {
      * @param string $value The range in the format "1-7" (days from today).
      * @param string $format The desired date format, default is 'D, M j'.
      * 
-     * @return Tamedevelopers\Support\Capsule\TimeHelper 
+     * @return \Tamedevelopers\Support\Capsule\TimeHelper 
      * - The formatted date, e.g., "Mon, May 27".
      */
     public static function dateRange($value, $format = 'D, M j')

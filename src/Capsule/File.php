@@ -204,8 +204,13 @@ class File {
      */
     public static function extension(string $path): ?string
     {
-        $ext = pathinfo($path, PATHINFO_EXTENSION);
-        return $ext !== '' ? $ext : null;
+        // Strip query strings or fragments (e.g., "image.jpg?5630" becomes "image.jpg")
+        $cleanPath = parse_url($path, PHP_URL_PATH);
+
+        // Get the extension from the clean path
+        $extension = strtolower(pathinfo($cleanPath, PATHINFO_EXTENSION));
+
+        return $extension !== '' ? $extension : null;
     }
 
     /**

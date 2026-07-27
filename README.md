@@ -1515,7 +1515,7 @@ $exchange = TameExchange();
 
 $exchange->convert('USD', 'GHS', 1); //11.3703
 // or 
-$exchange->convert('USD', 'GHS', 1000, true); //11,370.28
+$exchange->convert('USD', 'GHS', 1000, 5, true); //11,375.28 ->addtional +5 value added
 ```
 
 ## Asset
