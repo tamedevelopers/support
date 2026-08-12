@@ -53,11 +53,13 @@ class FileCache
      * Enable or disable serialization mode.
      *
      * @param bool $enable
-     * @return void
+     * @return static
      */
-    public static function serializeMode(bool $enable = true): void
+    public static function serializeMode(bool $enable = true)
     {
         self::$serializeMode = $enable;
+
+        return new static();
     }
 
     /**
@@ -65,7 +67,7 @@ class FileCache
      *
      * @param string $key
      * @param mixed $value
-     * @param int|null|Time $ttl Expiration time in seconds (null for no expiration)
+     * @param int|null|Time|\DateTimeInterface $ttl Expiration time in seconds (null for no expiration)
      * @return bool
      */
     public static function put(string $key, $value, $ttl = 604800): bool
@@ -74,8 +76,8 @@ class FileCache
 
         $cachePath = self::getCachePath($key);
 
-        // Handle serialization if explicitly enabled or if value is not a simple scalar
-        $shouldSerialize = self::$serializeMode || !is_scalar($value);
+        // Only serialize if explicit serializeMode is enabled or if value is an Object/Resource
+        $shouldSerialize = self::$serializeMode || is_object($value) || is_resource($value);
         $encodedValue = $shouldSerialize ? base64_encode(serialize($value)) : $value;
 
         $expiresAt = self::calculateExpiration($ttl);
@@ -142,7 +144,7 @@ class FileCache
      * Retrieve an item or compute and cache it.
      *
      * @param string $key
-     * @param int|null|Time $ttl Expiration time in seconds (null for no expiration)
+     * @param int|null|Time|\DateTimeInterface $ttl Expiration time in seconds (null for no expiration)
      * @param Closure|null $closure
      * @return mixed
      */
@@ -366,6 +368,11 @@ class FileCache
     {
         if ($ttl === null) {
             return null;
+        }
+
+        // Handle Carbon, DateTime, and DateTimeImmutable objects directly
+        if ($ttl instanceof \DateTimeInterface) {
+            return $ttl->getTimestamp();
         }
 
         $seconds = match (true) {

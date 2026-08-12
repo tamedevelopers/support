@@ -8,36 +8,92 @@ use Tamedevelopers\Support\Capsule\Logger;
 use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Process\Http;
 use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\Time;
 
 class Geocoder
 {
+    protected static mixed $defaultTTL;
+    protected static bool $initialized = false;
+    protected static string $defaultUserAgent;
+    protected static ?string $staticGoogleApiKey = null;
+    protected static ?string $staticGeoapifyKey = null;
+    protected static ?string $staticLocationIqKey = null;
+    protected static ?string $staticGeocodeMapsCoKey = null;
+
+    protected mixed $ttl;
+    protected bool $serialize;
     protected string $userAgent;
     protected ?string $googleApiKey;
     protected ?string $geoapifyKey;
     protected ?string $locationIqKey;
     protected ?string $geocodeMapsCoKey;
 
+    /**
+     * Boot and load environment configurations ONCE per lifecycle.
+     */
+    protected static function bootIfNotBooted(mixed $userAgent, mixed $ttl): void
+    {
+        if (self::$initialized) {
+            return;
+        }
+
+        Manager::startEnvIFNotStarted();
+        $server = new Server();
+
+        $appName  = $server->config('app.name', 'TameDeveloperApp');
+        $appEmail = $server->config('mail.from.address', 'admin@domain.com');
+
+        self::$defaultTTL               = $ttl;
+        self::$defaultUserAgent         = $userAgent ?: "{$appName}/1.0 ({$appEmail})";
+        self::$staticGoogleApiKey       = $server->config('services.google.maps_key') ?? env('GOOGLE_MAPS_API_KEY');
+        self::$staticGeoapifyKey        = $server->config('services.geoapify.key') ?? env('GEOAPIFY_API_KEY');
+        self::$staticLocationIqKey      = $server->config('services.locationiq.key') ?? env('LOCATIONIQ_API_KEY');
+        self::$staticGeocodeMapsCoKey   = $server->config('services.geocodemapsco.key') ?? env('GEOCODE_MAPS_CO_API_KEY');
+
+        self::$initialized = true;
+    }
         
     /**
      * __construct
      *
      * @param  string|null $userAgent
+     * @param int|null|Time|\DateTimeInterface $ttl Expiration time in seconds (null for no expiration)
+     * @param  bool $serialize
      * @return void 
      */
-    public function __construct(?string $userAgent = null)
+    public function __construct(?string $userAgent = null, $ttl = null, $serialize = false)
     {
-        $server = new Server;
+        self::bootIfNotBooted($userAgent, $ttl);
 
-        Manager::startEnvIFNotStarted();
+        $this->serialize        = $serialize;
+        $this->ttl              = self::$defaultTTL;
+        $this->userAgent        = self::$defaultUserAgent;
+        $this->googleApiKey     = self::$staticGoogleApiKey;
+        $this->geoapifyKey      = self::$staticGeoapifyKey;
+        $this->locationIqKey    = self::$staticLocationIqKey;
+        $this->geocodeMapsCoKey = self::$staticGeocodeMapsCoKey;
+    }
 
-        $appName  = $server->config('app.name', 'TameDeveloperApp');
-        $appEmail = $server->config('mail.from.address', 'admin@domain.com');
+    /**
+     * Static shortcut helper
+     */
+    public static function geocode(string $address): array|null
+    {
+        return (new static())->getCoordinates($address);
+    }
 
-        $this->userAgent        = $userAgent ?? "{$appName}/1.0 ({$appEmail})";
-        $this->googleApiKey     = $server->config('services.google.maps_key') ?? env('GOOGLE_MAPS_API_KEY');
-        $this->geoapifyKey      = $server->config('services.geoapify.key') ?? env('GEOAPIFY_API_KEY');
-        $this->locationIqKey    = $server->config('services.locationiq.key') ?? env('LOCATIONIQ_API_KEY');
-        $this->geocodeMapsCoKey = $server->config('services.geocodemapsco.key') ?? env('GEOCODE_MAPS_CO_API_KEY');
+    /**
+     * Static shortcut helper.
+     *
+     * @param string $address
+     * @param string|null $userAgent
+     * @param int|null|Time|\DateTimeInterface $ttl Expiration time in seconds (null for no expiration)
+     * @param bool $serialize
+     * @return array|null
+     */
+    public static function locate($address, $userAgent = null, $ttl = null, $serialize = false)
+    {
+        return (new static($userAgent, $ttl, $serialize))->geocode($address);
     }
 
     /**
@@ -55,39 +111,38 @@ class Geocoder
 
         $cacheKey = 'geocode_' . md5(mb_strtolower($cleanAddress));
         
-        // Generate sanitization levels from most clean/simplified -> exact raw
-        $queries = array_unique(array_filter([
-            $this->sanitizeAddress($cleanAddress), // e.g. "Hong Kong, Cheung Sha Wan, Wing Hong St, 83"
-            $cleanAddress                          // e.g. "Hong Kong, Cheung Sha Wan, Wing Hong St, 83號16樓B9室"
-        ]));
-
-        // Strict & Reliable engines first -> Fuzzy fallbacks last
-        $engines = [
-            'tryNominatim',     // Primary OSM Engine
-            'tryLocationIq',    // Keyed OSM
-            'tryGeoapify',      // Keyed Engine
-            'tryGeocodeMapsCo', // Keyed Engine
-            'tryGoogle',        // Google Maps API
-            'tryPhoton',        // Fuzzy Fallback (Only runs if all above strict engines fail)
-        ];
-
-        foreach ($engines as $engine) {
-            // Skip engines without API keys
-            if ($engine === 'tryGoogle' && !$this->googleApiKey) continue;
-            if ($engine === 'tryLocationIq' && !$this->locationIqKey) continue;
-            if ($engine === 'tryGeoapify' && !$this->geoapifyKey) continue;
-            if ($engine === 'tryGeocodeMapsCo' && !$this->geocodeMapsCoKey) continue;
-
-            foreach ($queries as $query) {
-                if ($result = $this->$engine($query)) {
-                    return $result;
+        return FileCache::serializeMode($this->serialize)->remember($cacheKey, $this->ttl, function () use ($cleanAddress) {
+            // Generate sanitization levels from most clean/simplified -> exact raw
+            $queries = array_unique(array_filter([
+                $this->sanitizeAddress($cleanAddress),
+                $cleanAddress
+            ]));
+    
+            // Strict & Reliable engines first -> Fuzzy fallbacks last
+            $engines = [
+                'tryNominatim',     // Primary OSM Engine
+                'tryLocationIq',    // Keyed OSM
+                'tryGeoapify',      // Keyed Engine
+                'tryGeocodeMapsCo', // Keyed Engine
+                'tryGoogle',        // Google Maps API
+                'tryPhoton',        // Fuzzy Fallback (Only runs if all above strict engines fail)
+            ];
+    
+            foreach ($engines as $engine) {
+                // Skip engines without API keys
+                if ($engine === 'tryGoogle' && !$this->googleApiKey) continue;
+                if ($engine === 'tryLocationIq' && !$this->locationIqKey) continue;
+                if ($engine === 'tryGeoapify' && !$this->geoapifyKey) continue;
+                if ($engine === 'tryGeocodeMapsCo' && !$this->geocodeMapsCoKey) continue;
+    
+                foreach ($queries as $query) {
+                    if ($result = $this->$engine($query)) {
+                        return $result;
+                    }
                 }
             }
-        }
-
-        return null;
-        return FileCache::remember($cacheKey, TameTime()->addDays(30), function () use ($cleanAddress) {
-            
+        
+            return null;
         });
     }
 
@@ -291,13 +346,5 @@ class Geocoder
         }
 
         return null;
-    }
-
-    /**
-     * Static shortcut helper
-     */
-    public static function geocode(string $address): array|null
-    {
-        return (new static())->getCoordinates($address);
     }
 }

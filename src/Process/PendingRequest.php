@@ -25,7 +25,6 @@ class PendingRequest extends LaravelPendingRequest
             'Accept-Encoding' => 'gzip, deflate',
         ])->withOptions([
             'connect_timeout' => 10,
-            // 'crypto_method'   => STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT,
             'curl' => [
                 CURLOPT_FORBID_REUSE  => false,
                 CURLOPT_FRESH_CONNECT => false,
@@ -46,8 +45,8 @@ class PendingRequest extends LaravelPendingRequest
             return $this->withHeader('User-Agent', $userAgent);
         }
 
+        // Remove User-Agent header if explicitly set to false
         if ($userAgent === false) {
-            // Remove User-Agent header if explicitly set to false
             return $this->withHeader('User-Agent', '');
         }
 
