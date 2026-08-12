@@ -6,14 +6,13 @@ namespace Tamedevelopers\Support;
 
 use DateTime;
 use DateTimeZone;
-use Tamedevelopers\Support\Capsule\TimeHelper;
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Traits\TimeTrait;
+use Tamedevelopers\Support\Capsule\TimeHelper;
 use Tamedevelopers\Support\Traits\TimeExtraTrait;
 use Tamedevelopers\Support\Traits\TimeGetterTrait;
-use Tamedevelopers\Support\Traits\TimeTrait;
 
 /**
- * Class Time
  * Time utility with dynamic static/instance method support.
  *
  * @method int second() Number of seconds since the stored time
@@ -33,6 +32,7 @@ use Tamedevelopers\Support\Traits\TimeTrait;
  * @property int $hour          - Hour (0-23)
  * @property int $minute        - Minute (0-59)
  * @property int $second        - Second (0-59)
+ * @property int $seconds|ttl   - Total elapsed time in seconds (TTL)
  * 
  * @property int $dayOfWeek     - Day of week (1-7, Monday=1)
  * @property int $dayOfYear     - Day of year (1-366)
@@ -177,7 +177,17 @@ final class Time {
     }
 
     /**
-     * Substract Second from curent date
+     * Add one second to the current date.
+     *
+     * @return $this 
+     */
+    public function addSecond()
+    {
+        return $this->addSeconds(1);
+    }
+
+    /**
+     * Substract Seconds from current date
      * 
      * @param int $value
      * @return $this
@@ -188,7 +198,17 @@ final class Time {
     }
 
     /**
-     * Add Minutes to curent date
+     * Substract one Second from current date
+     * 
+     * @return $this
+     */
+    public function subSecond()
+    {
+        return $this->subSeconds(1);
+    }
+
+    /**
+     * Add Minutes to current date
      * 
      * @param int $value
      * @return $this
@@ -199,7 +219,17 @@ final class Time {
     }
 
     /**
-     * Substract Minutes from curent date
+     * Add one Minute to current date
+     * 
+     * @return $this
+     */
+    public function addMinute()
+    {
+        return $this->addMinutes(1);
+    }
+
+    /**
+     * Substract Minutes from current date
      * 
      * @param int $value
      * @return $this
@@ -210,7 +240,17 @@ final class Time {
     }
 
     /**
-     * Add Hours to curent date
+     * Substract one Minute from current date
+     * 
+     * @return $this
+     */
+    public function subMinute()
+    {
+        return $this->subMinutes(1);
+    }
+
+    /**
+     * Add Hours to current date
      * 
      * @param int $value
      * @return $this
@@ -221,7 +261,17 @@ final class Time {
     }
 
     /**
-     * Substract Hours from curent date
+     * Add one Hour to current date
+     * 
+     * @return $this
+     */
+    public function addHour()
+    {
+        return $this->addHours(1);
+    }
+
+    /**
+     * Substract Hours from current date
      * 
      * @param int $value
      * @return $this
@@ -232,7 +282,17 @@ final class Time {
     }
 
     /**
-     * Add days to curent date
+     * Substract one Hour from current date
+     * 
+     * @return $this
+     */
+    public function subHour()
+    {
+        return $this->subHours(1);
+    }
+
+    /**
+     * Add days to current date
      * 
      * @param int $value
      * @return $this
@@ -243,7 +303,17 @@ final class Time {
     }
 
     /**
-     * Substract days from curent date
+     * Add one day to current date
+     * 
+     * @return $this
+     */
+    public function addDay()
+    {
+        return $this->addDays(1);
+    }
+
+    /**
+     * Substract days from current date
      * 
      * @param int $value
      * @return $this
@@ -254,7 +324,17 @@ final class Time {
     }
 
     /**
-     * Add Week to curent date
+     * Substract one day from current date
+     * 
+     * @return $this
+     */
+    public function subDay()
+    {
+        return $this->subDays(1);
+    }
+
+    /**
+     * Add Week to current date
      * 
      * @param int $value
      * @return $this
@@ -265,7 +345,17 @@ final class Time {
     }
 
     /**
-     * Substract Week from curent date
+     * Add one Week to current date
+     * 
+     * @return $this
+     */
+    public function addWeek()
+    {
+        return $this->addWeeks(1);
+    }
+
+    /**
+     * Substract Week from current date
      * 
      * @param int $value
      * @return $this
@@ -276,7 +366,17 @@ final class Time {
     }
 
     /**
-     * Add Month to curent date
+     * Substract one Week from current date
+     * 
+     * @return $this
+     */
+    public function subWeek()
+    {
+        return $this->subWeeks(1);
+    }
+
+    /**
+     * Add Month to current date
      * 
      * @param int $value
      * @return $this
@@ -287,7 +387,17 @@ final class Time {
     }
 
     /**
-     * Substract Month from curent date
+     * Add one Month to current date
+     * 
+     * @return $this
+     */
+    public function addMonth()
+    {
+        return $this->addMonths(1);
+    }
+
+    /**
+     * Substract Month from current date
      * 
      * @param int $value
      * @return $this
@@ -298,7 +408,17 @@ final class Time {
     }
 
     /**
-     * Add Year to curent date
+     * Substract one Month from current date
+     * 
+     * @return $this
+     */
+    public function subMonth()
+    {
+        return $this->subMonths(1);
+    }
+
+    /**
+     * Add Year to current date
      * 
      * @param int $value
      * @return $this
@@ -309,7 +429,17 @@ final class Time {
     }
 
     /**
-     * Substract Year from curent date
+     * Add one Year to current date
+     * 
+     * @return $this
+     */
+    public function addYear()
+    {
+        return $this->addYears(1);
+    }
+
+    /**
+     * Substract Year from current date
      * 
      * @param int $value
      * @return $this
@@ -317,6 +447,16 @@ final class Time {
     public function subYears($value = 0)
     {
         return $this->buildTimeModifier('year', $value, true);
+    }
+
+    /**
+     * Substract one Year from current date
+     * 
+     * @return $this
+     */
+    public function subYear()
+    {
+        return $this->subYears(1);
     }
     
     /**

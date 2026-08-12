@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Collections\Traits;
 
+use Closure;
 use InvalidArgumentException;
-use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\Str;
 
 
 /**
@@ -382,30 +383,30 @@ trait RelatedTrait{
     /**
      * Filter the collection using a callback.
      *
-     * @param  callable $callback
+     * @param  Closure $closure
      * @return self
      */
-    public function filter(callable $callback)
+    public function filter(closure $closure)
     {
-        return new static(array_filter($this->items, $callback, ARRAY_FILTER_USE_BOTH));
+        return new static(array_filter($this->items, $closure, ARRAY_FILTER_USE_BOTH));
     }
 
     /**
      * Remove items from the collection that pass a given truth test.
      *
-     * @param  callable|null  $callback
+     * @param  Closure|null  $closure
      * @return self
      */
-    public function reject($callback = null)
+    public function reject($closure = null)
     {
         // If no callback is provided, remove "truthy" values
-        if (is_null($callback)) {
-            $callback = fn($item) => (bool) $item;
+        if (is_null($closure)) {
+            $closure = fn($item) => (bool) $item;
         }
 
         // array_filter keeps items where callback returns false
-        $results = array_filter($this->items, function ($item, $key) use ($callback) {
-            return ! $callback($item, $key);
+        $results = array_filter($this->items, function ($item, $key) use ($closure) {
+            return ! $closure($item, $key);
         }, ARRAY_FILTER_USE_BOTH);
 
         return new static($results);
@@ -414,7 +415,7 @@ trait RelatedTrait{
     /**
      * Filter the collection by the given key, operator, and value.
      *
-     * @param  string|callable $key
+     * @param  string|Closure $key
      * @param  string|null $operator
      * @param  mixed $value
      * @return self
@@ -491,7 +492,7 @@ trait RelatedTrait{
     /**
      * Get the first element from the collection.
      *
-     * @param callable|null $callback
+     * @param Closure|null $callback
      * @param mixed $default
      * @return mixed
      */
@@ -516,7 +517,7 @@ trait RelatedTrait{
     /**
      * Get the first element matching the given key/value pair(s).
      *
-     * @param string|callable $key
+     * @param string|Closure $key
      * @param mixed $operator
      * @param mixed $value
      * @return mixed|null
@@ -711,10 +712,10 @@ trait RelatedTrait{
     /**
      * Determine if all items pass the given truth test.
      *
-     * @param  callable $callback
+     * @param  Closure $callback
      * @return bool
      */
-    public function every(callable $callback): bool
+    public function every($callback): bool
     {
         foreach ($this->items as $key => $value) {
             if (!$callback($value, $key)) {
@@ -727,10 +728,10 @@ trait RelatedTrait{
     /**
      * Determine if at least one item passes the given truth test.
      *
-     * @param  callable $callback
+     * @param  Closure $callback
      * @return bool
      */
-    public function some(callable $callback): bool
+    public function some($callback): bool
     {
         foreach ($this->items as $key => $value) {
             if ($callback($value, $key)) {
@@ -788,10 +789,10 @@ trait RelatedTrait{
     /**
      * Map the collection items using a callback.
      *
-     * @param  callable $callback
+     * @param  Closure $callback
      * @return self
      */
-    public function map(callable $callback)
+    public function map($callback)
     {
         $keys = array_keys($this->items);
 
@@ -806,12 +807,12 @@ trait RelatedTrait{
      * The callback should return an associative array containing a single
      * key-value pair: [key => value].
      *
-     * @param  callable  $callback  function(mixed $item, mixed $key): array
+     * @param  Closure  $callback  function(mixed $item, mixed $key): array
      * @return self
      *
      * @throws InvalidArgumentException if callback does not return an array
      */
-    public function mapWithKeys(callable $callback)
+    public function mapWithKeys($callback)
     {
         $results = [];
 
@@ -928,7 +929,7 @@ trait RelatedTrait{
     /**
      * Group items in the collection by a given key or callback.
      *
-     * @param  string|callable $key
+     * @param  string|Closure $key
      * @return self
      */
     public function groupBy($key)
@@ -979,16 +980,16 @@ trait RelatedTrait{
     /**
      * Sort the collection items.
      *
-     * @param  callable|null|int $callback
+     * @param  Closure|null|int $closure
      * @return self
      */
-    public function sort($callback = null)
+    public function sort($closure = null)
     {
         $items = $this->items;
 
-        $callback && is_callable($callback)
-            ? uasort($items, $callback)
-            : asort($items, $callback ?? SORT_REGULAR);
+        $closure && is_callable($closure)
+            ? uasort($items, $closure)
+            : asort($items, $closure ?? SORT_REGULAR);
 
         return new static($items);
     }
@@ -996,16 +997,16 @@ trait RelatedTrait{
     /**
      * Sort the collection items by a given key.
      *
-     * @param  callable|string $callable
+     * @param  Closure|string $closure
      * @param  int $direction
      * @return self
      */
-    public function sortBy(callable|string $callable, int $direction = SORT_ASC)
+    public function sortBy($closure, int $direction = SORT_ASC)
     {
         $sorted = $this->items;
-        uasort($sorted, function ($a, $b) use ($callable, $direction) {
-            $valueA = is_callable($callable) ? $callable($a) : $a[$callable];
-            $valueB = is_callable($callable) ? $callable($b) : $b[$callable];
+        uasort($sorted, function ($a, $b) use ($closure, $direction) {
+            $valueA = is_callable($closure) ? $closure($a) : $a[$closure];
+            $valueB = is_callable($closure) ? $closure($b) : $b[$closure];
 
             return $direction === SORT_ASC 
                     ? $valueA <=> $valueB 
@@ -1043,7 +1044,7 @@ trait RelatedTrait{
     /**
      * Sort the collection in descending order using a callback or key.
      *
-     * @param callable|string|null $callback
+     * @param Closure|string|null $callback
      * @return self
      */
     public function sortByDesc($callback = null)
@@ -1092,7 +1093,7 @@ trait RelatedTrait{
     /**
      * Key the collection by a given key or callback.
      *
-     * @param callable|string $key
+     * @param Closure|string $key
      * @return self
      */
     public function keyBy($key)
@@ -1131,10 +1132,10 @@ trait RelatedTrait{
     /**
      * Take items until the callback returns true.
      *
-     * @param callable $callback
+     * @param Closure $callback
      * @return self
      */
-    public function takeUntil(callable $callback)
+    public function takeUntil($callback)
     {
         $results = [];
         foreach ($this->items as $key => $item) {
@@ -1190,10 +1191,10 @@ trait RelatedTrait{
     /**
      * Pipe the collection through a callback.
      *
-     * @param callable $callback
+     * @param Closure $callback
      * @return mixed
      */
-    public function pipe(callable $callback)
+    public function pipe($callback)
     {
         return $callback($this);
     }
@@ -1292,10 +1293,10 @@ trait RelatedTrait{
     /**
      * Map a collection and flatten the result by a single level.
      *
-     * @param callable $callback
+     * @param Closure $callback
      * @return self
      */
-    public function flatMap(callable $callback)
+    public function flatMap($callback)
     {
         return $this->map($callback)->collapse();
     }
@@ -1369,10 +1370,10 @@ trait RelatedTrait{
     /**
      * Iterate over items and apply a callback.
      *
-     * @param callable $callback
+     * @param Closure $callback
      * @return void
      */
-    public function each(callable $callback)
+    public function each($callback)
     {
         foreach ($this->items as $key => $item) {
             $callback($item, $key);
@@ -1405,11 +1406,11 @@ trait RelatedTrait{
     /**
      * Reduce the collection to a single value using a callback.
      *
-     * @param  callable $callback
+     * @param  Closure $callback
      * @param  mixed $initial
      * @return mixed
      */
-    public function reduce(callable $callback, $initial = null): mixed
+    public function reduce($callback, $initial = null): mixed
     {
         return array_reduce($this->items, $callback, $initial);
     }
@@ -1430,10 +1431,10 @@ trait RelatedTrait{
     /**
      * Partition the collection into two collections based on a callback.
      *
-     * @param callable $callback
+     * @param Closure $callback
      * @return array [Collection, Collection]
      */
-    public function partition(callable $callback)
+    public function partition($callback)
     {
         $matches = [];
         $nonMatches = [];
@@ -1451,10 +1452,10 @@ trait RelatedTrait{
     /**
      * Tap into the collection and perform actions, then return the collection.
      *
-     * @param callable $callback
+     * @param Closure $callback
      * @return self
      */
-    public function tap(callable $callback)
+    public function tap($callback)
     {
         $callback($this);
 
@@ -1464,10 +1465,10 @@ trait RelatedTrait{
     /**
      * Chunk the collection while a condition is true.
      *
-     * @param callable $callback
+     * @param Closure $callback
      * @return self
      */
-    public function chunkWhile(callable $callback)
+    public function chunkWhile($callback)
     {
         $chunks = [];
         $chunk = [];
@@ -1528,10 +1529,10 @@ trait RelatedTrait{
      * Zip the collection with another collection using a callback.
      *
      * @param array $array
-     * @param callable $callback
+     * @param Closure $callback
      * @return self
      */
-    public function zipWith(array $array, callable $callback)
+    public function zipWith(array $array, $callback)
     {
         $results = [];
         $count = min(count($this->items), count($array));
@@ -1545,7 +1546,7 @@ trait RelatedTrait{
     /**
      * Count items grouped by a given key or callback.
      *
-     * @param callable|string $groupBy
+     * @param Closure|string $groupBy
      * @return self
      */
     public function countBy($groupBy)

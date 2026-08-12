@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Capsule\Traits;
 
+use Closure;
+
 /**
  * Provides helpers to build an associative array of available commands
  * from the Artisan registry, including subcommand methods on command classes.
@@ -14,7 +16,7 @@ trait ArtisanTrait
      * Build a grouped list keyed by the base command name.
      * Root commands without a colon are under key '__root'.
      *
-     * @param array<string, array<int, array{instance?: object, handler?: callable, description: string}>> $registry
+     * @param array<string, array<int, array{instance?: object, handler?: Closure, description: string}>> $registry
      * @return array<string, array<string,string>>
      */
     protected function buildGroupedCommandList(array $registry): array
@@ -44,7 +46,7 @@ trait ArtisanTrait
      * Build a flat associative list of commands => description.
      * Includes base commands and public subcommand methods (e.g., foo:bar).
      *
-     * @param array<string, array<int, array{instance?: object, handler?: callable, description: string}>> $registry
+     * @param array<string, array<int, array{instance?: object, handler?: Closure, description: string}>> $registry
      * @return array<string,string>
      */
     private function buildCommandList(array $registry): array

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\ChromePdf;
 
+use Closure;
 use HeadlessChromium\Communication\Message;
 use HeadlessChromium\Communication\Session;
 use HeadlessChromium\Page; 
@@ -1264,9 +1265,9 @@ final class ChromePdf
     }
 
     /**
-     * @return callable Invoked to disable interception (Fetch.disable) and detach the listener.
+     * @return Closure Invoked to disable interception (Fetch.disable) and detach the listener.
      */
-    private function enableUrlRequestBlocking(Page $page): callable
+    private function enableUrlRequestBlocking(Page $page): Closure
     {
         $session = $page->getSession();
         $loadRemoteImages = $this->shouldEnableChromiumImages();

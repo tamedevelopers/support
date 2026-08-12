@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Traits;
 
+use Closure;
+use PHPMailer\PHPMailer\SMTP;
+use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Mail;
 use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use Tamedevelopers\Support\Capsule\File;
-use Tamedevelopers\Support\Mail;
-use Tamedevelopers\Support\Process\HttpRequest;
 use Tamedevelopers\Support\Server;
-use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\Process\HttpRequest;
 
 
 trait MailTrait{
@@ -40,7 +41,7 @@ trait MailTrait{
     private $options = [];
 
     /**
-     * Resolved SMTP configuration data.
+     * Resolved configuration data.
      * @var array
      */
     private $smtpData = [];
@@ -65,7 +66,7 @@ trait MailTrait{
 
     /**
      * Queued callbacks for direct browser submit mode.
-     * @var array<int, callable>
+     * @var array<int, Closure>
      */
     private $directFlushQueue = [];
 
@@ -106,7 +107,7 @@ trait MailTrait{
     private $transport = null;
     
     /**
-     * SMTP debug level (0, 1, or 2).
+     * Debug level (0, 1, or 2).
      * @var int
      */
     private $debug = 0;
@@ -118,7 +119,7 @@ trait MailTrait{
     private $timeout = 10;
     
     /**
-     * Whether to use persistent SMTP connections.
+     * Whether to use persistent connections.
      * @var bool
      */
     private $keepAlive = true;
@@ -142,10 +143,11 @@ trait MailTrait{
     private $altbody = false;
     
     /**
-     * The constant name used for static configuration.
-     * @var string
+     * The static configuration Options
+     * 
+     * @var array
      */
-    private static $constantName = 'TAME_MAILER_CONFIG___';
+    private static $staticConfigOptions = [];
     
     /**
      * Static data cache for Mail instances.
@@ -433,7 +435,7 @@ trait MailTrait{
     }
 
     /**
-     * Configure the PHPMailer instance for SMTP transport.
+     * Configure the PHPMailer instance for transport.
      * @param  array|null  $options
      */
     private function setupMailer(?array $options = []): void
@@ -444,7 +446,7 @@ trait MailTrait{
         // set to 1 or 2 to see the response from mail server
         $this->mailer->SMTPDebug = $options['debug']; 
 
-        // prevent the SMTP session from being closed after each message
+        // prevent the session from being closed after each message
         $this->mailer->SMTPKeepAlive = $options['keep_alive']; 
 
         // Set timeout
@@ -549,7 +551,7 @@ trait MailTrait{
     }
 
     /**
-     * Retrieve the current SMTP configuration data.
+     * Retrieve the current configuration data.
      */
     public function getSMTPData(): array
     {
@@ -621,7 +623,7 @@ trait MailTrait{
     }
 
     /**
-     * Consolidate and resolve SMTP configuration data from all sources.
+     * Resolve configuration data from all sources.
      * 
      * @param array|null $globalRuntime (Mail::config)
      */
@@ -680,16 +682,6 @@ trait MailTrait{
         if($this->isAPI() && empty($this->smtpData['url'])){
             $this->smtpData['url'] = $this->getTransportApiUrl($this->transport);
         }
-    }
-
-    /**
-     * Retrieve static configuration from defined constants.
-     */
-    private static function getConfig(): array
-    {
-        return defined(self::$constantName) 
-            ? constant(self::$constantName)
-            : [];
     }
 
     /**
@@ -761,7 +753,6 @@ trait MailTrait{
 
         // create correct method name
         $method = match ($name) {
-            'altbody', 'altmessage' => '__altBody',
             'reply', 'replyto' => '__replyTo',
             default => '__altBody'
         };
@@ -772,18 +763,18 @@ trait MailTrait{
     /**
      * Flushes output buffer and sends data to client.
      *
-     * @param callable|null $callback The function to execute after flushing the buffer.
+     * @param Closure|null $closure The function to execute after flushing the buffer.
      * @param array|null $options The options to use during buffer flushing.
      *
      * @return void
      */
-    private function ob_crons_flush(callable $callable, ?array $options = null)
+    private function ob_crons_flush($closure, ?array $options = null)
     {
         // Keep legacy behavior for ajax/fetch/api where autoFlush already works well.
         if ($this->isAsyncLikeRequest()) {
-            if (is_callable($callable)) {
+            if (is_callable($closure)) {
                 $this->autoFlush($options);
-                $callable();
+                $closure();
             }
 
             return;
@@ -792,7 +783,7 @@ trait MailTrait{
         // Direct browser submit:
         // 1) detach response once so browser can complete immediately
         // 2) run queued callbacks during shutdown
-        $this->directFlushQueue[] = $callable;
+        $this->directFlushQueue[] = $closure;
 
         if (!$this->directResponseDetached) {
             $this->detachDirectBrowserResponse($options);

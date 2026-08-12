@@ -10,6 +10,7 @@ use Tamedevelopers\Support\Capsule\File;
  * 
  * @property mixed $lockedShared
  * @property mixed $baseFolder
+ * @method mixed render()
  */
 trait ViewTrait{
 
@@ -360,7 +361,7 @@ trait ViewTrait{
         // Ensure included views inherit current data unless explicitly overridden
         $payload = empty($array) ? $this->data : array_merge($this->data, (array) $array);
 
-        return (new self($view, $payload))->render();
+        return (new static($view, $payload))->render();
     }
 
     /**

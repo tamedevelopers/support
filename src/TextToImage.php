@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use Closure;
 use Exception;
+use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Asset;
 use Tamedevelopers\Support\Capsule\CustomException;
 use Tamedevelopers\Support\Capsule\File;
-use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Traits\FontPathTrait;
 
 /**
@@ -606,7 +607,7 @@ class TextToImage
         return $t;
     }
 
-    private static function normalizeShapeType($value): ?string
+    private static function normalizeShapeType(mixed $value): ?string
     {
         if ($value === null || $value === '') {
             return null;
@@ -644,7 +645,7 @@ class TextToImage
         return $s;
     }
 
-    private static function normalizeGradientType($value): ?string
+    private static function normalizeGradientType(mixed $value): ?string
     {
         if ($value === null || $value === '') {
             return null;
@@ -676,7 +677,7 @@ class TextToImage
     /**
      * Draw the background shape or pattern onto the image.
      *
-     * @param resource $img   GD image resource
+     * @param mixed $img   GD image resource
      * @param string   $type  clip preset (see clipTypePresets)
      * @param int      $size  Square dimension
      * @param int      $color The allocated background color (solid path)
@@ -745,16 +746,16 @@ class TextToImage
     }
 
     /** Legacy diagonal secondary (~15% lift per channel). */
-    private static function shapeAllocateLighten15($img, array $rgb): int
+    private static function shapeAllocateLighten15(mixed $img, array $rgb): int
     {
         return self::shapeAllocateMultiply($img, $rgb, 1.15);
     }
 
     /**
      * @param resource|\GdImage $img
-     * @param callable(int,int,int):bool $predicate
+     * @param Closure(int,int,int):bool $predicate
      */
-    private static function applySolidWhere($img, string $type, int $size, int $radius, callable $predicate, int $color): void
+    private static function applySolidWhere($img, string $type, int $size, int $radius, Closure $predicate, int $color): void
     {
         for ($y = 0; $y < $size; $y++) {
             for ($x = 0; $x < $size; $x++) {
@@ -1216,9 +1217,9 @@ class TextToImage
     }
 
     /**
-     * @param resource $img
+     * @param mixed $img
      */
-    private static function fillShapeWithGradient($img, string $type, int $size, array $rgb, int $radius, string $gradientType): void
+    private static function fillShapeWithGradient(mixed $img, string $type, int $size, array $rgb, int $radius, string $gradientType): void
     {
         $cx = ($size - 1) / 2.0;
         $cy = ($size - 1) / 2.0;

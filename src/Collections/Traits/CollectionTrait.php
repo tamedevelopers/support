@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Collections\Traits;
 
+use Closure;
 use Exception;
-use Traversable;
 use JsonSerializable;
-use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Collections\CollectionMapper;
+use Tamedevelopers\Support\Str;
+use Traversable;
 
 
 /**
@@ -204,7 +205,7 @@ trait CollectionTrait{
      * Evaluate a where clause condition for a given item.
      *
      * @param  array|object $item
-     * @param  string|callable $key
+     * @param  string|Closure $key
      * @param  string|null $operator
      * @param  mixed $value
      * @return bool
@@ -238,7 +239,7 @@ trait CollectionTrait{
             return $target;
         }
 
-        // Handle callable default
+        // Handle Closure default
         $default = $default instanceof \Closure ? $default() : $default;
 
         foreach (explode('.', $key) as $segment) {
@@ -258,7 +259,7 @@ trait CollectionTrait{
      * Helper for sorting by callback/key.
      *
      * @param mixed $value
-     * @param callable|string $callback
+     * @param Closure|string $callback
      * @return mixed
      */
     protected function valueForSort($value, $callback)

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Traits;
 
+use Closure;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Tame;
 
@@ -391,19 +392,19 @@ trait MailApiTransport{
     /**
      * Creates a temporary email closure.
      *
-     * This method allows you to define a callable that can be used to temporarily
-     * modify or handle email-related logic. If no callable is provided, it will
+     * This method allows you to define a closure that can be used to temporarily
+     * modify or handle email-related logic. If no closure is provided, it will
      * use a default behavior.
      *
-     * @param callable|null $callable An optional callable to customize the email handling.
-     * @return mixed Returns the result of the callable or the default behavior.
+     * @param Closure|null $closure An optional closure to customize the email handling.
+     * @return mixed Returns the result of the closure or the default behavior.
      */
-    private function createApiEmailTempClosure($callable = null)
+    private function createApiEmailTempClosure($closure = null)
     {
         $sendEmails = [];
 
         foreach ($this->recipients['to'] as $email) {
-            $sendEmails[] = function() use ($email, $callable) {
+            $sendEmails[] = function() use ($email, $closure) {
                 try {
 
                     $apiUrl = $this->smtpData['url'];
@@ -459,13 +460,13 @@ trait MailApiTransport{
 
                     // AWS SES via SDK or API
                     if ($this->isAWS()) {
-                        $this->sendViaAWS($callable, $email);
+                        $this->sendViaAWS($closure, $email);
                     } else{
-                        $this->sendViaCurl($apiUrl, $postFields, $callable, $email);
+                        $this->sendViaCurl($apiUrl, $postFields, $closure, $email);
                     }
                 } catch (\Exception $e) {
-                    if(is_callable($callable)){
-                        call_user_func($callable, (object)[
+                    if(is_callable($closure)){
+                        call_user_func($closure, (object)[
                             'status' => $e->getCode(),
                             'message' => $e->getMessage(),
                             'transport' => $this->smtpData['transport'], 
@@ -481,15 +482,17 @@ trait MailApiTransport{
     }
     
     /**
-     * sendViaAWS
+     * Send Via AWS
      *
-     * @param  mixed $callable
+     * @param  Closure $closure
      * @param  mixed $email
      * @return void
      */
-    private function sendViaAWS($callable, $email)
+    private function sendViaAWS($closure, $email)
     {
-        $client = new \Aws\SesV2\SesV2Client([
+        $instance = "\Aws\SesV2\SesV2Client";
+
+        $client = new $instance([
             'version'     => 'latest',
             'region'      => $this->smtpData['region'],
             'credentials' => [
@@ -604,8 +607,8 @@ trait MailApiTransport{
 
         $this->deleteAttachment();
 
-        if (is_callable($callable)) {
-            call_user_func($callable, (object)[
+        if (is_callable($closure)) {
+            call_user_func($closure, (object)[
                 'status' => 200,
                 'message' => 'Sent via AWS SES SDK',
                 'transport' => $this->smtpData['transport'], 
@@ -621,11 +624,11 @@ trait MailApiTransport{
      *
      * @param  mixed $apiUrl
      * @param  mixed $postFields
-     * @param  mixed $callable
+     * @param  Closure|null $closure
      * @param  mixed $email
      * @return void
      */
-    private function sendViaCurl($apiUrl, $postFields, $callable, $email)
+    private function sendViaCurl($apiUrl, $postFields, $closure, $email)
     {
         // using curl to send request
         $curl = curl_init();
@@ -695,8 +698,8 @@ trait MailApiTransport{
             );
         }
 
-        if(is_callable($callable)){
-            call_user_func($callable, (object)[
+        if(is_callable($closure)){
+            call_user_func($closure, (object)[
                 'status' => 200,
                 'message' => "Sent via API - [{$this->transport}]",
                 'transport' => $this->smtpData['transport'], 

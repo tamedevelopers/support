@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Traits;
 
+use Closure;
 use Tamedevelopers\Support\FileHelper;
 
 
@@ -129,7 +130,7 @@ trait FileTrait
     /**
      * Loop through each file in the collection
      */
-    public function each(callable $callback)
+    public function each(Closure $callback)
     {
         foreach ($this->collection as $index => $file) {
             if ($callback($file, $index) === false) {
@@ -142,7 +143,7 @@ trait FileTrait
     /**
      * Filter files in the collection
      */
-    public function filter(callable $callback)
+    public function filter(Closure $callback)
     {
         $filtered = array_filter($this->collection, $callback);
         return new static(array_values($filtered));

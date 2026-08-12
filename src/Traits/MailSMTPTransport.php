@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Traits;
 
+use Closure;
+
 
 trait MailSMTPTransport{
 
@@ -14,10 +16,10 @@ trait MailSMTPTransport{
      * modify or handle email-related logic. If no callable is provided, it will
      * use a default behavior.
      *
-     * @param callable|null $callable An optional callable to customize the email handling.
+     * @param Closure|null $closure An optional callable to customize the email handling.
      * @return mixed Returns the result of the callable or the default behavior.
      */
-    private function createEmailTempClosure($callable = null)
+    private function createEmailTempClosure($closure = null)
     {
         $sendEmails = [];
 
@@ -26,7 +28,7 @@ trait MailSMTPTransport{
 
             // We return a wrapper function. Nothing inside this block 
             // runs until $fn() is called in your TameCollect loop.
-            $sendEmails[] = function() use ($email, $callable) {
+            $sendEmails[] = function() use ($email, $closure) {
                 try {
 
                     // Validate the recipient email
@@ -76,15 +78,10 @@ trait MailSMTPTransport{
                     
                     // Delete attachments
                     $this->deleteAttachment();
-
-                    // Important: Clear state first to prevent BCC/CC from leaking to the next recipient
-                    // $this->mailer->clearAllRecipients();
-                    // $this->mailer->clearAttachments();
-                    // $this->mailer->clearCustomHeaders();
                     
                     // Return the response to the caller
-                    if(is_callable($callable)){
-                        call_user_func($callable, (object) [
+                    if(is_callable($closure)){
+                        call_user_func($closure, (object) [
                             'status'    => 200, 
                             'message'   => "Sent via [{$this->smtpData['transport']}]", 
                             'transport' => $this->smtpData['transport'], 
@@ -93,8 +90,8 @@ trait MailSMTPTransport{
                         ]);
                     }
                 } catch (\Exception $e) {
-                    if(is_callable($callable)){
-                        call_user_func($callable, (object) [
+                    if(is_callable($closure)){
+                        call_user_func($closure, (object) [
                             'status'    => $e->getCode(), 
                             'message'   => $e->getMessage(), 
                             'transport' => $this->smtpData['transport'], 

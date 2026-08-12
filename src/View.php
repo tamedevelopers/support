@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use Closure;
 use Exception;
-use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Traits\ViewTrait;
 
 
@@ -54,7 +55,6 @@ class View{
      */
     protected static $directives = [];
     protected static $namespaces = [];
-    protected static $sharedData = [];
     protected static $renderStack = [];
 
     /**
@@ -238,12 +238,12 @@ class View{
      * Attach a callback to a view before rendering (composer).
      *
      * @param string $template
-     * @param callable $callback
+     * @param Closure $closure
      */
-    public static function composer($template, callable $callback)
+    public static function composer($template, Closure $closure)
     {
         if (self::exists($template)) {
-            $callback(new self($template));
+            $closure(new self($template));
         }
     }
 
@@ -396,11 +396,11 @@ class View{
      * Add custom directives for template engine.
      *
      * @param string $name
-     * @param callable $callback
+     * @param Closure $closure
      */
-    public static function registerDirective($name, callable $callback)
+    public static function registerDirective($name, Closure $closure)
     {
-        self::$directives[$name] = $callback;
+        self::$directives[$name] = $closure;
     }
 
 }

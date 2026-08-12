@@ -13,16 +13,14 @@ use Tamedevelopers\Support\Tame;
 class Manager{
     
     /**
-     * Remove all whitespace characters
-     * @var string
+     * Regex pattern to target whitespace characters.
      */
-    public static $regex_whitespace = "/\s+/";
+    public static string $regex_whitespace = "/\s+/";
 
     /**
-     * Remove leading or trailing spaces/tabs from each line
-     * @var string
+     * Regex pattern to target leading or trailing spaces/tabs from each line.
      */
-    public static $regex_lead_and_end = "/^[ \t]+|[ \t]+$/m";
+    public static string $regex_lead_and_end = "/^[ \t]+|[ \t]+$/m";
 
     /**
      * Sample copy of env file
@@ -107,34 +105,34 @@ class Manager{
     }
 
     /**
-     * Re-generate and persist a new APP_KEY in .env (no quotes), then reload env.
+     * Re-generate and persist a new APP_KEY in .env.
      */
     public static function regenerate(): string
     {
-        // generate new key
         $key = self::generate();
 
-        // update env key
         Env::updateENV('APP_KEY', $key, false);
-
-        // Update stored key reference for tamper detection
-        // self::storeKeyFingerprint($key);
 
         return $key;
     }
 
     /**
-     * App Debug
+     * Determine if debug mode is enabled.
      * 
      * @return bool
      */
     public static function AppDebug()
     {
-        return self::isEnvBool($_ENV['APP_DEBUG'] ?? true);
+        $value = $_ENV['APP_DEBUG'] 
+            ?? getenv('APP_DEBUG') 
+            ?? $_SERVER['APP_DEBUG'] 
+            ?? true;
+
+        return self::isEnvBool($value);
     }
 
     /**
-     * Check if environment variable value is boolean-like.
+     * Check if an environment variable value is boolean-like.
      * 
      * @param mixed $value
      * @return bool
@@ -156,36 +154,38 @@ class Manager{
      */
     public static function isEnvSet($key)
     {
-        return getenv($key) !== false || isset($_ENV[$key]);
+        return getenv($key) !== false || isset($_ENV[$key]) || isset($_SERVER[$key]);
     }
 
     /**
-     * Set headers with response code
+     * Set headers with response status code and execute an optional callback.
      *
-     * @param  mixed $status
+     * @param  int $status
      * @param  Closure|null $closure
+     * @param  bool $exit
      * @return void
      */
-    public static function setHeaders($status = 404, $closure = null)
+    public static function setHeaders($status = 404, $closure = null, bool $exit = true)
     {
-        // Set HTTP response status code to 404
-        @http_response_code($status);
+        if (!headers_sent()) {
+            http_response_code($status);
+        }
 
         if(Tame::isClosure($closure)){
             $closure();
         }
 
-        // Exit with response 404
-        exit(1);
+        if ($exit) {
+            exit(1);
+        }
     }
 
     /**
-     * Remove whitespace from string
+     * Collapse multiple consecutive whitespaces into a single space.
      * 
      * @param string $string
-     * 
      * @return string
-     */ 
+     */
     public static function replaceWhiteSpace(?string $string = null)
     {
         return Str::trim(preg_replace(
@@ -196,14 +196,13 @@ class Manager{
     }
 
     /**
-     * Remove leading and ending space from string
+     * Remove leading and trailing spaces/tabs from each line in a string.
      * 
      * @param string $string
-     * 
      * @return string
      */ 
     public static function replaceLeadEndSpace(?string $string = null)
-    {   
+    {
         return preg_replace(self::$regex_lead_and_end, " ", $string);
     }
 
@@ -213,7 +212,7 @@ class Manager{
      */
     protected static function ensureAppKeyOrFail(): void
     {
-        $key = $_ENV['APP_KEY'] ?? '';
+        $key = $_ENV['APP_KEY'] ?? getenv('APP_KEY') ?? '';
         if (!self::isValidAppKey($key)) {
             return; // no enforcement in package runtime
         }
@@ -242,6 +241,7 @@ class Manager{
         }
         $raw = substr($key, 7);
         $decoded = base64_decode($raw, true);
+
         return $decoded !== false && strlen($decoded) === 32;
     }
 
@@ -264,14 +264,18 @@ class Manager{
     protected static function readKeyFingerprint(): ?string
     {
         $path = Env::formatWithBaseDirectory('storage/app_key');
-        if (!File::exists($path)) return null;
-        $c = @File::get($path);
-        return $c === false ? null : trim($c);
+
+        if (!File::exists($path)) {
+            return null;
+        }
+
+        $content = @File::get($path);
+
+        return $content === false ? null : trim($content);
     }
 
     /**
      * Compute the fingerprint of a given key for integrity comparison.
-     *
      * - Uses sha256 over the full key string (including the base64: prefix)
      */
     protected static function fingerprint(string $key): string
@@ -281,7 +285,6 @@ class Manager{
 
     /**
      * Abort the request with HTTP 500 until a valid key is regenerated.
-     *
      * - Use Manager::regenerate() or the helper tmanager()->regenerate() to fix
      */
     protected static function denyUntilRegenerated(): void

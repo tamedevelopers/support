@@ -63,6 +63,10 @@ trait TimeGetterTrait{
             'timeString'    => 'getDateTimeString',
             'dateTime'      => 'getDateTimeFullString',
             'rfc3339'       => 'getDateRfc3339',
+
+            // Dynamic Total Elapsed / TTL
+            'ttl'           => 'getTotalSeconds',
+            'seconds'       => 'getTotalSeconds',
             
             // Position in time
             'startOfDay'    => 'getDateStartOfDay',
@@ -130,6 +134,16 @@ trait TimeGetterTrait{
     public function getActualSecond()
     {
         return (int) date('s', $this->date);
+    }
+
+    /**
+     * Get the total elapsed time in seconds (TTL) between current time and stored date.
+     * 
+     * @return int
+     */
+    public function getTotalSeconds(): int
+    {
+        return (int) abs(time() - $this->date);
     }
 
     // ============================================

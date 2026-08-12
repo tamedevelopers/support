@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Capsule;
 
+use Closure;
+use Tamedevelopers\Support\Time;
 use Tamedevelopers\Support\Capsule\File;
 
 class FileCache
@@ -63,60 +65,73 @@ class FileCache
      *
      * @param string $key
      * @param mixed $value
-     * @param int|null $expirationTime Expiration time in seconds (null for no expiration)
-     * @return void
+     * @param int|null|Time $ttl Expiration time in seconds (null for no expiration)
+     * @return bool
      */
-    public static function put(string $key, $value, ?int $expirationTime = 604800): void
+    public static function put(string $key, $value, $ttl = 604800): bool
     {
         self::ensurePathInitialized();
 
         $cachePath = self::getCachePath($key);
 
-        // Handle serialization if enabled
-        $value = self::$serializeMode
-            ? base64_encode(serialize($value))
-            : $value;
+        // Handle serialization if explicitly enabled or if value is not a simple scalar
+        $shouldSerialize = self::$serializeMode || !is_scalar($value);
+        $encodedValue = $shouldSerialize ? base64_encode(serialize($value)) : $value;
+
+        $expiresAt = self::calculateExpiration($ttl);
 
         $data = [
-            'value' => $value,
-            'expires_at' => $expirationTime !== null ? time() + $expirationTime : null,
+            'serialized' => $shouldSerialize,
+            'value'      => $encodedValue,
+            'expires_at' => $expiresAt,
         ];
 
-        $json = json_encode($data);
+        $json = json_encode($data, JSON_UNESCAPED_SLASHES);
+        if ($json === false) {
+            return false;
+        }
 
         // Atomic write
-        $tempFile = $cachePath . '.tmp';
-        File::put($tempFile, $json);
-        rename($tempFile, $cachePath);
+        $tempFile = $cachePath . '.' . uniqid('', true) . '.tmp';
+        if (File::put($tempFile, $json) !== false) {
+            return rename($tempFile, $cachePath);
+        }
+
+        return false;
     }
 
     /**
      * Retrieve an item from cache.
      *
      * @param string $key
-     * @return mixed|null
+     * @return mixed
      */
-    public static function get(string $key)
+    public static function get(string $key, mixed $default = null)
     {
         self::ensurePathInitialized();
 
         $cachePath = self::getCachePath($key);
 
         if (!File::exists($cachePath)) {
-            return null;
+            return $default;
         }
 
-        $data = json_decode(File::get($cachePath), true);
-
-        if (!is_array($data) || self::expired($key)) {
+        if (self::expired($key)) {
             self::forget($key);
-            return null;
+            return $default;
+        }
+
+        $content = File::get($cachePath);
+        $data = json_decode((string) $content, true);
+
+        if (!is_array($data) || !array_key_exists('value', $data)) {
+            self::forget($key);
+            return $default;
         }
 
         $value = $data['value'];
 
-        // Deserialize if enabled
-        if (self::$serializeMode) {
+        if (!empty($data['serialized'])) {
             $value = unserialize(base64_decode($value));
         }
 
@@ -127,18 +142,26 @@ class FileCache
      * Retrieve an item or compute and cache it.
      *
      * @param string $key
-     * @param int $seconds
-     * @param callable $callback
+     * @param int|null|Time $ttl Expiration time in seconds (null for no expiration)
+     * @param Closure|null $closure
      * @return mixed
      */
-    public static function remember(string $key, int $seconds, callable $callback)
+    public static function remember(string $key, $ttl = null, $closure = null)
     {
+        // Support passing Closure as 2nd parameter: remember('key', fn() => ...)
+        if ($ttl instanceof Closure) {
+            $closure = $ttl;
+            $ttl = 604800;
+        }
+
         if (self::has($key)) {
             return self::get($key);
         }
 
-        $value = $callback();
-        self::put($key, $value, $seconds);
+        $value = $closure ? $closure() : null;
+
+        self::put($key, $value, $ttl);
+
         return $value;
     }
 
@@ -149,7 +172,7 @@ class FileCache
      * @return bool
      */
     public static function exists(string $key): bool
-    {   
+    {
         self::ensurePathInitialized();
         return File::exists(self::getCachePath($key));
     }
@@ -162,15 +185,7 @@ class FileCache
      */
     public static function has(string $key): bool
     {
-        self::ensurePathInitialized();
-
-        $cachePath = self::getCachePath($key);
-
-        if (!File::exists($cachePath)) {
-            return false;
-        }
-
-        return !self::expired($key);
+        return self::exists($key) && !self::expired($key);
     }
 
     /**
@@ -202,7 +217,7 @@ class FileCache
      */
     public static function increment(string $key, int $value = 1): int
     {
-        $current = (int) self::get($key);
+        $current = (int) self::get($key, 0);
         $new = $current + $value;
         self::put($key, $new);
         return $new;
@@ -217,10 +232,7 @@ class FileCache
      */
     public static function decrement(string $key, int $value = 1): int
     {
-        $current = (int) self::get($key);
-        $new = $current - $value;
-        self::put($key, $new);
-        return $new;
+        return self::increment($key, -$value);
     }
 
     /**
@@ -272,7 +284,7 @@ class FileCache
         foreach ($files as $file) {
             if (!File::exists($file)) continue;
 
-            $data = json_decode(File::get($file), true);
+            $data = json_decode((string) File::get($file), true);
             $expiresAt = $data['expires_at'] ?? null;
 
             if ($expiresAt !== null && $expiresAt < time()) {
@@ -302,6 +314,7 @@ class FileCache
     public static function all(): array
     {
         self::ensurePathInitialized();
+
         return array_map('basename', glob(self::$cachePath . '/*.cache') ?: []);
     }
 
@@ -321,7 +334,7 @@ class FileCache
 
         foreach ($files as $file) {
             $totalSize += filesize($file);
-            $data = json_decode(File::get($file), true);
+            $data = json_decode((string) File::get($file), true);
             if (($data['expires_at'] ?? 0) < time()) {
                 $expired++;
             }
@@ -345,4 +358,23 @@ class FileCache
         self::ensurePathInitialized();
         return self::$cachePath . '/' . md5($key) . '.cache';
     }
+
+    /**
+     * Calculate absolute Unix timestamp for expiration.
+     */
+    protected static function calculateExpiration(mixed $ttl): ?int
+    {
+        if ($ttl === null) {
+            return null;
+        }
+
+        $seconds = match (true) {
+            $ttl instanceof Time => $ttl->ttl,
+            is_numeric($ttl) => (int) $ttl,
+            default => 604800,
+        };
+
+        return time() + $seconds;
+    }
+
 }

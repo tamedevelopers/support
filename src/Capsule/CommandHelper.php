@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Capsule;
 
-use Tamedevelopers\Support\Env;
-use Tamedevelopers\Support\Str;
-use Tamedevelopers\Support\Constant;
+use Closure;
 use Tamedevelopers\Support\Capsule\Logger;
+use Tamedevelopers\Support\Constant;
+use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Process\HttpRequest;
+use Tamedevelopers\Support\Str;
 
 
 /**
@@ -575,7 +576,7 @@ class CommandHelper
      * This implementation writes directly to STDOUT using a carriage return (\r),
      * which updates the same line reliably in Windows CMD and Unix terminals.
      */
-    protected function progressBar(callable $callback, int $total = 1, int $barWidth = 50): void
+    protected function progressBar(Closure $callback, int $total = 1, int $barWidth = 50): void
     {
         $completed = 0;
 
@@ -589,7 +590,7 @@ class CommandHelper
             }
         };
 
-        $draw = static function (int $completed, int $total, int $barWidth, callable $write): void {
+        $draw = static function (int $completed, int $total, int $barWidth, Closure $write): void {
             $safeTotal = max(1, $total);
             $percent   = (int) floor(($completed / $safeTotal) * 100);
             if ($percent > 100) {

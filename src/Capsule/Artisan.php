@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Capsule;
 
+use Closure;
+use Tamedevelopers\Support\Capsule\CommandHelper;
 use Tamedevelopers\Support\Capsule\Logger;
 use Tamedevelopers\Support\Capsule\Manager;
-use Tamedevelopers\Support\Capsule\CommandHelper;
-use Tamedevelopers\Support\Capsule\Traits\ArtisanTrait;
 use Tamedevelopers\Support\Capsule\Traits\ArtisanDiscovery;
+use Tamedevelopers\Support\Capsule\Traits\ArtisanTrait;
 
 /**
  * Minimal artisan-like dispatcher for Tamedevelopers Support
@@ -32,7 +33,7 @@ class Artisan extends CommandHelper
 
     /**
      * Registered commands map (supports multiple providers per base command)
-     * @var array<string, array<int, array{instance?: object, handler?: callable, description: string}>>
+     * @var array<string, array<int, array{instance?: object, handler?: Closure, description: string}>>
      */
     protected static array $commands = [];
 
@@ -87,7 +88,7 @@ class Artisan extends CommandHelper
      * Register a command by name with description
      *
      * @param string $name 
-     * @param callable|object $handler  Either a callable or a command class instance
+     * @param Closure|object $handler  Either a callable or a command class instance
      * @param string $description       Short description for `list`
      */
     public function register(string $name, $handler, string $description = ''): void

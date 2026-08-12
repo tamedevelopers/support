@@ -6,47 +6,105 @@ namespace Tamedevelopers\Support\Capsule;
 
 use Whoops\Run;
 use Whoops\Handler\PrettyPageHandler;
+use Whoops\Handler\PlainTextHandler;
 use Tamedevelopers\Support\Capsule\Manager;
 
-class DebugManager{
-    
-    public static mixed $whoops;
+class DebugManager
+{
+    /**
+     * Track whether the boot process has completed.
+     */
+    protected static bool $booted = false;
+
+    /**
+     * The Whoops Run instance.
+     */
+    protected static ?Run $whoops = null;
 
     /**
      * Boot the DebugManager.
-     * If the constant 'TAME_DEBUG_MANAGER' is not defined, 
-     * it defines it and starts the debugger automatically.
      * 
-     * So that this is only called once in entire application life cycle
+     * Ensures the debugger registers only once during the application lifecycle.
      */
-    public static function boot()
+    public static function boot(): void
     {
-        if(!defined('TAME_DEBUG_MANAGER')){
-            self::autoStartDebugger();
-            // Define debug manager as true
-            define('TAME_DEBUG_MANAGER', 1);
-        } 
+        if (self::$booted) {
+            return;
+        }
+
+        self::$booted = true;
+        self::autoStartDebugger();
     }
 
     /**
-     * Autostart debugger for error logger
-     * 
-     * @return void
+     * Check if DebugManager has been booted.
      */
-    private static function autoStartDebugger()
+    public static function isBooted(): bool
     {
-        // if DEBUG MODE IS ON
-        if(Manager::AppDebug()){
-            // header not sent
-            if (!headers_sent()) {
-                // register error handler
-                if (!isset(self::$whoops)) {
-                    self::$whoops = new Run();
-                    self::$whoops->pushHandler(new PrettyPageHandler());
-                    self::$whoops->register();
-                }
-            }
-        } 
+        return self::$booted;
     }
-    
+
+    /**
+     * Autostart debugger for error logging and exception handling.
+     */
+    private static function autoStartDebugger(): void
+    {
+        // Check if debug mode is active
+        if (!Manager::AppDebug()) {
+            return;
+        }
+
+        if (self::$whoops === null) {
+            self::$whoops = new Run();
+
+            // Register appropriate handler based on SAPI environment
+            if (self::isCli()) {
+                self::$whoops->pushHandler(new PlainTextHandler());
+            } else {
+                $handler = new PrettyPageHandler();
+                
+                // Ensure HTTP 500 status code is set when rendering error pages
+                $handler->addDataTableCallback('HTTP Status', function () {
+                    if (!headers_sent()) {
+                        http_response_code(500);
+                    }
+                    return [];
+                });
+
+                self::$whoops->pushHandler($handler);
+            }
+
+            self::$whoops->register();
+        }
+    }
+
+    /**
+     * Check if the application is running in CLI mode.
+     */
+    protected static function isCli(): bool
+    {
+        return PHP_SAPI === 'cli' || PHP_SAPI === 'phpdbg';
+    }
+
+    /**
+     * Get the registered Whoops instance.
+     */
+    public static function getWhoops(): ?Run
+    {
+        return self::$whoops;
+    }
+
+    /**
+     * Unregister Whoops and reset the booted state.
+     * Useful for isolated unit testing environment teardowns.
+     */
+    public static function flush(): void
+    {
+        if (self::$whoops !== null) {
+            self::$whoops->unregister();
+            self::$whoops = null;
+        }
+
+        self::$booted = false;
+    }
 }

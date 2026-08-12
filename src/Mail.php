@@ -2,6 +2,7 @@
 
 namespace Tamedevelopers\Support;
 
+use Closure;
 use PHPMailer\PHPMailer\PHPMailer;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\Manager;
@@ -63,18 +64,27 @@ class Mail{
     }
 
     /**
-     * Set manual configuration
+     * Set Static Configuration
      *
-     * @param array $options Mailer configuration options
-     * - (transport|host|port|username|password|encryption|from_email|from_name|url|token|secret|region)
-     * 
+     * @param array{
+     *     transport?: 'smtp'|'zeptomail'|'sendgrid'|'mailgun'|'mailjet'|'postmark'|'ses'|'mailchimp'|'socketlabs'|'elastic'|'brevo',
+     *     host?: string,
+     *     port?: string|int,
+     *     username?: string,
+     *     password?: string,
+     *     encryption?: 'tls'|'ssl'|'starttls'|string,
+     *     from?: array{address: string, name?: string}|array<int, array{address: string, name?: string}>,
+     *     url?: string,
+     *     token?: string,
+     *     secret?: string,
+     *     region?: string
+     * } $options Mailer configuration options
+     *
      * @return $this
      */
     public static function config(?array $options = [])
     {
-        if(!defined(self::$constantName)){
-            define(self::$constantName, $options);
-        }
+        self::$staticConfigOptions = $options;
 
         return new self([], []);
     }
@@ -96,7 +106,7 @@ class Mail{
         // new class instance
         $instance = new self(
             $emails,
-            self::getConfig()
+            self::$staticConfigOptions
         );
 
         // automatically collecting the transport data if set or method 
@@ -194,8 +204,7 @@ class Mail{
     /**
      * Set the email sending Transport.
      *
-     * @param string $transport
-     * - [optional] Default is smtp (zeptomail, sendgrid, mailgun, mailjet, postmark, ses, mailchimp, socketlabs, elastic, brevo)
+     * @param 'smtp'|'zeptomail'|'sendgrid'|'mailgun'|'mailjet'|'postmark'|'ses'|'mailchimp'|'socketlabs'|'elastic'|'brevo' $transport
      * 
      * @return $this
      */
@@ -295,10 +304,10 @@ class Mail{
     /**
      * Proceed sending email
      * 
-     * @param callable $callable
+     * @param Closure $closure
      * @return void|mixed
      */
-    public function send($callable = null)
+    public function send($closure = null)
     {
         // configure smtp data
         $this->configureSMTPData($this->options);
@@ -316,9 +325,9 @@ class Mail{
 
         // create email closures
         if($isApi){
-            $sendEmails = $this->createApiEmailTempClosure($callable);
+            $sendEmails = $this->createApiEmailTempClosure($closure);
         } else{
-            $sendEmails = $this->createEmailTempClosure($callable);
+            $sendEmails = $this->createEmailTempClosure($closure);
         }
 
         TameCollect($sendEmails)
