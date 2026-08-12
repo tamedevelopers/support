@@ -1,5 +1,6 @@
 <?php 
 
+use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Translator;
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -33,7 +34,7 @@ function configuration($key, $default = null){
     // then message.key_name
     // To make this Laravel kind of language, we can add the default value to be returned as the key
 
-    return config("configuration/{$key}", $default, 'tests');
+    return Server::config("configuration/{$key}", $default, 'tests');
 }
 
 dd(

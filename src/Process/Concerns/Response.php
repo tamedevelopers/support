@@ -7,14 +7,18 @@ namespace Tamedevelopers\Support\Process\Concerns;
 use ArrayAccess;
 use JsonSerializable;
 use Stringable;
+use Exception;
 
 class Response implements ArrayAccess, JsonSerializable, Stringable
 {
+    protected mixed $decodedJson = null;
+    protected bool $isJsonDecoded = false;
+
     /**
      * @param int $status HTTP status code.
      * @param array<string, array<string>>|array<string, string> $headers Response headers.
      * @param string $body Raw response body.
-     * @param array $info Additional metadata (e.g., cURL info).
+     * @param array $info Additional metadata (e.g., execution time).
      */
     public function __construct(
         protected int $status,
@@ -23,57 +27,56 @@ class Response implements ArrayAccess, JsonSerializable, Stringable
         protected array $info = []
     ) {}
 
-    /**
-     * Get the HTTP status code.
-     */
     public function status(): int
     {
         return $this->status;
     }
 
-    /**
-     * Get the raw response body.
-     */
     public function body(): string
     {
         return $this->body;
     }
 
     /**
-     * Decode JSON body into an array or object.
+     * Memoized JSON Decoder (Decodes once per response lifecycle).
      */
     public function json(?string $key = null, mixed $default = null): mixed
     {
-        $decoded = json_decode($this->body, true);
+        if (!$this->isJsonDecoded) {
+            $this->decodedJson = json_decode($this->body, true);
+            $this->isJsonDecoded = true;
+        }
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             return $default;
         }
 
         if ($key === null) {
-            return $decoded;
+            return $this->decodedJson;
         }
 
-        return $this->arrayGet($decoded, $key, $default);
+        return $this->arrayGet($this->decodedJson, $key, $default);
     }
 
     /**
-     * Get response headers.
+     * Decode body into an object.
      */
+    public function object(): ?object
+    {
+        return json_decode($this->body, false) ?: null;
+    }
+
     public function headers(): array
     {
         return $this->headers;
     }
 
-    /**
-     * Get a specific header by name.
-     */
     public function header(string $name, ?string $default = null): ?string
     {
         $normalized = strtolower($name);
 
         foreach ($this->headers as $key => $value) {
-            if (strtolower($key) === $normalized) {
+            if (strtolower((string)$key) === $normalized) {
                 return is_array($value) ? implode(', ', $value) : (string) $value;
             }
         }
@@ -81,81 +84,63 @@ class Response implements ArrayAccess, JsonSerializable, Stringable
         return $default;
     }
 
-    /**
-     * Determine if status is 2xx OK.
-     */
     public function successful(): bool
     {
         return $this->status >= 200 && $this->status < 300;
     }
 
-    /**
-     * Determine if status is 200 OK.
-     */
     public function ok(): bool
     {
         return $this->status === 200;
     }
 
-    /**
-     * Determine if status is a redirect (3xx).
-     */
     public function redirect(): bool
     {
         return $this->status >= 300 && $this->status < 400;
     }
 
-    /**
-     * Determine if status is a client error (4xx).
-     */
     public function clientError(): bool
     {
         return $this->status >= 400 && $this->status < 500;
     }
 
-    /**
-     * Determine if status is a server error (5xx).
-     */
     public function serverError(): bool
     {
         return $this->status >= 500 && $this->status < 600;
     }
 
-    /**
-     * Determine if status is 401 Unauthorized.
-     */
     public function unauthorized(): bool
     {
         return $this->status === 401;
     }
 
-    /**
-     * Determine if status is 403 Forbidden.
-     */
     public function forbidden(): bool
     {
         return $this->status === 403;
     }
 
-    /**
-     * Determine if status is 404 Not Found.
-     */
     public function notFound(): bool
     {
         return $this->status === 404;
     }
 
-    /**
-     * Determine if request failed (4xx or 5xx).
-     */
     public function failed(): bool
     {
         return $this->serverError() || $this->clientError();
     }
 
     /**
-     * Get request transfer info (cURL statistics, execution time, etc.).
+     * Throw an exception if request failed.
      */
+    public function throw(): static
+    {
+        if ($this->failed()) {
+            throw new Exception("HTTP request failed with status code {$this->status}: {$this->body}");
+        }
+
+        return $this;
+    }
+
     public function transferInfo(?string $key = null): mixed
     {
         if ($key !== null) {
@@ -165,39 +150,23 @@ class Response implements ArrayAccess, JsonSerializable, Stringable
         return $this->info;
     }
 
-    /**
-     * Convert response to Symfony HttpFoundation Response if needed.
-     */
-    public function toSymfonyResponse(): \Symfony\Component\HttpFoundation\Response
-    {
-        return new \Symfony\Component\HttpFoundation\Response(
-            $this->body(),
-            $this->status(),
-            $this->headers()
-        );
-    }
-
-    // --- Interface Methods ---
+    // --- Interface Implementations ---
 
     public function offsetExists(mixed $offset): bool
     {
-        return isset($this->json()[$offset]);
+        $data = $this->json();
+        return is_array($data) && isset($data[$offset]);
     }
 
     public function offsetGet(mixed $offset): mixed
     {
-        return $this->json()[$offset] ?? null;
+        $data = $this->json();
+        return is_array($data) ? ($data[$offset] ?? null) : null;
     }
 
-    public function offsetSet(mixed $offset, mixed $value): void
-    {
-        // Responses are immutable
-    }
+    public function offsetSet(mixed $offset, mixed $value): void {}
 
-    public function offsetUnset(mixed $offset): void
-    {
-        // Responses are immutable
-    }
+    public function offsetUnset(mixed $offset): void {}
 
     public function jsonSerialize(): mixed
     {
@@ -209,9 +178,6 @@ class Response implements ArrayAccess, JsonSerializable, Stringable
         return $this->body();
     }
 
-    /**
-     * Dot notation array fetch helper.
-     */
     private function arrayGet(mixed $array, string $key, mixed $default = null): mixed
     {
         if (!is_array($array)) {

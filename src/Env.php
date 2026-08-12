@@ -45,6 +45,11 @@ class Env {
     private static $envFileIsLoaded = false;
 
     /**
+     * Track whether the boot process has completed.
+     */
+    protected static bool $booted = false;
+
+    /**
      * Define custom Server root path
      * 
      * @param string|null $path
@@ -320,21 +325,18 @@ class Env {
     }
 
     /**
-     * Boot the ENV::BootLogger.
-     * If the constant 'TAME_ENV_BOOTLOGER' is not defined, 
-     * it defines it and starts the debugger automatically 
+     * Boot the Environment.
      * 
-     * So that this is only called once in entire application life-cycle
+     * Ensures the BootLogger registers only once during the application lifecycle.
      */
     public static function boot()
     {
-        if(!defined('TAME_ENV_BOOTLOGER')){
-            // start logger
-            self::bootLogger();
+        if (self::$booted) {
+            return;
+        }
 
-            // Define boot logger as true
-            define('TAME_ENV_BOOTLOGER', 1);
-        } 
+        self::$booted = true;
+        self::bootLogger();
     }
 
     /**

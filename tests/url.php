@@ -12,7 +12,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 config_asset('/', true);
 
-$http = new Http();
+$http = new HttpRequest();
 
 dump(
     [
@@ -23,7 +23,7 @@ dump(
     ], // relative link path
 
     [
-      'IP: ' . HttpRequest::ip(),
+      'IP: ' . $http->ip(),
       'Method: ' . $http->method(),
       'Server: ' . $http->server(),
       'Request: ' . $http->request(),
@@ -40,8 +40,8 @@ dump(
 
     [
       $http->query('query'),
-      $http->post('query'),
       $http->input('query'),
+      $http->post('query'),
       $http->header('host'),
       $http->headers(),
     ],

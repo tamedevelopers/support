@@ -23,7 +23,9 @@
         "phpmailer/phpmailer": "^6.9",
         "filp/whoops": "^2.15",
         "ezyang/htmlpurifier": "^4.13",
-        "composer-plugin-api": "^2.0"
+        "composer-plugin-api": "^2.0",
+        "guzzlehttp/guzzle": "*",
+        "illuminate/http": "*"
     },
     "extra": {
         "class": "Tamedevelopers\\Support\\ComposerPlugin"

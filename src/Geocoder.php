@@ -5,7 +5,9 @@ namespace Tamedevelopers\Support;
 use Exception;
 use Tamedevelopers\Support\Capsule\FileCache;
 use Tamedevelopers\Support\Capsule\Logger;
+use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Process\Http;
+use Tamedevelopers\Support\Server;
 
 class Geocoder
 {
@@ -24,14 +26,18 @@ class Geocoder
      */
     public function __construct(?string $userAgent = null)
     {
-        $appName  = config('app.name', 'LaravelApp');
-        $appEmail = config('mail.from.address', 'admin@domain.com');
+        $server = new Server;
+
+        Manager::startEnvIFNotStarted();
+
+        $appName  = $server->config('app.name', 'TameDeveloperApp');
+        $appEmail = $server->config('mail.from.address', 'admin@domain.com');
 
         $this->userAgent        = $userAgent ?? "{$appName}/1.0 ({$appEmail})";
-        $this->googleApiKey     = config('services.google.maps_key') ?? env('GOOGLE_MAPS_API_KEY');
-        $this->geoapifyKey      = config('services.geoapify.key') ?? env('GEOAPIFY_API_KEY');
-        $this->locationIqKey    = config('services.locationiq.key') ?? env('LOCATIONIQ_API_KEY');
-        $this->geocodeMapsCoKey = config('services.geocodemapsco.key') ?? env('GEOCODE_MAPS_CO_API_KEY');
+        $this->googleApiKey     = $server->config('services.google.maps_key') ?? env('GOOGLE_MAPS_API_KEY');
+        $this->geoapifyKey      = $server->config('services.geoapify.key') ?? env('GEOAPIFY_API_KEY');
+        $this->locationIqKey    = $server->config('services.locationiq.key') ?? env('LOCATIONIQ_API_KEY');
+        $this->geocodeMapsCoKey = $server->config('services.geocodemapsco.key') ?? env('GEOCODE_MAPS_CO_API_KEY');
     }
 
     /**
@@ -49,39 +55,39 @@ class Geocoder
 
         $cacheKey = 'geocode_' . md5(mb_strtolower($cleanAddress));
         
-        return FileCache::remember($cacheKey, TameTime()->addDays(30), function () use ($cleanAddress) {
-            
-            // Generate sanitization levels from most clean/simplified -> exact raw
-            $queries = array_unique(array_filter([
-                $this->sanitizeAddress($cleanAddress), // e.g. "Hong Kong, Cheung Sha Wan, Wing Hong St, 83"
-                $cleanAddress                          // e.g. "Hong Kong, Cheung Sha Wan, Wing Hong St, 83號16樓B9室"
-            ]));
+        // Generate sanitization levels from most clean/simplified -> exact raw
+        $queries = array_unique(array_filter([
+            $this->sanitizeAddress($cleanAddress), // e.g. "Hong Kong, Cheung Sha Wan, Wing Hong St, 83"
+            $cleanAddress                          // e.g. "Hong Kong, Cheung Sha Wan, Wing Hong St, 83號16樓B9室"
+        ]));
 
-            // Strict & Reliable engines first -> Fuzzy fallbacks last
-            $engines = [
-                'tryNominatim',     // Primary OSM Engine
-                'tryLocationIq',    // Keyed OSM
-                'tryGeoapify',      // Keyed Engine
-                'tryGeocodeMapsCo', // Keyed Engine
-                'tryGoogle',        // Google Maps API
-                'tryPhoton',        // Fuzzy Fallback (Only runs if all above strict engines fail)
-            ];
+        // Strict & Reliable engines first -> Fuzzy fallbacks last
+        $engines = [
+            'tryNominatim',     // Primary OSM Engine
+            'tryLocationIq',    // Keyed OSM
+            'tryGeoapify',      // Keyed Engine
+            'tryGeocodeMapsCo', // Keyed Engine
+            'tryGoogle',        // Google Maps API
+            'tryPhoton',        // Fuzzy Fallback (Only runs if all above strict engines fail)
+        ];
 
-            foreach ($engines as $engine) {
-                // Skip engines without API keys
-                if ($engine === 'tryGoogle' && !$this->googleApiKey) continue;
-                if ($engine === 'tryLocationIq' && !$this->locationIqKey) continue;
-                if ($engine === 'tryGeoapify' && !$this->geoapifyKey) continue;
-                if ($engine === 'tryGeocodeMapsCo' && !$this->geocodeMapsCoKey) continue;
+        foreach ($engines as $engine) {
+            // Skip engines without API keys
+            if ($engine === 'tryGoogle' && !$this->googleApiKey) continue;
+            if ($engine === 'tryLocationIq' && !$this->locationIqKey) continue;
+            if ($engine === 'tryGeoapify' && !$this->geoapifyKey) continue;
+            if ($engine === 'tryGeocodeMapsCo' && !$this->geocodeMapsCoKey) continue;
 
-                foreach ($queries as $query) {
-                    if ($result = $this->$engine($query)) {
-                        return $result;
-                    }
+            foreach ($queries as $query) {
+                if ($result = $this->$engine($query)) {
+                    return $result;
                 }
             }
+        }
 
-            return null;
+        return null;
+        return FileCache::remember($cacheKey, TameTime()->addDays(30), function () use ($cleanAddress) {
+            
         });
     }
 
@@ -129,7 +135,7 @@ class Geocoder
                 ];
             }
         } catch (Exception $e) {
-           Logger::warning("Nominatim Geocoding Exception: " . $e->getMessage());
+            Logger::error("Nominatim Geocoding Exception: " . $e->getMessage());
         }
 
         return null;
