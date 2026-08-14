@@ -939,6 +939,38 @@ class Str
     }
 
     /**
+     * Splits a full name into first and last name components.
+     *
+     * Handles extra whitespace, single-word names, and groups any 
+     * middle names together with the last name.
+     *
+     * @param string $fullName The raw name string to split.
+     * @return array{firstName: string, lastName: string} An associative array containing 'firstName' and 'lastName'.
+     */
+    public static function splitName(string $fullName) 
+    {
+        // Trim spaces and split by one or more whitespace characters
+        $parts = preg_split('/\s+/', trim($fullName));
+
+        if (empty($parts) || $parts[0] === '') {
+            return ['firstName' => '', 'lastName' => ''];
+        }
+
+        if (count($parts) === 1) {
+            return ['firstName' => $parts[0], 'lastName' => ''];
+        }
+
+        // First element as first name, the rest joined together as last name
+        $firstName = array_shift($parts);
+        $lastName = implode(' ', $parts);
+
+        return [
+            'firstName' => $firstName,
+            'lastName'  => $lastName,
+        ];
+    }
+
+    /**
      * Capitalize words in a string to StudlyCase.
      *
      * @param string $value
