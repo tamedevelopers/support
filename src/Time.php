@@ -115,11 +115,18 @@ final class Time {
     protected $utcOffset;
         
     /**
-     * static
+     * Static Self Instance
      *
      * @var mixed
      */
     private static $staticData;
+
+    /**
+     * Stored translation configuration array.
+     *
+     * @var array|null
+     */
+    private static ?array $translations = null;
 
     /**
      * Time constructor.
@@ -585,6 +592,48 @@ final class Time {
     }
 
     /**
+     * Create a new Time instance from specific date and time components.
+     *
+     * @param int|string|null $year
+     * @param int|string|null $month
+     * @param int|string|null $day
+     * @param int|string|null $hour
+     * @param int|string|null $minute
+     * @param int|string|null $second
+     * @param string|DateTimeZone|null $tz
+     * 
+     * @return static
+     */
+    public static function create($year = null, $month = null, $day = null, $hour = null, $minute = null, $second = null, $tz = null) 
+    {
+        $tz     = !empty($tz) ? $tz : self::now()->timezone;
+        $now    = new DateTime('now', new DateTimeZone((string) $tz));
+
+        // Fall back to current date/time components if arguments are omitted
+        $year   = $year   ?? (int) $now->format('Y');
+        $month  = $month  ?? (int) $now->format('m');
+        $day    = $day    ?? (int) $now->format('d');
+        $hour   = $hour   ?? (int) $now->format('H');
+        $minute = $minute ?? (int) $now->format('i');
+        $second = $second ?? (int) $now->format('s');
+
+        // Pad components to construct standard Y-m-d H:i:s format string
+        $formattedDate = sprintf(
+            '%04d-%02d-%02d %02d:%02d:%02d',
+            (int) $year,
+            (int) $month,
+            (int) $day,
+            (int) $hour,
+            (int) $minute,
+            (int) $second
+        );
+
+        $timezone = $tz instanceof DateTimeZone ? $tz->getName() : $tz;
+
+        return new static($formattedDate, $timezone);
+    }
+
+    /**
      * Set time to `now`
      * @return $this
      */
@@ -731,6 +780,21 @@ final class Time {
     }
 
     /**
+     * Retrieve text configuration entries.
+     *
+     * @param string|null $mode Specific key to fetch or null for all
+     * @return mixed
+     */
+    private static function getText($mode  = null)
+    {
+        if(empty(self::$translations)){
+            self::config();
+        }
+
+        return self::$translations[$mode] ?? self::$translations;
+    }
+
+    /**
      * Set the configuration options for text representations.
      * 
      * @param array|null $options
@@ -738,28 +802,28 @@ final class Time {
      */
     public static function config(?array $options = [])
     {
-        if(!defined('TAME_TIME_CONFIG')){
-            define('TAME_TIME_CONFIG', array_merge([
-                'night'     => 'Good night!',
-                'morning'   => 'Good morning!',
-                'afternoon' => 'Good afternoon!',
-                'evening'   => 'Good evening!',
-                'now'       => 'Just now',
-                's'         => 's',
-                'd'         => 'd',
-                'h'         => 'h',
-                'm'         => 'm',
-                'w'         => 'w',
-                'y'         => 'y',
-                'at'        => 'at',
-                'ago'       => 'ago',
-                'sec'       => 'second',
-                'min'       => 'minute',
-                'hour'      => 'hour',
-                'year'      => 'year',
-                'yesterday' => 'Yesterday',
-            ], $options));
-        }
+        $defaults = [
+            'night'     => 'Good night!',
+            'morning'   => 'Good morning!',
+            'afternoon' => 'Good afternoon!',
+            'evening'   => 'Good evening!',
+            'now'       => 'Just now',
+            's'         => 's',
+            'd'         => 'd',
+            'h'         => 'h',
+            'm'         => 'm',
+            'w'         => 'w',
+            'y'         => 'y',
+            'at'        => 'at',
+            'ago'       => 'ago',
+            'sec'       => 'second',
+            'min'       => 'minute',
+            'hour'      => 'hour',
+            'year'      => 'year',
+            'yesterday' => 'Yesterday',
+        ];
+
+        self::$translations = array_merge($defaults, $options ?? []);
     }
 
     /**
@@ -986,21 +1050,6 @@ final class Time {
         ]);
 
         return $data[$mode] ?? $data;
-    }
-
-    /**
-     * Retrieve text configuration entries.
-     *
-     * @param string|null $mode Specific key to fetch or null for all
-     * @return mixed
-     */
-    private static function getText($mode  = null)
-    {
-        if(!defined('TAME_TIME_CONFIG')){
-            self::config();
-        }
-
-        return TAME_TIME_CONFIG[$mode] ?? TAME_TIME_CONFIG;
     }
 
     /**
