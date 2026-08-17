@@ -33,7 +33,11 @@ $removeArrayKeys = Str::removeKeysFromArray(
 );
 
 
+
 dd(
+    
+    Str::contains('This Package has alread been Delivered', ['arrived', 'delivered'], true),
+
     $changeArrayKeys,
     $removeArrayKeys,
     

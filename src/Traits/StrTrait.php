@@ -219,4 +219,41 @@ trait StrTrait{
         };
     }
 
+    /**
+     * Generate pronounceable pseudo-words using alternating syllables.
+     *
+     * @param int $wordCount
+     * @param int $minLength
+     * @param int $maxLength
+     * @return string
+     */
+    public static function generatePronounceableWords(int $wordCount = 10, int $minLength = 3, int $maxLength = 7)
+    {
+        $vowels = ['a', 'e', 'i', 'o', 'u'];
+        $consonants = ['b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'r', 's', 't', 'v', 'w', 'z'];
+        
+        $vMax = count($vowels) - 1;
+        $cMax = count($consonants) - 1;
+        $words = [];
+
+        for ($i = 0; $i < $wordCount; $i++) {
+            $length = random_int($minLength, $maxLength);
+            $word = '';
+            $useConsonant = (bool) random_int(0, 1);
+
+            for ($j = 0; $j < $length; $j++) {
+                $word .= $useConsonant 
+                    ? $consonants[random_int(0, $cMax)] 
+                    : $vowels[random_int(0, $vMax)];
+                
+                // Alternate character type for readability
+                $useConsonant = !$useConsonant;
+            }
+
+            $words[] = $word;
+        }
+
+        return ucfirst(implode(' ', $words));
+    }
+
 }
