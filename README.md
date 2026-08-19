@@ -289,19 +289,36 @@ Support Package For PHP, Laravel and PHP Frameworks
     * [diffBetween](#diffBetween)
     * [ago](#ago)
     * [range](#range)
+    * [same](#same)
+    * [next](#next)
+    * [previous](#previous)
+    * [addSecond](#addSecond)
     * [addSeconds](#addSeconds)
+    * [subSecond](#subSecond)
     * [subSeconds](#subSeconds)
+    * [addMinute](#addMinute)
     * [addMinutes](#addMinutes)
+    * [subMinute](#subMinute)
     * [subMinutes](#subMinutes)
+    * [addHour](#addHour)
     * [addHours](#addHours)
+    * [subHour](#subHour)
     * [subHours](#subHours)
+    * [addDay](#addDay)
     * [addDays](#addDays)
+    * [subDay](#subDay)
     * [subDays](#subDays)
+    * [addWeek](#addWeek)
     * [addWeeks](#addWeeks)
+    * [subWeek](#subWeek)
     * [subWeeks](#subWeeks)
+    * [addMonth](#addMonth)
     * [addMonths](#addMonths)
+    * [subMonth](#subMonth)
     * [subMonths](#subMonths)
+    * [addYear](#addYear)
     * [addYears](#addYears)
+    * [subYear](#subYear)
     * [subYears](#subYears)
     * [greeting](#greeting)
     * [allTimezone](#allTimezone)
@@ -1133,7 +1150,18 @@ TamePDF()->read('invoice100.pdf')
 
 ## Time
 - Class: `\Tamedevelopers\Support\Time`
-    - It's helper class can be called, using -- `TameTime()`
+    - Helper Function: `TameTime()`
+
+> **Note:** Every modification method returns a new, independent cloned instance of the object. Methods do not mutate the original instance, allowing you to generate multiple dates from a single base object safely.
+
+```php
+$time = TameTime();
+
+// Base $time remains untouched
+$nextSunday = $time->next('sunday');     // Returns Next Sunday
+$prevSunday = $time->previous('sunday'); // Returns Previous Sunday relative to base $time
+$sameSunday = $time->same('sunday');     // Returns Sunday of the current week
+```
 
 ### Time Usage
 - Get time date from class
@@ -1312,6 +1340,30 @@ $time->range('0-10', 'D, M j')
 // Output: returns class of Tamedevelopers\Support\Capsule\TimeHelper
 ```
 
+### same
+- Target a specific day within the current week anchored state.
+    - dayName as Param `mon-sun\|monday-sunday`
+
+```php
+$time->same('monday')
+```
+
+### next
+- Target a specific day within the upper week
+    - dayName as Param `mon-sun\|monday-sunday`
+
+```php
+$time->next('sun')
+```
+
+### previous
+- Target a specific day within the previous week
+    - dayName as Param `mon-sun\|monday-sunday`
+
+```php
+$time->previous('saturday')
+```
+
 #### get output
 - To get the output, we need to call the TimeHelper format method
     - The format() method takes two [optional] param. `start, year` as boolean
@@ -1324,18 +1376,18 @@ $time->range('0-10')->format()
 // Output: Tue, Mar 4
 ```
 
-### addSeconds
-- Can be called using boht [plural|singular] formats. To add more dates with already existing time.
+### addDay
+- To add more dates with already existing time.
 
 ```php
-$time4->now()->addMonth(3)->addSeconds(2)->addDays(2)->format()
+$time4->now()->addDay()->addMonths(2)->format()
 ```
 
-### subSeconds
-- Can be called using boht [plural|singular] formats. To subtract dates from already existing time.
+### addDays
+- To subtract dates from already existing time.
 
 ```php
-$time4->now()->subMonth(3)->subSecond(2)->subDays(2)->format()
+$time4->now()->addDays(3)->subMonth()->subWeek()->format()
 ```
 
 ### allTimezone

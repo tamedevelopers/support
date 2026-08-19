@@ -173,7 +173,7 @@ trait TimeExtraTrait
     // ---------------------------
 
     /**
-     * Check if two dates are the same calendar day (in instance timezone).
+     * Check if two dates are thesame calendar day (in instance timezone).
      *
      * @param mixed $otherDate A date-like value to compare
      * @return bool
@@ -187,7 +187,7 @@ trait TimeExtraTrait
     }
 
     /**
-     * Check if two dates are in the same month and year (in instance timezone).
+     * Check if two dates are in thesame month and year (in instance timezone).
      *
      * @param mixed $otherDate A date-like value to compare
      * @return bool
@@ -201,7 +201,7 @@ trait TimeExtraTrait
     }
 
     /**
-     * Check if two dates are in the same year (in instance timezone).
+     * Check if two dates are in thesame year (in instance timezone).
      *
      * @param mixed $otherDate A date-like value to compare
      * @return bool
@@ -215,7 +215,7 @@ trait TimeExtraTrait
     }
 
     /**
-     * Strict equality (same timestamp).
+     * Strict equality (thesame timestamp).
      *
      * @param mixed $otherDate A date-like value to compare
      * @return bool

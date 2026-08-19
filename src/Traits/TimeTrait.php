@@ -102,6 +102,49 @@ trait TimeTrait{
         // Compare timestamps (Unix time) for accuracy and simplicity
         return $this->format() >= $time->format();
     }
+
+    /**
+     * Handle named day calculations using a direct array lookup.
+     *
+     * @param string $dayName
+     * @return self
+     */
+    private function buildDayModifier(string $dayName): self
+    {
+        $clone = $this->clone();
+        $inputDay = Str::lower($dayName);
+
+        // Valid days mapping (short & full names mapped to canonical PHP day names)
+        $validDays = [
+            'monday'    => 'monday',
+            'mon'       => 'monday',
+            'tuesday'   => 'tuesday',
+            'tue'       => 'tuesday',
+            'tues'      => 'tuesday',
+            'wednesday' => 'wednesday',
+            'wed'       => 'wednesday',
+            'thursday'  => 'thursday',
+            'thu'       => 'thursday',
+            'thur'      => 'thursday',
+            'thurs'     => 'thursday',
+            'friday'    => 'friday',
+            'fri'       => 'friday',
+            'saturday'  => 'saturday',
+            'sat'       => 'saturday',
+            'sunday'    => 'sunday',
+            'sun'       => 'sunday',
+        ];
+
+        // Direct lookup; fallback to raw input if key doesn't exist
+        $targetDay = $validDays[$inputDay] ?? $inputDay;
+
+        // Calculate relative date anchored to current chained state
+        $currentTimestamp = $clone->date ?? strtotime('now');
+        $clone->date = strtotime("{$targetDay} this week", $currentTimestamp);
+        $clone->timestamp = $clone->buildTimePrint();
+
+        return $clone;
+    }
     
     /**
      * Modify builder for add/sub operations.

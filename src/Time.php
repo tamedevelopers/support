@@ -173,6 +173,39 @@ final class Time {
     }
 
     /**
+     * Target a specific day within the current week anchored state.
+     *
+     * @param string $dayName e.g. 'mon', 'tuesday', 'saturday'
+     * @return $this
+     */
+    public function same(string $dayName)
+    {
+        return $this->buildDayModifier($dayName);
+    }
+
+    /**
+     * Target the same day in the next week.
+     *
+     * @param string $dayName
+     * @return $this
+     */
+    public function next(string $dayName)
+    {
+        return $this->addWeek()->same($dayName);
+    }
+
+    /**
+     * Target the same day in the previous week.
+     *
+     * @param string $dayName
+     * @return $this
+     */
+    public function previous(string $dayName)
+    {
+        return $this->subWeek()->same($dayName);
+    }
+
+    /**
      * Add seconds to the current date.
      *
      * @param int $value
