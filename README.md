@@ -633,7 +633,7 @@ Str::padRight('7', 3, '0');                        // '700'
 
 // Pattern matching
 Str::is('user/*', 'user/42');                      // true
-Str::contains('brown', 'The quick brown fox');     // true
+Str::contains('The quick brown fox', 'Brown', true);     // true
 
 // Case/format helpers
 Str::snake('Hello World');                         // 'hello_world'

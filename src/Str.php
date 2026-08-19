@@ -474,14 +474,12 @@ class Str
      * Clean phone string
      *
      * @param string|null $phone
-     * @param bool $allow
-     * - [optional] to allow int format `+` (before number)
-     * 
+     * @param bool $allowFormat Default is true to allow int format `+` (before number)
      * @return string
      */
-    public static function phone($phone = null, ?bool $allow = true)
+    public static function phone($phone = null, $allowFormat = true)
     {
-        return Tame::cleanPhoneNumber($phone, $allow);
+        return Tame::cleanPhoneNumber($phone, $allowFormat);
     }
 
     /**
@@ -1018,8 +1016,9 @@ class Str
     /**
      * Check if a string or an array of words contains a given substring.
      *
-     * @param string|null $haystack
-     * @param string|iterable<string> $needles
+     * @param string|null $haystack The string to search within.
+     * @param string|null|iterable<string> $needles  The substring or array/collection of substrings to look for.
+     * @param bool $ignoreCase Whether to ignore case when searching.
      * @return bool
      */
     public static function contains($haystack = null, $needles = null, $ignoreCase = false)
@@ -1053,13 +1052,13 @@ class Str
 
     /**
      * Replace all occurrences of the search string with the replacement string
-     * @param mixed <array|string|null> $search
-     * @param mixed <array|string|null> $replace
+     * @param string|null|iterable<string> $search
+     * @param string|null|iterable<string> $replace
      * @param string|null $subject 
      * 
      * @return string
      */
-    public static function replace($search, $replace, $subject = null)
+    public static function replace($search = null, $replace = null, $subject = null)
     {
         $search  = self::replaceSubject($search);
         $replace = self::replaceSubject($replace);

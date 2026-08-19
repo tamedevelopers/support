@@ -307,8 +307,8 @@ class HttpRequest implements RequestInterface
     public static function isIpAccessedVia127Port()
     {
         return Str::contains(
-            $_SERVER['REMOTE_ADDR'] ?? '', 
-            self::host()
+            self::host(),
+            self::getRemoteAddr(), 
         );
     }
 
@@ -320,8 +320,8 @@ class HttpRequest implements RequestInterface
     public static function isIpAccessedViaLocalHost()
     {
         return Str::contains(
-            $_SERVER['REMOTE_ADDR'] ?? '',
-            'localhost'
+            'localhost',
+            self::getRemoteAddr(),
         );
     }
 
@@ -336,13 +336,20 @@ class HttpRequest implements RequestInterface
     }
 
     /**
+     * Get the remote address of the client making the request.
+     */
+    private static function getRemoteAddr(): string
+    {
+        return $_SERVER['REMOTE_ADDR'] ?? '';
+    }
+
+    /**
      * Local Domain Path
      * 
      * @return string
      */
     private static function localDomainPath()
     {
-
         $uri = $_SERVER['REQUEST_URI'] ?? '';
         $root = self::pathReplacer($_SERVER['DOCUMENT_ROOT']);
         $absolutePath = self::pathReplacer(self::createAbsolutePath());

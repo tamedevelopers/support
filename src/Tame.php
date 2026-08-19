@@ -787,31 +787,25 @@ class Tame extends TameHelper{
      * Clean phone string
      *
      * @param string|null $phone
-     * @param bool $allow --- Default is true
-     * - [optional] to allow int format `+` (before number)
-     * 
+     * @param bool $allowFormat Default is true to allow int format `+` (before number)
      * @return string
      */
-    public static function cleanPhoneNumber($phone = null, $allow = true)
+    public static function cleanPhoneNumber($phone = null, $allowFormat = true)
     {
-        $phone = Str::trim($phone);
-        $phone = str_replace([' ', '-'], '', $phone);
-        $phone = str_replace(['(', ')'], '', $phone);
-        
-        // Remove '+' if it exists and store the cleaned phone number
-        if(Str::contains('+', $phone)){
-            $phone = Str::replace('+', '', $phone);
-        }
-        
-        // Remove all non-numeric characters from the phone number
-        $phone = preg_replace('/[^0-9+]/', '', $phone);
-
-        // Add '+' back to the cleaned phone number if $allow is true
-        if($allow){
-            $phone = "+{$phone}";
+        if (empty($phone)) {
+            return '';
         }
 
-        return $phone;
+        // Strip out everything except digits
+        $digits = preg_replace('/\D/', '', $phone);
+
+        // If no digits remain, return an empty string
+        if ($digits === '') {
+            return '';
+        }
+
+        // Add leading '+' if allowed
+        return $allowFormat ? "+{$digits}" : $digits;
     }
 
     /**
