@@ -1340,6 +1340,18 @@ $time->range('0-10', 'D, M j')
 // Output: returns class of Tamedevelopers\Support\Capsule\TimeHelper
 ```
 
+#### range output
+- To get the output, we need to call the TimeHelper format method
+    - The format() method takes two [optional] param. `start, year` as boolean
+
+```php
+$time->range('0-10')->format(true, true)
+// Output: Thu, Jan 23 - Tue, Mar 4, 2025
+
+$time->range('0-10')->format()
+// Output: Tue, Mar 4
+```
+
 ### same
 - Target a specific day within the current week anchored state.
     - dayName as Param `mon-sun\|monday-sunday`
@@ -1362,18 +1374,6 @@ $time->next('sun')
 
 ```php
 $time->previous('saturday')
-```
-
-#### get output
-- To get the output, we need to call the TimeHelper format method
-    - The format() method takes two [optional] param. `start, year` as boolean
-
-```php
-$time->range('0-10')->format(true, true)
-// Output: Thu, Jan 23 - Tue, Mar 4, 2025
-
-$time->range('0-10')->format()
-// Output: Tue, Mar 4
 ```
 
 ### addDay
