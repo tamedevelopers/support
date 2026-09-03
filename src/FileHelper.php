@@ -63,8 +63,6 @@ class FileHelper{
     
     /**
      * Error on upload
-     * 
-     * @return string|null
      */
     public function noError(): bool
     {

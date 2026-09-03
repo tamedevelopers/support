@@ -8,32 +8,43 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // Tame()->HeadersSent();
 
 $volume = [
-    1 => [
-        'length' => 20,
-        'width' => 10,
-        'height' => 40,
-    ],
-    2 => [
-        'length' => 120,
-        'width' => 87,
-        'height' => 450,
-    ],
+    1 => ['length' => 20, 'width' => 10, 'height' => 40,],
+    2 => ['length' => 120, 'width' => 87, 'height' => 450,],
 ];
 
-$VolumeWeight       = Tame()->calculateVolumeWeight($volume[1]['length'], $volume[1]['width'], $volume[1]['height'], false, 0.5);
-$CubicMeterWeight   = Tame()->calculateCubicMeterWeight($volume[2]['length'], $volume[2]['width'], $volume[2]['height'], false, 0.1);
+$tame = new Tame();
+
+$VolumeWeight = $tame->calculateVolumeWeight(
+    $volume[1]['length'], 
+    $volume[1]['width'], 
+    $volume[1]['height'], 
+    false, 0.5
+);
+
+$CubicMeterWeight = $tame->calculateCubicMeterWeight(
+    $volume[2]['length'], 
+    $volume[2]['width'], 
+    $volume[2]['height'], 
+    false, 0.1
+);
+
+$placeholder = $tame->svgPlaceholder('AliExpress');
+
+echo "
+    <img src='{$placeholder}' style='width:200px; height: 150px; object-fit: cover; margin-bottom: 10px;'>
+";
 
 dd(
     [
-      Tame::urlExist('google.com'),
-      Tame::isInternetAvailable(),
+      $tame->urlExist('google.com'),
+      $tame->isInternetAvailable(), 
     ],
     [
-        Tame()->countDivisibleNumbers(100, 680),
-        Tame()->byteToUnit(6880),
-        Tame()->sizeToBytes('24mb'),
-        Tame()->fileTime('tests/tame.php')
-    ],
+        $tame->countDivisibleNumbers(100, 680),
+        $tame->byteToUnit(6880),
+        $tame->sizeToBytes('24mb'),
+        $tame->fileTime('tests/tame.php')
+    ], 
 
     'br',
     $VolumeWeight,

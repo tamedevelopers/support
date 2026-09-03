@@ -8,6 +8,10 @@ use Closure;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Server;
 
+/**
+ * @method mixed exists($path = null)
+ * @method mixed checkAnyClassExists(...$classNames) 
+ */
 trait TameTrait{
 
     /**
@@ -89,11 +93,7 @@ trait TameTrait{
      */
     public static function isClosure($closure = null)
     {
-        if($closure instanceof Closure){
-            return true;
-        }
-
-        return false;
+        return $closure instanceof Closure;
     }
 
     /**
@@ -256,13 +256,19 @@ trait TameTrait{
      */
     public static function stringReplacer($path = null)
     {
-        $replacer = str_replace(
+        $fullPath = str_replace(
             ['\\', '/'], 
             '/', 
             Str::trim($path)
         );
 
-        return self::getBasePath($replacer);
+        $withBasePath = self::getBasePath($fullPath);
+
+        if(is_dir($withBasePath) || file_exists($withBasePath)){
+            return $withBasePath;
+        }
+
+        return $fullPath;
     }
 
     /**

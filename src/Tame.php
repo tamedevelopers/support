@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support;
 
 use Closure;
+use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\TameHelper;
 use Tamedevelopers\Support\ApiResponse;
 use Tamedevelopers\Support\Capsule\File;
-use Tamedevelopers\Support\Server;
-use Tamedevelopers\Support\Str;
-use Tamedevelopers\Support\TameHelper;
-use Tamedevelopers\Support\Traits\NumberToWordsTraits;
 use Tamedevelopers\Support\Traits\TameTrait;
+use Tamedevelopers\Support\Traits\NumberToWordsTraits;
 
 /**
  * Tame Class Support
@@ -114,11 +114,15 @@ class Tame extends TameHelper{
 
         $urlParts = parse_url($url);
         $host = $urlParts['host'] ?? '';
-        if (!$host) return false;
+        if (!$host){
+            return false;
+        }
 
         // Resolve hostname to IP
         $ip = self::resolveDNS($host);
-        if (!$ip) return false;
+        if (!$ip){
+            return false;
+        }
 
         // Replace host with IP in URL
         $urlWithIp = str_replace($host, $ip, $url);
@@ -963,8 +967,17 @@ class Tame extends TameHelper{
 
         if(self::exists($fullPath)){
             if(basename($fullPath) != basename((string) $restrictedfileName)){
-                @unlink($fullPath);
-                return true;
+                $response = @unlink($fullPath);
+                if($response){
+                    return $response;
+                }
+            }
+        }
+
+        if(basename($file) != basename((string) $restrictedfileName)){
+            $response = @unlink($file);
+            if($response){
+                return $response;
             }
         }
 
@@ -1114,6 +1127,19 @@ class Tame extends TameHelper{
     }
 
     /**
+     * Minify an SVG into a single line string.
+     *
+     * @param string $svgContent Raw SVG XML string, local path, or remote URL.
+     * @param bool   $url   If true, treat $svgContent as a URL instead of a file.
+     * @param bool   $quote If true, force double quotes ("), else single quotes (').
+     * @return string|null  Minified one-line SVG string or null on failure.
+     */
+    public static function minifySvg($svgContent, $url = false, $quote = true)
+    {
+        return self::cleanSvg($svgContent, $url, $quote);
+    }
+
+    /**
      * Clean and minify an SVG into a single line string.
      *
      * @param string $svgContent Raw SVG XML string, local path, or remote URL.
@@ -1191,12 +1217,12 @@ class Tame extends TameHelper{
         if($useUrl){
             // Parse the URL to get the path
             $parse  = parse_url($path, PHP_URL_PATH);
-            $type   = pathinfo($parse, PATHINFO_EXTENSION);
+            $type   = File::extension($parse);
             $data   = File::get($path);
         } else{
             $path = self::stringReplacer($path);
             if(self::exists($path)){
-                $type   = pathinfo($path, PATHINFO_EXTENSION);
+                $type   = File::extension($path);
                 $data   = File::get($path);
             }
         }
@@ -1207,6 +1233,8 @@ class Tame extends TameHelper{
             if($raw){
                 return  base64_encode($data);
             }
+
+            $type = File::extension($path);
 
             return 'data:image/' . $type . ';base64,' . base64_encode($data);
         }
@@ -1245,7 +1273,7 @@ class Tame extends TameHelper{
         $path = self::stringReplacer($saveAs);
 
         // Ensure the path has an extension if it's just a directory or a name without one
-        if (!pathinfo($path, PATHINFO_EXTENSION)) {
+        if (!File::extension($path)) {
             $path = rtrim($path, '/') . '.' . $extension;
         }
 
@@ -1267,26 +1295,26 @@ class Tame extends TameHelper{
      * Convert image or SVG content into an SVG wrapper
      *
      * @param string|null $path (File path | URL | SVG content)
-     * @param string|null $saveAs - If provided, saves SVG to this file path
+     * @param string|bool|null $saveAs - If provided, saves SVG to this file path
      * @param bool $useUrl - If path should be treated as URL
      * @param bool $compress - Compress the image
      * @return null|string
      */
     public static function imageToSVG($path = null, $saveAs = true, $useUrl = false, $compress = true)
     {
-        $svg = null;
-        $data = null;
-        $type = null;
+        $svg    = null;
+        $data   = null;
+        $type   = null;
 
         // Get file data
         if ($useUrl) {
-            $parse = parse_url($path, PHP_URL_PATH);
-            $type  = pathinfo($parse, PATHINFO_EXTENSION);
-            $data = File::get($path);
+            $parse  = parse_url($path, PHP_URL_PATH);
+            $type   = File::extension($parse);
+            $data   = File::get($path);
         } else {
             $path = self::stringReplacer($path);
             if (self::exists($path)) {
-                $type = pathinfo($path, PATHINFO_EXTENSION);
+                $type = File::extension($path);
                 $data = File::get($path);
             }
         }
@@ -1359,6 +1387,114 @@ class Tame extends TameHelper{
         }
 
         return $svg ?: null;
+    }
+
+    /**
+     * Generate a simple SVG placeholder with a colored background and text.
+     *
+     * @param string|null $text File name, path, extension, or display label. Defaults to 'Tame'.
+     * @param string|null $customColor Optional override for background color (hex format, e.g. '#FF0000').
+     * @return string A base64-encoded SVG data URI.
+     */
+    public static function svgPlaceholder($text = null, $customColor = null)
+    {
+        $rawInput = Str::trim($text ?? 'Tame');
+        
+        // Extract extension or convert input directly if short string (e.g., "pdf")
+        $extension = Str::lower(File::extension($rawInput));
+        if (empty($extension) && strlen($rawInput) <= 5 && !Str::contains($rawInput, ' ')) {
+            $extension = Str::lower($rawInput);
+        }
+
+        // 1. Color Map for Major File Categories
+        $colorMap = [
+            // Documents
+            'pdf'   => '#E53935', // Red
+            'doc'   => '#1E88E5', // Blue
+            'docx'  => '#1E88E5',
+            'txt'   => '#607D8B', // Blue Grey
+            'rtf'   => '#5C6BC0',
+
+            // Spreadsheets & Data
+            'xls'   => '#43A047', // Green
+            'xlsx'  => '#43A047',
+            'csv'   => '#2E7D32',
+            'json'  => '#F57C00', // Orange
+            'xml'   => '#E65100',
+            'sql'   => '#0288D1',
+
+            // Code & Web
+            'php'   => '#777BB4', // PHP Purple
+            'js'    => '#F7DF1E', // JS Yellow
+            'ts'    => '#3178C6', // TS Blue
+            'html'  => '#E34F26',
+            'css'   => '#1572B6',
+            'py'    => '#3776AB',
+            'java'  => '#007396',
+            'cpp'   => '#00599C',
+            'c'     => '#A8B9CC',
+
+            // Images & Design
+            'jpg'   => '#8E24AA', // Purple
+            'jpeg'  => '#8E24AA',
+            'png'   => '#00ACC1', // Cyan
+            'gif'   => '#D81B60', // Pink
+            'svg'   => '#FFB300', // Amber
+            'psd'   => '#31A8FF', // Photoshop Blue
+            'ai'    => '#FF9A00', // Illustrator Orange
+            'fig'   => '#F24E1E', // Figma Red/Orange
+
+            // Archives
+            'zip'   => '#FB8C00', // Orange
+            'rar'   => '#7B1FA2', // Dark Purple
+            '7z'    => '#FF6F00',
+            'tar'   => '#5D4037',
+            'gz'    => '#4E342E',
+
+            // Audio & Video
+            'mp3'   => '#D81B60', // Deep Pink
+            'wav'   => '#C2185B',
+            'mp4'   => '#00897B', // Teal
+            'mov'   => '#00796B',
+            'avi'   => '#00695C',
+            'mkv'   => '#004D40',
+
+            // Executables & System
+            'exe'   => '#37474F',
+            'sh'    => '#263238',
+            'apk'   => '#7CB342',
+        ];
+
+        // Format display label (Truncate to max 10 chars)
+        $label = strtoupper(!empty($extension) ? $extension : $rawInput);
+        $displayLabel = strlen($label) > 10 ? substr($label, 0, 10) . '…' : $label;
+
+        // Determine background color
+        if ($customColor) {
+            $bgColor = $customColor;
+        } elseif (isset($colorMap[$extension])) {
+            $bgColor = $colorMap[$extension];
+        } else {
+            // Fallback: Generate a deterministic color from string hash
+            $hash = md5($rawInput);
+            $bgColor = '#' . substr($hash, 0, 6);
+        }
+
+        // Adjust text fill for bright yellow/cyan backgrounds to maintain high contrast
+        $textColor = in_array($extension, ['js', 'svg'], true) ? '#333333' : '#FFFFFF';
+
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">'
+            . '<rect width="400" height="400" rx="24" fill="' . $bgColor . '"/>'
+            . '<circle cx="200" cy="200" r="140" fill="' . $textColor . '" fill-opacity="0.12"/>'
+            . '<circle cx="200" cy="200" r="125" fill="' . $textColor . '" fill-opacity="0.04"/>'
+            . '<text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" '
+            . 'fill="' . $textColor . '" font-family="system-ui, -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif" '
+            . 'font-weight="700" font-size="36" letter-spacing="1.5">' 
+            . htmlspecialchars($displayLabel)
+            . '</text>'
+            . '</svg>';
+
+        return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
     
     /**

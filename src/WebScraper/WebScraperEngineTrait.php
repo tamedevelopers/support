@@ -6,6 +6,7 @@ namespace Tamedevelopers\Support\WebScraper;
 
 use GuzzleHttp\Client;
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\Time;
 use Symfony\Component\DomCrawler\Crawler;
 use GuzzleHttp\Exception\GuzzleException;
@@ -722,23 +723,7 @@ trait WebScraperEngineTrait
      */
     protected function generateCompanyPlaceholderSvg(?string $text = null): string
     {
-        $label = strtoupper(trim($text ?? $this->company ?? 'Store'));
-        $label = strlen($label) > 12 ? substr($label, 0, 12) . '…' : $label;
-
-        // Generate a deterministic background color based on the brand name string
-        $hash = md5($label);
-        $color = '#' . substr($hash, 0, 6);
-
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">'
-            . '<rect width="400" height="400" rx="20" fill="' . $color . '"/>'
-            . '<circle cx="200" cy="200" r="140" fill="#FFFFFF" fill-opacity="0.1"/>'
-            . '<text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" '
-            . 'fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="32" letter-spacing="1">'
-            . htmlspecialchars($label)
-            . '</text>'
-            . '</svg>';
-
-        return 'data:image/svg+xml;base64,' . base64_encode($svg);
+        return Tame::svgPlaceholder($text ?? $this->company ?? 'Store');
     }
 
     /**

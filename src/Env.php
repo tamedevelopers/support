@@ -14,7 +14,6 @@ use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Traits\ServerTrait;
 use Tamedevelopers\Support\Process\HttpRequest;
 use Tamedevelopers\Support\Traits\ReusableTrait;
-use Tamedevelopers\Support\Collections\Collection;
 use Tamedevelopers\Support\Capsule\CustomException;
 
 class Env {
@@ -69,9 +68,8 @@ class Env {
 
     /**
      * Initialization of self class
-     * @return void
      */
-    private static function init() 
+    private static function init(): void
     {
         self::$class = new self();
     }
@@ -154,10 +152,8 @@ class Env {
 
     /**
      * Create .env file or Ignore
-     * 
-     * @return void
      */
-    public static function createOrIgnore()
+    public static function createOrIgnore(): void
     {
         // file to .env
         $envPath = self::formatWithBaseDirectory('.env');
@@ -190,11 +186,8 @@ class Env {
 
     /**
      * Turn off error reporting and log errors to a file
-     * 
-     * @param string $logFile The name of the file to log errors to
-     * @return void
      */
-    public static function bootLogger() 
+    public static function bootLogger(): void
     {
         // Directory path
         $dir = self::formatWithBaseDirectory('storage/logs/');
@@ -208,43 +201,71 @@ class Env {
         $log_format = "[%s] %s in %s on line %d\n";
 
         $append     = true;
-        $max_size   = 1024*1024;
+        $max_size   = 1024 * 1024;
 
         // Define the error level mapping
         $error_levels = self::error_levels();
 
         // If APP_DEBUG = false
-        // Turn off error reporting for the application
         if(!self::isApplicationOnDebug()){
             // PHP 8+: E_STRICT is removed; suppress deprecations instead
             error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
             ini_set('display_errors', '0');
         }
 
-        // Define the error handler function
-        $error_handler = function($errno, $errstr, $errfile, $errline) use ($filename, $append, $max_size, $log_format, $error_levels) {
-            // Construct the log message
-            $error_level = isset($error_levels[$errno]) ? $error_levels[$errno] : 'Unknown Error';
-            $log_message = sprintf($log_format, date('Y-m-d H:i:s'), $error_level . ': ' . $errstr, $errfile, $errline);
-
-            // Write the log message to the file
+        // Helper closure to handle writing logs cleanly
+        $writeLog = function ($log_message) use ($filename, $append, $max_size) {
             if ($append && file_exists($filename)) {
-                $current_size = filesize($filename);
-                if ($current_size > $max_size) {
-                    File::put($filename, "{$log_message}");
+                $current_size = @filesize($filename);
+                if ($current_size !== false && $current_size > $max_size) {
+                    File::put($filename, $log_message);
                 } else {
-                    File::put($filename, "{$log_message}", FILE_APPEND);
+                    File::put($filename, $log_message, FILE_APPEND);
                 }
             } else {
                 File::put($filename, $log_message);
             }
-
-            // Let PHP handle the error in the normal way
-            return false;
         };
 
-        // Set the error handler function
-        set_error_handler($error_handler);
+        // 1. Standard Error Handler (Warnings, Notices, etc.)
+        set_error_handler(function ($errno, $errstr, $errfile, $errline) use ($log_format, $error_levels, $writeLog) {
+            // Respect current error_reporting level bitmask
+            if (!(error_reporting() & $errno)) {
+                return false;
+            }
+
+            $error_level = $error_levels[$errno] ?? 'Unknown Error';
+            $log_message = sprintf($log_format, date('Y-m-d H:i:s'), $error_level . ': ' . $errstr, $errfile, $errline);
+
+            $writeLog($log_message);
+
+            // Return true to prevent PHP's default handler from overriding
+            return true;
+        });
+
+        // 2. Uncaught Exception Handler
+        set_exception_handler(function (\Throwable $exception) use ($log_format, $writeLog) {
+            $log_message = sprintf(
+                $log_format, 
+                date('Y-m-d H:i:s'), 
+                'Uncaught Exception (' . get_class($exception) . '): ' . $exception->getMessage(), 
+                $exception->getFile(), 
+                $exception->getLine()
+            );
+
+            $writeLog($log_message);
+        });
+
+        // 3. Fatal Error / Shutdown Handler (Catches E_ERROR, Out of Memory, Syntax issues, etc.)
+        register_shutdown_function(function () use ($log_format, $error_levels, $writeLog) {
+            $error = error_get_last();
+            if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR])) {
+                $error_level = $error_levels[$error['type']] ?? 'Fatal Error';
+                $log_message = sprintf($log_format, date('Y-m-d H:i:s'), $error_level . ': ' . $error['message'], $error['file'], $error['line']);
+
+                $writeLog($log_message);
+            }
+        });
     }
 
     /**

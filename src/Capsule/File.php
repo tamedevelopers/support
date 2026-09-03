@@ -38,7 +38,7 @@ class File {
      * @param string $directory
      * @return array<int, \SplFileInfo>
      */
-    public static function files(string $directory): array
+    public static function files($directory)
     {
         $result = [];
         if (!self::isDirectory($directory)) {
@@ -63,7 +63,7 @@ class File {
      * @param bool $recursive
      * @return bool
      */
-    public static function makeDirectory(string $path, int $mode = 0777, bool $recursive = true): bool
+    public static function makeDirectory($path, $mode = 0777, $recursive = true)
     {
         if (self::isDirectory($path)) {
             return true;
@@ -79,7 +79,7 @@ class File {
      * @param bool $disallowUnsafeCharacters
      * @return bool
      */
-    public static function isValidName(string $fileName, bool $disallowUnsafeCharacters = true): bool
+    public static function isValidName($fileName, $disallowUnsafeCharacters = true)
     {
         if ($disallowUnsafeCharacters) {
             // Disallow: / \ ? % * : | " < >
@@ -94,7 +94,7 @@ class File {
      * @param string $path
      * @return bool
      */
-    public static function exists(string $path): bool
+    public static function exists($path)
     {
         return is_file($path);
     }
@@ -105,7 +105,7 @@ class File {
      * @param string $path
      * @return string|false
      */
-    public static function get(string $path): string|false
+    public static function get($path)
     {
         // Handle URLs explicitly
         if (filter_var($path, FILTER_VALIDATE_URL)) {
@@ -129,7 +129,7 @@ class File {
      * @param int $flags
      * @return bool|int
      */
-    public static function put(string $path, string $contents = null, int $flags = 0): bool|int
+    public static function put($path, $contents = null, $flags = 0)
     {
         if(is_null($contents)){
             return false;
@@ -145,7 +145,7 @@ class File {
      * @param string|null $restrictedfileName
      * @return bool
      */
-    public static function delete(string $file, $restrictedfileName = null): bool
+    public static function delete($file, $restrictedfileName = null)
     {
         return Tame::unlink($file, $restrictedfileName);
     }
@@ -157,7 +157,7 @@ class File {
      * @param string $to
      * @return bool
      */
-    public static function copy(string $from, string $to): bool
+    public static function copy($from, $to)
     {
         return copy($from, $to);
     }
@@ -169,7 +169,7 @@ class File {
      * @param string $to
      * @return bool
      */
-    public static function move(string $from, string $to): bool
+    public static function move($from, $to)
     {
         return rename($from, $to);
     }
@@ -180,7 +180,7 @@ class File {
      * @param string $path
      * @return int|false
      */
-    public static function size(string $path): int|false
+    public static function size($path)
     {
         return filesize($path);
     }
@@ -191,7 +191,7 @@ class File {
      * @param string $path
      * @return int|false
      */
-    public static function lastModified(string $path): int|false
+    public static function lastModified($path)
     {
         return filemtime($path);
     }
@@ -202,7 +202,7 @@ class File {
      * @param string $path
      * @return string|null
      */
-    public static function extension(string $path): ?string
+    public static function extension($path)
     {
         // Strip query strings or fragments (e.g., "image.jpg?5630" becomes "image.jpg")
         $cleanPath = parse_url($path, PHP_URL_PATH);
@@ -210,7 +210,7 @@ class File {
         // Get the extension from the clean path
         $extension = strtolower(pathinfo($cleanPath, PATHINFO_EXTENSION));
 
-        return $extension !== '' ? $extension : null;
+        return !empty($extension) ? $extension : null;
     }
 
     /**
@@ -219,7 +219,7 @@ class File {
      * @param string $path
      * @return string
      */
-    public static function name(string $path): string
+    public static function name($path)
     {
         return pathinfo($path, PATHINFO_FILENAME);
     }
@@ -230,7 +230,7 @@ class File {
      * @param string $path
      * @return string
      */
-    public static function base(string $path): string
+    public static function base($path)
     {
         return basename($path);
     }
@@ -241,7 +241,7 @@ class File {
      * @param string $path
      * @return string|false
      */
-    public static function mimeType(string $path): string|false
+    public static function mimeType($path)
     {
         // Check if path is a URL
         $isUrl = filter_var($path, FILTER_VALIDATE_URL);
@@ -411,7 +411,7 @@ class File {
      * @param string $path
      * @return string|false
      */
-    public static function type(string $path): string|false
+    public static function type($path)
     {
         return filetype($path);
     }
@@ -422,7 +422,7 @@ class File {
      * @param string $path
      * @return int|false
      */
-    public static function permissions(string $path): int|false
+    public static function permissions($path)
     {
         return fileperms($path);
     }
@@ -433,7 +433,7 @@ class File {
      * @param string $path
      * @return bool
      */
-    public static function isReadable(string $path): bool
+    public static function isReadable($path)
     {
         return @is_readable($path);
     }
@@ -444,7 +444,7 @@ class File {
      * @param string $path
      * @return bool
      */
-    public static function isWritable(string $path): bool
+    public static function isWritable($path)
     {
         return is_writable($path);
     }
@@ -455,7 +455,7 @@ class File {
      * @param string $path
      * @return bool
      */
-    public static function isDirectory(string $path): bool
+    public static function isDirectory($path)
     {
         return is_dir($path);
     }
@@ -466,7 +466,7 @@ class File {
      * @param string $path
      * @return bool
      */
-    public static function isFile(string $path): bool
+    public static function isFile($path)
     {
         return is_file($path);
     }
@@ -479,7 +479,7 @@ class File {
      */
     public static function isFileType(?string $string = null) 
     {
-        return pathinfo($string, PATHINFO_EXTENSION) !== '';
+        return !empty(pathinfo($string, PATHINFO_EXTENSION));
     }
 
     /**
@@ -488,7 +488,7 @@ class File {
      * @param string $url
      * @return string|false
      */
-    private static function getFromUrl(string $url): string|false
+    private static function getFromUrl($url)
     {
         // Basic hardening
         if (!in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
