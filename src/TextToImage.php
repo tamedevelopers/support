@@ -8,9 +8,9 @@ use Closure;
 use Exception;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Asset;
-use Tamedevelopers\Support\Capsule\CustomException;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\FontPathTrait;
+use Tamedevelopers\Support\Capsule\CustomException;
 
 /**
  * Generate initial-based avatar images similar to Google profile placeholders.

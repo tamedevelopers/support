@@ -19,7 +19,7 @@ $url = [
 ];
 
 
-$scraper = WebScraper::url($url['jumia'])
+$scraper = WebScraper::url($url['jumia3'])
             ->setEngine('dom')
             ->fetch()
             ->getData();

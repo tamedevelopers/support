@@ -12,7 +12,6 @@ use Tamedevelopers\Support\Str;
 
 /**
  * @property bool $isProxyAllowed
- * @property bool $isPaginate
  * @property bool $isBuilder
  * @property mixed $builder
  * 
@@ -145,6 +144,7 @@ trait RelatedTrait{
         if($this->isProxyAllowed){
             return true;
         }
+
         return $this->count() === 0 ? true : false;
     }
 
@@ -158,6 +158,7 @@ trait RelatedTrait{
         if($this->isProxyAllowed){
             return 0;
         }
+
         return  $this->isArray() ? count($this->items) : 0;
     }
 
@@ -1696,7 +1697,7 @@ trait RelatedTrait{
     }
 
     /**
-     * return items collection as an array
+     * Return items collection as an array
      *
      * @return array
      */
@@ -1706,7 +1707,7 @@ trait RelatedTrait{
     }
 
     /**
-     * return items collection as an object
+     * Return items collection as an object
      *
      * @return object
      */
@@ -1718,22 +1719,21 @@ trait RelatedTrait{
     /**
      * Get Database Builder Instance
      *  
-     * @return \Tamedevelopers\Database\Schema\Builder|mixed
+     * @return mixed
      */
-    public function builder()
+    public function getBuilder()
     {
-        return $this->builder;
+        return self::$builder;
     }
     
     /**
-     * Convert data to an array on Initializaiton
-     * @param mixed $items
+     * Convert data to an array on Loop
      * 
+     * @param mixed $items
      * @return void
      */ 
-    private function convertOnInit(mixed $items = null)
+    private function convertOnArrayLoop(mixed $items = null)
     {
-        // Convert to an array
         // For ORM Database Proxies and Paginate Data
         if(self::$isBuilder){
             $this->items = $items;

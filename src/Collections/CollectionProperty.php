@@ -15,14 +15,6 @@ namespace Tamedevelopers\Support\Collections;
 
 class CollectionProperty
 {
-
-    /**
-     * Instance of ORM Database Class
-     *
-     * @var \Tamedevelopers\Database\Schema\Builder
-     */
-    protected $builder;
-
     /**
      * The items of collections.
      *
@@ -31,23 +23,30 @@ class CollectionProperty
     protected $items = [];
 
     /**
-     * Check if data is proxy set
+     * Instance of ORM Database Class
      *
-     * @var bool
+     * @var \Tamedevelopers\Database\Schema\Builder
      */
-    protected $isProxyAllowed = false;
+    protected static $builder;
 
     /**
      * If Instance of Database Pagination Method is true
      * @var mixed
      */
-    protected $isPaginate = false;
+    protected static $isPaginate = false;
 
     /**
      * If Instance of \Tamedevelopers\Database\DB is true
      * @var bool
      */
     protected static $isBuilder = false;
+
+    /**
+     * Check if data is proxy set
+     *
+     * @var bool
+     */
+    protected $isProxyAllowed = false;
 
     /**
      * The methods that can be proxied.
@@ -62,5 +61,4 @@ class CollectionProperty
         'insert',
         'insertorignore',
     ];
-
 }

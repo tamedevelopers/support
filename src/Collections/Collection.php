@@ -37,6 +37,7 @@ class Collection extends CollectionProperty implements IteratorAggregate, ArrayA
     public function __construct($items = [], mixed $instance = null)
     {
         $this->items = $this->getArrayableItems($items);
+
         $this->isBuilderOrPaginator($instance);
         $this->isProxies();
     }
@@ -46,7 +47,7 @@ class Collection extends CollectionProperty implements IteratorAggregate, ArrayA
      *
      * @return ArrayIterator
      */
-    public function getIterator() : Traversable
+    public function getIterator(): Traversable
     {
         return new ArrayIterator(
             $this->wrapArrayIntoNewCollections()
@@ -57,13 +58,13 @@ class Collection extends CollectionProperty implements IteratorAggregate, ArrayA
      * Get Pagination Links
      * @param array $options
      *
-     * @return \Tamedevelopers\Database\Schema\Pagination\links()
+     * @return \Tamedevelopers\Database\Schema\Pagination\links()|void
      */
     public function links(?array $options = [])
     {
-        if(isset($this->isPaginate)){
+        if(self::$isPaginate){
             $this->paginationBuilder();
-            $this->builder->links($options);
+            self::$builder->links($options);
         }
     }
 
@@ -71,12 +72,12 @@ class Collection extends CollectionProperty implements IteratorAggregate, ArrayA
      * Format Pagination Data
      * @param array $options
      * 
-     * @return \Tamedevelopers\Database\Schema\Pagination\showing()
+     * @return \Tamedevelopers\Database\Schema\Pagination\showing()|void
      */
     public function showing(?array $options = [])
     {
-        if(isset($this->isPaginate)){
-            $this->builder->showing($options);
+        if(self::$isPaginate){
+            self::$builder->showing($options);
         }
     }
 
@@ -88,9 +89,10 @@ class Collection extends CollectionProperty implements IteratorAggregate, ArrayA
      */
     public function paginationBuilder()
     {
-        if(isset($this->isPaginate)){
-            $this->builder->pagination->pageParam = $this->builder->pageParam;
-            $this->builder->pagination->perPageParam = $this->builder->perPageParam;
+        if(self::$isPaginate){
+            $builder = self::$builder;
+            $builder->pagination->pageParam     = $builder->pageParam;
+            $builder->pagination->perPageParam  = $builder->perPageParam;
         }
     }
 

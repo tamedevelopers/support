@@ -6,10 +6,10 @@ namespace Tamedevelopers\Support\Collections\Traits;
 
 use Closure;
 use Exception;
-use JsonSerializable;
-use Tamedevelopers\Support\Collections\CollectionMapper;
-use Tamedevelopers\Support\Str;
 use Traversable;
+use JsonSerializable;
+use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Collections\CollectionMapper;
 
 
 /**
@@ -28,9 +28,9 @@ trait CollectionTrait{
      */
     public function getPagination()
     {
-        if(isset($this->isPaginate)){
-            $pagination = $this->builder->pagination;
-            return (object) [
+        if(self::$isPaginate){
+            $pagination = self::$builder->pagination;
+            return (object) [ 
                 'limit'         => (int) $pagination->limit,
                 'offset'        => (int) $pagination->offset,
                 'page'          => (int) $pagination->page,
@@ -67,13 +67,13 @@ trait CollectionTrait{
     protected function isProxies()
     {
         if(self::$isBuilder){
-            if(in_array(Str::lower($this->builder->method), self::$proxies)){
+            if(in_array(Str::lower(self::$builder->method), self::$proxies)){
                 $this->isProxyAllowed = true;
             }
         }
 
         if($this->isProxyAllowed){
-            $this->builder = null;
+            self::$builder = null;
         }
     }
     
@@ -87,15 +87,13 @@ trait CollectionTrait{
         $paginatorInstance  = '\Tamedevelopers\Database\Schema\Pagination\Paginator';
         $builderInstance    = '\Tamedevelopers\Database\Schema\Builder';
 
-        $this->builder = $expression;
-        if ($expression instanceof $builderInstance){
-            self::$isBuilder = true;
-        } else{
-            self::$isBuilder = false;
-        }
-        if ($expression instanceof $paginatorInstance){
-            $this->isPaginate = true;
-        }
+        self::$builder = $expression;
+
+        // Check if the expression is an instance of the builder or paginator
+        self::$isBuilder = $expression instanceof $builderInstance;
+
+        // Check if the expression is an instance of the paginator
+        self::$isPaginate = $expression instanceof $paginatorInstance;
     }
 
     /**
@@ -114,11 +112,14 @@ trait CollectionTrait{
             return [];
         }
 
+        if(is_object($items) && method_exists($items, 'toArray')){
+            return $items->toArray();
+        }
+
         return match (true) {
             $items instanceof Traversable => iterator_to_array($items),
             $items instanceof JsonSerializable => $items->jsonSerialize(),
             $this->isValidJson($items) => json_decode($items, true),
-            is_object($items) && method_exists($items, 'toArray')  => $items->toArray(),
             default => (array) $items,
         };
     }
