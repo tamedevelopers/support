@@ -16,6 +16,14 @@ abstract class CachedEngine implements ExchangeEngineInterface
     }
 
     /**
+     * Get Base Url
+     */
+    public function getBase(): string
+    {
+        return $this->baseUrl;
+    }
+
+    /**
      * Abstract method that child classes must implement to handle their raw API call.
      */
     abstract protected function fetchFromApi(): array;
@@ -41,4 +49,5 @@ abstract class CachedEngine implements ExchangeEngineInterface
         $this->staticCache = $rates;
         return $rates;
     }
+    
 }

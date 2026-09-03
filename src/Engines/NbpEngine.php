@@ -28,7 +28,7 @@ class NbpEngine extends CachedEngine
             throw new Exception("Unsupported currency codes via NBP: {$fromUpper} or {$toUpper}.");
         }
 
-        return (1 / $fromRate) * $toRate;
+        return (1 / $toRate) * $fromRate;
     }
 
     protected function fetchFromApi(): array

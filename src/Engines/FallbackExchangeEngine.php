@@ -38,4 +38,10 @@ class FallbackExchangeEngine implements ExchangeEngineInterface
 
         throw new Exception('All exchange engines failed. Errors: ' . implode(' | ', $errors));
     }
+
+    public function getEngines(): array
+    {
+        return $this->engines;
+    }
+
 }
