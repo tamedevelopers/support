@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Capsule;
 
 use Whoops\Run;
-use Whoops\Handler\PrettyPageHandler;
 use Whoops\Handler\PlainTextHandler;
+use Whoops\Handler\PrettyPageHandler;
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\Manager;
 
 class DebugManager
@@ -50,7 +51,7 @@ class DebugManager
     private static function autoStartDebugger(): void
     {
         // Check if debug mode is active
-        if (!Manager::AppDebug()) {
+        if (Manager::AppDebug()) {
             return;
         }
 
@@ -62,6 +63,9 @@ class DebugManager
                 self::$whoops->pushHandler(new PlainTextHandler());
             } else {
                 $handler = new PrettyPageHandler();
+
+                // Customize Page Title & Editor link formatting if needed
+                $handler->setPageTitle("Application Exception");
                 
                 // Ensure HTTP 500 status code is set when rendering error pages
                 $handler->addDataTableCallback('HTTP Status', function () {
@@ -70,6 +74,19 @@ class DebugManager
                     }
                     return [];
                 });
+
+                // Path to your Dummy directory
+                $dummyDir       = __DIR__ . '/Dummy';
+                $themeFileName  = 'whoops_ignition_theme.css';
+                $themeFilePath  = "{$dummyDir}/{$themeFileName}";
+
+                if (File::exists($themeFilePath)) {
+                    // Tell Whoops to look in your custom directory for resources
+                    $handler->addResourcePath($dummyDir);
+
+                    // Pass only the CSS filename (relative to the registered resource path)
+                    $handler->addCustomCss($themeFileName);
+                }
 
                 self::$whoops->pushHandler($handler);
             }
@@ -107,4 +124,5 @@ class DebugManager
 
         self::$booted = false;
     }
+
 }

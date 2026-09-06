@@ -1,0 +1,334 @@
+/**
+ * Ultra-Modern Next.js / Ignition Theme for Whoops
+ * Refined Contrast, Modern Typography & Glassmorphism
+ */
+
+/* ==========================================
+   1. CSS VARIABLES & BASE SETUP
+   ========================================== */
+:root {
+    --bg-main: #0b0f19;
+    --bg-sidebar: #050811;
+    --bg-card: #111827;
+    --bg-code: #030712;
+    --border-color: #1f293d;
+    --border-focus: #374151;
+    --accent-red: #f43f5e;
+    --accent-red-glow: rgba(244, 63, 94, 0.15);
+    --accent-cyan: #38bdf8;
+    --accent-indigo: #818cf8;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+    --text-muted: #6b7280;
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+html, body {
+    background-color: var(--bg-main) !important;
+    color: var(--text-primary) !important;
+    font-family: var(--font-sans) !important;
+    -webkit-font-smoothing: antialiased !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+* {
+    scrollbar-width: thin !important;
+    scrollbar-color: var(--bg-main) !important;
+}
+
+/* Smooth Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px !important;
+    height: 6px !important;
+}
+::-webkit-scrollbar-track {
+    background: var(--text-primary) !important;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--text-primary) !important;
+    border-radius: 9999px !important;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-primary) !important;
+}
+
+/* ==========================================
+   2. LEFT SIDEBAR (STACK FRAMES)
+   ========================================== */
+.left-panel, 
+div.left-panel {
+    background-color: var(--bg-sidebar) !important;
+    border-right: 1px solid var(--border-color) !important;
+}
+
+.left-panel .header,
+div.left-panel .header {
+    background-color: var(--bg-main) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    padding: 18px 20px !important;
+}
+
+.left-panel .header .title,
+.left-panel .header * {
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+}
+
+/* Individual Frame Cards */
+.frames-container .frame,
+div.frames-container .frame {
+    background-color: transparent !important;
+    border-bottom: 1px solid rgba(31, 41, 61, 0.5) !important;
+    padding: 14px 18px !important;
+    transition: all 0.15s ease-in-out !important;
+}
+
+.frames-container .frame:hover {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Inactive Frame Text Fix */
+.frames-container .frame .frame-class, 
+.frames-container .frame .frame-function {
+    color: #e5e7eb !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+}
+
+.frames-container .frame .frame-file {
+    color: var(--text-muted) !important;
+    font-size: 0.78rem !important;
+    margin-top: 4px !important;
+}
+
+.frames-container .frame .frame-line {
+    color: var(--accent-red) !important;
+    font-weight: 700 !important;
+}
+
+/* Active Highlighted Frame */
+.frames-container .frame.active,
+div.frames-container .frame.active {
+    background: linear-gradient(90deg, rgba(244, 63, 94, 0.1) 0%, rgba(17, 24, 39, 0.8) 100%) !important;
+    border-left: 3px solid var(--accent-red) !important;
+}
+
+.frames-container .frame.active .frame-class, 
+.frames-container .frame.active .frame-function {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+.frames-container .frame.active .frame-file {
+    color: #cbd5e1 !important;
+}
+
+/* ==========================================
+   3. RIGHT PANEL & EXCEPTION BANNER
+   ========================================== */
+.right-panel,
+div.right-panel {
+    background-color: var(--bg-main) !important;
+    padding: 28px !important;
+}
+
+header {
+    padding: 0px !important;
+}
+
+/* Header Exception Card */
+.exception,
+div.exception {
+    background: linear-gradient(135deg, #111827 0%, #1e1b4b 100%) !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 24px !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Exception Badge */
+.exception .exception-type,
+div.exception .exception-type {
+    display: inline-flex !important;
+    align-items: center !important;
+    background-color: var(--accent-red-glow) !important;
+    color: #fca5a5 !important;
+    border: 1px solid rgba(244, 63, 94, 0.3) !important;
+    padding: 4px 12px !important;
+    border-radius: 20px !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.03em !important;
+    margin-bottom: 14px !important;
+}
+
+/* Exception Main Title */
+.exception .exception-message,
+div.exception .exception-message {
+    color: #ffffff !important;
+    font-size: 1.4rem !important;
+    font-weight: 700 !important;
+    line-height: 1.5 !important;
+    letter-spacing: -0.01em !important;
+}
+
+/* Action Buttons (Copy / Search) */
+.exception .tools,
+.exception .copy-button {
+    opacity: 0.8 !important;
+    transition: opacity 0.2s !important;
+}
+.exception .tools:hover {
+    opacity: 1 !important;
+}
+
+/* ==========================================
+   4. CODE VIEWER & SYNTAX HIGHLIGHTING
+   ========================================== */
+.frame-file-path,
+div.frame-file-path {
+    color: var(--accent-cyan) !important;
+    font-family: var(--font-mono) !important;
+    font-size: 0.82rem !important;
+    margin-bottom: 10px !important;
+    padding-left: 2px !important;
+}
+
+.code-container,
+div.code-container {
+    background-color: var(--bg-code) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4) !important;
+    margin-bottom: 28px !important;
+}
+
+/* Line numbers and Code styling */
+.code-container .line,
+div.code-container .line {
+    font-family: var(--font-mono) !important;
+    font-size: 0.88rem !important;
+    line-height: 1.7 !important;
+    color: #f3f4f6 !important;
+}
+
+.code-container .linenums,
+div.code-container .linenums {
+    background-color: #080d1a !important;
+    color: #4b5563 !important;
+    border-right: 1px solid var(--border-color) !important;
+    padding-right: 12px !important;
+}
+
+/* Error Line Glow */
+.code-container .line-highlight,
+div.code-container .line-highlight {
+    background-color: rgba(244, 63, 94, 0.14) !important;
+    border-left: 3px solid var(--accent-red) !important;
+}
+
+.code-container .line-highlight .linenums {
+    background-color: rgba(244, 63, 94, 0.25) !important;
+    color: #fecdd3 !important;
+}
+
+/* ==========================================
+   5. ENVIRONMENT & REQUEST DETAILS (FIXED CONTRAST)
+   ========================================== */
+.details-container,
+.data-table-container,
+div.data-table-container,
+div.details-container {
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    padding: 20px 10px;
+    border-radius: 12px !important;
+    margin-top: 28px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Titles (e.g., Environment & details) */
+.details-container h2,
+.data-table-container h2,
+.details-heading,
+div.details-container > h2 {
+    color: var(--accent-cyan) !important;
+    font-size: 1.15rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 16px !important;
+    letter-spacing: -0.01em !important;
+}
+
+.details-container {
+    left: 32%;
+    width: 66.5%;
+}
+
+.frame-code-container .frame-code,
+.frame-code-container .code-block{
+    background-color: var(--bg-code) !important;
+}
+
+/* Data Tables & Key Value Pairs */
+.data-table,
+table.data-table {
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+
+.data-table th {
+    background-color: var(--bg-code) !important;
+    color: var(--text-muted) !important;
+    text-align: left !important;
+    padding: 10px 14px !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+.data-table td {
+    padding: 12px 14px !important;
+    color: #e5e7eb !important;
+    font-family: var(--font-mono) !important;
+    font-size: 0.85rem !important;
+    border-bottom: 1px solid rgba(31, 41, 61, 0.6) !important;
+}
+
+/* Fix for empty or dimmed table rows (HTTP Status, GET Data, etc.) */
+.data-table tr td.key,
+.data-table tr td:first-child,
+.data-table-row .key {
+    color: var(--accent-indigo) !important;
+    font-weight: 600 !important;
+    width: 30% !important;
+}
+
+.data-table tr:last-child td {
+    border-bottom: none !important;
+}
+
+/* Fixing dimmed 'empty' labels */
+.empty, 
+span.empty,
+td.empty {
+    color: var(--text-muted) !important;
+    font-style: italic !important;
+    opacity: 0.7 !important;
+}
+.details, 
+.frame-code {
+    padding: 20px;
+}
+.data-table-container .data-table pre,
+.data-table-container .data-table pre span,
+.data-table-container .data-table pre small{
+    color: #BCD42A !important;
+}
