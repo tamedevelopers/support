@@ -13,7 +13,6 @@ use Tamedevelopers\Support\Str;
 /**
  * @property bool $isProxyAllowed
  * @property bool $isBuilder
- * @property mixed $builder
  * 
  * @method mixed getArrayableItems($items)
  * @method mixed prepareValueAndOperator($value, $operator, $useDefault = false)
@@ -1714,16 +1713,6 @@ trait RelatedTrait{
     public function getOriginal()
     {
         return $this->toObject();
-    }
-
-    /**
-     * Get Database Builder Instance
-     *  
-     * @return mixed
-     */
-    public function getBuilder()
-    {
-        return self::$builder;
     }
     
     /**

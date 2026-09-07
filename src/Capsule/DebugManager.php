@@ -51,11 +51,12 @@ class DebugManager
     private static function autoStartDebugger(): void
     {
         // Check if debug mode is active
-        if (Manager::AppDebug()) {
+        if (!Manager::AppDebug()) {
+            self::flush();
             return;
         }
-
-        if (self::$whoops === null) {
+        
+        if (empty(self::$whoops)) {
             self::$whoops = new Run();
 
             // Register appropriate handler based on SAPI environment
@@ -117,7 +118,7 @@ class DebugManager
      */
     public static function flush(): void
     {
-        if (self::$whoops !== null) {
+        if (!empty(self::$whoops)) {
             self::$whoops->unregister();
             self::$whoops = null;
         }

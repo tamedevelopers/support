@@ -25,6 +25,13 @@ class CollectionProperty
     /**
      * Instance of ORM Database Class
      *
+     * @var \Tamedevelopers\Database\Schema\Pagination\Paginator
+     */
+    protected static $paginator;
+
+    /**
+     * Instance of ORM Database Class
+     *
      * @var \Tamedevelopers\Database\Schema\Builder
      */
     protected static $builder;

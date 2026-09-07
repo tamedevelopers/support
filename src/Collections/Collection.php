@@ -34,7 +34,7 @@ class Collection extends CollectionProperty implements IteratorAggregate, ArrayA
      * Meant for easy manupulation of collection instance
      * This doesn't have affect on using this the Collection class on other projects
      */
-    public function __construct($items = [], mixed $instance = null)
+    public function __construct($items = [], $instance = null)
     {
         $this->items = $this->getArrayableItems($items);
 
@@ -56,28 +56,37 @@ class Collection extends CollectionProperty implements IteratorAggregate, ArrayA
 
     /**
      * Get Pagination Links
-     * @param array $options
+     * 
+     * @param array{
+     *  first: string,
+     *  last: string,
+     *  next: string,
+     *  prev: string,
+     *  showing: string,
+     *  of: string,
+     *  results: string,
+     *  buttons: int<1, 20>,
+     *  load_more: string,
+     *  no_content: string
+     * } $options
      *
-     * @return \Tamedevelopers\Database\Schema\Pagination\links()|void
+     * @return string
      */
-    public function links(?array $options = [])
+    public function links($options = [])
     {
-        if(self::$isPaginate){
-            $this->paginationBuilder();
-            self::$builder->links($options);
-        }
+        $this->buildPagination($options);
     }
 
     /**
      * Format Pagination Data
-     * @param array $options
      * 
-     * @return \Tamedevelopers\Database\Schema\Pagination\showing()|void
+     * @param array $options
+     * @return string
      */
-    public function showing(?array $options = [])
+    public function showing($options = [])
     {
         if(self::$isPaginate){
-            self::$builder->showing($options);
+            self::$paginator->showing($options);
         }
     }
 
@@ -85,14 +94,18 @@ class Collection extends CollectionProperty implements IteratorAggregate, ArrayA
      * With this helper we're able to build support
      * for multiple pagination on same page without conflicts
      * 
-     * @return void
+     * @param array $options
+     * @return mixed
      */
-    public function paginationBuilder()
+    public function buildPagination($options = [])
     {
         if(self::$isPaginate){
-            $builder = self::$builder;
-            $builder->pagination->pageParam     = $builder->pageParam;
-            $builder->pagination->perPageParam  = $builder->perPageParam;
+            $paginator = self::$paginator;
+
+            $paginator->pagination->pageParam     = $paginator->pageParam;
+            $paginator->pagination->perPageParam  = $paginator->perPageParam;
+            
+            $paginator->links($options);
         }
     }
 

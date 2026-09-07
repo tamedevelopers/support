@@ -18,18 +18,19 @@ use Tamedevelopers\Support\Collections\CollectionMapper;
  * @property bool $isBuilder
  * @property array $proxies
  * @property mixed $builder
+ * @property mixed $paginator
  */
 trait CollectionTrait{
 
     /**
      * Get Pagination Data
      * 
-     * @return mixed
+     * @return object|void
      */
     public function getPagination()
     {
         if(self::$isPaginate){
-            $pagination = self::$builder->pagination;
+            $pagination = self::$paginator->pagination;
             return (object) [ 
                 'limit'         => (int) $pagination->limit,
                 'offset'        => (int) $pagination->offset,
@@ -61,19 +62,21 @@ trait CollectionTrait{
     /**
      * Check Proxies Type
      * Determine and get ORM Database Method/Function request
-     * 
-     * @return void
      */
-    protected function isProxies()
+    protected function isProxies(): void
     {
         if(self::$isBuilder){
-            if(in_array(Str::lower(self::$builder->method), self::$proxies)){
+            $methodName = Str::lower(self::$builder->method);
+
+            if(in_array($methodName, self::$proxies)){
                 $this->isProxyAllowed = true;
             }
         }
 
+        // reset builder and paginator instance if proxy is allowed
         if($this->isProxyAllowed){
             self::$builder = null;
+            self::$paginator = null;
         }
     }
     
@@ -87,13 +90,19 @@ trait CollectionTrait{
         $paginatorInstance  = '\Tamedevelopers\Database\Schema\Pagination\Paginator';
         $builderInstance    = '\Tamedevelopers\Database\Schema\Builder';
 
-        self::$builder = $expression;
-
         // Check if the expression is an instance of the builder or paginator
         self::$isBuilder = $expression instanceof $builderInstance;
 
         // Check if the expression is an instance of the paginator
         self::$isPaginate = $expression instanceof $paginatorInstance;
+
+        if(self::$isBuilder){
+            self::$builder = $expression;
+        }
+
+        if(self::$isPaginate){
+            self::$paginator = $expression;
+        }
     }
 
     /**
@@ -185,18 +194,30 @@ trait CollectionTrait{
     protected function compare($actual, $value, string $operator): bool
     {
         switch ($operator) {
-            case '=': case '==': return $actual == $value;
+            case '=': 
+            case '==': 
+                return $actual == $value;
             case '!=':
-            case '<>': return $actual != $value;
-            case '<':  return $actual < $value;
-            case '>':  return $actual > $value;
-            case '<=': return $actual <= $value;
-            case '>=': return $actual >= $value;
-            case '<=>': return ($actual <=> $value) === 0;
-            case 'like': return (bool) preg_match('/' . str_replace('%', '.*', preg_quote($value, '/')) . '/i', (string) $actual);
-            case 'not like': return !(bool) preg_match('/' . str_replace('%', '.*', preg_quote($value, '/')) . '/i', (string) $actual);
-            case 'is': return $actual === $value;
-            case 'is not': return $actual !== $value;
+            case '<>': 
+                return $actual != $value;
+            case '<':  
+                return $actual < $value;
+            case '>':  
+                return $actual > $value;
+            case '<=': 
+                return $actual <= $value;
+            case '>=': 
+                return $actual >= $value;
+            case '<=>': 
+                return ($actual <=> $value) === 0;
+            case 'like': 
+                return (bool) preg_match('/' . str_replace('%', '.*', preg_quote($value, '/')) . '/i', (string) $actual);
+            case 'not like': 
+                return !(bool) preg_match('/' . str_replace('%', '.*', preg_quote($value, '/')) . '/i', (string) $actual);
+            case 'is': 
+                return $actual === $value;
+            case 'is not': 
+                return $actual !== $value;
             // default: return false;
             default: throw new \InvalidArgumentException("Unsupported operator [{$operator}].");;
         }

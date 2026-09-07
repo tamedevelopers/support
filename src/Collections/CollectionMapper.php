@@ -20,6 +20,7 @@ class CollectionMapper extends CollectionProperty implements IteratorAggregate, 
      * Array index key
      */
     protected mixed $key;
+    protected mixed $collection;
     
     /**
      * Create a new collection.
@@ -32,9 +33,8 @@ class CollectionMapper extends CollectionProperty implements IteratorAggregate, 
     {
         $this->convertOnArrayLoop($items);
 
-        $this->key          = ((int) $key + 1);
-        self::$builder      = $collection?->builder;
-        self::$isPaginate   = $collection?->isPaginate;
+        $this->key = ((int) $key + 1);
+        $this->collection = $collection;
     }
 
     /**
@@ -51,9 +51,12 @@ class CollectionMapper extends CollectionProperty implements IteratorAggregate, 
      * Get Pagination Numbers
      */
     public function numbers(): int
-    {
-        if(self::$isPaginate){
-            return (self::$builder->pagination->offset + $this->key);
+    {   
+        $collection = $this->collection;
+
+        if($collection::$isPaginate){
+            $paginator = $collection::$paginator;
+            $this->key = ($paginator->pagination->offset + $this->key);
         }
         
         return $this->key;
