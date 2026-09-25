@@ -16,7 +16,7 @@ trait StrTextTrait {
         'en', 'en-US', 'en-GB',  // English variants
         'es', 'es-ES', 'es-MX',   // Spanish variants
         'fr', 'fr-FR', 'fr-CA',   // French variants
-        'de', 'de-DE', 'de-CH',   // German variants
+        'de', 'de-DE', 'de-CH',   // German variants 
         'it', 'it-IT',            // Italian
         'pt', 'pt-PT', 'pt-BR',   // Portuguese variants
         'nl', 'nl-NL', 'nl-BE',   // Dutch variants
