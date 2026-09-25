@@ -242,7 +242,7 @@ class WebScraper extends WebScraperApi
      */
     public function getSizes(): array
     {
-        return $this->v['sizes'] ?? [];
+        return $this->data['sizes'] ?? [];
     }
 
     /**

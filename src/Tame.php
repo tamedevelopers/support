@@ -335,7 +335,7 @@ class Tame extends TameHelper{
 
         foreach ($units as $unit => [$threshold, $label]) {
             if ($bytes >= $threshold) {
-                $value = round($bytes / $threshold) . $label;
+                $value = round($bytes / $threshold, 2) . $label;
 
                 return $format ? $value : Str::lower($value); 
             }

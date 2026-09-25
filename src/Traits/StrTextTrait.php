@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Traits;
 
+use Tamedevelopers\Support\Str;
+
 
 trait StrTextTrait { 
 
-    // Only LTR languages array
-    private static $ltrLanguages = [
+    /**
+     * Standard Left-To-Left language prefixes / tags.
+     */
+    private static array $ltrLanguages = [
         'en', 'en-US', 'en-GB',  // English variants
         'es', 'es-ES', 'es-MX',   // Spanish variants
         'fr', 'fr-FR', 'fr-CA',   // French variants
@@ -17,7 +21,7 @@ trait StrTextTrait {
         'pt', 'pt-PT', 'pt-BR',   // Portuguese variants
         'nl', 'nl-NL', 'nl-BE',   // Dutch variants
         'ru', 'ru-RU',            // Russian
-        'zh', 'zh-CN', 'zh-TW',   // Chinese variants
+        'zh', 'zh-CN', 'zh-TW', 'zh-Hant',   // Chinese variants
         'ja', 'ja-JP',            // Japanese
         'ko', 'ko-KR',            // Korean
         'hi', 'hi-IN',            // Hindi
@@ -58,16 +62,38 @@ trait StrTextTrait {
         'sw', 'sw-KE', 'sw-TZ',   // Swahili
         'tl', 'tl-PH'             // Filipino
     ];
+
+    /**
+     * Standard Right-To-Left language prefixes / tags.
+     */
+    private static array $rtlLanguages = [
+        'ar', 'he', 'fa', 'ur', 'ps', 'sd', 'ku', 'ug', 'yi', 'dv',
+        'ckb', 'ks', 'syr', 'az-Arab'
+    ];
     
     /**
      * Check if language is LTR
      * 
-     * @param string $iso Language ISO code
+     * @param string|null $iso Language ISO code
      * @return bool True if LTR, false if RTL
      */
-    public static function isLTR($iso) 
+    public static function isLTR($iso = null) 
     {
-        return in_array(strtolower($iso), self::$ltrLanguages);
+        if (empty($iso)) {
+            return true;
+        }
+
+        // Normalize separator (ar_SA -> ar-SA) and force lowercase
+        $normalizedIso = Str::lower(Str::replace('_', '-', trim($iso)));
+
+        // Extract primary language code (e.g. "en-US" -> "en")
+        $primaryCode = Str::before($normalizedIso, '-');
+
+        // Check if the primary language code or full code matches any RTL definition
+        $isRtl = in_array($primaryCode, self::$rtlLanguages, true) || 
+                in_array($normalizedIso, self::$rtlLanguages, true);
+
+        return !$isRtl;
     }
     
     /**
