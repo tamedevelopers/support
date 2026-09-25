@@ -10,7 +10,7 @@ use Tamedevelopers\Support\Str;
 trait StrTextTrait { 
 
     /**
-     * Standard Left-To-Left language prefixes / tags.
+     * Standard Left-To-Left language prefixes / tags. 
      */
     private static array $ltrLanguages = [
         'en', 'en-US', 'en-GB',  // English variants
