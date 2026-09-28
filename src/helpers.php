@@ -263,7 +263,7 @@ if (! function_exists('TameQR')) {
     }
 }
 
-if (! function_exists('TameQR')) {
+if (! function_exists('TameTotp')) {
     /**
      * Tame TOTP
      * 
