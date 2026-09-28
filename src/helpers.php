@@ -16,6 +16,7 @@ use Tamedevelopers\Support\PDF;
 use Tamedevelopers\Support\Process\HttpRequest;
 use Tamedevelopers\Support\Process\Session;
 use Tamedevelopers\Support\QRCode;
+use Tamedevelopers\Support\RecoveryKey;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
@@ -275,6 +276,18 @@ if (! function_exists('TameTotp')) {
     function TameTotp(int $digits = 6, int $period = 30, string $algorithm = 'sha1')
     {
         return new TOTP($digits, $period, $algorithm);
+    }
+}
+
+if (! function_exists('TameRecoveryKey')) {
+    /**
+     * Tame RecoveryKey
+     * 
+     * @return \Tamedevelopers\Support\RecoveryKey
+     */
+    function TameRecoveryKey(int $digits = 6, int $period = 30, string $algorithm = 'sha1')
+    {
+        return new RecoveryKey($digits, $period, $algorithm);
     }
 }
 
