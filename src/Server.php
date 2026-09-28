@@ -371,11 +371,6 @@ class Server{
             $basePath = rtrim(self::$basePath ?? '', '/\\');
             $fullPath = $basePath . '/' . ltrim($bootstrap, '/\\');
 
-            dd(
-                $fullPath,
-                'ss'
-            );
-
             if (file_exists($fullPath)) {
                 require_once $fullPath;
                 return true;
