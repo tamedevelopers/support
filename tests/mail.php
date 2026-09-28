@@ -38,8 +38,10 @@ $mailer = Mail::config([
 // MAIL_SECRET=""
 // MAIL_REGION=""
 
+$email = 'tamedevelopers@gmail.com';
+
 $mailer
-    ->to('tamedevelopers@gmail.com')
+    ->to($email)
     ->subject('New subject')
     ->body('Hello this is a body text')
     ->altBody('fff')
@@ -56,9 +58,9 @@ $mailer
     });
 
             
-// $mailer->to('tamedevelopers@gmail.com')
+// $mailer->to($email)
 //         ->bcc(['example-email@gmail.com'])
-//         ->replyTo('tamedevelopers@gmail.com', 'Jeffrey Way')
+//         ->replyTo($email, 'Jeffrey Way')
 //         ->attach(base_path("thousand_units.png"), 'New Name')
 //         ->delete(false)
 //         ->subject('New subject')

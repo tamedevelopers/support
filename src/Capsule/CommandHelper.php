@@ -236,7 +236,7 @@ class CommandHelper
     {
         $data = ['arguments' => [], 'options' => []];
         $traces = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 10);
-        
+
         foreach ($traces as $frame) {
             $frameArgs = $frame['args'];
 
@@ -248,12 +248,37 @@ class CommandHelper
 
             if($isValidArgs){
                 $data['arguments']  = $frameArgs[2] ?? [];
-                $data['options']    = $frameArgs[3] ?? [];
+                $data['options']    = $this->normalizeOptionsValue($frameArgs[3] ?? []);
                 break;
             }
         }
 
         return $data[$key] ?? $data;
+    }
+    
+    /**
+     * Normalize options boolean and numeric values
+     *
+     * @param mixed $values
+     * @return mixed
+     */
+    protected function normalizeOptionsValue($values = null)
+    {
+        if (!is_array($values)) {
+            return $values;
+        }
+
+        array_walk_recursive($values, function (&$value) {
+            if ($value === 'true') {
+                $value = true;
+            } elseif ($value === 'false') {
+                $value = false;
+            } elseif (is_numeric($value)) {
+                $value = $value + 0;
+            }
+        });
+
+        return $values;
     }
 
     /**

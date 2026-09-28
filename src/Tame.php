@@ -210,11 +210,13 @@ class Tame extends TameHelper{
     public static function checkAnyClassExists(...$classNames)
     {
         $classNames = Str::flattenValue($classNames);
+        
         foreach ($classNames as $name) {
-            if (class_exists($name)) {
+            if (is_string($name) && (class_exists($name) || interface_exists($name) || trait_exists($name))) {
                 return true;
             }
         }
+
         return false;
     }
 
@@ -1254,22 +1256,28 @@ class Tame extends TameHelper{
             return null;
         }
 
-        // 1. Detect extension and strip the prefix if it exists (e.g., data:image/png;base64,)
-        if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $type)) {
-            if(empty($extension)){
-                $extension = Str::lower($type[1]);
-            }
-
-            $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
+        // Strip the Data URL header
+        if (str_contains($base64Data, ',')) {
+            $base64Data = explode(',', $base64Data)[1];
         }
 
-        // 2. Decode the data
-        $decodedData = base64_decode($base64Data);
-        if (!$decodedData) {
+        // Decode the data
+        $binaryData = base64_decode($base64Data);
+        if (!$binaryData) {
             return null;
         }
 
-        // 3. Prepare the path
+        if (empty($extension) && $binaryData !== false) {
+            // Detect MIME type directly from binary bytes
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $detectedMime = $finfo->buffer($binaryData); // e.g., "image/png" or "application/pdf"
+
+            // Reverse-lookup extension from your File::mimes() array
+            $mimes = File::mimes();
+            $extension = array_search($detectedMime, $mimes, true) ?: 'bin';
+        }
+
+        // Prepare the path
         $path = self::stringReplacer($saveAs);
 
         // Ensure the path has an extension if it's just a directory or a name without one
@@ -1283,8 +1291,8 @@ class Tame extends TameHelper{
             File::makeDirectory($dir, 0755, true);
         }
 
-        // 4. Save using your File wrapper
-        if (File::put($path, $decodedData)) {
+        // Save using your File wrapper
+        if (File::put($path, $binaryData)) {
             return $path;
         }
 
@@ -1676,20 +1684,16 @@ class Tame extends TameHelper{
     /**
      * Get platform svg icon set
      * 
-     * @param string|null $platform
-     * - [windows|linux|android|mobile|phone|unknown|mac|macintosh|ios|iphone|c|os x]
+     * @param string|null|'facebook'|'messenger'|'instagram'|'linkedin'|'whatsapp'|'youtube'|'spotify'|'google'|'telegram'|
+     * 'wechat'|'discord'|'snapchat'|'tiktok'|'playstore'|'appstore'|'windows'|'linux'|'android'|'mobile'|'phone'|
+     * 'unknown'|'mac'|'macintosh'|'ios'|'iphone'|'c'|'os x' $platform
      * 
-     * @param string|null $os_name
-     * - [macos|os x|ios]
-     * 
+     * @param string|null|'macos'|'os x'|'ios' $os_name
      * @return string
      */
     public static function platformIcon($platform = null, $os_name = null)
     {
-        // platform to lower
         $platform = Str::lower(basename($platform));
-
-        // os name to lower
         $os_name = Str::lower($os_name);
 
         // set path
@@ -1697,6 +1701,21 @@ class Tame extends TameHelper{
 
         // Create items data set
         $dataSet = [
+            'facebook'  => "{$path}icons/platform/facebook.svg",
+            'messenger' => "{$path}icons/platform/messenger.svg",
+            'instagram' => "{$path}icons/platform/instagram.svg",
+            'linkedin'  => "{$path}icons/platform/linkedin.svg",
+            'whatsapp'  => "{$path}icons/platform/whatsapp.svg",
+            'youtube'   => "{$path}icons/platform/youtube.svg",
+            'spotify'   => "{$path}icons/platform/spotify.svg",
+            'google'    => "{$path}icons/platform/google.svg",
+            'telegram'  => "{$path}icons/platform/telegram.svg",
+            'wechat'    => "{$path}icons/platform/wechat.svg",
+            'discord'   => "{$path}icons/platform/discord.svg",
+            'snapchat'  => "{$path}icons/platform/snapchat.svg",
+            'tiktok'    => "{$path}icons/platform/tiktok.svg",
+            'playstore' => "{$path}icons/platform/playstore.svg",
+            'appstore'  => "{$path}icons/platform/appstore.svg",
             'windows'   => "{$path}icons/platform/windows.svg",
             'linux'     => "{$path}icons/platform/linux.svg",
             'mac'       => "{$path}icons/platform/mac.svg",
@@ -1708,12 +1727,16 @@ class Tame extends TameHelper{
         ];
 
         // check for extra validations
-        if(in_array($platform, ['macintosh', 'c', 'os x']) || in_array($os_name, ['macos', 'os x'])){
+        if (in_array($platform, ['macintosh', 'c', 'os x']) || in_array($os_name, ['macos', 'os x'])) {
             $platform = 'mac';
-        } elseif(in_array($platform, ['iphone', 'ios']) || in_array($os_name, ['ios'])){
+        } elseif (in_array($platform, ['iphone', 'ios']) || in_array($os_name, ['ios'])) {
             $platform = 'iphone';
-        } elseif(in_array($platform, ['androidos']) || in_array($os_name, ['androidos'])){
+        } elseif (in_array($platform, ['androidos']) || in_array($os_name, ['androidos'])) {
             $platform = 'android';
+        } elseif (in_array($platform, ['play-store', 'googleplay', 'google play'])) {
+            $platform = 'playstore';
+        } elseif (in_array($platform, ['app-store', 'apple-store', 'apple store'])) {
+            $platform = 'appstore';
         }
 
         return self::stringReplacer($dataSet[$platform] ?? $dataSet['unknown']);
@@ -1722,12 +1745,10 @@ class Tame extends TameHelper{
     /**
      * Get path to payment svg icon
      * 
-     * @param string|null $payment
-     * - [add-money|alipay|bank|cc|credit-card|discover|faster-pay|groupbuy|maestro|mastercard]
-     * - [pay|payme|payment-card|payment-wallet|paypal|stripe-circle|tripe-sqaure|stripe|visa]
+     * @param string|null|'add-money'|'alipay'|'bank'|'cc'|'credit-card'|'discover'|'faster-pay'|'groupbuy'|'maestro'|'mastercard'|
+     * 'pay'|'payme'|'payment-card'|'payment-wallet'|'paypal'|'stripe-circle'|'tripe-sqaure'|'stripe'|'visa' $payment
      * 
-     * @return mixed
-     * - string|null
+     * @return string
      */
     public static function paymentIcon($payment = null)
     {

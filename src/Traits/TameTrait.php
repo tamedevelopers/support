@@ -16,73 +16,113 @@ trait TameTrait{
 
     /**
      * Check if the application is running under a popular PHP framework.
-     * Returns true if any supported framework core class is found.
-     *
+     * - using `get_declared_classes()` function will return all classes in your project
+     * 
      * Supported frameworks:
      * - Laravel
-     * - CodeIgniter
-     * - CakePHP
+     * - CodeIgniter (v3 & v4)
+     * - CakePHP (v3, v4 & v5)
      * - Symfony
+     * - Yii (v1 & v2)
+     * - Slim
      *
      * @return bool
      */
     public static function isAppFramework()
     {
-        // using `get_declared_classes()` function will return all classes in your project
-        return self::checkAnyClassExists([
-            '\Illuminate\Foundation\Application', // Laravel
-            '\Illuminate\\Container\\Container', // Laravel
-            '\CI_Controller', // CodeIgniter
-            '\Cake\Controller\Controller', // CakePHP
-            '\Symfony\Component\HttpKernel\Kernel', // Symfony
-            '\Symfony\Component\Routing\Annotation\Route',
-        ]);
+        return self::isLaravel()
+            || self::isSymfony()
+            || self::isCodeIgniter()
+            || self::isCakePhp()
+            || self::isYii()
+            || self::isSlim();
     }
 
     /**
      * Check if the application is running under Laravel.
-     *
-     * @return bool
      */
-    public static function isLaravel()
+    public static function isLaravel(): bool
     {
-        return self::checkAnyClassExists([
-            '\Illuminate\Foundation\Application',
-            '\Illuminate\\Container\\Container',
-        ]);
+        $className = 'Illuminate\Foundation\Application';
+
+        // Runtime function check (available when Laravel is booted)
+        if (function_exists('app') && class_exists($className)) {
+            return true;
+        }
+
+        // Class check for Illuminate Application
+        return class_exists($className);
     }
 
     /**
-     * Check if the application is running under CodeIgniter.
+     * Check if the application is running as a native Symfony App.
+     * Avoids false positives from standalone vendor components (Routing/HttpKernel).
      *
      * @return bool
      */
-    public static function isCodeIgniter()
+    public static function isSymfony(): bool
     {
-        return self::checkAnyClassExists('\CI_Controller');
+        // The standard entry point for all modern Symfony apps (Flex / 4.x / 5.x / 6.x / 7.x)
+        if (class_exists('App\Kernel')) {
+            return true;
+        }
+
+        // Legacy / Bundle bundle marker specific to native Symfony framework runtime
+        if (class_exists('Symfony\Bundle\FrameworkBundle\FrameworkBundle')) {
+            return true;
+        }
+
+        // Fallback check for active kernel instance in global scope
+        return class_exists('Symfony\Component\HttpKernel\KernelInterface') 
+            && defined('SYMFONY_VERSION');
     }
 
     /**
-     * Check if the application is running under CakePhp.
+     * Check if the application is running under CodeIgniter (v3 or v4).
      *
      * @return bool
      */
-    public static function isCakePhp()
+    public static function isCodeIgniter(): bool
     {
-        return self::checkAnyClassExists('\Cake\Controller\Controller');
+        // CodeIgniter 3
+        if (class_exists('CI_Controller') || (class_exists('CI_Controller') && defined('BASEPATH'))) {
+            return true;
+        }
+
+        // CodeIgniter 4
+        return class_exists('CodeIgniter\CodeIgniter') || class_exists('CodeIgniter\Controller');
     }
 
     /**
-     * Check if the application is running under Symfony.
+     * Check if the application is running under CakePHP.
      *
      * @return bool
      */
-    public static function isSymfony()
+    public static function isCakePhp(): bool
     {
-        return self::checkAnyClassExists([
-            '\Symfony\Component\HttpKernel\Kernel',
-            '\Symfony\Component\Routing\Annotation\Route'
-        ]);
+        return class_exists('Cake\Core\Configure') 
+            || class_exists('Cake\Controller\Controller') 
+            || defined('CAKE_CORE_INCLUDE_PATH');
+    }
+
+    /**
+     * Check if the application is running under Yii (v1 or v2).
+     *
+     * @return bool
+     */
+    public static function isYii(): bool
+    {
+        return class_exists('Yii') || class_exists('YiiBase');
+    }
+
+    /**
+     * Check if the application is running under Slim Framework.
+     *
+     * @return bool
+     */
+    public static function isSlim(): bool
+    {
+        return class_exists('Slim\App') || class_exists('Slim\Factory\AppFactory');
     }
     
     /**

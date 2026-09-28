@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Commands\Traits;
 
 use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\Installer;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Capsule\Logger;
 
@@ -65,6 +67,26 @@ trait ServiceTrait{
     }
 
     /**
+     * Ensure the directory exists or create it if missing.
+     */
+    protected function createBaseService(): void
+    {
+        $service = Installer::getPathsData(null, 'service');
+
+        $dummyDir   = realpath(__DIR__ . '/../../');
+        $dummyPath  = Tame::stringReplacer("{$dummyDir}{$service['dummy']}");
+        $filePath   = $service['path'];
+        
+        if(File::exists($dummyPath) && !File::exists($filePath)){
+            // Read the contents of the dummy file
+            $dummyContent = File::get($dummyPath);
+
+            // Write the contents to the new file
+            File::put($filePath, $dummyContent);
+        }
+    }
+
+    /**
      * Build the service class stub content.
      *
      * @param  string $className
@@ -77,17 +99,72 @@ trait ServiceTrait{
             <?php
 
             namespace {$namespace};
+
+            use App\Services\BaseService;
             
-            class {$className}
+            class {$className} extends BaseService
+            {
+                // 
+
+            }
+            
+            PHP;
+    }
+
+    /**
+     * Build the service class stub content with Resource support
+     *
+     * @param  string $className
+     * @param  string $namespace
+     * @return string
+     */
+    protected function buildClassStubWithResource(string $className, string $namespace): string
+    {
+        return <<<PHP
+            <?php
+
+            namespace {$namespace};
+            
+            use App\Services\BaseService;
+            
+            class {$className} extends BaseService
             {
                 /**
-                 * Public constructor
+                 * Store something in the service.
+                 *
+                 * @param  array \$param
+                 * @param  \Tamedevelopers\Validator\Validator \$response
+                 * @return array
                  */
-                public function __construct()
+                public function store(\$param, \$response)
                 {
-                    // 
+                    //
                 }
-
+                
+                /**
+                 * Update something in the service.
+                 *
+                 * @param  array \$param
+                 * @param  \Tamedevelopers\Validator\Validator \$response
+                 * @return array
+                 */
+                public function update(\$param, \$response)
+                {
+                    //
+                }
+                
+                /**
+                 * Delete something in the service.
+                 *
+                 * @param  array \$param
+                 * @param  \Tamedevelopers\Validator\Validator \$response
+                 * @return array
+                 */
+                public function delete(\$param, \$response)
+                {
+                    //
+                }
+                
             }
             
             PHP;

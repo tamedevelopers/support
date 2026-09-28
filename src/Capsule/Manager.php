@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Capsule;
 
 use Closure;
-use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\Collections\Collection;
 
 class Manager{
     
@@ -178,6 +179,59 @@ class Manager{
         if ($exit) {
             exit(1);
         }
+    }
+
+    /**
+     * Silently handles exceptions by disabling error reporting, setting a 404 response header,
+     * and logging the error without exposing raw exception traces to the end user.
+     *
+     * @param \Throwable $throwable   The caught exception or error instance to handle.
+     * @param  bool $exit
+     * @param int        $error_level Optional PHP error level constant (defaults to E_USER_NOTICE).
+     * 
+     * @return void
+     */
+    public static function silentError($throwable, bool $exit = false, int $error_level = E_USER_NOTICE)
+    {
+        // Handle the exception silently (turn off error reporting)
+        error_reporting(0);
+
+        $description = '';
+
+        if(!empty($throwable)){
+            $collect = new Collection($throwable->getTrace());
+
+            // Filter trace to include ONLY application files (strip out vendor noise)
+            $appTrace = $collect
+                ->filter(function ($item) {
+                    return isset($item['file']) && str_contains($item['file'], 'app' . DIRECTORY_SEPARATOR);
+                })
+                ->take(5)
+                ->map(function ($item, $index) {
+                    // Make file path relative & concise (e.g. app\Services\Traits\OrderTrait.php:116)
+                    $file       = str_replace(base_path() . DIRECTORY_SEPARATOR, '', $item['file']);
+                    $class      = isset($item['class']) ? class_basename($item['class']) . '->' : '';
+                    $function   = $item['function'] ?? '';
+
+                    return sprintf("#%d %s(%d): %s%s()", $index + 1, $file, $item['line'] ?? 0, $class, $function);
+                })
+                ->implode("\n");
+            
+            // Format a clean, human-readable error description
+            $description = sprintf(
+                "Error: %s\nLocation: %s (Line %d)\n\nApp Trace:\n%s",
+                $throwable->getMessage(),
+                str_replace(base_path() . DIRECTORY_SEPARATOR, '', $throwable->getFile()),
+                $throwable->getLine(),
+                $appTrace ?: "No app trace available."
+            );
+        }
+
+        self::setHeaders(404, function() use($description, $error_level){
+            Env::bootLogger();
+            
+            @trigger_error($description, $error_level);
+        }, $exit);
     }
 
     /**

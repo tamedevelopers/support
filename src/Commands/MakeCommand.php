@@ -39,7 +39,7 @@ class MakeCommand extends CommandHelper
     {
         $this->handleHeader('make');
         Logger::writeln('  make:command [name]');
-        Logger::writeln('  make:service [name]');
+        Logger::writeln('  make:service [name] --resource');
         Logger::writeln('');
     }
 
@@ -65,6 +65,8 @@ class MakeCommand extends CommandHelper
     {
         [$className, $namespace, $filePath, $directory] = $this->parseInput();
 
+        $resource = (bool) $this->flag('resource');
+
         if(empty($className)){
             $className = $this->ask(
                 question: 'Service name is required',
@@ -81,8 +83,15 @@ class MakeCommand extends CommandHelper
         }
 
         $this->ensureDirectoryExists($directory);
+        $this->createBaseService();
+
+        if($resource){
+            $content = $this->buildClassStubWithResource($className, $namespace);
+        } else{
+            $content = $this->buildClassStub($className, $namespace);
+        }
         
-        File::put($filePath, $this->buildClassStub($className, $namespace));
+        File::put($filePath, $content);
 
         Logger::info("Service [{$filePath}] created successfully.");
     }

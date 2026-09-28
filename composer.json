@@ -26,6 +26,9 @@
         "phpmailer/phpmailer": "^6.9",
         "ezyang/htmlpurifier": "^4.13",
         "composer-plugin-api": "^2.0",
+        "chillerlan/php-qrcode": "^5.0",
+        "meyfa/php-svg": "*",
+        "tamedevelopers/file": "*",
         "guzzlehttp/guzzle": "*",
         "illuminate/http": "*"
     },

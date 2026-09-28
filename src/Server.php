@@ -29,6 +29,13 @@ class Server{
      * @var array
      */
     private static array $overrides = [];
+
+    /**
+     * Base path
+     *
+     * @var mixed
+     */
+    private static $basePath = null;
     
     /**
      * Get the value of a configuration option.
@@ -60,24 +67,28 @@ class Server{
                 $tame = new Tame();
 
                 if ($tame->isAppFramework()) {
-                    $basePath = self::pathReplacer(self::formatWithBaseDirectory(), '\\');
+                    self::$basePath = self::pathReplacer(self::formatWithBaseDirectory(), '\\');
 
-                    // Laravel: register Application if not already set on the container
+                    // Register Application if not already set on the container
                     if($tame->isLaravel()){
-                        self::requireFrameWorkBootstrap("{$basePath}/bootstrap/app.php");
-                    } 
-                    // CodeIgniter (assuming CI 3/4)
-                    else if ($tame->isCodeIgniter()) {
-                        self::requireFrameWorkBootstrap("{$basePath}/app/Config/Paths.php");
-                    }
-                    // CakePHP
-                    elseif ($tame->isCakePhp()) {
-                        self::requireFrameWorkBootstrap("{$basePath}/config/bootstrap.php");
-                    }
-                    // Symfony
-                    elseif ($tame->isSymfony()) {
-                        self::requireFrameWorkBootstrap("{$basePath}/config/bootstrap.php");
-                        self::requireFrameWorkBootstrap("{$basePath}/src/Kernel.php");
+                        self::bootstrapFile('bootstrap/app.php');
+                    }  elseif ($tame->isCodeIgniter()) {
+                        if (!self::bootstrapFile('app/Config/Paths.php')) {
+                            self::bootstrapFile('application/config/config.php'); // CI3 fallback
+                        }
+                    } elseif ($tame->isCakePhp()) {
+                        self::bootstrapFile('config/bootstrap.php');
+                    } elseif ($tame->isSymfony()) {
+                        self::bootstrapFile('config/bootstrap.php');
+                        self::bootstrapFile('src/Kernel.php');
+                    } elseif ($tame->isYii()) {
+                        if (!self::bootstrapFile('config/web.php') && !self::bootstrapFile('config/console.php')) {
+                            self::bootstrapFile('protected/config/main.php'); // Yii 1 fallback
+                        }
+                    } elseif ($tame->isSlim()) {
+                        if (!self::bootstrapFile('config/bootstrap.php') && !self::bootstrapFile('src/app/app.php')) {
+                            self::bootstrapFile('src/settings.php'); // Slim 3 skeleton fallback
+                        }
                     }
                 }
             }
@@ -236,12 +247,13 @@ class Server{
         ];
         PHP;
 
-        // Make directory
+        // directory path
         $dirPath = dirname($filePath);
-        File::makeDirectory($dirPath);
-
-        // to avoid warning error
-        // we check if path is a directory first before executing the code
+        
+        if(!File::isDirectory($dirPath)){
+            File::makeDirectory($dirPath);
+        }
+        
         if(File::isDirectory($dirPath)){
             File::put($filePath, $phpCode);
         }
@@ -269,10 +281,7 @@ class Server{
             }
         }
 
-        return json_decode(
-            json_encode($value), 
-            true
-        );
+        return json_decode(json_encode($value), true) ?? [];
     }
 
     /**
@@ -283,10 +292,9 @@ class Server{
      */
     public static function toObject($value)
     {
-        return json_decode(
-            json_encode( self::toArray($value) ), 
-            false
-        );
+        $encodedValue = json_encode(self::toArray($value));
+
+        return json_decode($encodedValue, false);
     }
     
     /**
@@ -301,7 +309,7 @@ class Server{
             return $value;
         }
     
-        return json_encode($value);
+        return (string) json_encode($value);
     }
 
     /**
@@ -328,7 +336,6 @@ class Server{
         return false;
     }
 
-
     /**
      * Check if data is valid JSON.
      *
@@ -337,29 +344,47 @@ class Server{
      */
     private static function isValidJson(mixed $data = null)
     {
-        if(is_string($data)){
-            json_decode($data);
-            return json_last_error() === JSON_ERROR_NONE;
+        if (!is_string($data) || trim($data) === '') {
+            return false;
         }
 
-        return false;
+        if (function_exists('json_validate')) {
+            return json_validate($data);
+        }
+        
+        json_decode($data);
+
+        return json_last_error() === JSON_ERROR_NONE;
     }
 
     /**
-     * Require framework bootstrap file
+     * Bootstrap framework file
      *
      * @param string $bootstrap
-     * @return void
+     * @return bool
      */
-    private static function requireFrameWorkBootstrap($bootstrap)
+    private static function bootstrapFile($bootstrap)
     {
         try {
-            if (file_exists($bootstrap)) {
-                require_once $bootstrap;
+            $fullPath = self::$basePath . "/$bootstrap";
+
+            $basePath = rtrim(self::$basePath ?? '', '/\\');
+            $fullPath = $basePath . '/' . ltrim($bootstrap, '/\\');
+
+            dd(
+                $fullPath,
+                'ss'
+            );
+
+            if (file_exists($fullPath)) {
+                require_once $fullPath;
+                return true;
             }
         } catch (\Throwable $th) {
             // Ignore continuous error
         }
+
+        return false;
     }
     
 }

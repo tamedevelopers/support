@@ -36,10 +36,10 @@ class Installer
 
         // only create when files are not present
         if(self::isDummyNotPresent($paths)){
-            // create for [tame] 
+            // Create for [tame] 
             self::createTameBash($paths);
 
-            // create for [database.php]
+            // Create Defaults
             // self::createTameMailer($paths);
         }
     }
@@ -88,16 +88,18 @@ class Installer
     /**
      * Get dummy contents path data
      * 
+     * @param string|null $realPath
+     * @param 'tame'|'mail'|'disposable'|'service'|null $mode
      * @return array
      */
-    public static function getPathsData($realPath = null)
+    public static function getPathsData($realPath = null, $mode = null)
     {
         $env        = new Env();
         $server     = Env::getServers('server');
         $serverPath = $env->cleanServerPath( $server );
         $realPath   = rtrim($env->cleanServerPath( $realPath ), '/');
 
-        return [
+        $data = [
             'tame' => [
                 'path'  => "{$serverPath}tame",
                 'dummy' => "{$realPath}/Capsule/Dummy/dummyTame.dum",
@@ -110,7 +112,13 @@ class Installer
                 'path'  => $realPath,
                 'dummy' => "/Capsule/Dummy/disposableEmails.dum",
             ],
+            'service' => [
+                'path'  => "{$serverPath}app/Services/BaseService.php",
+                'dummy' => "/Capsule/Dummy/dummyBaseService.dum",
+            ],
         ];
+
+        return $data[$mode] ?? $data;
     }
 
     /**

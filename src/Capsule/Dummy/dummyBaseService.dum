@@ -1,0 +1,206 @@
+<?php
+
+namespace App\Services;
+
+use Tamedevelopers\File\File;
+
+
+class BaseService
+{
+
+    /**
+     * Start a new Self Instance
+     *
+     * @return $this
+     */
+    public function start()
+    {
+        return new static();
+    }
+
+    /**
+     * Standard service response structure.
+     *
+     * @param  int|bool $response   Typically 200...5xx, or true/false
+     * @param  mixed $message
+     * @return array{response: int|bool, message: mixed}
+     */
+    public static function responseHandle($response = 0, $message = null)
+    {
+        return ['response' => $response, 'message' => $message];
+    }
+
+    /**
+     * Determine if an array contains only allowed keys.
+     *
+     * @param  array  $values  Associative array of input values to check.
+     * @param  array  $allowedKeys  List of expected or permitted key names.
+     * @return bool
+     */
+    public static function hasOnlyAllowedKeys($values = [], $allowedKeys = [])
+    {
+        return tcollect($values)
+            ->keys()
+            ->every(function ($key) use($allowedKeys) {
+                return in_array($key, $allowedKeys);
+            });
+    }
+
+    /**
+     * Create timestamps based on a given time and timezone, with an optional expiration time in minutes.
+     *
+     * @param  mixed $time
+     * @param  mixed $timezone
+     * @param  int $expireInMinutes
+     * @return array{created_at: string, expired_at: string}
+     */
+    public static function createFromTimeZone($time, $timezone, $expireInMinutes = 10)
+    {
+        $ttime = TameTime($time, $timezone);
+
+        return [
+            'created_at' => $ttime->format(),
+            'expired_at' => $ttime->addMinutes($expireInMinutes)->format(),
+        ];
+    }
+
+    /**
+    * Normalize and validate an OTP code from string or array format.
+    *
+    * @param  string|array|null  $otp  The OTP code or array of OTP digits.
+    * @param  int  $expectedLength  Expected digit count (default 6).
+    * @return string|null Returns the clean numeric OTP string, or null if invalid/incomplete.
+    */
+    public static function normalizeOtp($otp = null, $expectedLength = 6)
+    {
+        if (empty($otp)) {
+            return null;
+        }
+
+        // Convert array inputs (e.g. ['1', '2', '3']) into a single string
+        $rawCode = is_array($otp) ? implode('', $otp) : (string) $otp;
+
+        // Strip out all non-digit characters
+        $cleanCode = preg_replace('/\D/', '', $rawCode);
+
+        // Verify length requirements
+        if (strlen($cleanCode) !== $expectedLength) {
+            return null;
+        }
+
+        return $cleanCode;
+    }
+
+    /**
+     * Unset ID key from the given parameters.
+     * 
+     * @param  array $value
+     * @return void
+     */
+    public static function unsetId(&$value)
+    {
+        unset($value['id']);
+    }
+
+    /**
+     * Process file upload
+     *
+     * @param  \Tamedevelopers\File\File $file
+     * @param  string $fileName
+     * @param  bool $required
+     * @param  bool $multiple
+     * @return array{path: mixed, attachment: mixed, message: mixed, file: File}
+     */
+    public static function processUpload($file, $fileName = 'attachment', $required = true, $multiple = false)
+    {
+        $request = [
+            'path'       => null, // full path to image
+            'attachment' => null, // attachment name
+            'message'    => null,
+            'file'       => $file,
+        ];
+
+        if ($file->isEmpty($fileName) && !$required) {
+            return $request;
+        }
+
+        $file->validate(function (File $response) use (&$request) {
+            $request['message'] = $response->getMessage();
+        })->save(function (File $response) use (&$request, $multiple) {
+            $response->compress();
+
+            $method = $multiple ? 'get' : 'first';
+
+            $request['path']       = $response->{$method}('path');
+            $request['attachment'] = $response->{$method}('name');
+        });
+
+        return $request;
+    }
+
+    /**
+     * Delete Process file upload
+     *
+     * @param  array{path: mixed, attachment: mixed, message: mixed, file: File} $processUpload
+     * @param  mixed $oldData
+     * @param  null|\Tamedevelopers\File\File $file
+     * @return void
+     */
+    public static function deleteProcessUpload($processUpload, $oldData = null, $file = null)
+    {
+        $file = $processUpload['file'] ?? $file;
+        $message = $processUpload['message'] ?? null;
+        $attachment = $processUpload['attachment'] ?? null; // attachment name
+
+        if (!$file) {
+            return;
+        }
+
+        // 1. Validation/Error Failure: Clean up newly uploaded files
+        if (!empty($message)) {
+            self::unlinkFiles($file, $attachment);
+            return;
+        }
+
+        // 2. Direct Deletion: $oldData passed without $processUpload context
+        if (empty($processUpload) && !empty($oldData)) {
+            self::unlinkFiles($file, $oldData);
+            return;
+        }
+
+        // 3. No New File Uploaded: Do not delete existing $oldData
+        if (empty($attachment)) {
+            return;
+        }
+
+        // 4. Update Action: Delete $oldData only when new files were uploaded
+        if (!empty($oldData) || !empty($attachment)) {
+            self::unlinkFiles($file, $oldData ?: $attachment);
+        }
+    }
+
+    /**
+     * Helper method to unlink single or multiple file attachments safely.
+     *
+     * @param  File $file
+     * @param  mixed $data
+     * @return void
+     */
+    private static function unlinkFiles($file, mixed $data): void
+    {
+        if (empty($data)) {
+            return;
+        }
+
+        $attachments = is_array($data) ? $data : [$data];
+
+        foreach ($attachments as $image) {
+            if (!empty($image)) {
+                $file->unlink(
+                    public_path($file->getFolder($image))
+                );
+            }
+        }
+    }
+
+}

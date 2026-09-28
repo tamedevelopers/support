@@ -227,17 +227,7 @@ class PDF{
                 );
             }
         } catch (CustomException $e) {
-            // Handle the exception silently (turn off error reporting)
-            error_reporting(0);
-
-            Manager::setHeaders(404, function() use($e){
-
-                // create error logger
-                Env::bootLogger();
-
-                // Trigger a custom error
-                trigger_error($e->getMessage(), E_USER_ERROR);
-            });
+            Manager::silentError($e);
         }
     }
 

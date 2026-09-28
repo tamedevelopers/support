@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
-use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Capsule\CustomException;
 
@@ -12,14 +11,10 @@ use Tamedevelopers\Support\Capsule\CustomException;
 final class Hash {
     
     /**
-     * Password Encrypter.
      * This function encrypts a password using bcrypt with a generated salt.
      *
-     * @param string $password 
-     * - The password to encrypt.
-     * 
-     * @return string 
-     * - The encrypted password.
+     * @param string $password      The password to encrypt.
+     * @return string   The encrypted password.
      */
     public static function make($password)
     {
@@ -31,17 +26,11 @@ final class Hash {
     }
 
     /**
-     * Password Verifier.
      * This function verifies a new password against the old hashed password.
      *
-     * @param string $newPassword 
-     * - The new password to verify.
-     * 
-     * @param string $oldHashedPassword 
-     * - The old hashed password to verify against.
-     * 
+     * @param string $newPassword    The new password to verify.
+     * @param string $oldHashedPassword     The old hashed password to verify against.
      * @return bool 
-     * - Returns true if the verification is successful, false otherwise.
      */
     public static function check($newPassword, $oldHashedPassword)
     {
@@ -64,17 +53,7 @@ final class Hash {
                 );
             }
         } catch (CustomException $e) {
-            // Handle the exception silently (turn off error reporting)
-            error_reporting(0);
-
-            Manager::setHeaders(404, function() use($e){
-
-                // create error logger
-                Env::bootLogger();
-
-                // Trigger a custom error
-                trigger_error($e->getMessage(), E_USER_ERROR);
-            });
+            Manager::silentError($e);
         }
     }
 

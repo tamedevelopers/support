@@ -120,8 +120,6 @@ class Env {
 
     /**
      * Inherit the load() method and returns an error message 
-     * if any or load environment variables
-     * 
      * @param string|null $path Path to .env Folder\Not needed exept called statically
      * @return void
      */
@@ -135,17 +133,7 @@ class Env {
                     (new Exception)->getTraceAsString()
                 );
             } catch (CustomException $e) {
-                // Handle the exception silently (turn off error reporting)
-                error_reporting(0);
-
-                Manager::setHeaders(404, function() use($e){
-
-                    // create error logger
-                    self::bootLogger();
-
-                    // Trigger a custom error
-                    trigger_error($e->getMessage(), E_USER_ERROR);
-                });
+                Manager::silentError($e, true);
             }
         }
     }
