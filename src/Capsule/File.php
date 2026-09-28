@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Capsule;
 
 use Tamedevelopers\Support\Tame;
-use Tamedevelopers\Support\Process\Http;
 use Tamedevelopers\Support\Traits\FileTrait;
 
 /**
@@ -98,7 +97,7 @@ class File {
     public static function exists($path)
     {
         if (filter_var($path, FILTER_VALIDATE_URL)) {
-            return Http::head($path)->successful();
+            return !empty(self::getFromUrl($path));
         }
         
         return is_file(self::cleanPath($path));
