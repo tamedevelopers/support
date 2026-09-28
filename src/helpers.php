@@ -15,11 +15,13 @@ use Tamedevelopers\Support\NumberToWords;
 use Tamedevelopers\Support\PDF;
 use Tamedevelopers\Support\Process\HttpRequest;
 use Tamedevelopers\Support\Process\Session;
+use Tamedevelopers\Support\QRCode;
 use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
 use Tamedevelopers\Support\TextSanitizer;
 use Tamedevelopers\Support\Time;
+use Tamedevelopers\Support\TOTP;
 use Tamedevelopers\Support\Translator;
 use Tamedevelopers\Support\Utility;
 use Tamedevelopers\Support\View;
@@ -72,6 +74,7 @@ if (! function_exists('TameMail')) {
 if (! function_exists('TameEnv')) {
     /**
      * Env Class
+     * 
      * @param  mixed $path
      * @return \Tamedevelopers\Support\Env
      */
@@ -96,6 +99,7 @@ if (! function_exists('TameCookie')) {
 if (! function_exists('TameTime')) {
     /**
      * Time Class
+     * 
      * @param int|string|null $time
      * @param string|null $timezone
      * @return \Tamedevelopers\Support\Time
@@ -112,7 +116,6 @@ if (! function_exists('TameCollect')) {
      * Collection Class
      *
      * @param array|null $items 
-     * 
      * @return \Tamedevelopers\Support\Collections\Collection|mixed
      */
     function TameCollect($items = [])
@@ -125,8 +128,7 @@ if (! function_exists('tcollect')) {
     /**
      * Collection Class
      *
-     * @param array|null $items 
-     * 
+     * @param array|null $items =
      * @return \Tamedevelopers\Support\Collections\Collection|mixed
      */
     function tcollect($items = [])
@@ -140,7 +142,6 @@ if (! function_exists('toptional')) {
      * Optional Class
      *
      * @param array|object|null $items 
-     * 
      * @return \Tamedevelopers\Support\Collections\Collection|mixed
      */
     function toptional($items = [])
@@ -205,6 +206,7 @@ if (! function_exists('TameUtility')) {
 if (! function_exists('TameCountry')) {
     /**
      * Country Class
+     * 
      * @return \Tamedevelopers\Support\Country
      */
     function TameCountry()
@@ -216,6 +218,7 @@ if (! function_exists('TameCountry')) {
 if (! function_exists('NumberToWords')) {
     /**
      * NumberToWords Class
+     * 
      * @return \Tamedevelopers\Support\NumberToWords
      */
     function NumberToWords()
@@ -248,16 +251,39 @@ if (! function_exists('TameZip')) {
     }
 }
 
+if (! function_exists('TameQR')) {
+    /**
+     * QRCode
+     * @param string|null $path 
+     * @return \Tamedevelopers\Support\QRCode
+     */
+    function TameQR(?string $path = null)
+    {
+        return new QRCode($path);
+    }
+}
+
+if (! function_exists('TameQR')) {
+    /**
+     * Tame TOTP
+     * 
+     * @param int    $digits    Length of the OTP output code (default: 6).
+     * @param int    $period    Time interval window in seconds (default: 30).
+     * @param 'sha1'|'sha256'|'sha512' $algorithm HMAC hashing algorithm (default: 'sha1').
+     * @return \Tamedevelopers\Support\TOTP
+     */
+    function TameTotp(int $digits = 6, int $period = 30, string $algorithm = 'sha1')
+    {
+        return new TOTP($digits, $period, $algorithm);
+    }
+}
+
 if (! $Tame_isAppFramework && ! function_exists('bcrypt')) {
      /**
      * Password Encrypter.
-     * This function encrypts a password using bcrypt with a generated salt.
-     *
-     * @param string $password 
-     * - The password to encrypt.
      * 
+     * @param string $password 
      * @return string 
-     * - The encrypted password.
      */
     function bcrypt($password)
     {
@@ -300,7 +326,7 @@ if (! function_exists('autoload_register')) {
      * 
      * @return \Tamedevelopers\Support\AutoloadRegister
      */
-    function autoload_register(string|array $directory)
+    function autoload_register($directory)
     {
         (new AutoloadRegister)->load($directory);
     }
@@ -346,14 +372,9 @@ if (! $Tame_isAppFramework && ! function_exists('config')) {
     /**
      * Get the value of a configuration option.
      *
-     * @param mixed $key 
-     * The configuration key in dot notation (e.g., 'database.connections.mysql')
-     * 
-     * @param mixed $default 
-     * [optional] The default value to return if the configuration option is not found
-     * 
+     * @param mixed $key    Supports dot notation (e.g., 'database.connections.mysql')
+     * @param mixed $default     The default value to return option is not found
      * @return mixed
-     * The value of the configuration option, or null if it doesn't exist
      */
     function config($key, $default = null)
     {
@@ -364,20 +385,14 @@ if (! $Tame_isAppFramework && ! function_exists('config')) {
 if (! $Tame_isAppFramework && ! function_exists('env')) {
     /**
      * Get ENV (Enviroment) Data
-     * - If .env was not used, 
-     * - Then it will get all App Configuration Data as well
      * 
      * @param string|null $key
-     * - [optional] ENV KEY or APP Configuration Key
-     * 
-     * @param mixed $value
-     * - [optional] Default value if key not found
-     * 
+     * @param mixed $default (optional) Default value if key not found
      * @return mixed
      */
-    function env($key = null, $value = null)
+    function env($key = null, $default = null)
     {
-        return Env::env($key, $value);
+        return Env::env($key, $default);
     }
 }
 
@@ -386,15 +401,9 @@ if (! function_exists('env_update')) {
      * Update Environment [path .env] variables
      * 
      * @param string|null $key \Environment key you want to update
-     * 
      * @param string|bool|null $value \Value of Variable to update
-     * 
-     * @param bool $quote \Default is true
-     * [optional] Allow quotes around values
-     * 
-     * @param bool $space \Default is false
-     * [optional] Allow space between key and value
-     * 
+     * @param bool $quote   Default is true
+     * @param bool $space   Default is false Allow space between key and value
      * @return bool
      */
     function env_update($key = null, $value = null, ?bool $quote = true, ?bool $space = false)
@@ -409,7 +418,6 @@ if (! function_exists('tview')) {
      * 
      * @param string|null $viewPath The path to the view file.
      * @param array $data The data to be passed to the view.
-     * 
      * @return Tamedevelopers\Support\View
      */
     function tview($viewPath = null, $data = [])
@@ -425,7 +433,6 @@ if (! function_exists('tasset')) {
      * @param string $asset
      * @param bool|null $cache
      * @param bool|null $type "absolute" | "relative" (default: false → absolute)
-     * 
      * @return string
      */
     function tasset($asset, $cache = null, $type = null)
@@ -442,7 +449,6 @@ if (! function_exists('config_asset')) {
      * @param bool $cache       Whether to use cache-busting (default: true)
      * - End point of link `?v=xxxxxxxx` is with cache of file time chang
      * @param bool $type   "absolute" | "relative" (default: false → absolute)
-     * 
      * @return void
      */
     function config_asset($path = null, $cache = false, $type = false)
@@ -454,8 +460,8 @@ if (! function_exists('config_asset')) {
 if (! function_exists('config_time')) {
     /**
      * Set the configuration options for text representations of time greeting()
-     * @param array|null $options
      * 
+     * @param array|null $options
      * @return void
      */
     function config_time(?array $options = [])
@@ -471,7 +477,6 @@ if (! $Tame_isAppFramework && ! function_exists('__')) {
      * @param  string|null  $key
      * @param  string|null  $locale
      * @param  string|null  $base_folder
-     * 
      * @return string|array|null
      */
     function __($key = null, $locale = null, $base_folder = null)
@@ -487,9 +492,8 @@ if (! $Tame_isAppFramework && ! function_exists('__')) {
 if (! function_exists('base_path')) {
     /**
      * Get Base Directory `Path`
-     * @param string|null $path
-     * - [optional] You can pass a path to include with the base directory
      * 
+     * @param string|null $path
      * @return string
      */
     function base_path($path = null)
@@ -501,9 +505,8 @@ if (! function_exists('base_path')) {
 if (! function_exists('directory')) {
     /**
      * Get Base Directory `Path`
-     * @param string|null $path
-     * - [optional] You can pass a path to include with the base directory
      * 
+     * @param string|null $path
      * @return string
      */
     function directory($path = null)
@@ -515,9 +518,8 @@ if (! function_exists('directory')) {
 if (! function_exists('storage_path')) {
     /**
      * Get Storage Directory `Path`
-     * @param string|null $path
-     * - [optional] You can pass a path to include with the base directory
      * 
+     * @param string|null $path
      * @return string
      */
     function storage_path($path = null)
@@ -529,9 +531,8 @@ if (! function_exists('storage_path')) {
 if (! function_exists('public_path')) {
     /**
      * Get Public Directory `Path`
-     * @param string|null $path
-     * - [optional] You can pass a path to include with the base directory
      * 
+     * @param string|null $path
      * @return string
      */
     function public_path($path = null)
@@ -543,9 +544,8 @@ if (! function_exists('public_path')) {
 if (! function_exists('database_path')) {
     /**
      * Get Database Directory `Path`
-     * @param string|null $path
-     * - [optional] You can pass a path to include with the base directory
      * 
+     * @param string|null $path
      * @return string
      */
     function database_path($path = null)
@@ -557,9 +557,8 @@ if (! function_exists('database_path')) {
 if (! function_exists('app_path')) {
     /**
      * Get Storage Directory `Path`
-     * @param string|null $path
-     * - [optional] You can pass a path to include with the base directory
      * 
+     * @param string|null $path
      * @return string
      */
     function app_path($path = null)
@@ -571,9 +570,8 @@ if (! function_exists('app_path')) {
 if (! function_exists('config_path')) {
     /**
      * Get Config Directory `Path`
-     * @param string|null $path
-     * - [optional] You can pass a path to include with the base directory
      * 
+     * @param string|null $path
      * @return string
      */
     function config_path($path = null)
@@ -585,9 +583,8 @@ if (! function_exists('config_path')) {
 if (! function_exists('lang_path')) {
     /**
      * Get Config Directory `Path`
-     * @param string|null $path
-     * - [optional] You can pass a path to include with the base directory
      * 
+     * @param string|null $path
      * @return string
      */
     function lang_path($path = null)
@@ -601,9 +598,6 @@ if (! function_exists('domain')) {
      * Get Domain `URL` URI
      * 
      * @param string|null $path
-     * - [optional] You can pass a path to include with the domain link
-     * - Final result: i.e https://domain.com/path
-     * 
      * @return string
      */
     function domain($path = null)
@@ -654,8 +648,8 @@ if (! function_exists('to_json')) {
 if (! $Tame_isAppFramework && ! function_exists('dump')) {
     /**
      * Dump Data
-     * @param mixed $data
      * 
+     * @param mixed $data
      * @return void
      */ 
     function dump(...$data)
@@ -667,8 +661,8 @@ if (! $Tame_isAppFramework && ! function_exists('dump')) {
 if (! $Tame_isAppFramework && ! function_exists('dd')) {
     /**
      * Dump and Data
-     * @param mixed $data
      * 
+     * @param mixed $data
      * @return void
      */ 
     function dd(...$data)

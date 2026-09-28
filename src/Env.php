@@ -258,14 +258,13 @@ class Env {
 
     /**
      * Get ENV (Enviroment) Data
-     * - If .env was not used, 
-     * - Then it will get all App Configuration Data as well
+     *  If .env was not used, Then it will get all App Configuration Data as well
      * 
-     * @param string|null $key - [optional] ENV KEY or APP Configuration Key
-     * @param mixed $value - [optional] Default value if key not found
+     * @param string|null $key (optional) ENV KEY or APP Configuration Key
+     * @param mixed $default (optional) Default value if key not found
      * @return mixed
      */
-    public static function env($key = null, $value = null)
+    public static function env($key = null, $default = null)
     {
         // Convert all keys to lowercase
         $envData = array_change_key_case($_ENV, CASE_UPPER);
@@ -273,11 +272,12 @@ class Env {
         // convert to upper-case
         $key = Str::upper(Str::trim($key));
 
-        return $envData[$key] ?? $value;
+        return $envData[$key] ?? $default;
     }
 
     /**
      * Update Environment path .env file
+     * 
      * @param string|null $key \Environment key you want to update
      * @param string|bool|null $value \Value allocated to the key
      * @param bool $quote \Allow quotes around value

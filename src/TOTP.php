@@ -142,11 +142,11 @@ class TOTP
      * @param string      $issuerName  The application or organization name issuing the 2FA token.
      * @param string|null $path        Target file path to save the QR code image, or null.
      * @param array{
-     *  palette?: 'default'|'neon'|'forest'|'instagram'|'facebook'|'youtube'|'whatsapp'|'telegram'|'snapchat',
+     *  pattern: 'classic'|'rounded'|'thin'|'smooth'|'circle'|'leaf'|'inverted'|'pillow'|'finder'|'scallop',
      *  iconPath?: string,
-     *  shape?: 'square'|'rounded'|'dot'|'circle',
-     *  innerShape?: 'square'|'rounded'|'dot'|'circle',
-     *  outerShape?: 'square'|'rounded'|'dot'|'circle',
+     *  shape: 'classic'|'rounded'|'thin'|'smooth'|'circle'|'leaf'|'inverted'|'pillow'|'finder'|'scallop',
+     *  innerShape: 'classic'|'rounded'|'thin'|'smooth'|'circle'|'leaf'|'inverted'|'pillow'|'finder'|'scallop',
+     *  outerShape: 'classic'|'rounded'|'thin'|'smooth'|'circle'|'leaf'|'inverted'|'pillow'|'finder'|'scallop',
      *  showIcon?: bool,
      * } $qrOptions
      * 
@@ -173,8 +173,8 @@ class TOTP
         $qr = new QRCode($path);
 
         if(!empty($qrOptions)){
-            if(isset($qrOptions['palette'])){
-                $qr->palette($qrOptions['palette']);
+            if(isset($qrOptions['pattern'])){
+                $qr->pattern($qrOptions['pattern']);
             }
             if(isset($qrOptions['iconPath'])){
                 $qr->iconPath($qrOptions['iconPath']);

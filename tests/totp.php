@@ -13,9 +13,9 @@ $data = $totp->render(
     'Tame Support',
     public_path("user_2_totp"),
     [
-        'palette' => 'default',
-        'shape' => 'square',
-        'outerShape'  => 'rounded',
+        'pattern' => 'rounded',
+        // 'shape' => 'classic',
+        // 'outerShape'  => 'rounded',
         'iconPath' => base_path('watermark.png'),
         'showIcon' => true,
     ]
