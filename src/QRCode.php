@@ -26,6 +26,9 @@ class QRCode
     /** @var int QR version (1-40) */
     protected int $version = Version::AUTO;
 
+    /** @var bool Image transparency */
+    protected bool $transparent = false;
+
     /** @var int Error correction level constant */
     protected int $eccLevel = EccLevel::H;
 
@@ -119,6 +122,18 @@ class QRCode
     public function iconPath(string $iconPath): self
     {
         $this->iconPath = $iconPath;
+        return $this;
+    }
+
+    /**
+     * Set Transparency
+     * 
+     * @param bool $transparent
+     * @return self
+     */
+    public function transparent($transparent): self
+    {
+        $this->transparent = $transparent;
         return $this;
     }
 
@@ -562,7 +577,7 @@ class QRCode
             'eccLevel'          => $this->eccLevel,
             'scale'             => $this->scale,
             'outputType'        => 'svg',
-            'imageTransparent'  => false,
+            'imageTransparent'  => $this->transparent,
             'paletteColors'     => $this->getPaletteColors(),
             'shape'             => $this->shape,
             'outerShape'        => $this->outerShape,

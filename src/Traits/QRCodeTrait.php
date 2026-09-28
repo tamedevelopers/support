@@ -130,6 +130,9 @@ trait QRCodeTrait
             $iconPath = (!empty($this->platform) ? Tame::platformIcon($this->platform) : null);
         }
 
+        // clean path
+        $iconPath = File::cleanPath($iconPath);
+
         if (empty($iconPath) || !File::exists($iconPath)) {
             return $svgOutput;
         }
@@ -140,7 +143,7 @@ trait QRCodeTrait
         }
 
         // Determine mime type and convert icon payload to Base64
-        $extension = strtolower(pathinfo($iconPath, PATHINFO_EXTENSION));
+        $extension = File::extension($iconPath);
         $mimeType  = match ($extension) {
             'png'   => 'image/png',
             'jpg', 'jpeg' => 'image/jpeg',
@@ -156,17 +159,26 @@ trait QRCodeTrait
             $totalSize = (int) $matches[1];
         }
 
-        $badgeSize  = (int) round($totalSize * 0.22);
-        $iconSize   = (int) round($totalSize * 0.20);
+        $badgeSize   = (int) round($totalSize * 0.22);
+        $iconSize    = (int) round($totalSize * 0.20);
         $badgeOffset = (int) round(($totalSize - $badgeSize) / 2);
         $iconOffset  = (int) round(($totalSize - $iconSize) / 2);
 
+        // Render background badge only if transparency is disabled
+        $rectElement = '';
+        if (!$this->transparent) {
+            $rectElement = sprintf(
+                '<rect x="%d" y="%d" width="%d" height="%d" fill="#FFFFFF" rx="6" ry="6"/>',
+                $badgeOffset,
+                $badgeOffset,
+                $badgeSize,
+                $badgeSize
+            );
+        }
+
         $overlaySvg = sprintf(
-            '<g><rect x="%d" y="%d" width="%d" height="%d" fill="#FFFFFF" rx="6" ry="6"/><image x="%d" y="%d" width="%d" height="%d" href="%s"/></g>',
-            $badgeOffset,
-            $badgeOffset,
-            $badgeSize,
-            $badgeSize,
+            '<g>%s<image x="%d" y="%d" width="%d" height="%d" href="%s"/></g>',
+            $rectElement,
             $iconOffset,
             $iconOffset,
             $iconSize,

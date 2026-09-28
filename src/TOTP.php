@@ -148,6 +148,7 @@ class TOTP
      *  innerShape: 'classic'|'rounded'|'thin'|'smooth'|'circle'|'leaf'|'inverted'|'pillow'|'finder'|'scallop',
      *  outerShape: 'classic'|'rounded'|'thin'|'smooth'|'circle'|'leaf'|'inverted'|'pillow'|'finder'|'scallop',
      *  showIcon?: bool,
+     *  transparent?: bool,
      * } $qrOptions
      * 
      * @return array{
@@ -181,6 +182,9 @@ class TOTP
             }
             if(isset($qrOptions['showIcon'])){
                 $qr->showIcon($qrOptions['showIcon']);
+            }
+            if(isset($qrOptions['transparent'])){
+                $qr->transparent($qrOptions['transparent']);
             }
             if(isset($qrOptions['shape'])){
                 $qr->shape($qrOptions['shape']);

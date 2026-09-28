@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Capsule;
 
 use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\Process\Http;
 use Tamedevelopers\Support\Traits\FileTrait;
 
 /**
@@ -96,7 +97,11 @@ class File {
      */
     public static function exists($path)
     {
-        return is_file($path);
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return Http::head($path)->successful();
+        }
+        
+        return is_file(self::cleanPath($path));
     }
 
     /**
@@ -118,7 +123,7 @@ class File {
         }
 
         // Safe read
-        return @file_get_contents($path) ?: '';
+        return @file_get_contents(self::cleanPath($path)) ?: '';
     }
 
     /**
@@ -131,7 +136,7 @@ class File {
      */
     public static function put($path, $contents = null, $flags = 0)
     {
-        if(is_null($contents)){
+        if(empty($contents)){
             return false;
         }
 
@@ -141,13 +146,13 @@ class File {
     /**
      * Delete the file at the given path.
      *
-     * @param string $file (Relative|Absolute Path)
+     * @param string $path (Relative|Absolute Path)
      * @param string|null $restrictedfileName
      * @return bool
      */
-    public static function delete($file, $restrictedfileName = null)
+    public static function delete($path, $restrictedfileName = null)
     {
-        return Tame::unlink($file, $restrictedfileName);
+        return Tame::unlink(self::cleanPath($path), $restrictedfileName);
     }
 
     /**
@@ -182,7 +187,7 @@ class File {
      */
     public static function size($path)
     {
-        return filesize($path);
+        return filesize(self::cleanPath($path));
     }
 
     /**
@@ -193,7 +198,7 @@ class File {
      */
     public static function lastModified($path)
     {
-        return filemtime($path);
+        return filemtime(self::cleanPath($path));
     }
 
     /**
@@ -204,11 +209,10 @@ class File {
      */
     public static function extension($path)
     {
-        // Strip query strings or fragments (e.g., "image.jpg?5630" becomes "image.jpg")
-        $cleanPath = parse_url($path, PHP_URL_PATH);
+        $path = self::cleanPath($path);
 
         // Get the extension from the clean path
-        $extension = strtolower(pathinfo($cleanPath, PATHINFO_EXTENSION));
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
         return !empty($extension) ? $extension : null;
     }
@@ -221,7 +225,7 @@ class File {
      */
     public static function name($path)
     {
-        return pathinfo($path, PATHINFO_FILENAME);
+        return pathinfo(self::cleanPath($path), PATHINFO_FILENAME);
     }
 
     /**
@@ -232,7 +236,84 @@ class File {
      */
     public static function base($path)
     {
-        return basename($path);
+        return basename(self::cleanPath($path));
+    }
+    
+    /**
+     * Get the file's type (file, dir, link, etc).
+     *
+     * @param string $path
+     * @return string|false
+     */
+    public static function type($path)
+    {
+        return filetype(self::cleanPath($path));
+    }
+
+    /**
+     * Get the file's permissions.
+     *
+     * @param string $path
+     * @return int|false
+     */
+    public static function permissions($path)
+    {
+        return fileperms(self::cleanPath($path));
+    }
+
+    /**
+     * Check if the file is readable.
+     *
+     * @param string $path
+     * @return bool
+     */
+    public static function isReadable($path)
+    {
+        return @is_readable(self::cleanPath($path));
+    }
+
+    /**
+     * Check if the file is writable.
+     *
+     * @param string $path
+     * @return bool
+     */
+    public static function isWritable($path)
+    {
+        return is_writable(self::cleanPath($path));
+    }
+
+    /**
+     * Check if the file is a directory.
+     *
+     * @param string $path
+     * @return bool
+     */
+    public static function isDirectory($path)
+    {
+        return is_dir(self::cleanPath($path));
+    }
+
+    /**
+     * Check if the file is a regular file.
+     *
+     * @param string $path
+     * @return bool
+     */
+    public static function isFile($path)
+    {
+        return is_file(self::cleanPath($path));
+    }
+
+    /**
+     * Determines if the given string represents a valid file type.
+     *
+     * @param string $path The string to check for file type validity.
+     * @return bool Returns true if the string is a valid file type, false otherwise.
+     */
+    public static function isFileType($path = null) 
+    {
+        return !empty(pathinfo(self::cleanPath($path), PATHINFO_EXTENSION));
     }
 
     /**
@@ -413,80 +494,14 @@ class File {
     }
 
     /**
-     * Get the file's type (file, dir, link, etc).
+     * Clean Path String
      *
-     * @param string $path
-     * @return string|false
+     * @param string $path The string to check for file type validity.
+     * @return string
      */
-    public static function type($path)
+    public static function cleanPath($path = null) 
     {
-        return filetype($path);
-    }
-
-    /**
-     * Get the file's permissions.
-     *
-     * @param string $path
-     * @return int|false
-     */
-    public static function permissions($path)
-    {
-        return fileperms($path);
-    }
-
-    /**
-     * Check if the file is readable.
-     *
-     * @param string $path
-     * @return bool
-     */
-    public static function isReadable($path)
-    {
-        return @is_readable($path);
-    }
-
-    /**
-     * Check if the file is writable.
-     *
-     * @param string $path
-     * @return bool
-     */
-    public static function isWritable($path)
-    {
-        return is_writable($path);
-    }
-
-    /**
-     * Check if the file is a directory.
-     *
-     * @param string $path
-     * @return bool
-     */
-    public static function isDirectory($path)
-    {
-        return is_dir($path);
-    }
-
-    /**
-     * Check if the file is a regular file.
-     *
-     * @param string $path
-     * @return bool
-     */
-    public static function isFile($path)
-    {
-        return is_file($path);
-    }
-
-    /**
-     * Determines if the given string represents a valid file type.
-     *
-     * @param string $string The string to check for file type validity.
-     * @return bool Returns true if the string is a valid file type, false otherwise.
-     */
-    public static function isFileType(?string $string = null) 
-    {
-        return !empty(pathinfo($string, PATHINFO_EXTENSION));
+        return preg_replace('/[?#].*$/', '', (string) $path);
     }
 
     /**
