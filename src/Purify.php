@@ -8,52 +8,41 @@ use Tamedevelopers\Support\Str;
 
 class Purify
 {
-    private static $purifierString;
-    
     /**
-     * Init plain string purifier
+     * Singleton instances for default purifiers.
      */
-    private static function initString()
-    {
-        if (!self::$purifierString) {
-            $config = HTMLPurifier_Config::createDefault();
-
-            // Strip all HTML safely including scripts
-            $config->set('HTML.Allowed', '');
-            $config->set('HTML.Trusted', false);
-
-            self::$purifierString = new HTMLPurifier($config);
-        }
-    }
+    private static ?HTMLPurifier $stringPurifier = null;
+    private static ?HTMLPurifier $htmlPurifier = null;
+    private static ?HTMLPurifier $devPurifier = null;
 
     /**
-     * purifier
+     * Build standard HTMLPurifier instance with custom HTML5 definitions.
      *
      * @param array $settings
-     * @return \HTMLPurifier
+     * @return HTMLPurifier
      */
-    protected static function purifier($settings = [])
+    protected static function purifier(array $settings = []): HTMLPurifier
     {
-        $config = \HTMLPurifier_Config::createDefault();
+        $config = HTMLPurifier_Config::createDefault();
 
-        // Preserve formatting as-is
-        $config->set('Core.NormalizeNewlines', false);
-        $config->set('HTML.Trusted', true);
-        $config->set('Attr.EnableID', true);
-        $config->set('CSS.AllowTricky', true);
-        $config->set('Attr.AllowedFrameTargets', ['_blank','_self','_parent','_top']);
-        $config->set('HTML.AllowedAttributes', null); 
+        // Preserve formatting and security defaults
+        $config->set('Attr.AllowedFrameTargets', ['_blank', '_self', '_parent', '_top']);
 
-        // Required when extending HTML5 support
-        $config->set('HTML.DefinitionID', 'custom-html5-definitions'); 
-        $config->set('HTML.DefinitionRev', 1); // bump this if you change definitions
-
-        // Merge custom overrides
+        // Custom default configuration
+        $settings = array_merge([
+            'Attr.EnableID'         => true,
+            'CSS.AllowTricky'       => true,
+            'Core.NormalizeNewlines'=> false,
+            'HTML.DefinitionID'     => 'custom-html5-definitions',
+            'HTML.DefinitionRev'    => 2,
+        ], $settings);
+        
+        // Apply custom overrides
         foreach ($settings as $key => $val) {
             $config->set($key, $val);
         }
 
-        // ---- Extend HTML5 tags support ----
+        // Extend HTML5 element support
         if ($def = $config->maybeGetRawHTMLDefinition()) {
             // Structural / semantic tags
             $def->addElement('section', 'Block', 'Flow', 'Common');
@@ -61,9 +50,11 @@ class Purify
             $def->addElement('aside', 'Block', 'Flow', 'Common');
             $def->addElement('header', 'Block', 'Flow', 'Common');
             $def->addElement('footer', 'Block', 'Flow', 'Common');
-            $def->addElement('main',    'Block', 'Flow', 'Common');
-            $def->addElement('figure',  'Block', 'Flow', 'Common');
+            $def->addElement('main', 'Block', 'Flow', 'Common');
+            $def->addElement('figure', 'Block', 'Flow', 'Common');
             $def->addElement('figcaption', 'Inline', 'Flow', 'Common');
+            $def->addElement('pre', 'Block', 'Flow', 'Common');
+            $def->addElement('code', 'Inline', 'Flow', 'Common');
 
             // Media tags
             $def->addElement('video', 'Block', 'Flow', 'Common', [
@@ -101,45 +92,44 @@ class Purify
 
         return new HTMLPurifier($config);
     }
-    
+
     /**
-     * Preserve structural newlines
+     * Preserve structural newlines prior to stripping tags.
      *
-     * @param  string $content
-     * @param  bool $collapse
+     * @param string $content
+     * @param bool $collapse
      * @return string
      */
-    protected static function preserveNewLine($content, $collapse = false)
+    protected static function preserveNewLine(string $content, bool $collapse = false): string
     {
-        $text = preg_replace('/<\s*br\s*\/?>/i', "\n", $content);
-        $text = preg_replace('/<\/p\s*>/i', "\n\n", $text);
-        $text = preg_replace('/<\/div\s*>/i', "\n\n", $text);
-        $text = preg_replace('/<\/h[1-6]\s*>/i', "\n\n", $text);
+        $text = preg_replace('/<\s*br\s*\/?>/i', "\n", (string) $content);
+        $text = preg_replace('/<\/(p|div|h[1-6]|li)\s*>/i', "\n\n", $text);
 
         // Collapse whitespace
-        if($collapse){
-            $text = preg_replace('/\s+/u', ' ', $text);
+        if ($collapse) {
+            // Collapse horizontal whitespace (spaces/tabs) without removing newlines
+            $text = preg_replace('/[^\S\r\n]+/u', ' ', $text);
+
+            // Collapse 3 or more consecutive newlines into 2
+            $text = preg_replace('/\n{3,}/', "\n\n", $text);
         }
 
         return $text;
     }
-    
+
     /**
-     * cleanUrlLink
+     * Clean and decode URL strings.
      *
-     * @param  string $url
+     * @param string $url
      * @return string
      */
-    protected static function cleanUrlLink($url)
+    protected static function cleanUrlLink(string $url): string
     {
-        // Clean URL: decode %xx + HTML entities
-        $url = rawurldecode($url ?: '');
-
-        return html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        return html_entity_decode(rawurldecode($url), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     /**
-     * Convert HTML content to readable string
+     * Convert HTML content into a human-readable plain text format.
      *
      * @param string $content
      * @param bool $allowUrl
@@ -147,72 +137,74 @@ class Purify
      */
     public static function readable(string $content, bool $allowUrl = true): string
     {
-        $text = $content;
-        $text = self::preserveNewLine($text, true);
+        $content = self::preserveNewLine($content, true);
 
-        // Handle all tags with link-like attributes (href, src, data-src, poster, etc.)
+        // Process elements with link/src attributes
         $text = preg_replace_callback(
-            '/<(a|img|iframe|video|audio|source|embed|track|script)[^>]+?(?:href|src|data-src|poster)=["\']([^"\']+)["\'][^>]*>(?:([\s\S]*?)<\/\1>)?/i',
-            function ($matches) use($allowUrl) {
-                if($allowUrl){
-                    $tag   = strtolower($matches[1]);
-                    $url   = self::cleanUrlLink($matches[2]);
-                    $alt   = trim($matches[3] ?? '');   // alt attr if exists
-                    $label = trim(strip_tags($matches[4] ?? '')); // inner text if exists
+            '/<(a|img|iframe|video|audio|source|embed|track|script)\b[^>]*?(?:href|src|data-src|poster)=["\']([^"\']+)["\'][^>]*>(?:([\s\S]*?)<\/\1>)?/i',
+            function ($matches) use ($allowUrl) {
+                if (!$allowUrl) {
+                    return '';
+                }
 
-                    switch ($tag) {
-                        case 'a':
-                            // Prefer label, otherwise fall back to domain
-                            return !empty($label) ? "[$label]" : "[link]";
-                        case 'img':
-                            return !empty($alt) ? "[$alt]" : "[image]";
-                        case 'iframe':
-                        case 'video':
-                        case 'audio':
-                        case 'source':
-                        case 'embed':
-                        case 'track':
-                        case 'script':
-                            // Prefer url if any
-                            if (!empty($url)) {
-                                return "[$url]";
-                            }
-                            return "[$tag]";
-                        default:
-                            return "[$tag]";
-                    }
-                } else{
-                    return  "";
+                $tag   = strtolower($matches[1]);
+                $url   = self::cleanUrlLink($matches[2]);
+                $inner = trim($matches[3] ?? '');
+
+                switch ($tag) {
+                    case 'a':
+                        $label = trim(strip_tags($inner));
+                        return !empty($label) ? "[$label]" : '[link]';
+
+                    case 'img':
+                        // Check full tag for alt attribute
+                        if (preg_match('/alt=["\']([^"\']+)["\']/i', $matches[0], $altMatch)) {
+                            $alt = trim($altMatch[1]);
+                            return !empty($alt) ? "[$alt]" : '[image]';
+                        }
+                        return '[image]';
+
+                    case 'iframe':
+                    case 'video':
+                    case 'audio':
+                    case 'source':
+                    case 'embed':
+                    case 'track':
+                    case 'script':
+                        return !empty($url) ? "[$url]" : "[$tag]";
+
+                    default:
+                        return "[$tag]";
                 }
             },
-            $text
+            $content
         );
 
-        // Remove all other HTML tags
+        // Strip remaining HTML tags
         $text = strip_tags($text);
 
-        // Decode HTML entities (&amp; → & etc.)
-        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
-        return html_entity_decode(
-            trim($text), 
-            ENT_QUOTES | ENT_HTML5, 'UTF-8'
-        );
+        // Decode HTML entities
+        return trim(html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 
     /**
-     * Purify HTML for CMS/blog posts
+     * Purify HTML for standard web and CMS content.
+     *
+     * @param string $content
+     * @return string
      */
     public static function html(string $content): string
     {
-        // Allow almost everything for CMS (iframe, video, embeds)
-        $settings = [
-            'HTML.SafeIframe' => true,
-            'URI.SafeIframeRegexp' => '%^(https?:)?//%', // allow external iframes
-            'HTML.SafeObject' => true,
-            'Output.FlashCompat' => true,
-        ];
-        return self::purifier($settings)->purify($content);
+        if (!self::$htmlPurifier) {
+            self::$htmlPurifier = self::purifier([
+                'HTML.SafeIframe'       => true,
+                'URI.SafeIframeRegexp'  => '%^(https?:)?//%', // allow external iframes
+                'HTML.SafeObject'       => true,
+                'Output.FlashCompat'    => true,
+            ]);
+        }
+
+        return self::$htmlPurifier->purify($content);
     }
 
     /**
@@ -220,30 +212,47 @@ class Purify
      */
     public static function dev(string $content): string
     {
-        // Allow code/pre/dev tags but still sanitize dangerous stuff
-        $settings = [
-            'HTML.SafeIframe' => true,
-            'URI.SafeIframeRegexp' => '%^(https?:)?//%',
-            'HTML.SafeObject' => true,
-            'Output.FlashCompat' => true,
-            'HTML.AllowedElements' => null, // don't restrict, allow code-related tags too
-        ];
-        
-        return self::purifier($settings)->purify($content);
+        if (!self::$devPurifier) {
+            self::$devPurifier = self::purifier([
+                'HTML.SafeIframe'       => true,
+                'URI.SafeIframeRegexp'  => '%^(https?:)?//%', // allow external iframes
+                'HTML.SafeObject'       => true,
+                'Output.FlashCompat'    => true,
+                'HTML.SafeEmbed'        => true,
+                'HTML.Trusted'          => true,
+                'HTML.DefinitionRev'    => 3,
+                'HTML.DefinitionID'     => 'dev-cms-definitions',
+            ]);
+        }
+
+        return self::$devPurifier->purify($content);
     }
 
     /**
-     * Purify for plain string (strip all HTML, scripts, unsafe content)
+     * Purify string content by stripping all HTML tags safely.
+     *
+     * @param string $content
+     * @return string
      */
     public static function string(string $content): string
     {
-        self::initString();
-        $clean = self::$purifierString->purify($content);
+        if (!self::$stringPurifier) {
+            $config = HTMLPurifier_Config::createDefault();
+            $config->set('HTML.Allowed', '');
+
+            self::$stringPurifier = new HTMLPurifier($config);
+        }
+
+        $clean = self::$stringPurifier->purify($content);
+        
         return Str::trim($clean);
     }
 
     /**
-     * Unsafe Purify HTML for CMS/blog posts
+     * Return raw content without purification.
+     *
+     * @param string $content
+     * @return string
      */
     public static function raw(string $content): string
     {
