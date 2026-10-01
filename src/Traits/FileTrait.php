@@ -7,7 +7,9 @@ namespace Tamedevelopers\Support\Traits;
 use Closure;
 use Tamedevelopers\Support\FileHelper;
 
-
+/**
+ * @property mixed $name file name
+ */
 trait FileTrait
 {
 
@@ -19,7 +21,9 @@ trait FileTrait
      */
     public static function collect($fileName): static
     {
-        if (!isset($_FILES[$fileName])) {
+        self::$name = $fileName;
+
+        if (is_array($fileName) || !isset($_FILES[$fileName])) {
             return new static([]);
         }
 
@@ -45,7 +49,7 @@ trait FileTrait
      */
     public function get()
     {
-        return $this->all();
+        return $this->collection;
     }
 
     /**
@@ -53,6 +57,10 @@ trait FileTrait
      */
     public function all()
     {
+        dd(
+            $_FILES
+        );
+        
         return $this->collection;
     }
 
@@ -73,11 +81,32 @@ trait FileTrait
     }
 
     /**
+     * Check if a file is set in the $_FILES superglobal
+     *
+     * @param string|null $name
+     * @return bool
+     */
+    public function isset($name = null)
+    {
+        $getName = empty($name) ? self::$name : $name;
+
+        return isset($_FILES[$getName]);
+    }
+
+    /**
      * Check if collection is empty
      */
     public function isEmpty()
     {
         return empty($this->collection);
+    }
+
+    /**
+     * Check if collection is not empty
+     */
+    public function isNotEmpty()
+    {
+        return !$this->isEmpty();
     }
 
     /**
@@ -110,10 +139,10 @@ trait FileTrait
         $hasErrors = false;
 
         foreach ($this->collection as $file) {
-            $totalSize += $file['size'];
-            $fileTypes[$file['type']] = ($fileTypes[$file['type']] ?? 0) + 1;
+            $totalSize += $file->size();
+            $fileTypes[$file->type()] = ($fileTypes[$file->type()] ?? 0) + 1;
             
-            if ($file['error'] !== UPLOAD_ERR_OK) {
+            if ($file->error() !== UPLOAD_ERR_OK) {
                 $hasErrors = true;
             }
         }
@@ -129,6 +158,8 @@ trait FileTrait
 
     /**
      * Loop through each file in the collection
+     * 
+     * @return $this
      */
     public function each(Closure $callback)
     {
@@ -137,25 +168,31 @@ trait FileTrait
                 break;
             }
         }
+
         return $this;
     }
 
     /**
      * Filter files in the collection
+     * 
+     * @return $this
      */
     public function filter(Closure $callback)
     {
         $filtered = array_filter($this->collection, $callback);
+
         return new static(array_values($filtered));
     }
 
     /**
      * Get only valid files (without upload errors)
+     * 
+     * @return $this
      */
     public function valid()
     {
         return $this->filter(function($file) {
-            return $file['error'] === UPLOAD_ERR_OK;
+            return $file->error() === UPLOAD_ERR_OK;
         });
     }
 

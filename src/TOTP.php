@@ -152,6 +152,7 @@ class TOTP
      * } $qrOptions
      * 
      * @return array{
+     *  qr: QRCode,
      *  secret: string, 
      *  encrypt: string, 
      *  otpUri: string, 
@@ -200,6 +201,7 @@ class TOTP
         $qr->addText($otpUri)->save();
 
         return [
+            'qr'        => $qr,
             'secret'    => $userSecret,
             'encrypt'   => Str::encrypt($userSecret),
             'otpUri'    => $otpUri,

@@ -10,7 +10,6 @@ use Tamedevelopers\Support\Tame;
 
 class FileHelper{
 
-    /** @var string */
     private string $name;
     private string $path;
     private string $filename;
@@ -30,33 +29,37 @@ class FileHelper{
      */
     public function __construct($data = null)
     {
-        $this->name = $data['name'] ?? '';
-        $this->path = $data['path'] ?? '';
-        $this->filename = $data['filename'] ?? '';
-        $this->type = $data['type'] ?? '';
-        $this->tmp_name = $data['tmp_name'] ?? '';
-        $this->error = $data['error'] ?? 0;
-        $this->size = $data['size'] ?? 0;
-        $this->extension = $data['extension'] ?? '';
+        $this->name         = $data['name'] ?? '';
+        $this->path         = $data['path'] ?? '';
+        $this->filename     = $data['filename'] ?? '';
+        $this->type         = $data['type'] ?? '';
+        $this->tmp_name     = $data['tmp_name'] ?? '';
+        $this->error        = $data['error'] ?? 0;
+        $this->size         = $data['size'] ?? 0;
+        $this->extension    = $data['extension'] ?? '';
         $this->errorMessage = $this->errorMessage();
     }
     
     /**
      * Get File Extension
-     *
-     * @return string
      */
-    public function extension()
+    public function extension(): string
     {
         return Str::lower($this->extension);
+    }
+
+    /**
+     * Get File Extension with dot (.jpg)
+     */
+    public function extensionWithDot(): string
+    {
+        return ".{$this->extension()}";
     }
     
     /**
      * Error code
-     *
-     * @return int
      */
-    public function error()
+    public function error(): int
     {
         return $this->error;
     }
@@ -69,13 +72,18 @@ class FileHelper{
         return ($this->error() === UPLOAD_ERR_OK);
     }
 
+    /**
+     * Get file path
+     */
+    public function path(): string|null
+    {
+        return $this->path;
+    }
     
     /**
      * Get Temporary Path
-     *
-     * @return string|null
      */
-    public function tmp()
+    public function tmp(): string|null
     {
         return $this->tmp_name;
     }
@@ -85,58 +93,47 @@ class FileHelper{
      *
      * @return string
      */
-    public function type()
+    public function type(): string
     {
         return $this->type;
     }
     
     /**
      * If uploaded file is empty
-     *
-     * @return bool
      */
-    public function isEmpty()
+    public function isEmpty(): bool
     {
         return empty($this->name);
     }
     
     /**
      * If uploaded file is not empty
-     *
-     * @return bool
      */
-    public function isNotEmpty()
+    public function isNotEmpty(): bool
     {
         return !$this->isEmpty();
     }
     
     /**
      * Get File Name
-     *
-     * @return string
      */
-    public function name()
+    public function name(): string
     {
         return $this->name;
     }
     
     /**
      * Get File Name
-     *
-     * @return string
      */
-    public function fileName()
+    public function fileName(): string
     {
         return $this->filename;
     }
         
     /**
      * Get File MimeType
-     *
-     * @return string|bool
-     * - false if not found
      */
-    public function mime()
+    public function mime(): string|bool
     {
         return Str::lower(@mime_content_type(
             $this->getTmp()
@@ -145,10 +142,8 @@ class FileHelper{
 
     /**
      * Get File Size
-     * 
-     * @return int
      */
-    public function size()
+    public function size(): int
     {
         return $this->size;
     }
@@ -160,7 +155,7 @@ class FileHelper{
      * @return string
      * Examples: "1.5 KB", "2.3 MB", "1.2 GB"
      */
-    public function sizeFormatted(int $precision = 2): string
+    public function sizeFormatted(int $precision = 2)
     {
         $size = $this->size;
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -178,9 +173,9 @@ class FileHelper{
      * @param string $unit 'B', 'KB', 'MB', 'GB'
      * @return float
      */
-    public function sizeIn(string $unit = 'KB'): float
+    public function sizeIn(string $unit = 'KB')
     {
-        $size = (float)$this->size;
+        $size = (float) $this->size;
         $units = ['B' => 1, 'KB' => 1024, 'MB' => 1048576, 'GB' => 1073741824];
         
         return $size / ($units[strtoupper($unit)] ?? 1);
@@ -193,7 +188,7 @@ class FileHelper{
      * @param string|int|float $minSize Minimum size in bytes (optional)
      * @return bool
      */
-    public function sizeBetween($maxSize, $minSize = null): bool
+    public function sizeBetween($maxSize, $minSize = null)
     {
         $size = $this->size;
 
@@ -210,8 +205,7 @@ class FileHelper{
     /**
      * Get Image Size
      * 
-     * @return array
-     * [width, height]
+     * @return array{width: mixed, height: mixed}
      */
     public function imageSize()
     {
@@ -235,7 +229,6 @@ class FileHelper{
      * This helps prevent spoofed extensions (e.g. renamed .exe to .jpg).
      *
      * @return bool
-     *  True if the file is a valid image, otherwise false.
      */
     public function isImage()
     {
@@ -250,7 +243,6 @@ class FileHelper{
      *
      * @param  bool $allow
      * @return string
-     * - Generated Filename
      */
     public function generate(?bool $allow = true)
     {
@@ -260,7 +252,6 @@ class FileHelper{
         }
 
         $name = bin2hex(random_bytes(25)) . '.' . $this->extension();
-
         $this->generatedName = $name;
 
         return $name;
@@ -271,11 +262,11 @@ class FileHelper{
      * 
      * @param string $destination Destination path
      * @param string|null $newName New filename (optional)
-     * @return array
+     * @return array{path: string, name: string, status: bool}
      */
     public function move(string $destination, ?string $newName = null)
     {
-        $fileName = File::name($newName ?? $this->generatedName ?? $this->name());
+        $fileName = File::name($newName ?: $this->generatedName ?: $this->name());
 
         // get the path
         $path = Tame::stringReplacer($destination);
@@ -292,26 +283,22 @@ class FileHelper{
         $move = @move_uploaded_file($this->tmp(), $fullPath);
 
         return [
-            'path' => $fullPath,
-            'name' => $fileName,
+            'path'   => $fullPath,
+            'name'   => $fileName,
             'status' => $move,
         ];
     }
 
     /**
      * Get Upload Error Message
-     * 
-     * @return string|null
      */
-    public function getErrorMessage(): ?string
+    public function getErrorMessage(): string|null
     {
         return $this->errorMessage;
     }
 
     /**
-     * Delete temporary file (cleanup)
-     * 
-     * @return bool
+     * Delete temporary file
      */
     public function cleanup(): bool
     {
@@ -324,10 +311,8 @@ class FileHelper{
 
     /**
      * Normalize error message
-     * 
-     * @return string|null
      */
-    private function errorMessage(): ?string
+    private function errorMessage(): string|null
     {
         $error = $this->error();
         
@@ -347,10 +332,8 @@ class FileHelper{
 
     /**
      * Get Temporary Path or null
-     *
-     * @return string|null
      */
-    private function getTmp()
+    private function getTmp(): string|null
     {
         return $this->tmp() ?: 'null';
     }

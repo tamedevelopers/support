@@ -1,34 +1,5 @@
 <?php 
 
-use Tamedevelopers\Support\Asset;
-use Tamedevelopers\Support\AutoloadRegister;
-use Tamedevelopers\Support\Capsule\FileCache;
-use Tamedevelopers\Support\Capsule\Manager;
-use Tamedevelopers\Support\Collections\Collection;
-use Tamedevelopers\Support\Cookie;
-use Tamedevelopers\Support\Country;
-use Tamedevelopers\Support\Env;
-use Tamedevelopers\Support\Exchange;
-use Tamedevelopers\Support\Hash;
-use Tamedevelopers\Support\Mail;
-use Tamedevelopers\Support\NumberToWords;
-use Tamedevelopers\Support\PDF;
-use Tamedevelopers\Support\Process\HttpRequest;
-use Tamedevelopers\Support\Process\Session;
-use Tamedevelopers\Support\QRCode;
-use Tamedevelopers\Support\RecoveryKey;
-use Tamedevelopers\Support\Server;
-use Tamedevelopers\Support\Str;
-use Tamedevelopers\Support\Tame;
-use Tamedevelopers\Support\TextSanitizer;
-use Tamedevelopers\Support\Time;
-use Tamedevelopers\Support\TOTP;
-use Tamedevelopers\Support\Translator;
-use Tamedevelopers\Support\Utility;
-use Tamedevelopers\Support\View;
-use Tamedevelopers\Support\Zip;
-
-
 if (! function_exists('Tame_isAppFramework')) {
     /**
      * Check if Application is not Core PHP
@@ -38,7 +9,7 @@ if (! function_exists('Tame_isAppFramework')) {
      */
     function Tame_isAppFramework()
     {
-        return (new Tame)->isAppFramework();
+        return (new \Tamedevelopers\Support\Tame)->isAppFramework();
     }
 }
 
@@ -56,7 +27,7 @@ if (! function_exists('Tame')) {
      */
     function Tame()
     {
-        return new Tame();
+        return new \Tamedevelopers\Support\Tame();
     }
 }
 
@@ -68,7 +39,7 @@ if (! function_exists('TameMail')) {
      */
     function TameMail()
     {
-        return new Mail();
+        return new \Tamedevelopers\Support\Mail();
     }
 }
 
@@ -81,7 +52,7 @@ if (! function_exists('TameEnv')) {
      */
     function TameEnv($path = null)
     {
-        return new Env($path);
+        return new \Tamedevelopers\Support\Env($path);
     }
 }
 
@@ -93,7 +64,7 @@ if (! function_exists('TameCookie')) {
      */
     function TameCookie()
     {
-        return new Cookie();
+        return new \Tamedevelopers\Support\Cookie();
     }
 }
 
@@ -107,63 +78,7 @@ if (! function_exists('TameTime')) {
      */
     function TameTime($time = null, $timezone = null)
     {
-        return new Time($time, $timezone);
-    }
-}
-
-
-if (! function_exists('TameCollect')) {
-    /**
-     * Collection Class
-     *
-     * @param array|null $items 
-     * @return \Tamedevelopers\Support\Collections\Collection|mixed
-     */
-    function TameCollect($items = [])
-    {
-        return new Collection($items);
-    }
-}
-
-if (! function_exists('tcollect')) {
-    /**
-     * Collection Class
-     *
-     * @param array|null $items =
-     * @return \Tamedevelopers\Support\Collections\Collection|mixed
-     */
-    function tcollect($items = [])
-    {
-        return new Collection($items);
-    }
-}
-
-if (! function_exists('toptional')) {
-    /**
-     * Optional Class
-     *
-     * @param array|object|null $items 
-     * @return \Tamedevelopers\Support\Collections\Collection|mixed
-     */
-    function toptional($items = [])
-    {
-        if(!is_array($items) && !is_null($items)){
-            $items = Server::toArray($items);
-        }
-
-        return new Collection($items);
-    }
-}
-
-if (! function_exists('tmanager')) {
-    /**
-     * Manager Class
-     * 
-     * @return \Tamedevelopers\Support\Capsule\Manager
-     */
-    function tmanager()
-    {
-        return new Manager();
+        return new \Tamedevelopers\Support\Time($time, $timezone);
     }
 }
 
@@ -175,7 +90,7 @@ if (! function_exists('TameStr')) {
      */
     function TameStr()
     {
-        return new Str();
+        return new \Tamedevelopers\Support\Str();
     }
 }
 
@@ -187,7 +102,7 @@ if (! function_exists('TameSanitizer')) {
      */
     function TameSanitizer()
     {
-        return new TextSanitizer();
+        return new \Tamedevelopers\Support\TextSanitizer();
     }
 }
 
@@ -200,7 +115,7 @@ if (! function_exists('TameUtility')) {
      */
     function TameUtility($text = null)
     {
-        return new Utility($text);
+        return new \Tamedevelopers\Support\Utility($text);
     }
 }
 
@@ -212,19 +127,19 @@ if (! function_exists('TameCountry')) {
      */
     function TameCountry()
     {
-        return new Country();
+        return new \Tamedevelopers\Support\Country();
     }
 }
 
 if (! function_exists('NumberToWords')) {
     /**
-     * NumberToWords Class
+     * Number-to-words
      * 
      * @return \Tamedevelopers\Support\NumberToWords
      */
     function NumberToWords()
     {
-        return new NumberToWords();
+        return new \Tamedevelopers\Support\NumberToWords();
     }
 }
 
@@ -236,7 +151,7 @@ if (! function_exists('TamePDF')) {
      */
     function TamePDF()
     {
-        return new PDF();
+        return new \Tamedevelopers\Support\PDF();
     }
 }
 
@@ -248,7 +163,7 @@ if (! function_exists('TameZip')) {
      */
     function TameZip()
     {
-        return new Zip();
+        return new \Tamedevelopers\Support\Zip();
     }
 }
 
@@ -260,7 +175,7 @@ if (! function_exists('TameQR')) {
      */
     function TameQR(?string $path = null)
     {
-        return new QRCode($path);
+        return new \Tamedevelopers\Support\QRCode($path);
     }
 }
 
@@ -275,7 +190,7 @@ if (! function_exists('TameTotp')) {
      */
     function TameTotp(int $digits = 6, int $period = 30, string $algorithm = 'sha1')
     {
-        return new TOTP($digits, $period, $algorithm);
+        return new \Tamedevelopers\Support\TOTP($digits, $period, $algorithm);
     }
 }
 
@@ -287,7 +202,123 @@ if (! function_exists('TameRecoveryKey')) {
      */
     function TameRecoveryKey(int $digits = 6, int $period = 30, string $algorithm = 'sha1')
     {
-        return new RecoveryKey($digits, $period, $algorithm);
+        return new \Tamedevelopers\Support\RecoveryKey($digits, $period, $algorithm);
+    }
+}
+
+if (! function_exists('FileCache')) {
+    /**
+     * File Cache Object
+     *
+     * @return \Tamedevelopers\Support\Capsule\FileCache
+     */
+    function FileCache()
+    {
+        return new \Tamedevelopers\Support\Capsule\FileCache();
+    }
+}
+
+if (! function_exists('TameFileBag')) {
+    /**
+     * Get instance of FileBag.
+     * 
+     * @param array<string, mixed>|null $collection
+     * @return \Tamedevelopers\Support\Capsule\FileBag
+     */
+    function TameFileBag(?array $collection = null)
+    {
+        return new \Tamedevelopers\Support\Capsule\FileBag($collection);
+    }
+}
+
+if (! function_exists('TameExchange')) {
+    /**
+     * Currency rates exchange
+     * 
+     * @return \Tamedevelopers\Support\Exchange
+     */
+    function TameExchange()
+    {
+        return new \Tamedevelopers\Support\Exchange();
+    }
+}
+
+if (! function_exists('urlHelper')) {
+    /**
+     * Get URL Helper
+     * 
+     * @return \Tamedevelopers\Support\Process\HttpRequest
+     */
+    function urlHelper()
+    {
+        return new \Tamedevelopers\Support\Process\HttpRequest();
+    }
+}
+
+// Lightweight accessors (do not conflict with frameworks)
+if (! function_exists('TameRequest')) {
+    /**
+     * Native HTTP Request accessor
+     * @return \Tamedevelopers\Support\Process\HttpRequest
+     */
+    function TameRequest()
+    {
+        return new \Tamedevelopers\Support\Process\HttpRequest();
+    }
+}
+
+if (! function_exists('TameCollect')) {
+    /**
+     * Collection Class
+     *
+     * @param array|null $items 
+     * @return \Tamedevelopers\Support\Collections\Collection|mixed
+     */
+    function TameCollect($items = [])
+    {
+        return new \Tamedevelopers\Support\Collections\Collection($items);
+    }
+}
+
+if (! function_exists('tcollect')) {
+    /**
+     * Collection Class
+     *
+     * @param array|null $items =
+     * @return \Tamedevelopers\Support\Collections\Collection|mixed
+     */
+    function tcollect($items = [])
+    {
+        return new \Tamedevelopers\Support\Collections\Collection($items);
+    }
+}
+
+if (! function_exists('toptional')) {
+    /**
+     * Optional Class
+     *
+     * @param array|object|null $items 
+     * @return \Tamedevelopers\Support\Collections\Collection|mixed
+     */
+    function toptional($items = [])
+    {
+        if(!is_array($items) && !is_null($items)){
+            $items = (new \Tamedevelopers\Support\Server)->toArray($items);
+        }
+
+        return new \Tamedevelopers\Support\Collections\Collection($items);
+    }
+}
+
+if (! function_exists('tmanager')) {
+    /**
+     * Manager Class
+     * 
+     * @return \Tamedevelopers\Support\Capsule\Manager
+     */
+    function tmanager()
+    {
+        return new \Tamedevelopers\Support\Capsule\Manager();
     }
 }
 
@@ -300,19 +331,7 @@ if (! $Tame_isAppFramework && ! function_exists('bcrypt')) {
      */
     function bcrypt($password)
     {
-        return Hash::make($password);
-    }
-}
-
-if (! function_exists('FileCache')) {
-    /**
-     * File Cache Object
-     *
-     * @return \Tamedevelopers\Support\Capsule\FileCache
-     */
-    function FileCache()
-    {
-        return new FileCache();
+        return (new \Tamedevelopers\Support\Hash)->make($password);
     }
 }
 
@@ -324,7 +343,7 @@ if (! function_exists('server')) {
      */
     function server()
     {
-        return new Server();
+        return new \Tamedevelopers\Support\Server();
     }
 }
 
@@ -341,43 +360,7 @@ if (! function_exists('autoload_register')) {
      */
     function autoload_register($directory)
     {
-        (new AutoloadRegister)->load($directory);
-    }
-}
-
-if (! function_exists('TameExchange')) {
-    /**
-     * Currency rates exchange
-     * 
-     * @return \Tamedevelopers\Support\Exchange
-     */
-    function TameExchange()
-    {
-        return new Exchange();
-    }
-}
-
-if (! function_exists('urlHelper')) {
-    /**
-     * Get URL Helper
-     * 
-     * @return \Tamedevelopers\Support\Process\HttpRequest
-     */
-    function urlHelper()
-    {
-        return new HttpRequest();
-    }
-}
-
-// Lightweight accessors (do not conflict with frameworks)
-if (! function_exists('TameRequest')) {
-    /**
-     * Native HTTP Request accessor
-     * @return \Tamedevelopers\Support\Process\HttpRequest
-     */
-    function TameRequest()
-    {
-        return new HttpRequest();
+        (new \Tamedevelopers\Support\AutoloadRegister)->load($directory);
     }
 }
 
@@ -391,7 +374,7 @@ if (! $Tame_isAppFramework && ! function_exists('config')) {
      */
     function config($key, $default = null)
     {
-        return Server::config($key, $default);
+        return (new \Tamedevelopers\Support\Server)->config($key, $default);
     }
 }
 
@@ -405,7 +388,7 @@ if (! $Tame_isAppFramework && ! function_exists('env')) {
      */
     function env($key = null, $default = null)
     {
-        return Env::env($key, $default);
+        return (new \Tamedevelopers\Support\Env)->env($key, $default);
     }
 }
 
@@ -421,7 +404,12 @@ if (! function_exists('env_update')) {
      */
     function env_update($key = null, $value = null, ?bool $quote = true, ?bool $space = false)
     {
-        return Env::updateENV($key, $value, $quote, $space);
+        return (new \Tamedevelopers\Support\Env)->updateENV(
+            $key, 
+            $value, 
+            $quote, 
+            $space
+        );
     }
 }
 
@@ -435,7 +423,7 @@ if (! function_exists('tview')) {
      */
     function tview($viewPath = null, $data = [])
     {
-        return new View($viewPath, $data);
+        return new \Tamedevelopers\Support\View($viewPath, $data);
     }
 }
 
@@ -450,7 +438,7 @@ if (! function_exists('tasset')) {
      */
     function tasset($asset, $cache = null, $type = null)
     {
-        return Asset::asset($asset, $cache, $type);
+        return (new \Tamedevelopers\Support\Asset)->asset($asset, $cache, $type);
     }
 }
 
@@ -466,7 +454,7 @@ if (! function_exists('config_asset')) {
      */
     function config_asset($path = null, $cache = false, $type = false)
     {
-        Asset::config($path, $cache, $type);
+        (new \Tamedevelopers\Support\Asset)->config($path, $cache, $type);
     }
 }
 
@@ -479,7 +467,7 @@ if (! function_exists('config_time')) {
      */
     function config_time(?array $options = [])
     {
-        (new Time)->config($options);
+        (new \Tamedevelopers\Support\Time)->config($options);
     }
 }
 
@@ -498,7 +486,7 @@ if (! $Tame_isAppFramework && ! function_exists('__')) {
             return $key;
         }
 
-        return Translator::trans($key, $locale, $base_folder);
+        return (new \Tamedevelopers\Support\Translator)->trans($key, $locale, $base_folder);
     }
 }
 
@@ -511,7 +499,7 @@ if (! function_exists('base_path')) {
      */
     function base_path($path = null)
     {
-        return Server::formatWithBaseDirectory($path);
+        return (new \Tamedevelopers\Support\Server)->formatWithBaseDirectory($path);
     }
 }
 
@@ -615,7 +603,7 @@ if (! function_exists('domain')) {
      */
     function domain($path = null)
     {
-        return Server::formatWithDomainURI($path);
+        return (new \Tamedevelopers\Support\Server)->formatWithDomainURI($path);
     }
 }
 
@@ -628,7 +616,7 @@ if (! function_exists('to_array')) {
      */ 
     function to_array($value)
     {
-        return Server::toArray($value);
+        return (new \Tamedevelopers\Support\Server)->toArray($value);
     }
 }
 
@@ -641,7 +629,7 @@ if (! function_exists('to_object')) {
      */ 
     function to_object($value)
     {
-        return Server::toObject($value);
+        return (new \Tamedevelopers\Support\Server)->toObject($value);
     }
 }
 
@@ -654,7 +642,7 @@ if (! function_exists('to_json')) {
      */ 
     function to_json($value)
     {
-        return Server::toJson($value);
+        return (new \Tamedevelopers\Support\Server)->toJson($value);
     }
 }
 
@@ -667,7 +655,7 @@ if (! $Tame_isAppFramework && ! function_exists('dump')) {
      */ 
     function dump(...$data)
     {
-        Server::dump($data);
+        (new \Tamedevelopers\Support\Server)->dump($data);
     }
 }
 

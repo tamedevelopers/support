@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
-use Tamedevelopers\Support\Capsule\CustomException;
-use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\Capsule\FileBag;
 use Tamedevelopers\Support\Traits\ImageToTextTrait;
 use Tamedevelopers\Support\Traits\OcrLanguageTrait;
+use Tamedevelopers\Support\Capsule\CustomException;
 
 /**
  * ImageToText: Extract text from images using multiple OCR engines
@@ -180,7 +181,7 @@ class ImageToText
         $tempFiles      = [];
         $maxFileSize    = $config['max_file_size'];
         
-        $file = File::collect($config['upload'] ?? 'image');
+        $file = FileBag::collect($config['upload'] ?? 'image');
         $upload = $file->first();
 
         if ($upload->isNotEmpty()) {
