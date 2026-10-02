@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
-use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\Capsule\File;
 
 class FileHelper{
 
@@ -120,6 +120,14 @@ class FileHelper{
     public function name(): string
     {
         return $this->name;
+    }
+
+    /**
+     * Alias of name() method
+     */
+    public function getName(): string
+    {
+        return $this->name();
     }
     
     /**

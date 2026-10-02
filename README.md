@@ -921,7 +921,7 @@ $bag->all(); // get all upload and non upload inputs
 $bag->get(); // get all uploaded file inputs
 $bag->first(); //get first uploaded inputs
 $bag->last();
-$bag->name(); // Get File Input Name
+$bag->name(); // $this->getName() 
 $bag->isset(); // when form request submitted
 $bag->isEmpty(); 
 $bag->isNotEmpty(); 
@@ -949,7 +949,7 @@ if($file->isNotEmpty()){
     $file->type(); 
     $file->isEmpty(); 
     $file->isNotEmpty(); 
-    $file->name(); 
+    $file->name(); // $this->getName()
     $file->filename(); 
     $file->mime(); 
     $file->size(); 

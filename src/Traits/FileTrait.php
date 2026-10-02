@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 use Closure;
-use Tamedevelopers\Support\Capsule\File;
-use Tamedevelopers\Support\FileHelper;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\FileHelper;
+use Tamedevelopers\Support\Capsule\File;
 
 /**
  * @property mixed $name file name
@@ -124,6 +124,14 @@ trait FileTrait
     public function name(): string|null
     {
         return self::$name;
+    }
+
+    /**
+     * Alias of name() method
+     */
+    public function getName(): string|null
+    {
+        return $this->name();
     }
 
     /**
