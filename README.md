@@ -905,7 +905,7 @@ $files = File::files(storage_path('logs')); // array of SplFileInfo
 ## File Bag
 - FileBag Upload Utilities (read, write, copy, move, info).
     - Class: `Tamedevelopers\Support\Capsule\FileBag`
-    - It's helper class can be called, using -- `TameFileBag()`
+    - It's helper class can be called, using -- `TameFileBag($collectionOrInputName = null)`
 
 ### File Bag Usage
 
