@@ -26,14 +26,18 @@ trait FileTrait
     {
         self::$name = $fileName;
 
-        if (is_array($fileName) || !isset($_FILES[$fileName])) {
+        // If no key specified, process the entire $_FILES array
+        if ($fileName === null) {
+            return new static(self::normalizeFiles($_FILES));
+        }
+
+        // Return empty instance if the field does not exist
+        if (!isset($_FILES[$fileName])) {
             return new static([]);
         }
 
-        $files = $_FILES[$fileName] ?? [];
-
         return new static(
-            self::normalizeFiles($files)
+            self::normalizeFiles($_FILES[$fileName])
         );
     }
 
@@ -112,6 +116,14 @@ trait FileTrait
     public function last()
     {
         return !empty($this->collection) ? end($this->collection) : null;
+    }
+
+    /**
+     * Get File Input Name
+     */
+    public function name(): string|null
+    {
+        return self::$name;
     }
 
     /**
@@ -260,16 +272,27 @@ trait FileTrait
     /** 
      * Publish JavaScript code to validate file size before upload with a modern UI notification
      * 
-     * @param string|null $customCssClass Optional custom CSS class to style the popup alert
+     * @param  int|string $size  Default is (40mb)
      * @param int $durationMs Auto-close duration in milliseconds (default: 4000ms / 4s)
      * @return string
      */
-    public static function publishMaxSizeJS($customCssClass = null, $durationMs = 2000)
+    public static function publishMaxSizeJS($size = null, $durationMs = 2000)
     {
-        $size           = self::getServerMaxUploadSize();
-        $maxBytes       = $size['size'];
-        $maxSizeFormat  = $size['format'];
-        $cssClass       = $customCssClass ? Str::trim($customCssClass) : '';
+        if(!empty($size) && (int) $size >= 1024){
+            $size = Tame::sizeToBytes(Tame::byteToUnit($size));
+        } else{
+            if($size){
+                $size = Tame::sizeToBytes($size);
+            } else{
+                $size = self::getServerMaxUploadSize()['size'];
+            }
+        }
+        
+        // format to unit
+        $sizeFormat = Tame::byteToUnit($size);
+
+        $maxBytes       = $size;
+        $maxSizeFormat  = $sizeFormat;
         $styleContent   = self::getToastCss();
 
         return <<<JS
@@ -288,7 +311,7 @@ trait FileTrait
                 }
 
                 var toast = document.createElement('div');
-                toast.className = 'tame-file-bag-toast {$cssClass}';
+                toast.className = 'tame-file-bag-toast';
                 
                 toast.innerHTML = 
                     '<div class="tame-file-bag-toast-content">' +

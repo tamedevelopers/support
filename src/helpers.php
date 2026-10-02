@@ -225,11 +225,11 @@ if (! function_exists('TameFileBag')) {
     /**
      * Get FileBag instance.
      *
-     * @param array|string|null $collectionOrInputName
+     * @param string|null $fileName The form field name
      */
-    function TameFileBag($collectionOrInputName = null): FileBag
+    function TameFileBag(?string $fileName = null): FileBag
     {
-        return new FileBag($collectionOrInputName);
+        return FileBag::collect($fileName);
     }
 }
 

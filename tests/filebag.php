@@ -32,7 +32,7 @@ dump(
     <title>Document</title>
 
     <?= FileBag::publishJS(); ?>
-    <?= FileBag::publishMaxSizeJS(); ?>
+    <?= FileBag::publishMaxSizeJS('20mb'); ?>
 </head>
 <body>
     <center>

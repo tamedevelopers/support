@@ -34,17 +34,11 @@ class FileBag
     /**
      * Constructor.
      * 
-     * @param array|string|null $collectionOrInputName
+     * @param array $collection
      */
-    public function __construct($collectionOrInputName = null) 
+    public function __construct(array $collection = []) 
     {
-        if(!empty($collectionOrInputName)){
-            if(is_string($collectionOrInputName)){
-                self::$name = $collectionOrInputName;
-                $this->collection = self::collect(self::$name)->collection;
-            } elseif(is_array($collectionOrInputName)){
-                $this->collection = $collectionOrInputName;
-            }
-        }
+        $this->collection = $collection;
     }
+    
 }

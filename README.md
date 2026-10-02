@@ -159,6 +159,7 @@ Support Package For PHP, Laravel and PHP Frameworks
     * [get](#file-bag-get) 
     * [first](#file-bag-first) 
     * [last](#file-bag-last) 
+    * [name](#file-bag-name) 
     * [isset](#file-bag-isset) 
     * [isEmpty](#file-bag-isEmpty) 
     * [isNotEmpty](#file-bag-isNotEmpty) 
@@ -906,7 +907,7 @@ $files = File::files(storage_path('logs')); // array of SplFileInfo
 ## File Bag
 - FileBag Upload Utilities (read, write, copy, move, info).
     - Class: `Tamedevelopers\Support\Capsule\FileBag`
-    - It's helper class can be called, using -- `TameFileBag($collectionOrInputName = null)`
+    - It's helper class can be called, using -- `TameFileBag($fileName = null)`
 
 ### File Bag Usage
 
@@ -920,6 +921,7 @@ $bag->all(); // get all upload and non upload inputs
 $bag->get(); // get all uploaded file inputs
 $bag->first(); //get first uploaded inputs
 $bag->last();
+$bag->name(); // Get File Input Name
 $bag->isset(); // when form request submitted
 $bag->isEmpty(); 
 $bag->isNotEmpty(); 
@@ -929,7 +931,7 @@ $bag->each(Closure); // Loop through each file in the collection
 $bag->filter(Closure); // Filter files in the collection
 $bag->valid();  // Get only valid files (without upload errors)
 $bag->publishJS(); // Publish JavaScript code to automatically convert file inputs to support multiple files
-$bag->publishMaxSizeJS(); // Publish JavaScript code to validate file size before upload with a modern UI notification
+$bag->publishMaxSizeJS($size = null, $durationMs = 2000); // Publish JavaScript code to validate file size before upload
 
 
 // Data returned are wrapped in a (FileHelper) with below methods
