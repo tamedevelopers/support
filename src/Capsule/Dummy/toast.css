@@ -1,0 +1,62 @@
+.tame-file-bag-toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.tame-file-bag-toast {
+    pointer-events: auto;
+    min-width: 300px;
+    max-width: 420px;
+    background: #ffffff;
+    color: #1f2937;
+    border-left: 4px solid #ef4444;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    opacity: 0;
+    transform: translateY(-12px) scale(0.95);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tame-file-bag-toast.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+.tame-file-bag-toast-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.tame-file-bag-toast-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #991b1b;
+}
+.tame-file-bag-toast-message {
+    font-size: 13px;
+    color: #4b5563;
+    line-height: 1.4;
+}
+.tame-file-bag-toast-close {
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    transition: color 0.15s ease;
+}
+.tame-file-bag-toast-close:hover {
+    color: #1f2937;
+}

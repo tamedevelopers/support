@@ -1,10 +1,12 @@
 <?php
 
-use Tamedevelopers\File\File;
-use Tamedevelopers\Support\Capsule\FileBag;
 use Tamedevelopers\Support\Env;
+use Tamedevelopers\Support\Capsule\FileBag;
+use Tamedevelopers\Support\Tame;
 
 include_once __DIR__  . "/../vendor/autoload.php";
+
+Env::bootLogger();
 
 
 $fileDocument = FileBag::collect('document');
@@ -13,8 +15,9 @@ $fileAvatar = FileBag::collect('avatar');
 dump(
     $fileAvatar->all(),
     $fileAvatar->isset(),
-    TameFileBag('document')->valid(),
-    $fileAvatar->valid()->first()->isImage(),
+    $fileAvatar->valid()->first(),
+    // TameFileBag('document')->valid(),
+    // $fileAvatar->valid()->first()->isImage(),
     // $fileDocument,
 );
 
@@ -27,6 +30,9 @@ dump(
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+
+    <?= FileBag::publishJS(); ?>
+    <?= FileBag::publishMaxSizeJS(); ?>
 </head>
 <body>
     <center>

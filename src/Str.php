@@ -1275,4 +1275,72 @@ class Str
             : '';
     }
 
+    /**
+     * Minify CSS string
+     *
+     * @param string $css
+     * @return string
+     */
+    public static function minifyCss(string $css)
+    {
+        if (empty(trim($css))) {
+            return '';
+        }
+
+        // 1. Remove comments
+        $css = preg_replace('!/\*.*?\*/!s', '',$css);
+
+        // 2. Normalize whitespace (tabs, newlines, multiple spaces -> single space)
+        $css = preg_replace('/\s+/', ' ',$css);
+
+        // 3. Remove spaces around structural symbols ({ }, : ; , > + ~)
+        $css = preg_replace('/\s*([\{\}:;,>+~])\s*/', '$1',$css);
+
+        // 4. Remove trailing semicolons before closing braces
+        $css = str_replace(';}', '}',$css);
+
+        return trim($css);
+    }
+
+    /**
+     * Minify JavaScript string safely
+     *
+     * @param string $js
+     * @return string
+     */
+    public static function minifyJs(string $js)
+    {
+        if (empty(trim($js))) {
+            return '';
+        }
+
+        // 1. Preserve strings (single, double, template literals) and regex literals by replacing them with placeholders
+        $literals = [];$js = preg_replace_callback(
+            '/(["\'])(?:(?=(\\\\?))\2.)*?\1|`(?:[^`\\\\]|\\\\.)*`|\/(?![*\/])(?:[^\/\\\\]|\\\\.)+\/[gimyu]*/s',
+            function ($matches) use (&$literals) {
+                $placeholder = '___LITERAL_' . count($literals) . '___';
+                $literals[$placeholder] = $matches[0];
+                return $placeholder;
+            },
+            $js
+        );
+
+        // 2. Strip single-line (// ...) and multi-line (/* ... */) comments
+        $js = preg_replace('!/\*.*?\*/!s', '', $js);
+        $js = preg_replace('/(?<!:)\/\/.*/m', '', $js);
+
+        // 3. Collapse whitespace and line breaks into spaces
+        $js = preg_replace('/\s+/', ' ', $js);
+
+        // 4. Safely remove spaces around JS operators and structural characters
+        $js = preg_replace('/\s*([\{\}\(\)\[\];,=+\-\*\/%&|^!<>?:])\s*/', '$1', $js);
+
+        // 5. Restore original preserved strings, template literals, and regexes
+        if (!empty($literals)) {
+            $js = str_replace(array_keys($literals), array_values($literals), $js);
+        }
+
+        return trim($js);
+    }
+
 }

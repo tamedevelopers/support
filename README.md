@@ -168,6 +168,7 @@ Support Package For PHP, Laravel and PHP Frameworks
     * [filter](#file-bag-filter) 
     * [valid](#file-bag-valid) 
     * [publishJS](#file-bag-publishJS)
+    * [publishMaxSizeJS](#file-bag-publishMaxSizeJS)
 * [ReceiptGenerator](#ReceiptGenerator)
     * [Usage](#ReceiptGenerator-usage)
     * [setData](#ReceiptGenerator-setData)
@@ -928,6 +929,7 @@ $bag->each(Closure); // Loop through each file in the collection
 $bag->filter(Closure); // Filter files in the collection
 $bag->valid();  // Get only valid files (without upload errors)
 $bag->publishJS(); // Publish JavaScript code to automatically convert file inputs to support multiple files
+$bag->publishMaxSizeJS(); // Publish JavaScript code to validate file size before upload with a modern UI notification
 
 
 // Data returned are wrapped in a (FileHelper) with below methods

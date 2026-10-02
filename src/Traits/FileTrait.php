@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Tamedevelopers\Support\Traits;
 
 use Closure;
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\FileHelper;
+use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Tame;
 
 /**
  * @property mixed $name file name
@@ -227,10 +230,7 @@ trait FileTrait
     }
 
     /**
-     * Publish JavaScript code to automatically convert file inputs to support multiple files
-     * Call this method and echo the output in your HTML head or before file inputs
-     * 
-     * @return string JavaScript code
+     * Publish JavaScript code to handle multiple file inputs
      */
     public static function publishJS(): string
     {
@@ -255,6 +255,144 @@ trait FileTrait
             });
         </script>
       JS;
+    }
+
+    /** 
+     * Publish JavaScript code to validate file size before upload with a modern UI notification
+     * 
+     * @param string|null $customCssClass Optional custom CSS class to style the popup alert
+     * @param int $durationMs Auto-close duration in milliseconds (default: 4000ms / 4s)
+     * @return string
+     */
+    public static function publishMaxSizeJS($customCssClass = null, $durationMs = 2000)
+    {
+        $size           = self::getServerMaxUploadSize();
+        $maxBytes       = $size['size'];
+        $maxSizeFormat  = $size['format'];
+        $cssClass       = $customCssClass ? Str::trim($customCssClass) : '';
+        $styleContent   = self::getToastCss();
+
+        return <<<JS
+        <style>
+            {$styleContent};
+        </style>
+        <script>
+            'use strict';
+            
+            window.showTameFileToast = function(title, message) {
+                var container = document.querySelector('.tame-file-bag-toast-container');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.className = 'tame-file-bag-toast-container';
+                    document.body.appendChild(container);
+                }
+
+                var toast = document.createElement('div');
+                toast.className = 'tame-file-bag-toast {$cssClass}';
+                
+                toast.innerHTML = 
+                    '<div class="tame-file-bag-toast-content">' +
+                        '<div class="tame-file-bag-toast-title">' + title + '</div>' +
+                        '<div class="tame-file-bag-toast-message">' + message + '</div>' +
+                    '</div>' +
+                    '<button type="button" class="tame-file-bag-toast-close" onclick="this.parentElement.classList.remove(\'show\'); setTimeout(function(){ this.parentElement.remove(); }.bind(this), 250);">&times;</button>';
+
+                container.appendChild(toast);
+
+                // Trigger animation
+                setTimeout(function() {
+                    toast.classList.add('show');
+                }, 10);
+
+                // Auto remove after specified duration
+                setTimeout(function() {
+                    if (toast && toast.parentElement) {
+                        toast.classList.remove('show');
+                        setTimeout(function() {
+                            if (toast.parentElement) {
+                                toast.remove();
+                            }
+                        }, 250);
+                    }
+                }, {$durationMs});
+            };
+
+            window.initMaxSizeInputFile = function() {
+                var inputs = document.querySelectorAll('input[type="file"]');
+                var limit  = {$maxBytes};
+                
+                for (var i = 0; i < inputs.length; i++) {
+                    var input = inputs[i];
+                    
+                    if (!input.dataset.maxSizeBound) {
+                        input.dataset.maxSizeBound = 'true';
+
+                        if (input.form && !input.form.dataset.maxSizeSubmitBound) {
+                            input.form.dataset.maxSizeSubmitBound = 'true';
+                            
+                            input.form.addEventListener('submit', function(e) {
+                                var formInputs = e.target.querySelectorAll('input[type="file"]');
+                                
+                                for (var k = 0; k < formInputs.length; k++) {
+                                    var formFiles = formInputs[k].files;
+                                    for (var m = 0; m < formFiles.length; m++) {
+                                        if (formFiles[m].size > limit) {
+                                            window.showTameFileToast(
+                                                '413 Payload Too Large', 
+                                                '"' + formFiles[m].name + '" exceeds the maximum allowed upload limit of {$maxSizeFormat}.'
+                                            );
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            return false;
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            };
+
+            document.addEventListener('DOMContentLoaded', function(){
+                window.initMaxSizeInputFile();
+            });
+        </script>
+        JS;
+    }
+
+    /**
+     * Get the server's maximum upload file size in bytes.
+     *
+     * @return array{size: int, format: string}
+     */
+    public static function getServerMaxUploadSize()
+    {
+        // Retrieve server configuration values
+        $uploadMax = Tame::sizeToBytes(ini_get('upload_max_filesize'));
+        $postMax   = Tame::sizeToBytes(ini_get('post_max_size'));
+        $memory    = Tame::sizeToBytes(ini_get('memory_limit'));
+
+        // Filter out disabled or unlimited memory (-1)
+        $limits = array_filter([$uploadMax, $postMax, $memory], fn($size) => $size > 0);
+
+        // The true limit is the lowest among all configurations
+        $maxSize = empty($limits) ? 0 : min($limits);
+
+        return [
+            'size' => $maxSize,
+            'format' => Tame::byteToUnit($maxSize),
+        ];
+    }
+
+    /**
+     * Get Toast Css
+     */
+    private static function getToastCss(): string
+    {
+        $themeFileName = __DIR__ . '/../Capsule/Dummy/toast.css';
+        $content = File::get(Tame::stringReplacer($themeFileName));
+
+        return Str::minifyCss($content);
     }
 
     /**

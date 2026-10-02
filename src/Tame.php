@@ -236,6 +236,68 @@ class Tame extends TameHelper{
     }
 
     /**
+     * Parse and retrieve details about the web server software environment.
+     *
+     * @param string|null $serverSoftware Optional server software string (defaults to $_SERVER['SERVER_SOFTWARE'])
+     * @return array{
+     *     raw: string,
+     *     name: string,
+     *     version: string|null,
+     *     os: string|null,
+     *     modules: array<string, string>
+     * } Array containing parsed server details and individual components.
+     */
+    public static function serverSoftware(?string $serverSoftware = null): array
+    {
+        $raw = $serverSoftware ?? ($_SERVER['SERVER_SOFTWARE'] ?? 'Unknown');
+
+        // Default structure
+        $result = [
+            'raw'           => $raw,
+            'name'          => 'Unknown',
+            'version'       => null,
+            'sapi'          => php_sapi_name(),
+            'os_detailed'   => PHP_OS,
+            'php_version'   => PHP_VERSION,
+            'os'            => [PHP_OS_FAMILY],
+            'modules'       => [],
+        ];
+
+        if ($raw === 'Unknown' || empty(trim($raw))) {
+            return $result;
+        }
+
+        // Split string into component segments by whitespace
+        $parts = explode(' ', trim($raw));
+
+        // First part is always primary server (e.g., "Apache/2.4.54")
+        $primaryServer = array_shift($parts);
+        $serverDetails = explode('/', $primaryServer, 2);
+
+        $result['name']    = $serverDetails[0] ?? 'Unknown';
+        $result['version'] = $serverDetails[1] ?? null;
+
+        // Parse remaining tokens (e.g., "(Win64)", "OpenSSL/1.1.1p", "PHP/8.1.10")
+        foreach ($parts as $part) {
+            $part = trim($part);
+
+            // Check for OS wrapper in parentheses like (Win64) or (Unix)
+            if (str_starts_with($part, '(') && str_ends_with($part, ')')) {
+                $result['os'][] = trim($part, '()');
+                continue;
+            }
+
+            // Check for key/value modules separated by slash (e.g., OpenSSL/1.1.1p)
+            if (str_contains($part, '/')) {
+                [$moduleName, $moduleVersion] = explode('/', $part, 2);
+                $result['modules'][$moduleName] = $moduleVersion;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * Check if headers have been sent.
      * This function checks if headers have been sent and outputs information about where headers were sent.
      * If headers are sent, it outputs the file and location where the headers were sent and terminates the script.

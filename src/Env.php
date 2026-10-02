@@ -193,6 +193,7 @@ class Env {
 
         // Define the error level mapping
         $error_levels = self::error_levels();
+        $allowed_errors = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR]; //E_WARNING
 
         // If APP_DEBUG = false
         if(!self::isApplicationOnDebug()){
@@ -245,9 +246,9 @@ class Env {
         });
 
         // 3. Fatal Error / Shutdown Handler (Catches E_ERROR, Out of Memory, Syntax issues, etc.)
-        register_shutdown_function(function () use ($log_format, $error_levels, $writeLog) {
+        register_shutdown_function(function () use ($log_format, $error_levels, $writeLog, $allowed_errors) {
             $error = error_get_last();
-            if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR])) {
+            if ($error !== null && in_array($error['type'], $allowed_errors)) {
                 $error_level = $error_levels[$error['type']] ?? 'Fatal Error';
                 $log_message = sprintf($log_format, date('Y-m-d H:i:s'), $error_level . ': ' . $error['message'], $error['file'], $error['line']);
 
@@ -290,7 +291,6 @@ class Env {
         $path = self::formatWithBaseDirectory('.env');
 
         if (file_exists($path)) {
-
             // if isset
             if(Manager::isEnvSet($key)){
                 
