@@ -16,8 +16,8 @@ class Asset{
      * Create assets Real path url
      * 
      * @param string $asset
-     * @param bool|null $cache
-     * @param bool|null $type "absolute" | "relative" (default: false → absolute)
+     * @param bool $cache   Whether to use cache-busting (default: null)
+     * @param 'absolute'|'relative'|bool|null $type ( default: null)
      */
     public static function asset($asset = null, $cache = null, $type = null): string
     {
@@ -31,6 +31,14 @@ class Asset{
         $assetConfig = ASSET_BASE_DIRECTORY;
         $cache = is_bool($cache) ? $cache : $assetConfig['cache'];
         $type  = is_bool($type)  ? $type  : $assetConfig['type'];
+
+        if(is_string($type)){
+            $type = match($type){
+                'relative' => true,
+                'absolute' => false,
+                default => $type,
+            };
+        }
 
         // Build the internal path segment
         // If $path is 'assets' and $asset is 'css/style.css', result is 'assets/css/style.css'
@@ -74,15 +82,13 @@ class Asset{
      * Configure Assets Default Directory
      * 
      * @param string|null $path
-     * @param bool $cache       Whether to use cache-busting (default: true)
-     * - End point of link `?v=xxxxxxxx` is with cache of file time chang
-     * @param bool $type   "absolute" | "relative" (default: false → absolute)
+     * @param bool $cache   Whether to use cache-busting (default: false)
+     * @param 'absolute'|'relative'|bool|null $type ( default: false)
      */
     public static function config($path = null, $cache = false, $type = false): void
     {
         // if not defined
         if(!defined('ASSET_BASE_DIRECTORY')){
-
             $url    = HttpRequest::url();
             $http   = HttpRequest::http();
             $host   = HttpRequest::host();
@@ -111,8 +117,8 @@ class Asset{
     private static function getFiletime(?string $file_path = null) 
     {
         return file_exists($file_path) 
-                ? "?v=" . filemtime($file_path)
-                : false;
+            ? "?v=" . filemtime($file_path)
+            : false;
     }
     
 }

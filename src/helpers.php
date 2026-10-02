@@ -1,324 +1,317 @@
 <?php 
 
+use Tamedevelopers\Support\Collections\Collection;
+use Tamedevelopers\Support\Process\HttpRequest;
+use Tamedevelopers\Support\Capsule\FileCache;
+use Tamedevelopers\Support\AutoloadRegister;
+use Tamedevelopers\Support\Capsule\FileBag;
+use Tamedevelopers\Support\Capsule\Manager;
+use Tamedevelopers\Support\NumberToWords;
+use Tamedevelopers\Support\TextSanitizer;
+use Tamedevelopers\Support\RecoveryKey;
+use Tamedevelopers\Support\Translator;
+use Tamedevelopers\Support\Exchange;
+use Tamedevelopers\Support\Country;
+use Tamedevelopers\Support\Utility;
+use Tamedevelopers\Support\Cookie;
+use Tamedevelopers\Support\Server;
+use Tamedevelopers\Support\QRCode;
+use Tamedevelopers\Support\Asset;
+use Tamedevelopers\Support\Mail;
+use Tamedevelopers\Support\Hash;
+use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\Time;
+use Tamedevelopers\Support\TOTP;
+use Tamedevelopers\Support\View;
+use Tamedevelopers\Support\Env;
+use Tamedevelopers\Support\PDF;
+use Tamedevelopers\Support\Str;
+use Tamedevelopers\Support\Zip;
+
 if (! function_exists('Tame_isAppFramework')) {
     /**
-     * Check if Application is not Core PHP
-     * If running on other frameworks
-     *
-     * @return bool
+     * Check if application is running inside a framework.
      */
-    function Tame_isAppFramework()
+    function Tame_isAppFramework(): bool
     {
-        return (new \Tamedevelopers\Support\Tame)->isAppFramework();
+        return Tame::isAppFramework();
     }
 }
 
 /**
- * Helps without calling the method multiple times
+ * Cache framework status check to prevent repeated executions.
  */
 $Tame_isAppFramework = function_exists('Tame_isAppFramework') ? Tame_isAppFramework() : false;
 
 
 if (! function_exists('Tame')) {
     /**
-     * Tame Object
-     *
-     * @return \Tamedevelopers\Support\Tame
+     * Get Tame instance.
      */
-    function Tame()
+    function Tame(): Tame
     {
-        return new \Tamedevelopers\Support\Tame();
+        return new Tame();
     }
 }
 
 if (! function_exists('TameMail')) {
     /**
-     * Mailer Object
-     *
-     * @return \Tamedevelopers\Support\Mail
+     * Get Mailer instance.
      */
-    function TameMail()
+    function TameMail(): Mail
     {
-        return new \Tamedevelopers\Support\Mail();
+        return new Mail();
     }
 }
 
 if (! function_exists('TameEnv')) {
     /**
-     * Env Class
+     * Get Env instance.
      * 
-     * @param  mixed $path
-     * @return \Tamedevelopers\Support\Env
+     * @param string|null $path
      */
-    function TameEnv($path = null)
+    function TameEnv(?string $path = null): Env
     {
-        return new \Tamedevelopers\Support\Env($path);
+        return new Env($path);
     }
 }
 
 if (! function_exists('TameCookie')) {
     /**
-     * Cookie Class
-     *
-     * @return \Tamedevelopers\Support\Cookie
+     * Get Cookie instance.
      */
-    function TameCookie()
+    function TameCookie(): Cookie
     {
-        return new \Tamedevelopers\Support\Cookie();
+        return new Cookie();
     }
 }
 
 if (! function_exists('TameTime')) {
     /**
-     * Time Class
-     * 
+     * Get Time instance.
+     *
      * @param int|string|null $time
      * @param string|null $timezone
-     * @return \Tamedevelopers\Support\Time
      */
-    function TameTime($time = null, $timezone = null)
+    function TameTime($time = null, ?string $timezone = null): Time
     {
-        return new \Tamedevelopers\Support\Time($time, $timezone);
+        return new Time($time, $timezone);
     }
 }
 
 if (! function_exists('TameStr')) {
     /**
-     * Tame Str
-     * 
-     * @return \Tamedevelopers\Support\Str
+     * Get Str instance.
      */
-    function TameStr()
+    function TameStr(): Str
     {
-        return new \Tamedevelopers\Support\Str();
+        return new Str();
     }
 }
 
 if (! function_exists('TameSanitizer')) {
     /**
-     * Tame Sanitizer
-     * 
-     * @return \Tamedevelopers\Support\TextSanitizer
+     * Get TextSanitizer instance.
      */
-    function TameSanitizer()
+    function TameSanitizer(): TextSanitizer
     {
-        return new \Tamedevelopers\Support\TextSanitizer();
+        return new TextSanitizer();
     }
 }
 
 if (! function_exists('TameUtility')) {
     /**
-     * Tame Utility
+     * Get Utility instance.
      * 
      * @param string|null $text
-     * @return \Tamedevelopers\Support\Utility
      */
-    function TameUtility($text = null)
+    function TameUtility(?string $text = null): Utility
     {
-        return new \Tamedevelopers\Support\Utility($text);
+        return new Utility($text);
     }
 }
 
 if (! function_exists('TameCountry')) {
     /**
-     * Country Class
-     * 
-     * @return \Tamedevelopers\Support\Country
+     * Get Country instance.
      */
-    function TameCountry()
+    function TameCountry(): Country
     {
-        return new \Tamedevelopers\Support\Country();
+        return new Country();
     }
 }
 
 if (! function_exists('NumberToWords')) {
     /**
-     * Number-to-words
-     * 
-     * @return \Tamedevelopers\Support\NumberToWords
+     * Get NumberToWords instance.
      */
-    function NumberToWords()
+    function NumberToWords(): NumberToWords
     {
-        return new \Tamedevelopers\Support\NumberToWords();
+        return new NumberToWords();
     }
 }
 
 if (! function_exists('TamePDF')) {
     /**
-     * PDF Class
-     *
-     * @return \Tamedevelopers\Support\PDF
+     * Get PDF instance.
      */
-    function TamePDF()
+    function TamePDF(): PDF
     {
-        return new \Tamedevelopers\Support\PDF();
+        return new PDF();
     }
 }
 
 if (! function_exists('TameZip')) {
     /**
-     * Zip Class
-     *
-     * @return \Tamedevelopers\Support\Zip
+     * Get Zip instance.
+     * 
+     * @param string|null $sourcePath The source path
+     * @param string|null $archivePath The path to the archive file
      */
-    function TameZip()
+    function TameZip(?string $sourcePath = null, ?string $archivePath = null): Zip
     {
-        return new \Tamedevelopers\Support\Zip();
+        return new Zip($sourcePath, $archivePath);
     }
 }
 
 if (! function_exists('TameQR')) {
     /**
-     * QRCode
-     * @param string|null $path 
-     * @return \Tamedevelopers\Support\QRCode
+     * Get QRCode instance.
+
+     * @param string|null $path
      */
-    function TameQR(?string $path = null)
+    function TameQR(?string $path = null): QRCode
     {
-        return new \Tamedevelopers\Support\QRCode($path);
+        return new QRCode($path);
     }
 }
 
 if (! function_exists('TameTotp')) {
     /**
-     * Tame TOTP
-     * 
-     * @param int    $digits    Length of the OTP output code (default: 6).
-     * @param int    $period    Time interval window in seconds (default: 30).
+     * Get TOTP instance.
+     *
+     * @param int $digits Length of the OTP output code (default: 6).
+     * @param int $period Interval window in seconds (default: 30).
      * @param 'sha1'|'sha256'|'sha512' $algorithm HMAC hashing algorithm (default: 'sha1').
-     * @return \Tamedevelopers\Support\TOTP
+     * @return TOTP
      */
     function TameTotp(int $digits = 6, int $period = 30, string $algorithm = 'sha1')
     {
-        return new \Tamedevelopers\Support\TOTP($digits, $period, $algorithm);
+        return new TOTP($digits, $period, $algorithm);
     }
 }
 
 if (! function_exists('TameRecoveryKey')) {
     /**
-     * Tame RecoveryKey
-     * 
-     * @return \Tamedevelopers\Support\RecoveryKey
+     * Get RecoveryKey instance.
      */
-    function TameRecoveryKey(int $digits = 6, int $period = 30, string $algorithm = 'sha1')
+    function TameRecoveryKey(): RecoveryKey
     {
-        return new \Tamedevelopers\Support\RecoveryKey($digits, $period, $algorithm);
+        return new RecoveryKey();
     }
 }
 
 if (! function_exists('FileCache')) {
     /**
-     * File Cache Object
-     *
-     * @return \Tamedevelopers\Support\Capsule\FileCache
+     * Get FileCache instance.
      */
-    function FileCache()
+    function FileCache(): FileCache
     {
-        return new \Tamedevelopers\Support\Capsule\FileCache();
+        return new FileCache();
     }
 }
 
 if (! function_exists('TameFileBag')) {
     /**
-     * Get instance of FileBag.
-     * 
+     * Get FileBag instance.
+     *
      * @param array<string, mixed>|null $collection
-     * @return \Tamedevelopers\Support\Capsule\FileBag
      */
-    function TameFileBag(?array $collection = null)
+    function TameFileBag(?array $collection = null): FileBag
     {
-        return new \Tamedevelopers\Support\Capsule\FileBag($collection);
+        return new FileBag($collection);
     }
 }
 
 if (! function_exists('TameExchange')) {
     /**
-     * Currency rates exchange
-     * 
-     * @return \Tamedevelopers\Support\Exchange
+     * Get Exchange instance.
      */
-    function TameExchange()
+    function TameExchange(): Exchange
     {
-        return new \Tamedevelopers\Support\Exchange();
+        return new Exchange();
     }
 }
 
 if (! function_exists('urlHelper')) {
     /**
-     * Get URL Helper
-     * 
-     * @return \Tamedevelopers\Support\Process\HttpRequest
+     * Native HTTP Request accessor.
      */
-    function urlHelper()
+    function urlHelper(): HttpRequest
     {
-        return new \Tamedevelopers\Support\Process\HttpRequest();
+        return new HttpRequest();
     }
 }
 
 // Lightweight accessors (do not conflict with frameworks)
 if (! function_exists('TameRequest')) {
     /**
-     * Native HTTP Request accessor
-     * @return \Tamedevelopers\Support\Process\HttpRequest
+     * Native HTTP Request accessor.
      */
-    function TameRequest()
+    function TameRequest(): HttpRequest
     {
-        return new \Tamedevelopers\Support\Process\HttpRequest();
+        return new HttpRequest();
     }
 }
 
 if (! function_exists('TameCollect')) {
     /**
-     * Collection Class
+     * Get Collection instance.
      *
-     * @param array|null $items 
-     * @return \Tamedevelopers\Support\Collections\Collection|mixed
+     * @param mixed $items
      */
-    function TameCollect($items = [])
+    function TameCollect($items = []): Collection
     {
-        return new \Tamedevelopers\Support\Collections\Collection($items);
+        return new Collection($items);
     }
 }
 
 if (! function_exists('tcollect')) {
     /**
-     * Collection Class
+     * Get Collection instance.
      *
-     * @param array|null $items =
-     * @return \Tamedevelopers\Support\Collections\Collection|mixed
+     * @param mixed $items
      */
-    function tcollect($items = [])
+    function tcollect($items = []): Collection
     {
-        return new \Tamedevelopers\Support\Collections\Collection($items);
+        return new Collection($items);
     }
 }
 
 if (! function_exists('toptional')) {
     /**
-     * Optional Class
+     * Get Collection wrapped optionally.
      *
-     * @param array|object|null $items 
-     * @return \Tamedevelopers\Support\Collections\Collection|mixed
+     * @param mixed $items
+     * @return Collection|mixed
      */
     function toptional($items = [])
     {
         if(!is_array($items) && !is_null($items)){
-            $items = (new \Tamedevelopers\Support\Server)->toArray($items);
+            $items = Server::toArray($items);
         }
 
-        return new \Tamedevelopers\Support\Collections\Collection($items);
+        return new Collection($items);
     }
 }
 
 if (! function_exists('tmanager')) {
     /**
-     * Manager Class
-     * 
-     * @return \Tamedevelopers\Support\Capsule\Manager
+     * Get Manager instance.
      */
-    function tmanager()
+    function tmanager(): Manager
     {
-        return new \Tamedevelopers\Support\Capsule\Manager();
+        return new Manager();
     }
 }
 
@@ -327,147 +320,129 @@ if (! $Tame_isAppFramework && ! function_exists('bcrypt')) {
      * Password Encrypter.
      * 
      * @param string $password 
-     * @return string 
      */
-    function bcrypt($password)
+    function bcrypt($password): string
     {
-        return (new \Tamedevelopers\Support\Hash)->make($password);
+        return Hash::make($password);
     }
 }
 
 if (! function_exists('server')) {
     /**
-     * Server Object
-     *
-     * @return \Tamedevelopers\Support\Server
+     * Get Server instance.
      */
-    function server()
+    function server(): Server
     {
-        return new \Tamedevelopers\Support\Server();
+        return new Server();
     }
 }
 
 if (! function_exists('autoload_register')) {
     /**
-     * Autoload function to load class and files in a given folder
+     * Autoload function to load classes and files in a given directory.
      *
-     * @param string|array $directory 
-     * - The directory path to load
-     * - Do not include the root path, as The Application already have a copy of your path
-     * - e.g 'classes' or ['app/main', 'includes']
-     * 
-     * @return \Tamedevelopers\Support\AutoloadRegister
+     * @param string|array $directory
      */
-    function autoload_register($directory)
+    function autoload_register($directory): void
     {
-        (new \Tamedevelopers\Support\AutoloadRegister)->load($directory);
+        AutoloadRegister::load($directory);
     }
 }
 
 if (! $Tame_isAppFramework && ! function_exists('config')) {
     /**
-     * Get the value of a configuration option.
+     * Get configuration option value.
      *
-     * @param mixed $key    Supports dot notation (e.g., 'database.connections.mysql')
-     * @param mixed $default     The default value to return option is not found
+     * @param mixed $key  Supports dot notation (e.g., 'database.connections.mysql')
+     * @param mixed $default
      * @return mixed
      */
     function config($key, $default = null)
     {
-        return (new \Tamedevelopers\Support\Server)->config($key, $default);
+        return Server::config($key, $default);
     }
 }
 
 if (! $Tame_isAppFramework && ! function_exists('env')) {
     /**
-     * Get ENV (Enviroment) Data
+     * Get Environment value.
      * 
      * @param string|null $key
-     * @param mixed $default (optional) Default value if key not found
+     * @param mixed $default
      * @return mixed
      */
     function env($key = null, $default = null)
     {
-        return (new \Tamedevelopers\Support\Env)->env($key, $default);
+        return Env::env($key, $default);
     }
 }
 
 if (! function_exists('env_update')) {
     /**
-     * Update Environment [path .env] variables
+     * Update Environment variables.
      * 
-     * @param string|null $key \Environment key you want to update
-     * @param string|bool|null $value \Value of Variable to update
-     * @param bool $quote   Default is true
-     * @param bool $space   Default is false Allow space between key and value
+     * @param string|null $key
+     * @param mixed $value
+     * @param bool|null $quote   (Default: true)
+     * @param bool|null $space   (Default: false) Allow space between key and value
      * @return bool
      */
     function env_update($key = null, $value = null, ?bool $quote = true, ?bool $space = false)
     {
-        return (new \Tamedevelopers\Support\Env)->updateENV(
-            $key, 
-            $value, 
-            $quote, 
-            $space
-        );
+        return Env::updateENV($key, $value, $quote, $space);
     }
 }
 
 if (! function_exists('tview')) {
     /**
-     * View Tenmplate Engine
+     * View Template Engine.
      * 
-     * @param string|null $viewPath The path to the view file.
-     * @param array $data The data to be passed to the view.
-     * @return Tamedevelopers\Support\View
+     * @param string|null $viewPath
+     * @param array $data
      */
-    function tview($viewPath = null, $data = [])
+    function tview($viewPath = null, $data = []): View
     {
-        return new \Tamedevelopers\Support\View($viewPath, $data);
+        return new View($viewPath, $data);
     }
 }
 
 if (! function_exists('tasset')) {
     /**
-     * Create assets Real path url
+     * Get asset URL.
      * 
      * @param string $asset
-     * @param bool|null $cache
-     * @param bool|null $type "absolute" | "relative" (default: false → absolute)
-     * @return string
+     * @param bool $cache   Whether to use cache-busting (default: null)
+     * @param 'absolute'|'relative'|bool|null $type ( default: null)
      */
-    function tasset($asset, $cache = null, $type = null)
+    function tasset($asset, $cache = null, $type = null): string
     {
-        return (new \Tamedevelopers\Support\Asset)->asset($asset, $cache, $type);
+        return Asset::asset($asset, $cache, $type);
     }
 }
 
 if (! function_exists('config_asset')) {
     /**
-     * Configure Assets Default Directory
+     * Configure asset options.
      * 
      * @param string|null $path
-     * @param bool $cache       Whether to use cache-busting (default: true)
-     * - End point of link `?v=xxxxxxxx` is with cache of file time chang
-     * @param bool $type   "absolute" | "relative" (default: false → absolute)
-     * @return void
+     * @param bool $cache   Whether to use cache-busting (default: false)
+     * @param 'absolute'|'relative'|bool|null $type (default: false)
      */
-    function config_asset($path = null, $cache = false, $type = false)
+    function config_asset($path = null, $cache = false, $type = false): void
     {
-        (new \Tamedevelopers\Support\Asset)->config($path, $cache, $type);
+        Asset::config($path, $cache, $type);
     }
 }
 
 if (! function_exists('config_time')) {
     /**
-     * Set the configuration options for text representations of time greeting()
+     * Configure time options.
      * 
      * @param array|null $options
-     * @return void
      */
-    function config_time(?array $options = [])
+    function config_time(?array $options = []): void
     {
-        (new \Tamedevelopers\Support\Time)->config($options);
+        Time::config($options);
     }
 }
 
@@ -486,31 +461,29 @@ if (! $Tame_isAppFramework && ! function_exists('__')) {
             return $key;
         }
 
-        return (new \Tamedevelopers\Support\Translator)->trans($key, $locale, $base_folder);
+        return Translator::trans($key, $locale, $base_folder);
     }
 }
 
 if (! function_exists('base_path')) {
     /**
-     * Get Base Directory `Path`
+     * Get Base Directory Path.
      * 
      * @param string|null $path
-     * @return string
      */
-    function base_path($path = null)
+    function base_path($path = null): string
     {
-        return (new \Tamedevelopers\Support\Server)->formatWithBaseDirectory($path);
+        return Server::formatWithBaseDirectory($path);
     }
 }
 
 if (! function_exists('directory')) {
     /**
-     * Get Base Directory `Path`
+     * Get Base Directory Path.
      * 
      * @param string|null $path
-     * @return string
      */
-    function directory($path = null)
+    function directory($path = null): string
     {
         return base_path($path);
     }
@@ -518,12 +491,11 @@ if (! function_exists('directory')) {
 
 if (! function_exists('storage_path')) {
     /**
-     * Get Storage Directory `Path`
+     * Get Storage Directory Path.
      * 
      * @param string|null $path
-     * @return string
      */
-    function storage_path($path = null)
+    function storage_path($path = null): string
     {
         return base_path("storage/{$path}");
     }
@@ -531,12 +503,11 @@ if (! function_exists('storage_path')) {
 
 if (! function_exists('public_path')) {
     /**
-     * Get Public Directory `Path`
+     * Get Public Directory Path.
      * 
      * @param string|null $path
-     * @return string
      */
-    function public_path($path = null)
+    function public_path($path = null): string
     {
         return base_path("public/{$path}");
     }
@@ -544,12 +515,11 @@ if (! function_exists('public_path')) {
 
 if (! function_exists('database_path')) {
     /**
-     * Get Database Directory `Path`
+     * Get Database Directory Path.
      * 
      * @param string|null $path
-     * @return string
      */
-    function database_path($path = null)
+    function database_path($path = null): string
     {
         return base_path("database/{$path}");
     }
@@ -557,12 +527,11 @@ if (! function_exists('database_path')) {
 
 if (! function_exists('app_path')) {
     /**
-     * Get Storage Directory `Path`
+     * Get App Directory Path.
      * 
      * @param string|null $path
-     * @return string
      */
-    function app_path($path = null)
+    function app_path($path = null): string
     {
         return base_path("app/{$path}");
     }
@@ -570,12 +539,11 @@ if (! function_exists('app_path')) {
 
 if (! function_exists('config_path')) {
     /**
-     * Get Config Directory `Path`
+     * Get Config Directory Path.
      * 
      * @param string|null $path
-     * @return string
      */
-    function config_path($path = null)
+    function config_path($path = null): string
     {
         return base_path("config/{$path}");
     }
@@ -583,12 +551,11 @@ if (! function_exists('config_path')) {
 
 if (! function_exists('lang_path')) {
     /**
-     * Get Config Directory `Path`
+     * Get Language Directory Path.
      * 
      * @param string|null $path
-     * @return string
      */
-    function lang_path($path = null)
+    function lang_path($path = null): string
     {
         return base_path("lang/{$path}");
     }
@@ -596,77 +563,71 @@ if (! function_exists('lang_path')) {
 
 if (! function_exists('domain')) {
     /**
-     * Get Domain `URL` URI
+     * Get Domain URL URI.
      * 
      * @param string|null $path
-     * @return string
      */
-    function domain($path = null)
+    function domain($path = null): string
     {
-        return (new \Tamedevelopers\Support\Server)->formatWithDomainURI($path);
+        return Server::formatWithDomainURI($path);
     }
 }
 
 if (! function_exists('to_array')) {
     /**
-     * Convert Value to an Array
+     * Convert Value to Array
      * 
      * @param  mixed $value
-     * @return array
      */ 
-    function to_array($value)
+    function to_array($value): array
     {
-        return (new \Tamedevelopers\Support\Server)->toArray($value);
+        return Server::toArray($value);
     }
 }
 
 if (! function_exists('to_object')) {
     /**
-     * Convert Value to an Object
+     * Convert Value to Object
      * 
      * @param  mixed $value
-     * @return object
      */ 
-    function to_object($value)
+    function to_object($value): object
     {
-        return (new \Tamedevelopers\Support\Server)->toObject($value);
+        return Server::toObject($value);
     }
 }
 
 if (! function_exists('to_json')) {
     /**
-     * Convert Value to Json Data
+     * Convert value to JSON string.
      * 
      * @param  mixed $value
-     * @return string
      */ 
-    function to_json($value)
+    function to_json($value): string
     {
-        return (new \Tamedevelopers\Support\Server)->toJson($value);
+        return Server::toJson($value);
     }
 }
 
 if (! $Tame_isAppFramework && ! function_exists('dump')) {
     /**
-     * Dump Data
-     * 
-     * @param mixed $data
-     * @return void
+     * Dump data.
+     *
+     * @param mixed ...$data
      */ 
-    function dump(...$data)
+    function dump(...$data): void
     {
-        (new \Tamedevelopers\Support\Server)->dump($data);
+        Server::dump($data);
     }
 }
 
 if (! $Tame_isAppFramework && ! function_exists('dd')) {
     /**
-     * Dump and Data
+     * Dump data and die.
      * 
-     * @param mixed $data
-     * @return void
+     * @param mixed ...$data
      */ 
-    function dd(...$data)
+    function dd(...$data): void
     {
         dump($data);
         exit(1);

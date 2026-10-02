@@ -10,14 +10,12 @@ use Tamedevelopers\Support\Time;
 final class Cookie{
     
     /** 
-     * Site name 
-     * @var string
+     * @var string Site name 
      */
     protected static $name;
     
     /** 
-     * Expire Cookie name
-     * @var string
+     * @var string Expire Cookie name
      */
     protected static $expireName;
 
@@ -25,20 +23,17 @@ final class Cookie{
     protected static $timeName;
 
     /** 
-     * Time format
-     * @var string
+     * @var string Time format
      */
     protected static $timeFormat;
 
     /** 
-     * Expire time format
-     * @var mixed
+     * @var mixed Expire time format
      */
     protected static $expireFormat;
 
     /** 
-     * Queued cookies
-     * @var mixed
+     * @var mixed Queued cookies
      */
     protected static $queued;
     
