@@ -11,11 +11,18 @@ class FileBag
     use FileTrait;
 
     /**
-     * Collection of files.
+     * Collection of file.
      *
      * @var array<string, mixed>
      */
     protected $collection = [];
+
+    /**
+     * Collections of files.
+     *
+     * @var array<string, mixed>
+     */
+    protected static $collections = [];
 
     /**
      * File name.
@@ -27,12 +34,17 @@ class FileBag
     /**
      * Constructor.
      * 
-     * @param array<string, mixed>|null $collection
+     * @param array|string|null $collectionOrInputName
      */
-    public function __construct(?array $collection = null) 
+    public function __construct($collectionOrInputName = null) 
     {
-        if(!empty($collection)){
-            $this->collection = $collection;
+        if(!empty($collectionOrInputName)){
+            if(is_string($collectionOrInputName)){
+                self::$name = $collectionOrInputName;
+                $this->collection = self::collect(self::$name)->collection;
+            } elseif(is_array($collectionOrInputName)){
+                $this->collection = $collectionOrInputName;
+            }
         }
     }
 }

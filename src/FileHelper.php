@@ -19,7 +19,7 @@ class FileHelper{
     private int $size;
     private string $extension;
     private string $errorMessage;
-    private string|null $generatedName;
+    private string|null $generatedName = null;
 
     /**
      * __construct
@@ -272,7 +272,11 @@ class FileHelper{
         $path = Tame::stringReplacer($destination);
 
         // get actual storage path
-        $storagePath = Str::replace($this->name(), '', $path);
+        $storagePath = Str::replace(
+            $this->name(), 
+            '', 
+            Str::trim($path, '/')
+        );
 
         $fullPath = "{$storagePath}/{$fileName}.{$this->extension()}";
 

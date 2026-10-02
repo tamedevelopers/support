@@ -153,6 +153,21 @@ Support Package For PHP, Laravel and PHP Frameworks
     * [isDirectory](#file-isdirectory) 
     * [isFile](#file-isfile) 
     * [isFileType](#file-isfiletype)
+* [FileBag](#file-bag)
+    * [Usage](#file-bag-usage)
+    * [all](#file-bag-all) 
+    * [get](#file-bag-get) 
+    * [first](#file-bag-first) 
+    * [last](#file-bag-last) 
+    * [isset](#file-bag-isset) 
+    * [isEmpty](#file-bag-isEmpty) 
+    * [isNotEmpty](#file-bag-isNotEmpty) 
+    * [count](#file-bag-count) 
+    * [summary](#file-bag-summary) 
+    * [each](#file-bag-each) 
+    * [filter](#file-bag-filter) 
+    * [valid](#file-bag-valid) 
+    * [publishJS](#file-bag-publishJS)
 * [ReceiptGenerator](#ReceiptGenerator)
     * [Usage](#ReceiptGenerator-usage)
     * [setData](#ReceiptGenerator-setData)
@@ -885,6 +900,65 @@ File::delete(storage_path('logs/app_moved.log'));
 
 // List files
 $files = File::files(storage_path('logs')); // array of SplFileInfo
+```
+
+## File Bag
+- FileBag Upload Utilities (read, write, copy, move, info).
+    - Class: `Tamedevelopers\Support\Capsule\FileBag`
+    - It's helper class can be called, using -- `TameFileBag()`
+
+### File Bag Usage
+
+```php
+use Tamedevelopers\Support\Capsule\FileBag;
+
+// Create instance
+$bag = FileBag::collect($fileInputName);
+
+$bag->all(); // get all upload and non upload inputs
+$bag->get(); // get all uploaded file inputs
+$bag->first(); //get first uploaded inputs
+$bag->last();
+$bag->isset(); // when form request submitted
+$bag->isEmpty(); 
+$bag->isNotEmpty(); 
+$bag->count(); 
+$bag->summary(); 
+$bag->each(Closure); // Loop through each file in the collection
+$bag->filter(Closure); // Filter files in the collection
+$bag->valid();  // Get only valid files (without upload errors)
+$bag->publishJS(); // Publish JavaScript code to automatically convert file inputs to support multiple files
+
+
+// Data returned are wrapped in a (FileHelper) with below methods
+use \Tamedevelopers\Support\FileHelper;
+
+$file = $bag->valid();
+
+if($file->isNotEmpty()){
+    $file->extension(); 
+    $file->extensionWithDot(); 
+    $file->error(); 
+    $file->noError(); 
+    $file->path(); 
+    $file->tmp(); 
+    $file->type(); 
+    $file->isEmpty(); 
+    $file->isNotEmpty(); 
+    $file->name(); 
+    $file->filename(); 
+    $file->mime(); 
+    $file->size(); 
+    $file->sizeIn($unit = 'KB'); 
+    $file->sizeBetween($maxSize, $minSize = null); 
+    $file->imageSize(); 
+    $file->isImage(); 
+    $file->generate($allow = true); //Generate new file
+    $file->getErrorMessage(); 
+    $file->cleanup(); // Delete temporary file
+    $file->move($destination, $newName = null); // Move uploaded file to destination
+}
+
 ```
 
 ## Collection

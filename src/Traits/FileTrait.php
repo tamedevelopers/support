@@ -9,17 +9,17 @@ use Tamedevelopers\Support\FileHelper;
 
 /**
  * @property mixed $name file name
+ * @property mixed $collections files collections
  */
 trait FileTrait
 {
-
     /**
      * Get a specific file from the collection
      * 
-     * @param string $fileName The form field name
+     * @param string|null $fileName The form field name
      * @return static
      */
-    public static function collect($fileName): static
+    public static function collect(?string $fileName = null)
     {
         self::$name = $fileName;
 
@@ -27,53 +27,84 @@ trait FileTrait
             return new static([]);
         }
 
-        $files = $_FILES[$fileName];
+        $files = $_FILES[$fileName] ?? [];
+
+        return new static(
+            self::normalizeFiles($files)
+        );
+    }
+
+    /**
+     * Get all files from the collections
+     */
+    public function all(): array
+    {
+        if(!empty(self::$collections)){
+            return self::$collections;
+        }
+
+        $files  = $_FILES;
         $collect = [];
 
-        // Handle multiple files (works with both name="files" and name="files[]")
-        if (is_array($files['name'])) {
-            foreach ($files['name'] as $index => $name) {
-                $collect[] = new FileHelper(self::createFileItem($files, $index));
+        foreach ($files as $key => $file) {
+            // Single PHP Upload Array Structure (e.g., $_FILES['avatar'])
+            $isSingle = isset($file['name'], $file['tmp_name'], $file['error']) && !is_array($file['name']);
+
+            // Multi-Upload PHP File Structure (e.g., $_FILES['document'])
+            $isMultiple = isset($file['name'], $file['tmp_name'], $file['error']) && is_array($file['name']);
+
+            if ($isSingle) {
+                $collect[$key] = new FileHelper(self::createFileItem($file));
+            } elseif ($isMultiple) {
+                $collect[$key] = [];
+                foreach ($file['name'] as $index => $name) {
+                    $collect[$key][] = new FileHelper(self::createFileItem($file, $index));
+                }
             }
         }
-        // Handle single file
-        else {
-            $collect[] = new FileHelper(self::createFileItem($files));
+
+        // Build local items array if a name key exists
+        $localItems = [];
+        if (! empty(self::$name) && ! empty($this->collection)) {
+            $localItems[self::$name] = $this->collection;
         }
 
-        return new static($collect);
+        // Check if local collection has data for the active key
+        $hasLocalData = ! empty($localItems[self::$name] ?? null);
+
+        if ($hasLocalData) {
+            // Local is NOT empty -> Use local values to fill in matching keys / fallbacks
+            self::$collections = array_merge($collect, $localItems);
+        } else {
+            // Local IS empty -> Global $_FILES overrides/precedes local
+            self::$collections = array_merge($localItems, $collect);
+        }
+
+        return self::$collections;
     }
 
     /**
      * Get all files from the collection
      */
-    public function get()
+    public function get(): array
     {
-        return $this->collection;
-    }
-
-    /**
-     * Get all files from the collection
-     */
-    public function all()
-    {
-        dd(
-            $_FILES
-        );
-        
         return $this->collection;
     }
 
     /**
      * Get the first file from the collection
+     * 
+     * @return null|\Tamedevelopers\Support\FileHelper
      */
     public function first()
     {
-        return $this->collection[0] ?? null;
+        return $this->get()[0] ?? null;
     }
 
     /**
      * Get the last file from the collection
+     * 
+     * @return array|null
      */
     public function last()
     {
@@ -84,9 +115,8 @@ trait FileTrait
      * Check if a file is set in the $_FILES superglobal
      *
      * @param string|null $name
-     * @return bool
      */
-    public function isset($name = null)
+    public function isset($name = null): bool
     {
         $getName = empty($name) ? self::$name : $name;
 
@@ -96,7 +126,7 @@ trait FileTrait
     /**
      * Check if collection is empty
      */
-    public function isEmpty()
+    public function isEmpty(): bool
     {
         return empty($this->collection);
     }
@@ -104,7 +134,7 @@ trait FileTrait
     /**
      * Check if collection is not empty
      */
-    public function isNotEmpty()
+    public function isNotEmpty(): bool
     {
         return !$this->isEmpty();
     }
@@ -112,7 +142,7 @@ trait FileTrait
     /**
      * Get the number of files in collection
      */
-    public function count()
+    public function count(): int
     {
         return count($this->collection);
     }
@@ -225,6 +255,40 @@ trait FileTrait
             });
         </script>
       JS;
+    }
+
+    /**
+     * Normalize and collect file items into helper instances.
+     *
+     * @param array<string, mixed> $files Raw file payload (single or multi-upload structure)
+     * @return array
+     */
+    private static function normalizeFiles($files)
+    {
+        $collect = [];
+
+        // Single PHP Upload Array Structure (e.g., $_FILES['avatar'])
+        $isSingle = isset($files['name'], $files['tmp_name'], $files['error']) && !is_array($files['name']);
+
+        // Multi-Upload PHP File Structure (e.g., $_FILES['document'] with files[])
+        $isMultiple = isset($files['name'], $files['tmp_name'], $files['error']) && is_array($files['name']);
+
+        if ($isSingle) {
+            $collect[] = new FileHelper(self::createFileItem($files));
+        } elseif ($isMultiple) {
+            foreach ($files['name'] as $index => $name) {
+                $collect[] = new FileHelper(self::createFileItem($files, $index));
+            }
+        } else {
+            // Nested/Multi-Field Structure (e.g., passing raw $_FILES containing both 'avatar' and 'document')
+            foreach ($files as $key => $file) {
+                if (is_array($file)) {
+                    $collect = array_merge($collect, self::normalizeFiles($file));
+                }
+            }
+        }
+
+        return $collect;
     }
 
     /**
