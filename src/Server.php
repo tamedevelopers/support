@@ -217,14 +217,8 @@ class Server{
         $filename = Str::replace(self::formatWithBaseDirectory(), '', $filename);
         $filePath = Server::formatWithBaseDirectory($filename);
 
-        // Generate PHP code
-        $exported   = var_export($array, true);
-        $string     = explode("\n", $exported);
-        $string     = array_map('trim', $string);
-        $string     = implode("\n    ", $string);
-        $string     = ltrim($string, 'array (');
-        $string     = rtrim($string, ')');
-        $string     = trim($string);
+        // Generate properly indented PHP array code
+        $string = self::formatArray($array, 1);
 
         // Generate PHP code with specific formatting
         $phpCode = <<<PHP
@@ -243,7 +237,7 @@ class Server{
             |
             */
 
-            $string
+        {$string}
         ];
         PHP;
 
@@ -377,6 +371,51 @@ class Server{
         }
 
         return false;
+    }
+
+    /**
+     * Recursively format an array into properly indented PHP code.
+     */
+    protected static function formatArray(array $array, int $indentLevel = 1): string
+    {
+        $indent      = str_repeat('    ', $indentLevel);
+        $closeIndent = str_repeat('    ', $indentLevel - 1);
+        $lines       = [];
+
+        foreach ($array as $key => $value) {
+            $keyStr = is_int($key) ? $key : "'" . addslashes($key) . "'";
+
+            if (is_array($value)) {
+                $lines[] = "{$indent}{$keyStr} => [";
+                $lines[] = self::formatArray($value, $indentLevel + 1);
+                $lines[] = "{$indent}],";
+            } else {
+                $lines[] = "{$indent}{$keyStr} => " . self::exportValue($value) . ",";
+            }
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Export a scalar value as valid PHP code.
+     */
+    protected static function exportValue(mixed $value): string
+    {
+        if (is_null($value)) {
+            return 'null';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return var_export($value, true);
+        }
+
+        // strings
+        return "'" . addslashes((string) $value) . "'";
     }
     
 }

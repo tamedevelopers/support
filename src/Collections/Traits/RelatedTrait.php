@@ -939,9 +939,13 @@ trait RelatedTrait{
         foreach ($this->items as $item) {
             $groupKey = is_callable($key)
                 ? $key($item)
-                : (is_array($item) ? ($item[$key] ?? null) : ($item->{$key} ?? null));
+                : $this->dataGet($item, $key);
 
             $results[$groupKey][] = $item;
+        }
+
+        foreach ($results as $groupKey => $items) {
+            $results[$groupKey] = new static($items);
         }
 
         return new static($results);
@@ -1672,7 +1676,9 @@ trait RelatedTrait{
      */ 
     public function toArray()
     {
-        return Server::toArray($this->items);
+        return Server::toArray(
+            $this->prepareForArray($this->items)
+        );
     }
     
     /**
@@ -1682,7 +1688,9 @@ trait RelatedTrait{
      */ 
     public function toObject()
     {
-        return Server::toObject($this->items);
+        return Server::toObject(
+            $this->prepareForArray($this->items)
+        );
     }
     
     /**
@@ -1692,7 +1700,30 @@ trait RelatedTrait{
      */ 
     public function toJson()
     {
-        return Server::toJson($this->items);
+        return Server::toJson(
+            $this->prepareForArray($this->items)
+        );
+    }
+
+    /**
+     * Prepare data for array conversion.
+     *
+     * @param mixed $items
+     * @return mixed
+     */
+    protected function prepareForArray($items)
+    {
+        if (is_object($items) && method_exists($items, 'toArray')) {
+            return $items->toArray();
+        }
+
+        if (is_array($items)) {
+            foreach ($items as $key => $item) {
+                $items[$key] = $this->prepareForArray($item);
+            }
+        }
+
+        return $items;
     }
 
     /**
