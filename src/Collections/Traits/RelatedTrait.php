@@ -929,7 +929,7 @@ trait RelatedTrait{
     /**
      * Group items in the collection by a given key or callback.
      *
-     * @param  string|Closure $key
+     * @param  string|Closure $key 
      * @return self
      */
     public function groupBy($key)
