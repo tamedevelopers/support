@@ -11,6 +11,7 @@ use Tamedevelopers\Support\TameHelper;
 use Tamedevelopers\Support\ApiResponse;
 use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Traits\TameTrait;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Tamedevelopers\Support\Traits\NumberToWordsTraits;
 
 /**
@@ -59,20 +60,6 @@ class Tame extends TameHelper{
      * @var string
      */
     private const PBKDF2_SALT = "\x2d\xb7\x68\x1a";
-    
-    
-    /**
-     * Alias for `echoJson` method
-     *
-     * @param  int $response
-     * @param  mixed $message
-     * @param  int      $statusCode
-     * @return mixed
-     */
-    public static function jsonEcho(int $response = 0, $message = null, $statusCode = 200)
-    {
-        self::echoJson($response, $message, $statusCode);
-    }
 
     /**
      * Echo `json_encode` with response and message
@@ -94,7 +81,44 @@ class Tame extends TameHelper{
      */
     public static function echoJson(int $response = 0, $message = null, $statusCode = 200)
     {
-        ApiResponse::jsonEcho($response, $message, $statusCode);
+        return ApiResponse::jsonEcho($response, $message, $statusCode);
+    }
+    
+    /**
+     * Alias for `echoJson` method
+     *
+     * @param  int $response
+     * @param  mixed $message
+     * @param  int      $statusCode
+     * @return mixed
+     */
+    public static function jsonEcho(int $response = 0, $message = null, $statusCode = 200)
+    {
+        return self::echoJson($response, $message, $statusCode);
+    }
+
+    /**
+     * Return a JSON response.
+     *
+     * Common HTTP status codes for API responses:
+     * - 200 OK - Request succeeded. Example: Successful login, data fetched successfully.
+     * - 201 Created - Resource created successfully. Example: User registered, item stored.
+     * - 400 Bad Request - Invalid request. Example: Malformed JSON, missing parameters.
+     * - 401 Unauthorized - Authentication failed. Example: Wrong password, invalid token.
+     * - 403 Forbidden - Not allowed. Example: User without permission attempts action.
+     * - 404 Not Found - Resource missing. Example: User ID not found, endpoint invalid.
+     * - 419 Page Expired - CSRF mismatch/session expired. Example: Invalid CSRF token.
+     * - 422 Unprocessable Entity - Validation failed. Example: Invalid email, missing fields.
+     * - 500 Internal Server Error - Server bug. Example: Database failure, fatal exception.
+     *
+     * @param  mixed  $content
+     * @param  int    $status
+     * @param  array  $headers
+     * @return mixed
+     */
+    public static function json($content = [], int $status = 200, array $headers = [])
+    {
+        return new JsonResponse($content, $status, $headers);
     }
 
     /**
@@ -417,21 +441,14 @@ class Tame extends TameHelper{
         $size = Str::lower(str_replace(' ', '', (string) $size));
 
         // Match the size and unit from the input string
-        if (preg_match('/^(\d+(\.\d+)?)([kmg]b?)?$/', $size, $matches)) {
-            $value = (float) $matches[1];
-            $unit = isset($matches[3]) ? $matches[3] : '';
-
-            switch ($unit) {
-                case 'kb':
-                    return (int) ($value * self::KB);
-                case 'mb':
-                    return (int) ($value * self::MB);
-                case 'gb':
-                    return (int) ($value * self::GB);
-                default:
-                    // If no unit specified, default to megabytes
-                    return (int) ($value * self::MB);
-            }
+        if (preg_match('/^(\d+(?:\.\d+)?)([kmg])?b?$/', $size, $m)) {
+            $value = (float) $m[1];
+            return (int) match ($m[2] ?? '') {
+                'k' => $value * self::KB,
+                'm' => $value * self::MB,
+                'g' => $value * self::GB,
+                default => $value, // bytes
+            };
         }
 
         // Invalid input
@@ -694,7 +711,7 @@ class Tame extends TameHelper{
      */
     public static function kgToGrams(float|int $weight = 0)
     {
-        return $weight == 0 ? 0 : round(($weight * 1000) + 1, 2);
+        return $weight == 0 || 0.0 ? 0 : round(($weight * 1000) + 1, 2);
     }
 
     /**
@@ -705,7 +722,7 @@ class Tame extends TameHelper{
      */
     public static function gramsToKg(float|int $weight = 0)
     {
-        return $weight == 0 || null ? 0 : round((($weight - 1) / 1000), 2);
+        return $weight == 0 || 0.0 ? 0 : round((($weight - 1) / 1000), 2);
     }
 
     /**
@@ -911,9 +928,80 @@ class Tame extends TameHelper{
      * @param  int $interation
      * @return void
      */
-    public static function stringHash($string = null, $length = 100, $type = 'sha256', $interation = 100)
+
+    /**
+     * Hash a string using PBKDF2-HMAC with a random per-call salt.
+     *
+     * Output format:  base64(salt) . '$' . hash
+     *   - salt is 16 random bytes (128-bit)
+     *   - hash is the PBKDF2 output, in the requested hex length
+     *
+     * @param  string|null $string      The plaintext to hash.
+     * @param  int         $length      Hex length of the hash output (max 64 for sha256).
+     * @param  'sha256'|'sha512'|string      $type        Hash algorithm: sha256, sha512, etc.
+     * @param  int         $iterations  PBKDF2 iteration count (OWASP: 600,000+ for sha256).
+     * @return string                   The salted hash string (safe to store).
+     */
+    public static function stringHash($string = null, $length = 100, $type = 'sha256', $interation = 600000)
     {
-        return hash_pbkdf2($type, mt_rand() . $string, self::PBKDF2_SALT, $interation, $length);
+         // PHP's hash_pbkdf2 output length is bounded by the digest size.
+        $maxLength = strlen(hash($type, '', false));
+        $length    = max(1, min($length, $maxLength));
+
+        $salt = random_bytes(16);
+        $hash = hash_pbkdf2($type, (string) $string, $salt, $iterations, $length, false);
+
+        return base64_encode($salt) . '$' . $hash;
+    }
+
+    /**
+     * Verify a plaintext string against a hash produced by stringHash().
+     *
+     * Uses hash_equals() to prevent timing attacks.
+     *
+     * @param  string|null $string  The plaintext to check.
+     * @param  string|null $hash    The stored hash from stringHash().
+     * @return bool                 True if the string matches, false otherwise.
+     */
+    public static function verifyStringHash($string = null, $hash = null): bool
+    {
+        if (!is_string($hash) || $hash === '' || $string === null) {
+            return false;
+        }
+
+        // Format: <type>:<iterations>:<base64-salt>$<hex-hash>
+        $parts = explode('$', $hash, 2);
+        if (count($parts) !== 2) {
+            return false;
+        }
+
+        [$meta, $expectedHash] = $parts;
+
+        $metaParts = explode(':', $meta, 3);
+        if (count($metaParts) !== 3) {
+            return false;
+        }
+
+        [$type, $iterations, $encodedSalt] = $metaParts;
+        $iterations = (int) $iterations;
+
+        if ($iterations < 1 || !in_array($type, hash_algos(), true)) {
+            return false;
+        }
+
+        $salt = base64_decode($encodedSalt, true);
+        if ($salt === false || $salt === '') {
+            return false;
+        }
+
+        $length = strlen($expectedHash);
+        if ($length === 0) {
+            return false;
+        }
+
+        $recomputed = hash_pbkdf2($type, (string) $string, $salt, $iterations, $length, false);
+
+        return hash_equals($expectedHash, $recomputed);
     }
     
     /**
@@ -1230,7 +1318,7 @@ class Tame extends TameHelper{
             }
             unset($ch);
         } else {
-            $data = FIle::get($svgContent);
+            $data = File::get($svgContent);
         }
 
         if ($data === false || $data === null) {
@@ -1613,8 +1701,8 @@ class Tame extends TameHelper{
 
         // If it's a valid email, mask only the email part (excluding the domain)
         if ($isEmail && $atPosition !== false) {
-            $email = mb_substr($str, 0, mb_strpos($str, "@"));
-            $tld = mb_substr($str, mb_strpos($str, "@"));
+            $email  = mb_substr($str, 0, $atPosition);
+            $tld    = mb_substr($str, $atPosition);
 
             // Mask only the email part, keeping visibility as per the $length
             $maskedEmail = self::mask($email, $length, $position);

@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support\Process;
 
-use Tamedevelopers\Support\Traits\ServerTrait;
-use Tamedevelopers\Support\Collections\Collection;
 use Tamedevelopers\Support\Env;
-use Tamedevelopers\Support\Process\Concerns\RequestInterface;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\Traits\ServerTrait;
+use Tamedevelopers\Support\Process\Concerns\RequestInterface;
 
 /**
  * Native PHP request implementation for RequestInterface.
@@ -181,13 +180,13 @@ class HttpRequest implements RequestInterface
     public static function ip(): ?string
     {
         $keys = [
-            'HTTP_CLIENT_IP',
-            'HTTP_X_FORWARDED_FOR',
-            'HTTP_X_FORWARDED',
-            'HTTP_X_CLUSTER_CLIENT_IP',
-            'HTTP_FORWARDED_FOR',
-            'HTTP_FORWARDED',
-            'REMOTE_ADDR',
+            'HTTP_CLIENT_IP',              // ← Spoofable, and rarely set by real proxies
+            'HTTP_X_FORWARDED_FOR',        // ← Spoofable
+            'HTTP_X_FORWARDED',            // ← Spoofable
+            'HTTP_X_CLUSTER_CLIENT_IP',    // ← Spoofable
+            'HTTP_FORWARDED_FOR',          // ← Spoofable
+            'HTTP_FORWARDED',              // ← Spoofable
+            'REMOTE_ADDR',                 // ← Only trustworthy one
         ];
         foreach ($keys as $k) {
             if (!empty($_SERVER[$k])) {
@@ -227,14 +226,150 @@ class HttpRequest implements RequestInterface
 
     /**
      * Get Host from URL
-     * - Parse URL and reliably extract the host, sanitizing protocol typos.
-     *
-     * @param string $url
+     * 
+     * @param string|null $url
      * @return string
      */
-    public static function getHost($url)
+    public static function getHost($url = null)
     {
-        return Tame::getHostFromUrl($url);
+        return Tame::getHostFromUrl($url ?: self::full());
+    }
+
+    /**
+     * Get Domain URL URI.
+     * 
+     * @param bool $withProtocol
+     * @return string
+     */
+    public static function getDomain($withProtocol = true): string
+    {
+        if($withProtocol){
+            return self::full();
+        }
+
+        return Str::replace(self::http(), '', self::getDomain());
+    }
+
+    /**
+     * Get Cookie URL URI (without protocol).
+     */
+    public static function getCookieDomain(): string|null
+    {
+        $host = self::host();
+
+        // Localhost and IPs must not set a Domain attribute.
+        if (self::isIpAccessedViaLocalHost() || filter_var($host, FILTER_VALIDATE_IP)) {
+            return null;
+        }
+
+        // Real domain: leading dot allows subdomains.
+        return '.' . ltrim($host, '.');
+    }
+
+    /**
+     * Get Base Path
+     * 
+     * @param string|null $path
+     * @return string
+     */
+    public static function getBasePath($path = null): string
+    {
+        return self::path($path);
+    }
+
+    /**
+     * Build the session config array for the current request.
+     *
+     * All customisation goes through the `$overrides` array. Recognised keys:
+     *
+     *   - 'secure'          bool         Force the `secure` flag.
+     *                                    Default: auto-detect (HTTPS → true, HTTP → false).
+     *   - 'allow_subdomain' bool         If true, cookie domain keeps its leading dot
+     *                                    so subdomains inherit the cookie.
+     *                                    If false, the dot is stripped (exact-host only).
+     *                                    Default: true.
+     *   - 'domain'          string|null  Override the resolved cookie domain.
+     *   - 'path'            string       Override the resolved base path.
+     *   - 'same_site'       string       'lax' | 'strict' | 'none'.
+     *                                    Default: 'none' on HTTPS, 'lax' on HTTP.
+     *
+     * Any other key you pass is merged into the returned array untouched — useful
+     * for 'lifetime', 'http_only', etc.
+     *
+     * @param  array  $overrides
+     * @return array{
+     *     domain:    string|null,
+     *     path:      string,
+     *     secure:    bool,
+     *     same_site: string
+     * }
+     */
+    public static function getSessionConfig($overrides = [])
+    {
+        // Secure flag
+        $secure = array_key_exists('secure', $overrides)
+            ? (bool) $overrides['secure']
+            : self::isSecure();
+
+        // Domain
+        $allowSubdomain = array_key_exists('allow_subdomain', $overrides)
+            ? (bool) $overrides['allow_subdomain']
+            : true;
+
+        $domain = array_key_exists('domain', $overrides)
+            ? $overrides['domain']
+            : self::getCookieDomain();
+
+        if ($domain !== null && ! $allowSubdomain) {
+            $domain = ltrim($domain, '.');
+        }
+
+        // SameSite
+        $sameSite = array_key_exists('same_site', $overrides)
+            ? $overrides['same_site']
+            : ($secure ? 'none' : 'lax');
+
+        // Auto-fix: SameSite=None requires Secure=true
+        if ($sameSite === 'none' && ! $secure) {
+            $sameSite = 'lax';
+        }
+
+        // Path
+        $path = array_key_exists('path', $overrides)
+            ? $overrides['path']
+            : self::getBasePath();
+
+        // Assemble, then merge remaining overrides
+        return array_merge([
+            'domain'    => $domain,
+            'path'      => $path,
+            'secure'    => $secure,
+            'same_site' => $sameSite,
+        ], $overrides);
+    }
+
+    /**
+     * Apply the session config directly to Laravel's config repository.
+     *
+     * Example:
+     *   HttpRequest::applySessionConfig();                       // defaults
+     *   HttpRequest::applySessionConfig(['lifetime' => 120]);    // with override
+     *
+     * @param  array  $overrides
+     * @return array  The config array that was applied
+     */
+    public static function applySessionConfig(array $overrides = [])
+    {
+        $session = self::getSessionConfig($overrides);
+
+        config([
+            'session.domain'    => $session['domain'],
+            'session.path'      => $session['path'],
+            'session.secure'    => $session['secure'],
+            'session.same_site' => $session['same_site'],
+        ]);
+
+        return $session;
     }
 
     /**
@@ -249,88 +384,111 @@ class HttpRequest implements RequestInterface
     }
 
     /**
-     * Check if the internet connection is available
-     *
-     * @return bool
+     * Check if the request use secure connection
      */
-    public static function isInternet()
+    public static function isSecure(): bool
+    {
+        return self::http() === 'https://';
+    }
+
+    /**
+     * Check if the internet connection is available
+     */
+    public static function isInternet(): bool
     {
         return Tame::isInternetAvailable(null, 53, 2);
     }
 
     /**
      * Alias for `runningInConsole()` method
-     *
-     * @return bool
      */
-    public static function isConsole()
+    public static function isConsole(): bool
     {
         return self::runningInConsole();
     }
 
     /**
      * Check if the server is using a local/private IP.
-     *
-     * @return bool
      */
-    public static function isLocalIp()
+    public static function isLocalIp(): bool
     {
         // Strict mode: only verify if machine is local/private
         $serverAddr = $_SERVER['SERVER_ADDR'] ?? gethostbyname(gethostname());
 
-        // Check if it's loopback or private LAN range
-        // 127.* loopback IPv4
-        // ::1 loopback IPv6
-        // 10.*, 172.16.*, 192.168.* → private LAN ranges
-        // localhost - explicit hostname, which some setups resolve instead of raw IP
-        $localRanges = ['127.', '::1', '10.', '172.16.', 'localhost'];
+        // If we couldn't determine the IP, assume not local (safe default)
+        if (empty($serverAddr) || $serverAddr === gethostname()) {
+            return false;
+        }
 
-        // return TRUE if the current server address starts with any local prefix
-        return (new Collection($localRanges))->startsWith($serverAddr);
+        // IPv6 loopback and link-local / unique-local ranges
+        if (filter_var($serverAddr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            $ip = strtolower($serverAddr);
+
+            // ::1 loopback
+            if ($ip === '::1') {
+                return true;
+            }
+
+            // fc00::/7 (fc00–fdff) Unique Local Address
+            if (preg_match('/^f[cd][0-9a-f]{2}:/', $ip)) {
+                return true;
+            }
+
+            // fe80::/10 (fe80–febf) Link-Local
+            if (preg_match('/^fe[89ab][0-9a-f]:/', $ip)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        // IPv4: 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+        if (filter_var($serverAddr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            if (str_starts_with($serverAddr, '127.') ||
+                str_starts_with($serverAddr, '10.') ||
+                str_starts_with($serverAddr, '192.168.')) {
+                return true;
+            }
+
+            // 172.16.0.0 – 172.31.255.255
+            if (preg_match('/^172\.(1[6-9]|2[0-9]|3[01])\./', $serverAddr)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        return false;
     }
 
     /**
      * Is IP accessed via private LAN port in browser
-     * 
-     * @return bool
      */
-    public static function isIpAccessedViaPrivateLanPort()
+    public static function isIpAccessedViaPrivateLanPort(): bool
     {
         return self::isIpAccessedVia127Port();
     }
 
     /**
      * Is IP accessed via 127.0.0.1 port in browser
-     * 
-     * @return bool
      */
-    public static function isIpAccessedVia127Port()
+    public static function isIpAccessedVia127Port(): bool
     {
-        return Str::contains(
-            self::host(),
-            self::getRemoteAddr(), 
-        );
+        return Str::contains(self::host(), self::getRemoteAddr());
     }
 
     /**
      * Is IP accessed via localhost port in browser
-     *
-     * @return bool
      */ 
-    public static function isIpAccessedViaLocalHost()
+    public static function isIpAccessedViaLocalHost(): bool
     {
-        return Str::contains(
-            'localhost',
-            self::getRemoteAddr(),
-        );
+        return Str::contains(self::host(), ['localhost', '127.0.0.1']) ;
     }
 
     /**
      * Determine if the script is running in CLI mode.
-     *
-     * @return bool
      */
-    public static function runningInConsole()
+    public static function runningInConsole(): bool
     {
         return (php_sapi_name() === 'cli' || PHP_SAPI === 'cli');
     }
@@ -345,10 +503,8 @@ class HttpRequest implements RequestInterface
 
     /**
      * Local Domain Path
-     * 
-     * @return string
      */
-    private static function localDomainPath()
+    private static function localDomainPath(): string
     {
         $uri = $_SERVER['REQUEST_URI'] ?? '';
         $root = self::pathReplacer($_SERVER['DOCUMENT_ROOT']);
@@ -389,9 +545,8 @@ class HttpRequest implements RequestInterface
 
     /**
      * Get server path
-     * @return string
      */
-    private static function getServerPath() 
+    private static function getServerPath(): string
     {
         return self::cleanServerPath(
             self::createAbsolutePath()

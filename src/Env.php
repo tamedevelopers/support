@@ -463,7 +463,7 @@ class Env {
     }
 
     /**
-     * Validate strict environment rules
+     * Validate that the current environment name matches the server's IP context.
      * 
      * @param string $current
      * @return bool
@@ -473,9 +473,9 @@ class Env {
         $isLocal = HttpRequest::isLocalIp();
         $localAliases = ['local', 'localhost', 'dev', 'development'];
 
-        $productionAliases = [
+        $remoteAliases = [
             'prod', 'production', 'stage', 'staging',  'test', 'testing', 'preprod', 'pre-production',
-            'live', 'online', 'public', 'remote', 'qa', 'uat', 'user-acceptance-testing', 'unknown'
+            'live', 'online', 'public', 'remote', 'qa', 'uat', 'user-acceptance-testing'
         ];
 
         // If the current env is "local-like", require a local IP
@@ -484,7 +484,7 @@ class Env {
         }
 
         // Anything else (production/live/unknown) => must NOT be local
-        return ! $isLocal && in_array($current, $productionAliases, true);
+        return ! $isLocal && in_array($current, $remoteAliases, true);
     }
 
     /**
