@@ -36,8 +36,7 @@ echo "
 
 dd(
     [
-        $tame->getHostFromUrl('www.tamedevelopers.com'),
-        $tame->urlExist('fbds.com'),
+        $tame->urlExist('www.google.com'),
         $tame->isInternetAvailable(), 
     ],
     [
