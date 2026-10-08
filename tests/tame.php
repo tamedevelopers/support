@@ -36,8 +36,9 @@ echo "
 
 dd(
     [
-      $tame->urlExist('google.com'),
-      $tame->isInternetAvailable(), 
+        $tame->getHostFromUrl('www.tamedevelopers.com'),
+        $tame->urlExist('fbds.com'),
+        $tame->isInternetAvailable(), 
     ],
     [
         $tame->countDivisibleNumbers(100, 680),

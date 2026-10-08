@@ -345,6 +345,191 @@ trait TameTrait{
         return $host;
     }
 
+     /**
+     * Fast DNS resolution using the OS resolver (cached).
+     * Returns null on failure.
+     */
+    public static function resolveFast(string $host): ?string
+    {
+        if (self::isRoutableIp($host)) {
+            return $host;
+        }
+
+        // 1. Try public DNS first — bounded at 2s each, no OS blocking
+        foreach (['8.8.8.8', '1.1.1.1'] as $server) {
+            $ip = self::queryDnsServer($host, $server, 2);
+            if ($ip !== null && self::isRoutableIp($ip)) {
+                return $ip;
+            }
+        }
+
+        // 2. OS resolver as a last resort (may block; only reached if DNS failed)
+        $ip = @gethostbyname($host);
+        if ($ip !== $host && self::isRoutableIp($ip)) {
+            return $ip;
+        }
+
+        return null;
+    }
+
+    /**
+     * Reject IPs that are valid IPv4 strings but non-routable:
+     *  - 0.0.0.0/8         ("this network")
+     *  - 127.0.0.0/8       (loopback)
+     *  - 169.254.0.0/16    (link-local)
+     *  - 224.0.0.0/4       (multicast)
+     *  - 240.0.0.0/4       (reserved)
+     *  - 255.255.255.255   (broadcast)
+     */
+    public static function isRoutableIp(string $ip): bool
+    {
+        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            return false;
+        }
+
+        $long = ip2long($ip);
+        if ($long === false) {
+            return false;
+        }
+
+        // Reject the non-routable ranges
+        $ranges = [
+            ['0.0.0.0',         '0.255.255.255'],   // 0.0.0.0/8
+            ['127.0.0.0',       '127.255.255.255'], // 127.0.0.0/8
+            ['169.254.0.0',     '169.254.255.255'], // 169.254.0.0/16
+            ['224.0.0.0',       '239.255.255.255'], // 224.0.0.0/4 multicast
+            ['240.0.0.0',       '255.255.255.254'], // 240.0.0.0/4 reserved
+            ['255.255.255.255', '255.255.255.255'], // broadcast
+        ];
+
+        foreach ($ranges as [$start, $end]) {
+            if ($long >= ip2long($start) && $long <= ip2long($end)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Query a DNS server directly over UDP for an A record.
+     * Returns an IPv4 string on success, null on failure.
+     */
+    private static function queryDnsServer(string $hostname, string $dnsServer, int $timeout = 2): ?string
+    {
+        // stream_socket_client supports udp:// — fsockopen does NOT.
+        $socket = @stream_socket_client(
+            "udp://{$dnsServer}:53",
+            $errno,
+            $errstr,
+            $timeout
+        );
+
+        if (!is_resource($socket)) {
+            return null;
+        }
+
+        stream_set_timeout($socket, $timeout);
+
+        // Build query
+        $id     = random_int(0, 0xFFFF);
+        $header = pack('n*', $id, 0x0100, 1, 0, 0, 0);
+
+        $qname = '';
+        foreach (explode('.', rtrim($hostname, '.')) as $label) {
+            if ($label === '') {
+                continue;
+            }
+            if (strlen($label) > 63) {
+                fclose($socket);
+                return null;
+            }
+            $qname .= chr(strlen($label)) . $label;
+        }
+        $qname .= "\0";
+
+        $query = $header . $qname . pack('n*', 1, 1); // QTYPE=A, QCLASS=IN
+
+        if (@fwrite($socket, $query) === false) {
+            fclose($socket);
+            return null;
+        }
+
+        // Bounded read — do NOT fread directly, it can block forever
+        $read   = [$socket];
+        $write  = null;
+        $except = null;
+        if (@stream_select($read, $write, $except, $timeout) === 0) {
+            fclose($socket);
+            return null;
+        }
+
+        $response = fread($socket, 512);
+        fclose($socket);
+
+        if (!is_string($response) || strlen($response) < 12) {
+            return null;
+        }
+
+        // Verify it's our response
+        $hdr = unpack('nid/nflags/nqd/nan', substr($response, 0, 8));
+        if ($hdr === false || $hdr['id'] !== $id || $hdr['an'] === 0) {
+            return null;
+        }
+
+        $len = strlen($response);
+        $pos = 12;
+
+        // Skip question section
+        while ($pos < $len && $response[$pos] !== "\0") {
+            $pos += ord($response[$pos]) + 1;
+        }
+        $pos += 5; // null + QTYPE + QCLASS
+
+        if ($pos >= $len) {
+            return null;
+        }
+
+        // Parse answers
+        for ($i = 0; $i < $hdr['an']; $i++) {
+            if ($pos >= $len) {
+                return null;
+            }
+
+            // Skip NAME
+            if ((ord($response[$pos]) & 0xC0) === 0xC0) {
+                $pos += 2;
+            } else {
+                while ($pos < $len && $response[$pos] !== "\0") {
+                    $pos += ord($response[$pos]) + 1;
+                }
+                $pos += 1;
+            }
+
+            if ($pos + 10 > $len) {
+                return null;
+            }
+
+            $type = unpack('n', substr($response, $pos, 2))[1];
+            $pos += 8; // TYPE + CLASS + TTL
+            $rdlength = unpack('n', substr($response, $pos, 2))[1];
+            $pos += 2;
+
+            if ($pos + $rdlength > $len) {
+                return null;
+            }
+
+            if ($type === 1 && $rdlength === 4) {
+                $ip = @inet_ntop(substr($response, $pos, 4));
+                return $ip !== false ? $ip : null;
+            }
+
+            $pos += $rdlength;
+        }
+
+        return null;
+    }
+
     /**
      * Resolve hostname to IP using DNS query to 8.8.8.8
      *

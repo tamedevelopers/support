@@ -56,10 +56,77 @@ class Tame extends TameHelper{
     protected const GB = 1024 * self::MB;
 
     /**
-     * Salter String
-     * @var string
+     * Detected framework slug for the current process.
+     * Populated lazily on first call to framework().
+     *
+     * @var null|array{
+     *  isLaravel: bool,
+     *  isSymfony: bool,
+     *  isCodeIgniter: bool,
+     *  isCakePhp: bool,
+     *  isYii: bool,
+     *  isSlim: bool,
+     * }
      */
-    private const PBKDF2_SALT = "\x2d\xb7\x68\x1a";
+    private static ?array $framework = null;
+
+
+    /**
+     * Resolve (and cache) the active framework for this process.
+     *
+     * Detection runs exactly once per process, regardless of how many
+     * times isJsonResponse() or any other method asks for it.
+     * 
+     * @return array{
+     *  isLaravel: bool,
+     *  isSymfony: bool,
+     *  isCodeIgniter: bool,
+     *  isCakePhp: bool,
+     *  isYii: bool,
+     *  isSlim: bool,
+     * }
+     */
+    public static function setFramework()
+    {
+        // Already resolved — reuse.
+        if (!empty(self::$framework)) {
+            return self::$framework;
+        }
+
+        self::$framework = [
+            'isLaravel'     => self::isLaravel(),
+            'isSymfony'     => self::isSymfony(),
+            'isCodeIgniter' => self::isCodeIgniter(),
+            'isCakePhp'     => self::isCakePhp(),
+            'isYii'         => self::isYii(),
+            'isSlim'        => self::isSlim(),
+        ];
+
+        return self::$framework;
+    }
+
+    /**
+     * Get the cached framework
+     * 
+     * @param 'isLaravel'|'isSymfony'|'isCodeIgniter'|'isCakePhp'|'isYii'|'isSlim'|null $mode
+     * 
+     * @return bool|array{
+     *  isLaravel: bool,
+     *  isSymfony: bool,
+     *  isCodeIgniter: bool,
+     *  isCakePhp: bool,
+     *  isYii: bool,
+     *  isSlim: bool,
+     * }
+     */
+    public static function getFramework($mode = null)
+    {
+        if(empty(self::$framework)){
+            self::setFramework();
+        }
+
+        return self::$framework[$mode] ?? self::$framework;
+    }
 
     /**
      * Echo `json_encode` with response and message
@@ -131,51 +198,58 @@ class Tame extends TameHelper{
     {
         $url = self::getHostFromUrl($url);
 
-        // Ensure URL has a scheme
-        if (!preg_match('/^https?:\/\//', $url)) {
+        if (!preg_match('/^https?:\/\//i', $url)) {
             $url = 'http://' . $url;
         }
 
-        $urlParts = parse_url($url);
-        $host = $urlParts['host'] ?? '';
-        if (!$host){
+        $parts = parse_url($url);
+        if ($parts === false || empty($parts['host'])) {
             return false;
         }
 
-        // Resolve hostname to IP
-        $ip = self::resolveDNS($host);
-        if (!$ip){
+        $host = $parts['host'];
+        $port = $parts['port']
+            ?? (strtolower($parts['scheme'] ?? 'http') === 'https' ? 443 : 80);
+
+        $ip = filter_var($host, FILTER_VALIDATE_IP)
+            ? $host
+            : self::resolveFast($host);
+
+        if ($ip === null) {
             return false;
         }
 
-        // Replace host with IP in URL
-        $urlWithIp = str_replace($host, $ip, $url);
+        $ch = curl_init($url);
+        if ($ch === false) {
+            return false;
+        }
 
-        $ch = curl_init($urlWithIp);
+        $options = [
+            CURLOPT_NOBODY          => true,
+            CURLOPT_RETURNTRANSFER  => true,
+            CURLOPT_HEADER          => false,
+            CURLOPT_FOLLOWLOCATION  => true,
+            CURLOPT_MAXREDIRS       => 3,
+            CURLOPT_CONNECTTIMEOUT  => 3,
+            CURLOPT_TIMEOUT         => 6,
+            CURLOPT_SSL_VERIFYPEER  => true,
+            CURLOPT_SSL_VERIFYHOST  => 2,
+            CURLOPT_FORBID_REUSE    => true,
+            CURLOPT_USERAGENT       => 'TameValidator/1.0',
+        ];
 
-        // Set cURL options
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HEADER, true);
-        curl_setopt($ch, CURLOPT_NOBODY, true); // Use HEAD request
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Max time for the entire request
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2); // Connection timeout
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Skip SSL peer verification
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // Skip SSL host verification (since we're using IP)
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Host: ' . $host]); // Set Host header for virtual hosting
-        curl_setopt($ch, CURLOPT_FORBID_REUSE, true);
+        // Only pin the IP when we actually have one. If we're here, we do.
+        // (cURL's own resolver is broken on this machine, so pinning is required.)
+        $options[CURLOPT_RESOLVE] = ["{$host}:{$port}:{$ip}"];
 
-        // Execute cURL and get the header output
+        curl_setopt_array($ch, $options);
+
         curl_exec($ch);
-
-        // Use curl_getinfo to get the HTTP status code
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        // Close cURL handle
+        $errno = curl_errno($ch);
+        $code  = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         unset($ch);
 
-        // Return true if the HTTP code is a success code (e.g., 200)
-        return ($httpCode >= 200 && $httpCode < 300);
+        return $errno === 0 && $code >= 200 && $code < 300;
     }
 
     /**
@@ -918,17 +992,7 @@ class Tame extends TameHelper{
 
         return Str::trim($string);
     }
-
-    /**
-     * Hash String
-     *
-     * @param  string|null $string
-     * @param  int $length
-     * @param  string $type
-     * @param  int $interation
-     * @return void
-     */
-
+    
     /**
      * Hash a string using PBKDF2-HMAC with a random per-call salt.
      *
@@ -942,7 +1006,7 @@ class Tame extends TameHelper{
      * @param  int         $iterations  PBKDF2 iteration count (OWASP: 600,000+ for sha256).
      * @return string                   The salted hash string (safe to store).
      */
-    public static function stringHash($string = null, $length = 100, $type = 'sha256', $interation = 600000)
+    public static function stringHash($string = null, $length = 100, $type = 'sha256', $iterations = 600000)
     {
          // PHP's hash_pbkdf2 output length is bounded by the digest size.
         $maxLength = strlen(hash($type, '', false));

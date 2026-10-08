@@ -20,7 +20,7 @@ use Tamedevelopers\Support\Capsule\CustomException;
  * and common operations. Public API is provided by Time and dynamic dispatch.
  * 
  * @property mixed $staticData
- * @method mixed format()
+ * @method mixed format($format = null, $date = null)
 */
 trait TimeTrait{
 

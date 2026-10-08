@@ -34,7 +34,12 @@ if (! function_exists('Tame_isAppFramework')) {
      */
     function Tame_isAppFramework(): bool
     {
-        return Tame::isAppFramework();
+        $tame = new Tame();
+
+        // Gobal call to store framework type in life-circle cache
+        $tame->setFramework();
+
+        return $tame->isAppFramework();
     }
 }
 
