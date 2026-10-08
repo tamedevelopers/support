@@ -11,6 +11,7 @@ use Tamedevelopers\Support\Server;
 /**
  * @method mixed exists($path = null)
  * @method mixed checkAnyClassExists(...$classNames) 
+ * @method mixed getFramework($mode = null)
  */
 trait TameTrait{
 
@@ -30,12 +31,7 @@ trait TameTrait{
      */
     public static function isAppFramework()
     {
-        return self::isLaravel()
-            || self::isSymfony()
-            || self::isCodeIgniter()
-            || self::isCakePhp()
-            || self::isYii()
-            || self::isSlim();
+        return in_array(true, self::getFramework(), true);
     }
 
     /**
