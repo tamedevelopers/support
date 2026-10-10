@@ -66,7 +66,7 @@ class HttpRequest implements RequestInterface
     /** @inheritDoc */
     public static function http(): string
     {
-        // Check for standard HTTPS
+        // Check for standard protocol
         if (isset($_SERVER['HTTPS']) && Str::lower($_SERVER['HTTPS']) !== 'off') {
             return 'https://';
         }
