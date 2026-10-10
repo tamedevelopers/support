@@ -16,18 +16,14 @@ TameCookie()->set('test_cookie_name', 'value');
 
 // Cookie::set('test_cookie_name', 'value');
 
-Cookie::queue(['queue_cookie_name', 'name_error'], [
-    'name' => 'queue_cookie_name',
-    'value' => 'queue_cookie_value',
-    'minutes' => 10,
-]);
+Cookie::queue('queue_cookie_name', 'queue_cookie_value', 10);
+Cookie::queue('queue_cookie_name2', 'queue_cookie_value2', 5);
+Cookie::setQueue();
 
 dd(
-    Cookie::setQueue(),
 
     Cookie::all(),
     TameCookie()->get('test_cookie_name'),
-
     Cookie::forget('test_cookie_name2'),
     // Cookie::expire('test_cookie_name2'),
 );

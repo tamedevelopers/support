@@ -205,8 +205,8 @@ final class Cookie{
      * Queue a cookie to be set later.
      * Useful in response middleware before headers are sent.
      *
-     * @param mixed $name
-     * @param mixed $value
+     * @param string $name
+     * @param string|null $value
      * @param int|string $minutes
      * @param string|null $path
      * @param string|null $domain
@@ -216,7 +216,7 @@ final class Cookie{
      * @param string|null $sameSite Same site
      * @return void
      */
-    public static function queue($name, $value, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null, $sameSite = null)
+    public static function queue(string $name, $value = null, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null, $sameSite = null)
     {
         self::$queued[] = compact(
             'name', 
@@ -238,18 +238,29 @@ final class Cookie{
     public static function setQueue(): void
     {
         foreach (self::$queued as $cookie) {
+            $name = $cookie['name'];
+            if(!is_string($name)){
+                $name = self::getName($cookie['name']);
+            }
+
+            $value = $cookie['value'];
+            if(!is_string($value)){
+                $value = self::getValue($cookie['value']);
+            }
+
             self::set(
-                $cookie['name'],
-                $cookie['value'],
+                $name,
+                $value,
                 $cookie['minutes'],
                 $cookie['path'],
                 $cookie['domain'],
                 $cookie['secure'],
                 $cookie['httponly'],
                 $cookie['force'],
-                $cookie['samesite'],
+                $cookie['sameSite'],
             );
         }
+        
         self::$queued = [];
     }
 
@@ -345,7 +356,7 @@ final class Cookie{
     private static function normalizeCookie($name, $value, $expires, $path, $domain, $secure, $httponly, $sameSite)
     {
         [$expires, $path, $domain, $secure, $httponly] = [
-            (int) $expires, (string) $path, (string) $domain, (bool) $secure, (bool) $httponly
+            (int) $expires, (string) $path, (string) $domain, (bool) $secure, (bool) $httponly, $sameSite
         ];
 
         // PHP 7.3+ supports array options
