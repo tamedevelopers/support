@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use Tamedevelopers\Support\Process\Http;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Time;
 
@@ -62,17 +63,19 @@ final class Cookie{
      * @param bool|null   $secure   Send only over HTTPS.
      * @param bool|null   $httponly Accessible only through HTTP (not JS).
      * @param bool|null   $force    Force setting even if headers are already sent.
+     * @param string|null $sameSite Same site
+     * 
      * 
      * @return void
      */
-    public static function set($name, $value = null, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null)
+    public static function set($name, $value = null, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null, $sameSite = null)
     {
         // minutes
         $expires = self::minutesToExpire($minutes);
 
         // create default values
         [$path, $value, $domain, $secure, $httponly, $force] = self::getDefaultPathAndDomain(
-            $path, $value, $domain, $secure, $httponly, $force
+            $path, $value, $domain, $secure, $httponly, $force, $sameSite
         );
 
         // Set the cookie if headers not sent or forced
@@ -80,7 +83,7 @@ final class Cookie{
             $name = self::getName($name);
             $value = self::getValue($value);
 
-            self::normalizeCookie($name, $value, $expires, $path, $domain, $secure, $httponly);
+            self::normalizeCookie($name, $value, $expires, $path, $domain, $secure, $httponly, $sameSite);
         }
     }
 
@@ -210,12 +213,21 @@ final class Cookie{
      * @param bool|null $secure
      * @param bool|null $httponly
      * @param bool|null   $force    Force setting even if headers are already sent.
+     * @param string|null $sameSite Same site
      * @return void
      */
-    public static function queue($name, $value, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null)
+    public static function queue($name, $value, $minutes = 0, $path = null, $domain = null, $secure = null, $httponly = null, $force = null, $sameSite = null)
     {
         self::$queued[] = compact(
-            'name', 'value', 'minutes', 'path', 'domain', 'secure', 'httponly', 'force'
+            'name', 
+            'value', 
+            'minutes', 
+            'path', 
+            'domain', 
+            'secure', 
+            'httponly', 
+            'force',
+            'sameSite'
         );
     }
 
@@ -234,7 +246,8 @@ final class Cookie{
                 $cookie['domain'],
                 $cookie['secure'],
                 $cookie['httponly'],
-                $cookie['force']
+                $cookie['force'],
+                $cookie['samesite'],
             );
         }
         self::$queued = [];
@@ -319,16 +332,17 @@ final class Cookie{
     /**
      * Normalize Cookie
      *
-     * @param  mixed $name
-     * @param  mixed $value
-     * @param  mixed $expires
-     * @param  mixed $path
-     * @param  mixed $domain
-     * @param  mixed $secure
-     * @param  mixed $httponly
+     * @param   mixed $name
+     * @param   mixed $value
+     * @param   mixed $expires
+     * @param   mixed $path
+     * @param   mixed $domain
+     * @param   mixed $secure
+     * @param   mixed $httponly
+     * @param   mixed $sameSite
      * @return void
      */
-    private static function normalizeCookie($name, $value, $expires, $path, $domain, $secure, $httponly)
+    private static function normalizeCookie($name, $value, $expires, $path, $domain, $secure, $httponly, $sameSite)
     {
         [$expires, $path, $domain, $secure, $httponly] = [
             (int) $expires, (string) $path, (string) $domain, (bool) $secure, (bool) $httponly
@@ -342,7 +356,7 @@ final class Cookie{
                 'domain'   => $domain,
                 'secure'   => $secure,
                 'httponly' => $httponly,
-                'samesite' => 'Lax', // sensible default
+                'samesite' => $sameSite,
             ]);
         } else {
             // fails (older PHP), fallback to legacy signature
@@ -359,21 +373,51 @@ final class Cookie{
      * @param  bool|null  $secure
      * @param  bool|null  $httponly
      * @param  bool|null  $force
+     * @param string|null $sameSite
      * @return array
      */
-    private static function getDefaultPathAndDomain($path = null, $value = null, $domain = null, $secure = null, $httponly = null, $force = null)
+    private static function getDefaultPathAndDomain($path = null, $value = null, $domain = null, $secure = null, $httponly = null, $force = null, $sameSite = null)
     {
         if(is_null($secure)){
             $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
         }
 
+        $default = Http::getSessionConfig();
+
+        $data = [
+            'value'     => $value,
+            'path'      => $path,
+            'domain'    => $domain,
+            'secure'    => $secure,
+            'httponly'  => $httponly,
+            'force'     => $force,
+            'samesite'  => $sameSite,
+        ];
+
+        if(empty($data['path'])){
+            $data['path'] = $default['path'];
+        }
+
+        if(empty($data['domain'])){
+            $data['domain'] = $default['domain'];
+        }
+
+        if(empty($data['secure'])){
+            $data['secure'] = $default['secure'];
+        }
+
+        if(empty($data['samesite'])){
+            $data['samesite'] = $default['same_site'];
+        }
+
         return [
-            !empty($path) ? $path : '/', 
-            !empty($value) ? $value : '', 
-            !empty($domain) ? $domain : '', 
-            is_bool($secure) ? $secure : false, 
-            is_bool($httponly) ? $httponly : false,
-            is_bool($force) ? $force : false,
+            !empty($data['value']) ? $data['value'] : '', 
+            !empty($data['path']) ? $data['path'] : '/', 
+            !empty($data['domain']) ? $data['domain'] : '', 
+            is_bool($data['secure']) ? $data['secure'] : false, 
+            is_bool($data['httponly']) ? $data['httponly'] : false,
+            is_bool($data['force']) ? $data['force'] : false,
+            is_bool($data['samesite']) ? $data['samesite'] : 'lax',
         ];
     }
     

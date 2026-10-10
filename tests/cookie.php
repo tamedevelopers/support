@@ -12,9 +12,9 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // TameCookie()
 
 
-TameCookie()->set('cookie_name', 'value');
+TameCookie()->set('test_cookie_name', 'value');
 
-// Cookie::set('cookie_name', 'value');
+// Cookie::set('test_cookie_name', 'value');
 
 Cookie::queue(['queue_cookie_name', 'name_error'], [
     'name' => 'queue_cookie_name',
@@ -26,8 +26,8 @@ dd(
     Cookie::setQueue(),
 
     Cookie::all(),
-    TameCookie()->get('cookie_name'),
+    TameCookie()->get('test_cookie_name'),
 
-    Cookie::forget('cookie_name2'),
-    // Cookie::expire('cookie_name2'),
+    Cookie::forget('test_cookie_name2'),
+    // Cookie::expire('test_cookie_name2'),
 );
