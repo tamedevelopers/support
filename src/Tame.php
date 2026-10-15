@@ -1838,14 +1838,14 @@ class Tame extends TameHelper{
         }
 
         // Decode base64-encoded IV and encrypted string
-        $iv = base64_decode($array['e']);
-        $encryptedString = base64_decode($array['s']);
+        $iv = base64_decode($array['e'] ?? '');
+        $encryptedString = base64_decode($array['s'] ?? '');
 
         // Get encryption settings
         $openSSL = self::openSSLEncrypt();
 
         // Store the encryption key
-        $key = $array['k'];
+        $key = $array['k'] ?? '';
 
         // Decryption
         return openssl_decrypt(

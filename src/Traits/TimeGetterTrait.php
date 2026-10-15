@@ -371,9 +371,18 @@ trait TimeGetterTrait{
      * Get the Unix timestamp
      * @return int
      */
-    public function getDateTimestamp()
+    public function getTimestamp()
     {
         return (int) $this->date;
+    }
+
+    /**
+     * Get the Unix timestamp
+     * @return int
+     */
+    public function getDateTimestamp()
+    {
+        return $this->getTimestamp();
     }
 
     /**
