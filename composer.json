@@ -29,6 +29,7 @@
         "chillerlan/php-qrcode": "^5.0",
         "meyfa/php-svg": "*",
         "tamedevelopers/file": "*",
+        "tamedevelopers/validator": "*",
         "guzzlehttp/guzzle": "*",
         "illuminate/http": "*"
     },
