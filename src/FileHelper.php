@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
+use Tamedevelopers\Support\Capsule\File;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
-use Tamedevelopers\Support\Capsule\File;
 
 class FileHelper{
 
@@ -120,14 +120,6 @@ class FileHelper{
     public function name(): string
     {
         return $this->name;
-    }
-
-    /**
-     * Alias of name() method
-     */
-    public function getName(): string
-    {
-        return $this->name();
     }
     
     /**
@@ -257,11 +249,11 @@ class FileHelper{
         // if not allowed
         if(!$allow){
             $name = $this->name();
+        } else{
+            $name = bin2hex(random_bytes(25)) . '.' . $this->extension();
         }
-
-        $name = bin2hex(random_bytes(25)) . '.' . $this->extension();
+        
         $this->generatedName = $name;
-
         return $name;
     }
 
@@ -275,9 +267,9 @@ class FileHelper{
     public function move(string $destination, ?string $newName = null)
     {
         $fileName = File::name($newName ?: $this->generatedName ?: $this->name());
+        $fullFileName = "{$fileName}.{$this->extension()}";
 
-        // get the path
-        $path = Tame::stringReplacer($destination);
+        $path = Tame::stringReplacer(Str::replace($fullFileName, '', $destination));
 
         // get actual storage path
         $storagePath = Str::replace(
@@ -286,7 +278,7 @@ class FileHelper{
             Str::trim($path, '/')
         );
 
-        $fullPath = "{$storagePath}/{$fileName}.{$this->extension()}";
+        $fullPath = "{$storagePath}/{$fullFileName}";
 
         if(!File::isDirectory($storagePath)){
             File::makeDirectory($storagePath);
