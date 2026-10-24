@@ -255,8 +255,6 @@ class View{
      */
     public static function addNamespace($namespace, $path)
     {
-        // Implementation depends on your view system
-        // Example: store namespaces in a static property
         self::$namespaces[$namespace] = $path;
     }
 

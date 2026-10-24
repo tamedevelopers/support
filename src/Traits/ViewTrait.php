@@ -17,7 +17,7 @@ trait ViewTrait{
     /**
      * Set shared data.
      */
-    public static function setShared($key, $value)
+    public static function setShared(string $key, mixed $value)
     {
         self::$sharedData[$key] = $value;
     }
@@ -25,7 +25,7 @@ trait ViewTrait{
     /**
      * Get shared data by key.
      */
-    public static function getShared($key)
+    public static function getShared(string $key)
     {
         return self::$sharedData[$key] ?? null;
     }
@@ -33,7 +33,7 @@ trait ViewTrait{
     /**
      * Check if shared data exists.
      */
-    public static function hasShared($key)
+    public static function hasShared(string $key)
     {
         return isset(self::$sharedData[$key]);
     }
@@ -41,7 +41,7 @@ trait ViewTrait{
     /**
      * Remove shared data by key.
      */
-    public static function removeShared($key)
+    public static function removeShared(string $key)
     {
         unset(self::$sharedData[$key]);
     }
@@ -73,7 +73,7 @@ trait ViewTrait{
     /**
      * Share data only once per request.
      */
-    public static function shareOnce($key, $value)
+    public static function shareOnce(string $key, mixed $value)
     {
         if (!isset(self::$sharedData[$key])) {
             self::$sharedData[$key] = $value;
@@ -83,7 +83,7 @@ trait ViewTrait{
     /**
      * Conditionally share data.
      */
-    public static function shareIf($condition, $key, $value)
+    public static function shareIf(bool $condition, string $key, mixed $value)
     {
         if ($condition) {
             self::$sharedData[$key] = $value;
@@ -93,7 +93,7 @@ trait ViewTrait{
     /**
      * Prevent shared data from being overwritten.
      */
-    public static function lockShared($key)
+    public static function lockShared(string $key)
     {
         self::$lockedShared[$key] = true;
     }
@@ -101,7 +101,7 @@ trait ViewTrait{
     /**
      * Allow shared data to be overwritten.
      */
-    public static function unlockShared($key)
+    public static function unlockShared(string $key)
     {
         unset(self::$lockedShared[$key]);
     }
@@ -205,9 +205,8 @@ trait ViewTrait{
 
     /**
      * Parse @if, @elseif, @else, @endif directives
-     * @return string
      */
-    protected function parseDirectiveIf($content)
+    protected function parseDirectiveIf(string $content): string
     {
         $content = preg_replace('/@if\s*\((.+?)\)/', '<?php if ($1): ?>', $content);
         $content = preg_replace('/@elseif\s*\((.+?)\)/', '<?php elseif ($1): ?>', $content);
@@ -218,9 +217,8 @@ trait ViewTrait{
 
     /**
      * Parse @for, @endfor directives
-     * @return string
      */
-    protected function parseDirectiveFor($content)
+    protected function parseDirectiveFor(string $content): string
     {
         $content = preg_replace('/@for\s*\((.+?)\)/', '<?php for ($1): ?>', $content);
         $content = str_replace('@endfor', '<?php endfor; ?>', $content);
@@ -229,9 +227,8 @@ trait ViewTrait{
 
     /**
      * Parse @foreach, @endforeach directives
-     * @return string
      */
-    protected function parseDirectiveForeach($content)
+    protected function parseDirectiveForeach(string $content): string
     {
         $content = preg_replace('/@foreach\s*\((.+?)\)/', '<?php foreach ($1): ?>', $content);
         $content = str_replace('@endforeach', '<?php endforeach; ?>', $content);
@@ -240,9 +237,8 @@ trait ViewTrait{
 
     /**
      * Parse @while, @endwhile directives
-     * @return string
      */
-    protected function parseDirectiveWhile($content)
+    protected function parseDirectiveWhile(string $content): string
     {
         $content = preg_replace('/@while\s*\((.+?)\)/', '<?php while ($1): ?>', $content);
         $content = str_replace('@endwhile', '<?php endwhile; ?>', $content);
@@ -251,18 +247,16 @@ trait ViewTrait{
 
     /**
      * Parse @yield directive
-     * @return string
      */
-    protected function parseDirectiveYield($content)
+    protected function parseDirectiveYield(string $content): string
     {
         return preg_replace('/@yield\s*\((.+?)\)/', '<?php echo $this->yieldSection($1); ?>', $content);
     }
 
     /**
      * Parse @section and @endsection directives
-     * @return string
      */
-    protected function parseDirectiveSection($content)
+    protected function parseDirectiveSection(string $content): string
     {
         // Inline form: @section('title', 'Homepage')
         $content = preg_replace(
@@ -279,9 +273,8 @@ trait ViewTrait{
 
     /**
      * Parse raw PHP blocks: @php and @endphp
-     * @return string
      */
-    protected function parseDirectivePhp($content)
+    protected function parseDirectivePhp(string $content): string
     {
         $content = str_replace('@php', '<?php', $content);
         $content = str_replace('@endphp', '?>', $content);
@@ -290,18 +283,16 @@ trait ViewTrait{
 
     /**
      * Parse escaped output: {{ $variable }}
-     * @return string
      */
-    protected function parseDirectiveEscaped($content)
+    protected function parseDirectiveEscaped(string $content): string
     {
         return preg_replace('/\{\{\s*(.+?)\s*\}\}/', '<?php echo htmlspecialchars($1, ENT_QUOTES, "UTF-8"); ?>', $content);
     }
 
     /**
      * Parse unescaped output: {!! $variable !!}
-     * @return string
      */
-    protected function parseDirectiveUnescaped($content)
+    protected function parseDirectiveUnescaped(string $content): string
     {
         return preg_replace('/\{!!\s*(.+?)\s*!!\}/', '<?php echo $1; ?>', $content);
     }
@@ -312,9 +303,8 @@ trait ViewTrait{
      *  - @include('path.to.view')
      *  - @include('path.to.view', ['key' => $value])
      * Renders the included view with its own data only (no inheritance/merge).
-     * @return string
      */
-    protected function parseDirectiveInclude($content)
+    protected function parseDirectiveInclude(string $content): string
     {
         // Generate a simple runtime call so it's easy to test and read
         return preg_replace('/@include\s*\((.*?)\)/s', '<?php echo $this->renderInclude($1); ?>', $content);
@@ -324,18 +314,16 @@ trait ViewTrait{
      * Parse @extends directive.
      * Usage: @extends('layout.path')
      * Stores the parent layout to be rendered after child sections are captured.
-     * @return string
      */
-    protected function parseDirectiveExtends($content)
+    protected function parseDirectiveExtends(string $content): string
     {
         return preg_replace('/@extends\s*\((.*?)\)/', '<?php $this->setParentView($1); ?>', $content);
     }
 
     /**
      * Remove Blade-style comments: {{-- ... --}}
-     * @return string
      */
-    protected function parseDirectiveComments($content)
+    protected function parseDirectiveComments(string $content): string
     {
         return preg_replace('/\{\{\-\-.*?\-\-\}\}/s', '', $content);
     }

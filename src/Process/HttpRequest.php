@@ -44,23 +44,22 @@ class HttpRequest implements RequestInterface
     }
 
     /** @inheritDoc */
-    public static function path($path = null): string
+    public static function path($withExtension = true): string
     {
-        $basePath = self::localDomainPath();
-    
-        // Ensure base path is at least a /
-        $basePath = '/' . trim($basePath, '/');
-
-        if (!empty($path)) {
-            $path = ltrim($path, '/');
-
-            // If we aren't at root, add a separator
-            $glue = $basePath === '/' ? '' : '/';
-
-            return $basePath . $glue . self::replace($path);
-        }
+        $url = parse_url($_SERVER['REQUEST_URI'] ?: '');
+        $request = ($url['path'] ?? '');
         
-        return $basePath;
+        if(!$withExtension){
+            $request = Str::replace('.php', '', $request);
+        }
+
+        $resolved = Str::replace(self::getBasePath(), '', $request);
+
+        // Trim leading/trailing slashes AND backslashes (correct argument order)
+        $resolved = ltrim($resolved, '\\/');
+        $resolved = rtrim($resolved, '\\/');
+        
+        return $resolved;
     }
 
     /** @inheritDoc */
@@ -95,12 +94,7 @@ class HttpRequest implements RequestInterface
     /** @inheritDoc */
     public static function full(): string
     {
-        $path = self::path();
-
-        // Ensure we don't return "//" for root
-        $formattedPath = ($path === '/') ? '' : '/' . ltrim($path, '/');
-
-        return self::http() . self::host() . $formattedPath;
+        return self::getRootPath();
     }
 
     /** @inheritDoc */
@@ -215,7 +209,7 @@ class HttpRequest implements RequestInterface
     /** @inheritDoc */
     public static function request(): string
     {
-        return Str::replace(self::path(), '', ($_SERVER['REQUEST_URI'] ?? ''));
+        return Str::replace(self::getBasePath(), '', ($_SERVER['REQUEST_URI'] ?? ''));
     }
 
     /** @inheritDoc */
@@ -267,6 +261,19 @@ class HttpRequest implements RequestInterface
     }
 
     /**
+     * Get Url Full Path
+     */
+    public static function getRootPath(): string
+    {
+        $path = self::getBasePath();
+
+        // Ensure we don't return "//" for root
+        $formattedPath = ($path === '/') ? '' : '/' . ltrim($path, '/');
+
+        return self::http() . self::host() . $formattedPath;
+    }
+
+    /**
      * Get Base Path
      * 
      * @param string|null $path
@@ -274,7 +281,29 @@ class HttpRequest implements RequestInterface
      */
     public static function getBasePath($path = null): string
     {
-        return self::path($path);
+        $basePath = self::localDomainPath();
+    
+        // Ensure base path is at least a /
+        $basePath = '/' . trim($basePath, '/');
+
+        if (!empty($path)) {
+            $path = ltrim($path, '/');
+
+            // If we aren't at root, add a separator
+            $glue = $basePath === '/' ? '' : '/';
+
+            return $basePath . $glue . self::replace($path);
+        }
+        
+        return $basePath;
+    }
+
+    /**
+     * Gets the request's scheme.
+     */
+    public static function getScheme(): string
+    {
+        return self::isSecure() ? 'https' : 'http';
     }
 
     /**

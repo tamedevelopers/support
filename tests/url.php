@@ -39,10 +39,10 @@ dump(
     ],
 
     [
-      $http->query('query'),
-      $http->input('query'),
-      $http->post('query'),
-      $http->header('host'),
+      'Query: ' . $http->query('user'),
+      'Input: ' . $http->input('user'),
+      'Post: ' . $http->post('user'),
+      'Header: ' . $http->header('host'),
       $http->headers(),
     ],
 

@@ -1505,6 +1505,7 @@ $http = TameRequest();
     $http->http(),
     $http->host(),
     $http->path(),
+    $http->getBasePath(),
 ]
 ```
 

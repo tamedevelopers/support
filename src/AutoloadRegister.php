@@ -50,7 +50,7 @@ class AutoloadRegister
     /**
      * Autoload function to load classes and files in the given folder(s).
      *
-     * @param string|array $baseDirectory Directory path(s) relative to application base.
+     * @param string|array $baseDirectory Directory path relative to application base.
      * - Do not include the root path. e.g. 'classes' or 'app/main'
      */
     public static function load(string|array $baseDirectory): void

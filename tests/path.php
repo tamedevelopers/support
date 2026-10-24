@@ -11,16 +11,20 @@ $array = [
     'output' => 'download'
 ];
 
+$helper = urlHelper();
+$request = TameRequest();
 
 dd(
-    urlHelper()->path(),
-    directory(),
-    base_path(),
-    storage_path(),
-    app_path(),
-    public_path(),
-    config_path(),
-    lang_path(),
+    'Path: ' . $helper->path(),
+    'getBasePath: ' . $request->getBasePath(),
+    'directory: ' . directory(),
+    'base_path: ' . base_path(),
+    'storage_path: ' . storage_path(),
+    'app_path' . app_path(),
+    'public_path: ' . public_path(),
+    'config_path: ' . config_path(),
+    'lang_path: ' . lang_path(),
+    'database_path: ' . database_path(),
     
     server()->toArray($Json),
     // server()->toJson($array),

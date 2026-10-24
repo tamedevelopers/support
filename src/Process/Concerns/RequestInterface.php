@@ -30,10 +30,10 @@ interface RequestInterface
 
     /**
      * Get the request path without the query string.
-     * @param string|null $path
+     * @param string|null $withExtension
      * @return string
      */
-    public static function path($path = null): string;
+    public static function path($withExtension = true): string;
 
     /**
      * Get Server Path
