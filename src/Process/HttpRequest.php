@@ -219,6 +219,17 @@ class HttpRequest implements RequestInterface
     }
 
     /**
+     * Determine what path starts with
+     * 
+     * @param string $needle
+     * @return bool
+     */
+    public static function pathStartsWith($needle)
+    {
+        return str_starts_with(self::path(false), $needle);
+    }
+
+    /**
      * Get Host from URL
      * 
      * @param string|null $url
