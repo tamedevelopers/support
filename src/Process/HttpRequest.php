@@ -46,7 +46,7 @@ class HttpRequest implements RequestInterface
     /** @inheritDoc */
     public static function path($withExtension = true): string
     {
-        $url = parse_url($_SERVER['REQUEST_URI'] ?: '');
+        $url = parse_url($_SERVER['REQUEST_URI'] ?? '');
         $request = ($url['path'] ?? '');
         
         if(!$withExtension){
