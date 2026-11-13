@@ -598,4 +598,22 @@ trait TameTrait{
         return false;
     }
 
+    /**
+     * Pick the single most descriptive mode from a flags map.
+     * Priority: bot > tv > console > wearable > tablet > mobile > embedded > desktop > unknown
+     * 
+     * @param array $flags
+     * @return string
+     */
+    private static function resolvePrimaryMode($flags)
+    {
+        foreach (['bot','tv','console','wearable','tablet','mobile','embedded','desktop','unknown'] as $key) {
+            if (!empty($flags[$key])) {
+                return $key;
+            }
+        }
+        
+        return 'unknown';
+    }
+
 }

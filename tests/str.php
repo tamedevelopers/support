@@ -71,6 +71,11 @@ dd(
         Str::encrypt('hoping for more'),
         Str::decrypt('{"k":"dadb5dd1a0558257","e":"7ZMcZv6tALEVq4k7MHpJCQ==","s":"cUFmY0ZwRlpobVJ6bGxTYUJrVDdydz09"}'),
     ],
+
+    [
+        Str::encryptString('hoping for more'),
+        Str::decryptString('eyJpdkI2NCI6ImNoOExvVUVqcXNYMGZwRGFVSVRXMVE9PSIsInZhbHVlQjY0IjoiMm5EV2dSakVtQU12MVRxYUJ0bnVzUT09IiwibWFjIjoiYjIyM2M2YTQ4ZTVhYzFjNzUyZTY3YzlkYWQ3YzRkODIzYWY0N2MwOTczZjQ0M2YzY2QxNDY2OGMyOTczZDRlOCJ9'),
+    ],
     Str::phone('+234 (90) 012-234'),
     Str::phone('+234 (90) + - 012-234', false),
 );

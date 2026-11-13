@@ -10,7 +10,9 @@ use Tamedevelopers\Support\Server;
 use Tamedevelopers\Support\TameHelper;
 use Tamedevelopers\Support\ApiResponse;
 use Tamedevelopers\Support\Capsule\File;
+use Tamedevelopers\Support\Capsule\Manager;
 use Tamedevelopers\Support\Traits\TameTrait;
+use Tamedevelopers\Support\Traits\TameCoreTrait;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Tamedevelopers\Support\Traits\NumberToWordsTraits;
 
@@ -29,6 +31,7 @@ use Tamedevelopers\Support\Traits\NumberToWordsTraits;
 class Tame extends TameHelper{
 
     use TameTrait, 
+        TameCoreTrait,
         NumberToWordsTraits;
     
     /**
@@ -54,6 +57,18 @@ class Tame extends TameHelper{
      * @var int
      */
     protected const GB = 1024 * self::MB;
+
+    /**
+     * The encryption key.
+     * @var string
+     */
+    protected static string $key = '';
+
+    /**
+     * The cipher algorithm.
+     * @var string
+     */
+    protected static string $cipher = 'AES-256-CBC';
 
     /**
      * Detected framework slug for the current process.
@@ -331,68 +346,6 @@ class Tame extends TameHelper{
         }
         
         return false;
-    }
-
-    /**
-     * Parse and retrieve details about the web server software environment.
-     *
-     * @param string|null $serverSoftware Optional server software string (defaults to $_SERVER['SERVER_SOFTWARE'])
-     * @return array{
-     *     raw: string,
-     *     name: string,
-     *     version: string|null,
-     *     os: string|null,
-     *     modules: array<string, string>
-     * } Array containing parsed server details and individual components.
-     */
-    public static function serverSoftware(?string $serverSoftware = null): array
-    {
-        $raw = $serverSoftware ?? ($_SERVER['SERVER_SOFTWARE'] ?? 'Unknown');
-
-        // Default structure
-        $result = [
-            'raw'           => $raw,
-            'name'          => 'Unknown',
-            'version'       => null,
-            'sapi'          => php_sapi_name(),
-            'os_detailed'   => PHP_OS,
-            'php_version'   => PHP_VERSION,
-            'os'            => [PHP_OS_FAMILY],
-            'modules'       => [],
-        ];
-
-        if ($raw === 'Unknown' || empty(trim($raw))) {
-            return $result;
-        }
-
-        // Split string into component segments by whitespace
-        $parts = explode(' ', trim($raw));
-
-        // First part is always primary server (e.g., "Apache/2.4.54")
-        $primaryServer = array_shift($parts);
-        $serverDetails = explode('/', $primaryServer, 2);
-
-        $result['name']    = $serverDetails[0] ?? 'Unknown';
-        $result['version'] = $serverDetails[1] ?? null;
-
-        // Parse remaining tokens (e.g., "(Win64)", "OpenSSL/1.1.1p", "PHP/8.1.10")
-        foreach ($parts as $part) {
-            $part = trim($part);
-
-            // Check for OS wrapper in parentheses like (Win64) or (Unix)
-            if (str_starts_with($part, '(') && str_ends_with($part, ')')) {
-                $result['os'][] = trim($part, '()');
-                continue;
-            }
-
-            // Check for key/value modules separated by slash (e.g., OpenSSL/1.1.1p)
-            if (str_contains($part, '/')) {
-                [$moduleName, $moduleVersion] = explode('/', $part, 2);
-                $result['modules'][$moduleName] = $moduleVersion;
-            }
-        }
-
-        return $result;
     }
 
     /**
@@ -1822,10 +1775,10 @@ class Tame extends TameHelper{
     /**
      * Decrypt string
      *
-     * @param  string|null $jsonString
+     * @param  string $jsonString
      * @return mixed
      */
-    public static function decryptStr($jsonString = null)
+    public static function decryptWithOpenSSL($jsonString)
     {
         // get encryption
         $openSSL = self::openSSLEncrypt();
@@ -1860,12 +1813,12 @@ class Tame extends TameHelper{
     /**
      * Encrypt string
      *
-     * @param string|null $string
+     * @param string $string
      * @return string
      * - Uses the Open SSL Encryption
      * - BF-CBC
      */
-    public static function encryptStr($string = null)
+    public static function encryptWithOpenSSL($string)
     {
         // get encryption
         $openSSL = self::openSSLEncrypt();
@@ -1896,106 +1849,135 @@ class Tame extends TameHelper{
     }
 
     /**
-     * Get platform svg icon set
-     * 
-     * @param string|null|'facebook'|'messenger'|'instagram'|'linkedin'|'whatsapp'|'youtube'|'spotify'|'google'|'telegram'|
-     * 'wechat'|'discord'|'snapchat'|'tiktok'|'playstore'|'appstore'|'windows'|'linux'|'android'|'mobile'|'phone'|
-     * 'unknown'|'mac'|'macintosh'|'ios'|'iphone'|'c'|'os x' $platform
-     * 
-     * @param string|null|'macos'|'os x'|'ios' $os_name
-     * @return string
+     * Encrypt the given string value using authenticated encryption.
+     *
+     * @param string $value
+     * @return string|null
      */
-    public static function platformIcon($platform = null, $os_name = null)
+    public static function encryptString($value)
     {
-        $platform = Str::lower(basename($platform));
-        $os_name = Str::lower($os_name);
-
-        // set path
-        $path = self::stringReplacer( __DIR__  . DIRECTORY_SEPARATOR);
-
-        // Create items data set
-        $dataSet = [
-            'facebook'  => "{$path}icons/platform/facebook.svg",
-            'messenger' => "{$path}icons/platform/messenger.svg",
-            'instagram' => "{$path}icons/platform/instagram.svg",
-            'linkedin'  => "{$path}icons/platform/linkedin.svg",
-            'whatsapp'  => "{$path}icons/platform/whatsapp.svg",
-            'youtube'   => "{$path}icons/platform/youtube.svg",
-            'spotify'   => "{$path}icons/platform/spotify.svg",
-            'google'    => "{$path}icons/platform/google.svg",
-            'telegram'  => "{$path}icons/platform/telegram.svg",
-            'wechat'    => "{$path}icons/platform/wechat.svg",
-            'discord'   => "{$path}icons/platform/discord.svg",
-            'snapchat'  => "{$path}icons/platform/snapchat.svg",
-            'tiktok'    => "{$path}icons/platform/tiktok.svg",
-            'playstore' => "{$path}icons/platform/playstore.svg",
-            'appstore'  => "{$path}icons/platform/appstore.svg",
-            'windows'   => "{$path}icons/platform/windows.svg",
-            'linux'     => "{$path}icons/platform/linux.svg",
-            'mac'       => "{$path}icons/platform/mac.svg",
-            'iphone'    => "{$path}icons/platform/iphone.svg",
-            'android'   => "{$path}icons/platform/android.svg",
-            'mobile'    => "{$path}icons/platform/mobile.svg",
-            'phone'     => "{$path}icons/platform/phone.svg",
-            'unknown'   => "{$path}icons/platform/unknown.svg",
-        ];
-
-        // check for extra validations
-        if (in_array($platform, ['macintosh', 'c', 'os x']) || in_array($os_name, ['macos', 'os x'])) {
-            $platform = 'mac';
-        } elseif (in_array($platform, ['iphone', 'ios']) || in_array($os_name, ['ios'])) {
-            $platform = 'iphone';
-        } elseif (in_array($platform, ['androidos']) || in_array($os_name, ['androidos'])) {
-            $platform = 'android';
-        } elseif (in_array($platform, ['play-store', 'googleplay', 'google play'])) {
-            $platform = 'playstore';
-        } elseif (in_array($platform, ['app-store', 'apple-store', 'apple store'])) {
-            $platform = 'appstore';
+        if (empty(self::$key)) {
+            self::setKey();
         }
 
-        return self::stringReplacer($dataSet[$platform] ?? $dataSet['unknown']);
+        $ivLength = openssl_cipher_iv_length(self::$cipher);
+        $iv = openssl_random_pseudo_bytes($ivLength);
+
+        // 1. Encrypt the string using AES-256-CBC
+        $encrypted = openssl_encrypt($value, self::$cipher, self::$key, OPENSSL_RAW_DATA, $iv);
+        
+        // Could not encrypt the data.
+        if ($encrypted === false) {
+            return null;
+        }
+
+        // 2. Generate HMAC for authentication (SHA256)
+        $ivB64    = base64_encode($iv);
+        $valueB64 = base64_encode($encrypted);
+        $mac      = hash_hmac('sha256', $ivB64 . $valueB64, self::$key);
+
+        // 3. Pack into a JSON payload (Laravel style)
+        $json = json_encode(compact('ivB64', 'valueB64', 'mac'));
+
+        // 4. Base64 encode the JSON
+        return base64_encode($json);
     }
 
     /**
-     * Get path to payment svg icon
-     * 
-     * @param string|null|'add-money'|'alipay'|'bank'|'cc'|'credit-card'|'discover'|'faster-pay'|'groupbuy'|'maestro'|'mastercard'|
-     * 'pay'|'payme'|'payment-card'|'payment-wallet'|'paypal'|'stripe-circle'|'tripe-sqaure'|'stripe'|'visa' $payment
-     * 
-     * @return string
+     * Decrypt the given string value.
+     *
+     * @param string $payload
+     * @return string|bool
      */
-    public static function paymentIcon($payment = null)
+    public static function decryptString($payload)
     {
-        // platform to lower
-        $payment = Str::lower(basename($payment));
+        if (empty(self::$key)) {
+            self::setKey();
+        }
 
-        // set path
-        $path = self::stringReplacer( __DIR__  . DIRECTORY_SEPARATOR);
+        // 1. Base64 decode and parse JSON
+        $json = base64_decode($payload, true);
+        if ($json === false) {
+            return $json;
+        }
 
-        // Create items data set
-        $dataSet = [
-            'add-money'     => "{$path}icons/payment/add-money.svg",
-            'alipay'        => "{$path}icons/payment/alipay.svg",
-            'bank'          => "{$path}icons/payment/bank.svg",
-            'cc'            => "{$path}icons/payment/cc.svg",
-            'credit-card'   => "{$path}icons/payment/credit-card.svg",
-            'discover'      => "{$path}icons/payment/discover.svg",
-            'faster-pay'    => "{$path}icons/payment/faster-pay.svg",
-            'groupbuy'      => "{$path}icons/payment/groupbuy.svg",
-            'maestro'       => "{$path}icons/payment/maestro.svg",
-            'mastercard'    => "{$path}icons/payment/mastercard.svg",
-            'pay'           => "{$path}icons/payment/pay.svg",
-            'payme'         => "{$path}icons/payment/payme.svg",
-            'payment-card'  => "{$path}icons/payment/payment-card.svg",
-            'payment-wallet'=> "{$path}icons/payment/payment-wallet.svg",
-            'paypal'        => "{$path}icons/payment/paypal.svg",
-            'stripe-circle' => "{$path}icons/payment/stripe-circle.svg",
-            'stripe-sqaure' => "{$path}icons/payment/stripe-sqaure.svg",
-            'stripe'        => "{$path}icons/payment/stripe.svg",
-            'visa'          => "{$path}icons/payment/cc.svg",
-        ];  
+        $data = json_decode($json, true);
+        if (!is_array($data) || !isset($data['ivB64'], $data['valueB64'], $data['mac'])) {
+            // Invalid payload structure
+            return false;
+        }
 
-        return self::stringReplacer($dataSet[$payment] ?? $dataSet['cc']);
+        // 2. Verify HMAC to ensure data hasn't been tampered with
+        $expectedMac = hash_hmac('sha256', $data['ivB64'] . $data['valueB64'], self::$key);
+        
+        if (!hash_equals($expectedMac, $data['mac'])) {
+            // The MAC is invalid (data tampering detected).
+            return false;
+        }
+
+        // 3. Decrypt
+        $iv = base64_decode($data['ivB64']);
+        $encrypted = base64_decode($data['valueB64']);
+        $decrypted = openssl_decrypt($encrypted, self::$cipher, self::$key, OPENSSL_RAW_DATA, $iv);
+
+        if ($decrypted === false) {
+            // Could not decrypt the data.
+            return false;
+        }
+
+        return $decrypted;
+    }
+
+    /**
+     * Set the encryption key.
+     * If not set, it will attempt to fall back to the APP_KEY environment variable.
+     *
+     * @param string|null $key
+     * @return void
+     */
+    public static function setKey(?string $key = null): void
+    {
+        // Already resolved in memory
+        if (!empty(self::$key)) {
+            return;
+        }
+
+        // Explicitly passed or from .env
+        $key = $key ?? env('APP_KEY', null);
+
+        if (!empty($key)) {
+            self::applyKey($key);
+            return;
+        }
+
+        // Check if we have a cached key file
+        $cachePath = base_path('storage/cache/tame_crypt_key.lock');
+        
+        if (File::exists($cachePath)) {
+            $cachedKey = File::get($cachePath);
+            if (!empty($cachedKey)) {
+                self::applyKey($cachedKey);
+                return;
+            }
+        }
+
+        $newKey = Manager::generate();
+
+        File::put($cachePath, $newKey, LOCK_EX);
+
+        self::applyKey($newKey);
+    }
+
+    /**
+     * Normalize and assign the key.
+     */
+    private static function applyKey(string $key): void
+    {
+        if (str_starts_with($key, 'base64:')) {
+            $key = base64_decode(substr($key, 7));
+        }
+        
+        self::$key = $key;
     }
     
 }

@@ -471,6 +471,48 @@ class Str
     }
 
     /**
+     * Parse and retrieve details about the web server software environment.
+     *
+     * @param string|null $server Optional server software string (defaults to $_SERVER['SERVER_SOFTWARE'])
+     * @return array{
+     *     raw: string,
+     *     name: string,
+     *     version: string|null,
+     *     os: string|null,
+     *     modules: array<string, string>
+     * } Array containing parsed server details and individual components.
+     */
+    public static function serverSoftware(?string $server = null)
+    {
+        return Tame::serverSoftware($server);
+    }
+
+    /**
+     * Detect the visitor's device mode from the User-Agent header.
+     *
+     * Mirrors the shape of serverSoftware() so both methods return
+     * a structured array when no specific mode is requested.
+     *
+     * @param  'mobile'|'phone'|'tablet'|'desktop'|'bot'|'tv'|'console'|'wearable'|'embedded'|'unknown'|null $mode
+     * @param  string|null $ua    Optional custom User-Agent (defaults to HTTP_USER_AGENT).
+     * @return bool|array{
+     *     raw: string,
+     *     name: string,
+     *     mode: string,
+     *     mode_flags: array<string,bool>,
+     *     platform: string,
+     *     is_mobile: bool,
+     *     is_tablet: bool,
+     *     is_desktop: bool,
+     *     is_bot: bool,
+     * }
+     */
+    public static function osMode(?string $mode = null, ?string $ua = null)
+    {
+        return Tame::osMode($mode, $ua);
+    }
+
+    /**
      * Clean phone string
      *
      * @param string|null $phone
@@ -483,22 +525,24 @@ class Str
     }
 
     /**
+     * Parse a human-formatted amount string into a numeric value.
+     *
+     * @param mixed $value The raw value to parse (expected to be a string).
+     * @return float The parsed amount, or 0.0 when no numeric value is found.
+     */
+    public static function amount($value) 
+    {
+        return Tame::amount($value);
+    }
+
+    /**
      * Masks characters in a string.
      *
-     * @param string|null $str 
-     * - The string to be masked.
-     * 
-     * @param int $length 
-     * - The number of visible characters. Default is 4.
-     * 
-     * @param string $position 
-     * - The position to apply the mask: 'left', 'middle' or 'center', 'right'. Default is 'right'.
-     * 
-     * @param string $mask 
-     * - The character used for masking. Default is '*'.
-     * 
-     * @return string 
-     * - The masked string.
+     * @param string|null $str  The string to be masked.
+     * @param int $length       The number of visible characters. Default is 4.
+     * @param string $position  The position to apply the mask: 'left', 'middle' or 'center', 'right'. Default is 'right'.
+     * @param string $mask      The character used for masking. Default is '*'.
+     * @return string           The masked string.
      */
     public static function mask($str = null, $length = 4, $position = 'right', $mask = '*')
     {
@@ -579,25 +623,47 @@ class Str
     }
     
     /**
-     * Encrypt string
+     * Encrypt string with Open SSL
      *
-     * @param string|null $string
+     * @param string $string
      * @return string
      */
-    public static function encrypt($string = null)
+    public static function encrypt($string)
     {
-        return Tame::encryptStr($string);
+        return Tame::encryptWithOpenSSL($string);
     }
 
     /**
-     * Derypt string
+     * Derypt string with Open SSL
      *
-     * @param string|null $jsonString
+     * @param string $jsonString
      * @return mixed
      */
-    public static function decrypt($jsonString = null)
+    public static function decrypt($jsonString)
     {
-        return Tame::decryptStr($jsonString);
+        return Tame::decryptWithOpenSSL($jsonString);
+    }
+
+    /**
+     * Encrypt the given string value using authenticated encryption.
+     *
+     * @param string $value
+     * @return string|null
+     */
+    public static function encryptString($value)
+    {
+        return Tame::encryptString($value);
+    }
+
+    /**
+     * Decrypt the given string value.
+     *
+     * @param string $value
+     * @return string|bool
+     */
+    public static function decryptString($value)
+    {
+        return Tame::decryptString($value);
     }
 
     /**
