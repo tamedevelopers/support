@@ -273,15 +273,20 @@ class HttpRequest implements RequestInterface
 
     /**
      * Get Url Full Path
+     * 
+     * @param string|null $path
+     * @return string
      */
-    public static function getRootPath(): string
+    public static function getRootPath($path = null): string
     {
-        $path = self::getBasePath();
+        $basePath = self::getBasePath();
 
         // Ensure we don't return "//" for root
-        $formattedPath = ($path === '/') ? '' : '/' . ltrim($path, '/');
+        $formattedPath = ($basePath === '/') ? '' : '/' . ltrim($basePath, '/');
 
-        return self::http() . self::host() . $formattedPath;
+        $fullUrl = self::http() . self::host() . $formattedPath;
+
+        return "{$fullUrl}{$path}";
     }
 
     /**
@@ -307,6 +312,24 @@ class HttpRequest implements RequestInterface
         }
         
         return $basePath;
+    }
+
+    /**
+     * Get Host Path
+     * 
+     * @param string|null $path
+     * @param bool $allowFullPath
+     * @return string
+     */
+    public static function getHostPath($path = null, $allowFullPath = true): string
+    {
+        $basePath = self::getBasePath('/');
+        if(!$allowFullPath){
+            $basePath = Str::replace($basePath, '/', $basePath);
+        }
+        $path = ltrim((string) $path, '/') . '/';
+
+        return "{$basePath}{$path}";
     }
 
     /**

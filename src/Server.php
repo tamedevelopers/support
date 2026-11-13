@@ -288,6 +288,12 @@ class Server{
     {
         $encodedValue = json_encode(self::toArray($value));
 
+        $data = json_decode($encodedValue, false);
+
+        if(!is_object($data)){
+            return (object) $data;
+        }
+
         return json_decode($encodedValue, false);
     }
     
