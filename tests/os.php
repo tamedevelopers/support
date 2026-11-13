@@ -10,4 +10,4 @@ dd(
     Str::osMode(),
     Str::osMode('desktop'),
     Str::amount('$ 275,900.43'),
-);
+); 
