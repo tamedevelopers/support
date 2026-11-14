@@ -203,7 +203,7 @@ class TOTP
         return [
             'qr'        => $qr,
             'secret'    => $userSecret,
-            'encrypt'   => Str::encrypt($userSecret),
+            'encrypt'   => Str::encryptString($userSecret),
             'otpUri'    => $otpUri,
             'name'      => $qr->getPath('name'),
             'path'      => $qr->getPath('path'),

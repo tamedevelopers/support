@@ -33,7 +33,7 @@ class QRCode
     protected int $eccLevel = EccLevel::H;
 
     /** @var int Pixel scaling multiplier */
-    protected int $scale = 10;
+    protected int $scale = 20;
 
     /** @var mixed Rendered data */
     protected mixed $data = null;
@@ -55,6 +55,9 @@ class QRCode
 
     /** @var string|null Custon Icon Path */
     protected ?string $iconPath = null;
+
+    /** @var bool Check if save method been called */
+    protected ?bool $saveHasBeenCalled = false;
 
     /** @var array{
      *  facebook: string,
@@ -138,6 +141,18 @@ class QRCode
     }
 
     /**
+     * Set Scale Size
+     * 
+     * @param int $scale
+     * @return self
+     */
+    public function scale(int $scale = 20): self
+    {
+        $this->scale = $scale;
+        return $this;
+    }
+
+    /**
      * Configure image output options fluently.
      * 
      * @param int $scale
@@ -145,7 +160,7 @@ class QRCode
      * @param int $eccLevel
      * @return self
      */
-    public function options(int $scale = 10, int $version = Version::AUTO, int $eccLevel = EccLevel::H)
+    public function options(int $scale = 20, int $version = Version::AUTO, int $eccLevel = EccLevel::H)
     {
         $this->scale = $scale;
         $this->version = $version;
@@ -612,6 +627,7 @@ class QRCode
             }
 
             $this->data = $this->generate();
+            $this->saveHasBeenCalled = true;
 
             if (empty($this->data) || empty($this->path)) {
                 return false;
@@ -620,6 +636,48 @@ class QRCode
             return is_int(File::put($this->path, $this->data));
         } catch (\Throwable $e) {
             Manager::silentError($e);
+        }
+
+        return false;
+    }
+
+    /**
+     * Render the QR code as PNG and save to specified or stored path.
+     */
+    public function saveAsPng(): bool
+    {
+        if(!$this->saveHasBeenCalled){
+            $this->save();
+        }
+
+        $original   = $this->path;
+        $extension  = File::extension($this->path);
+        $this->path = Str::replace($extension, 'png', $this->path);
+
+        if(File::put($this->path, $this->toPng())){
+            File::delete($original);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Render the QR code as JPG and save to specified or stored path.
+     */
+    public function saveAsJpg(): bool
+    {
+        if(!$this->saveHasBeenCalled){
+            $this->save();
+        }
+
+        $original   = $this->path;
+        $extension  = File::extension($this->path);
+        $this->path = Str::replace($extension, 'jpg', $this->path);
+
+        if(File::put($this->path, $this->toJpg())){
+            File::delete($original);
+            return true;
         }
 
         return false;
