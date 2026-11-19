@@ -17,6 +17,14 @@ class HttpRequest implements RequestInterface
 {
     use ServerTrait;
 
+    /**
+     * Cached session configuration.
+     *
+     * @var array|null
+     */
+    private static ?array $sessionConfigCache = null;
+
+
     /** @inheritDoc */
     public static function method(): string
     {
@@ -222,11 +230,24 @@ class HttpRequest implements RequestInterface
      * Determine what path starts with
      * 
      * @param string $needle
+     * @param string|null $path
      * @return bool
      */
-    public static function pathStartsWith($needle)
+    public static function pathStartsWith($needle, $path = null)
     {
-        return str_starts_with(self::path(false), $needle);
+        return str_starts_with($path ?: self::path(false), $needle);
+    }
+
+    /**
+     * Determine what path ends with
+     * 
+     * @param string $needle
+     * @param string|null $path
+     * @return bool
+     */
+    public static function pathEndsWith($needle, $path = null)
+    {
+        return str_ends_with($path ?: self::path(false), $needle);
     }
 
     /**
@@ -246,7 +267,7 @@ class HttpRequest implements RequestInterface
      * @param bool $withProtocol
      * @return string
      */
-    public static function getDomain($withProtocol = true): string
+    public static function getDomain($withProtocol = true)
     {
         if($withProtocol){
             return self::full();
@@ -257,8 +278,11 @@ class HttpRequest implements RequestInterface
 
     /**
      * Get Cookie URL URI (without protocol).
+     * 
+     * @param bool $withSubdomain
+     * @return string|null
      */
-    public static function getCookieDomain(): string|null
+    public static function getCookieDomain($withSubdomain = false)
     {
         $host = self::host();
 
@@ -267,8 +291,14 @@ class HttpRequest implements RequestInterface
             return null;
         }
 
+        $domain = ltrim($host, '.');
+
         // Real domain: leading dot allows subdomains.
-        return '.' . ltrim($host, '.');
+        if($withSubdomain){
+            return ".{$domain}";
+        }
+        
+        return $domain;
     }
 
     /**
@@ -327,9 +357,16 @@ class HttpRequest implements RequestInterface
         if(!$allowFullPath){
             $basePath = Str::replace($basePath, '/', $basePath);
         }
-        $path = ltrim((string) $path, '/') . '/';
 
-        return "{$basePath}{$path}";
+        $endsWith   = self::pathEndsWith('/', $path);
+        $path       = ltrim((string) $path, '/');
+        $fullPath   = "{$basePath}/{$path}";
+
+        if($endsWith){
+            return rtrim((string) $fullPath, '/') . '/';
+        }
+
+        return $fullPath;
     }
 
     /**
@@ -343,24 +380,18 @@ class HttpRequest implements RequestInterface
     /**
      * Build the session config array for the current request.
      *
-     * All customisation goes through the `$overrides` array. Recognised keys:
-     *
-     *   - 'secure'          bool         Force the `secure` flag.
-     *                                    Default: auto-detect (HTTPS → true, HTTP → false).
-     *   - 'allow_subdomain' bool         If true, cookie domain keeps its leading dot
-     *                                    so subdomains inherit the cookie.
-     *                                    If false, the dot is stripped (exact-host only).
-     *                                    Default: true.
-     *   - 'domain'          string|null  Override the resolved cookie domain.
-     *   - 'path'            string       Override the resolved base path.
-     *   - 'same_site'       string       'lax' | 'strict' | 'none'.
-     *                                    Default: 'none' on HTTPS, 'lax' on HTTP.
-     *
-     * Any other key you pass is merged into the returned array untouched — useful
-     * for 'lifetime', 'http_only', etc.
-     *
-     * @param  array  $overrides
+     * @param  array{
+     *     cookie: string|null,
+     *     lifetime: int,
+     *     secure: bool,
+     *     allow_subdomain: bool,
+     *     domain:    string|null,
+     *     same_site: 'lax' | 'strict' | 'none',
+     * }  $overrides
+     * 
      * @return array{
+     *     cookie: string|null,
+     *     lifetime: int,
      *     domain:    string|null,
      *     path:      string,
      *     secure:    bool,
@@ -368,6 +399,74 @@ class HttpRequest implements RequestInterface
      * }
      */
     public static function getSessionConfig($overrides = [])
+    {   
+        // Load from cache if it exists
+        if (!empty(self::$sessionConfigCache)) {
+            return self::$sessionConfigCache;
+        }
+
+        // Build, cache, and return
+        self::$sessionConfigCache = self::buildSessionConfig($overrides);
+
+        return self::$sessionConfigCache;
+    }
+
+    /**
+     * Apply the session config directly to Laravel's config repository.
+     *
+     * @param  array{
+     *     cookie: string|null,
+     *     lifetime: int,
+     *     secure: bool,
+     *     allow_subdomain: bool,
+     *     domain:    string|null,
+     *     same_site: 'lax' | 'strict' | 'none',
+     * }  $overrides
+     * 
+     * @return array{
+     *     cookie: string|null,
+     *     lifetime: int,
+     *     domain:    string|null,
+     *     path:      string,
+     *     secure:    bool,
+     *     same_site: string
+     * }
+     */
+    public static function applySessionConfig(array $overrides = [])
+    {
+        $session = self::getSessionConfig($overrides);
+
+        config([
+            'session.cookie'    => $session['cookie'],
+            'session.lifetime'  => $session['lifetime'],
+            'session.domain'    => $session['domain'],
+            'session.path'      => $session['path'],
+            'session.secure'    => $session['secure'],
+            'session.same_site' => $session['same_site'],
+        ]);
+
+        return $session;
+    }
+
+    /**
+     * Clear the cached session configuration.
+     * Useful for testing or multi-tenant applications where config changes mid-request.
+     *
+     * @return void
+     */
+    public static function clearSessionConfigCache(): void
+    {
+        self::$sessionConfigCache = null;
+    }
+
+    /**
+     * The actual logic to build the session config.
+     * Extracted to keep the public getter clean and focused on caching.
+     *
+     * @param array $overrides
+     * @return array
+     */
+    private static function buildSessionConfig(array $overrides = []): array
     {
         // Secure flag
         $secure = array_key_exists('secure', $overrides)
@@ -377,15 +476,11 @@ class HttpRequest implements RequestInterface
         // Domain
         $allowSubdomain = array_key_exists('allow_subdomain', $overrides)
             ? (bool) $overrides['allow_subdomain']
-            : true;
+            : false;
 
         $domain = array_key_exists('domain', $overrides)
             ? $overrides['domain']
-            : self::getCookieDomain();
-
-        if ($domain !== null && ! $allowSubdomain) {
-            $domain = ltrim($domain, '.');
-        }
+            : self::getCookieDomain($allowSubdomain);
 
         // SameSite
         $sameSite = array_key_exists('same_site', $overrides)
@@ -393,14 +488,18 @@ class HttpRequest implements RequestInterface
             : ($secure ? 'none' : 'lax');
 
         // Auto-fix: SameSite=None requires Secure=true
-        if ($sameSite === 'none' && ! $secure) {
+        if ($sameSite === 'none' && !$secure) {
             $sameSite = 'lax';
         }
 
         // Path
         $path = array_key_exists('path', $overrides)
             ? $overrides['path']
-            : self::getBasePath();
+            : '/';
+
+        // cookie and lifetime
+        $cookieName = $overrides['cookie'] ?? null;
+        $lifetime   = $overrides['lifetime'] ?? 120;
 
         // Assemble, then merge remaining overrides
         return array_merge([
@@ -408,31 +507,9 @@ class HttpRequest implements RequestInterface
             'path'      => $path,
             'secure'    => $secure,
             'same_site' => $sameSite,
+            'cookie'    => $cookieName,
+            'lifetime'  => $lifetime,
         ], $overrides);
-    }
-
-    /**
-     * Apply the session config directly to Laravel's config repository.
-     *
-     * Example:
-     *   HttpRequest::applySessionConfig();                       // defaults
-     *   HttpRequest::applySessionConfig(['lifetime' => 120]);    // with override
-     *
-     * @param  array  $overrides
-     * @return array  The config array that was applied
-     */
-    public static function applySessionConfig(array $overrides = [])
-    {
-        $session = self::getSessionConfig($overrides);
-
-        config([
-            'session.domain'    => $session['domain'],
-            'session.path'      => $session['path'],
-            'session.secure'    => $session['secure'],
-            'session.same_site' => $session['same_site'],
-        ]);
-
-        return $session;
     }
 
     /**

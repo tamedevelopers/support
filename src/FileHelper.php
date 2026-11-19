@@ -271,12 +271,8 @@ class FileHelper{
 
         $path = Tame::stringReplacer(Str::replace($fullFileName, '', $destination));
 
-        // get actual storage path
-        $storagePath = Str::replace(
-            $this->name(), 
-            '', 
-            Str::trim($path, '/')
-        );
+        // Get actual storage path
+        $storagePath = rtrim(Str::replace($this->name(), '', $path), '/');
 
         $fullPath = "{$storagePath}/{$fullFileName}";
 
@@ -306,11 +302,13 @@ class FileHelper{
      */
     public function cleanup(): bool
     {
-        $tmpPath = $this->getTmp();
-        if ($tmpPath && file_exists($tmpPath)) {
-            return unlink($tmpPath);
+        $tmpPath = $this->tmp();
+
+        if (empty($tmpPath) || !is_uploaded_file($tmpPath)) {
+            return false;
         }
-        return false;
+
+        return @unlink($tmpPath);
     }
 
     /**
@@ -339,7 +337,7 @@ class FileHelper{
      */
     private function getTmp(): string|null
     {
-        return $this->tmp() ?: 'null';
+        return $this->tmp() ?: null;
     }
 
 }

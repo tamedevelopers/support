@@ -46,16 +46,18 @@ class Laravel{
     {
         self::initBladeFacades()::directive('css', function ($expression) {
             return "<?php
-                // Put Blade expression into an array so PHP parses arguments correctly
-                \$arguments = [{$expression}];
+                try {
+                    // Put Blade expression into an array so PHP parses arguments correctly
+                    \$arguments = [{$expression}];
 
-                // Normalize args and ensure two elements
-                list(\$path, \$class) = array_pad(\$arguments, 2, '');
-                
-                \$path = str_replace(['\"', \"'\"], '', \$path);
-                \$class = str_replace(['\"', \"'\"], '', \$class);
-                \$assets = tasset(\$path, true, true);
-                echo \"<link rel='stylesheet' type='text/css' href='\$assets'>\";
+                    // Normalize args and ensure two elements
+                    list(\$path, \$class) = array_pad(\$arguments, 2, '');
+                    
+                    \$path = str_replace(['\"', \"'\"], '', \$path);
+                    \$class = str_replace(['\"', \"'\"], '', \$class);
+                    \$assets = tasset(\$path, true, true);
+                    echo \"<link rel='stylesheet' type='text/css' href='\$assets'>\";
+                } catch (\\Throwable \$e) {}
             ?>";
         });
     }
@@ -70,16 +72,18 @@ class Laravel{
     {
         self::initBladeFacades()::directive('js', function ($expression) {
             return "<?php
-                // Put Blade expression into an array so PHP parses arguments correctly
-                \$arguments = [{$expression}];
+                try {
+                    // Put Blade expression into an array so PHP parses arguments correctly
+                    \$arguments = [{$expression}];
 
-                // Normalize args and ensure two elements
-                list(\$path, \$class) = array_pad(\$arguments, 2, '');
+                    // Normalize args and ensure two elements
+                    list(\$path, \$class) = array_pad(\$arguments, 2, '');
 
-                \$path = str_replace(['\"', \"'\"], '', \$path);
-                \$class = str_replace(['\"', \"'\"], '', \$class);
-                \$assets = tasset(\$path, true, true);
-                echo \"<script src='\$assets'></script>\";
+                    \$path = str_replace(['\"', \"'\"], '', \$path);
+                    \$class = str_replace(['\"', \"'\"], '', \$class);
+                    \$assets = tasset(\$path, true, true);
+                    echo \"<script src='\$assets'></script>\";
+                } catch (\\Throwable \$e) {}
             ?>";
         });
     }
@@ -104,22 +108,25 @@ class Laravel{
                 \$path = trim(str_replace(['\"', \"'\"], '', (string)\$path));
                 \$class = trim(str_replace(['\"', \"'\"], '', (string)\$class));
 
-                \$fullPath = \\Tamedevelopers\\Support\\Tame::stringReplacer(
-                    str_replace(rtrim(domain('')), '', tasset(\$path, false, false))
-                );
+                try {
 
-                libxml_use_internal_errors(true);
-                if (\\Tamedevelopers\\Support\\Tame::exists(\$fullPath)) {
-                    \$svg = new \\DOMDocument();
-                    \$svg->load(\$fullPath);
+                    \$fullPath = \\Tamedevelopers\\Support\\Tame::stringReplacer(
+                        str_replace(rtrim(domain('')), '', tasset(\$path, false, false))
+                    );
 
-                    if (!empty(\$class)) {
-                        \$svg->documentElement->setAttribute('class', \$class);
+                    libxml_use_internal_errors(true);
+                    if (\\Tamedevelopers\\Support\\Tame::exists(\$fullPath)) {
+                        \$svg = new \\DOMDocument();
+                        \$svg->load(\$fullPath);
+
+                        if (!empty(\$class)) {
+                            \$svg->documentElement->setAttribute('class', \$class);
+                        }
+
+                        echo \$svg->saveXML(\$svg->documentElement);
                     }
-
-                    echo \$svg->saveXML(\$svg->documentElement);
-                }
-                libxml_clear_errors();
+                    libxml_clear_errors();
+                } catch (\\Throwable \$e) {}
             ?>";
         });
     }
@@ -135,15 +142,17 @@ class Laravel{
     {
         self::initBladeFacades()::directive('asset', function ($expression) {
             return "<?php
-                \$params = explode(',', {$expression});
-                \$params = array_map(fn(\$p) => trim(\$p, '\"\\' '), \$params);
+                try {
+                    \$params = explode(',', {$expression});
+                    \$params = array_map(fn(\$p) => trim(\$p, '\"\\' '), \$params);
 
-                // Extract parameters with defaults
-                \$asset     = \$params[0] ?? '';
-                \$cache     = isset(\$params[1]) ? filter_var(\$params[1], FILTER_VALIDATE_BOOLEAN) : true;
-                \$path_type = isset(\$params[2]) ? filter_var(\$params[2], FILTER_VALIDATE_BOOLEAN) : true;
+                    // Extract parameters with defaults
+                    \$asset     = \$params[0] ?? '';
+                    \$cache     = isset(\$params[1]) ? filter_var(\$params[1], FILTER_VALIDATE_BOOLEAN) : true;
+                    \$path_type = isset(\$params[2]) ? filter_var(\$params[2], FILTER_VALIDATE_BOOLEAN) : true;
 
-                echo tasset(\$asset, \$cache, \$path_type);
+                    echo tasset(\$asset, \$cache, \$path_type);
+                } catch (\\Throwable \$e) {}
             ?>";
         });
     }
