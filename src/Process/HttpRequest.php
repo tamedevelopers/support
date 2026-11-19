@@ -353,16 +353,26 @@ class HttpRequest implements RequestInterface
      */
     public static function getHostPath($path = null, $allowFullPath = true): string
     {
-        $basePath = self::getBasePath('/');
+        $basePath = self::getBasePath();
         if(!$allowFullPath){
             $basePath = Str::replace($basePath, '/', $basePath);
         }
 
         $endsWith   = self::pathEndsWith('/', $path);
         $path       = ltrim((string) $path, '/');
-        $fullPath   = "{$basePath}/{$path}";
+        $basePath   = ltrim($basePath, '/');
+        
+        // Only prepend '/' if there's actually a base path segment
+        if ($basePath !== '' && !self::pathStartsWith('/', $basePath)) {
+            $basePath = "/{$basePath}";
+        }
 
-        if($endsWith){
+        $fullPath = $basePath === '' ? "/{$path}" : "{$basePath}/{$path}";
+
+        // Collapse any accidental leading double slashes
+        $fullPath = preg_replace('#^/+#', '/', $fullPath);
+
+        if ($endsWith) {
             return rtrim((string) $fullPath, '/') . '/';
         }
 
