@@ -528,11 +528,12 @@ class Str
      * Parse a human-formatted amount string into a numeric value.
      *
      * @param mixed $value The raw value to parse (expected to be a string).
-     * @return float The parsed amount, or 0.0 when no numeric value is found.
+     * @param null|int|float $default
+     * @return null|int|float
      */
-    public static function amount($value) 
+    public static function amount($value, $default = null) 
     {
-        return Tame::amount($value);
+        return Tame::amount($value, $default);
     }
 
     /**

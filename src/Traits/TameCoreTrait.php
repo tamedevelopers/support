@@ -328,28 +328,29 @@ trait TameCoreTrait{
      * Returns 0 for non-string input, empty strings, or strings with no digits.
      *
      * @param mixed $value The raw value to parse (expected to be a string).
-     * @return float The parsed amount, or 0.0 when no numeric value is found.
+     * @param null|int|float $default
+     * @return null|int|float
      */
-    public static function amount($value) 
+    public static function amount($value, $default = null) 
     {
         // accept only text
         if (!is_string($value)) {
-            return 0.0;
+            return $default;
         }
 
         $s = Str::trim($value);
         if ($s === '') {
-            return 0.0;
+            return $default;
         }
 
         // sign
         $negative = (bool) preg_match('/^[-\x{2212}]/u', $s);
         $s = preg_replace('/^[-\x{2212}+]/u', '', $s);
 
-        // keep only digits, '.' and ','; drop currency symbols, letters, spaces, NBSP…
+        // Keep only digits, '.' and ','s
         $s = preg_replace('/[^\d.,]/', '', $s);
         if ($s === '') {
-            return 0.0;
+            return $default;
         }
 
         // last '.' or ',' is the decimal marker; earlier ones are group separators
@@ -363,13 +364,19 @@ trait TameCoreTrait{
         } else {
             $intPart = preg_replace('/[.,]/', '', substr($s, 0, $decPos));
             $decPart = preg_replace('/[.,]/', '', substr($s, $decPos + 1));
-            // "1.234.567" / "32.999" / "7,500" → the 3-digit tail was a group, not decimals
-            if (strlen($decPart) === 3 && strlen($intPart) > 0) {
+
+            // or if the separator is a comma (e.g., "1,500" or "1.234.567").
+            // If it's just "32.999", we keep the decimal.
+            $hasOtherSeparators = substr_count($s, '.') > 1 || substr_count($s, ',') > 1;
+            $isCommaSeparator   = $s[$decPos] === ',';
+
+            if (strlen($decPart) === 3 && strlen($intPart) > 0 && ($hasOtherSeparators || $isCommaSeparator)) {
                 $intPart .= $decPart;
                 $decPart = '';
             }
         }
 
+        // Remove leading zeros safely
         $intPart = preg_replace('/^0+(?=\d)/', '', $intPart);
         if ($intPart === '') {
             $intPart = '0';

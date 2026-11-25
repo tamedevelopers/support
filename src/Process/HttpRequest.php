@@ -7,6 +7,7 @@ namespace Tamedevelopers\Support\Process;
 use Tamedevelopers\Support\Env;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Tame;
+use Tamedevelopers\Support\Cookie;
 use Tamedevelopers\Support\Traits\ServerTrait;
 use Tamedevelopers\Support\Process\Concerns\RequestInterface;
 
@@ -18,11 +19,11 @@ class HttpRequest implements RequestInterface
     use ServerTrait;
 
     /**
-     * Cached session configuration.
+     * Cached session configuration, keyed by a hash of the overrides.
      *
-     * @var array|null
+     * @var array<string, array>
      */
-    private static ?array $sessionConfigCache = null;
+    private static array $sessionConfigCache = [];
 
 
     /** @inheritDoc */
@@ -78,9 +79,22 @@ class HttpRequest implements RequestInterface
             return 'https://';
         }
 
-        // Check for Proxy-forwarded SSL (Common in Nginx/Cloudflare/Heroku)
-        $forwarded = self::header('X-Forwarded-Proto');
-        if ($forwarded === 'https') {
+        // Proxy header can be a list ("https,http"): the first entry is the client-facing scheme
+        $forwarded = self::header('X-Forwarded-Proto', '');
+        if ($forwarded !== '') {
+            $first = strtolower(trim(explode(',', $forwarded)[0]));
+            if ($first === 'https' || $forwarded === 'https') {
+                return 'https://';
+            }
+        }
+
+        if (Str::lower(self::header('X-Forwarded-Ssl', '')) === 'on') {
+            return 'https://';
+        }
+
+        // Cloudflare "Flexible" style: {"scheme":"https"}
+        $cf = (string) self::header('CF-Visitor', '');
+        if ($cf !== '' && str_contains($cf, '"scheme":"https"')) {
             return 'https://';
         }
         
@@ -262,6 +276,27 @@ class HttpRequest implements RequestInterface
     }
 
     /**
+     * Host name without the port. Handles IPv6 literals like [::1]:8000.
+     */
+    public static function getHostName(): string
+    {
+        $host = trim(self::host());
+
+        // [::1]:8000  ->  ::1
+        if (str_starts_with($host, '[')) {
+            $end = strpos($host, ']');
+            return $end !== false ? substr($host, 1, $end - 1) : $host;
+        }
+
+        // example.test:8000 -> example.test  (only strip if exactly one colon)
+        if (substr_count($host, ':') === 1) {
+            $host = explode(':', $host, 2)[0];
+        }
+
+        return strtolower($host);
+    }
+
+    /**
      * Get Domain URL URI.
      * 
      * @param bool $withProtocol
@@ -286,19 +321,23 @@ class HttpRequest implements RequestInterface
     {
         $host = self::host();
 
-        // Localhost and IPs must not set a Domain attribute.
-        if (self::isIpAccessedViaLocalHost() || filter_var($host, FILTER_VALIDATE_IP)) {
+        // localhost, IPs and dotless hosts must not carry a Domain attribute
+        if (in_array($host, ['localhost']) || filter_var($host, FILTER_VALIDATE_IP)) {
             return null;
         }
 
-        $domain = ltrim($host, '.');
+        // Localhost and IPs must not set a Domain attribute.
+        if (self::isIpAccessedViaLocalHost()) {
+            return null;
+        }
 
-        // Real domain: leading dot allows subdomains.
-        if($withSubdomain){
-            return ".{$domain}";
+        // Host-only cookie unless subdomain sharing is explicitly wanted
+        if (!$withSubdomain) {
+            return null;
         }
         
-        return $domain;
+        // Real domain: leading dot allows subdomains.
+        return '.' . ltrim($host, '.');
     }
 
     /**
@@ -388,6 +427,40 @@ class HttpRequest implements RequestInterface
     }
 
     /**
+     * Clear Browser Data
+     *
+     * @param mixed $name
+     * @param mixed $lifetime
+     * @return void
+     */
+    public static function resetBrowserState($name = null, $lifetime = 120): void
+    {
+        if(headers_sent() || empty($name)){
+            return;
+        }
+
+        $class = new Cookie();
+
+        if($class->has($name)){
+            return;
+        }
+        
+        // Expire all cookies sent in the current request
+        $cookies = self::cookies();
+        if (!empty($cookies)) {
+            foreach ($cookies as $cookieName => $value) {
+                $class->forget($cookieName);
+            }
+        }
+
+        try {
+            $class->set($name, 1, $lifetime);
+        } catch (\Throwable $th) {
+            //
+        }
+    }
+
+    /**
      * Build the session config array for the current request.
      *
      * @param  array{
@@ -409,16 +482,18 @@ class HttpRequest implements RequestInterface
      * }
      */
     public static function getSessionConfig($overrides = [])
-    {   
+    {
+        $key = md5(serialize($overrides));
+
         // Load from cache if it exists
-        if (!empty(self::$sessionConfigCache)) {
-            return self::$sessionConfigCache;
+        if (isset(self::$sessionConfigCache[$key])) {
+            return self::$sessionConfigCache[$key];
         }
 
-        // Build, cache, and return
-        self::$sessionConfigCache = self::buildSessionConfig($overrides);
+        $config = self::buildSessionConfig($overrides);
+        self::$sessionConfigCache[$key] = $config;
 
-        return self::$sessionConfigCache;
+        return $config;
     }
 
     /**
@@ -446,14 +521,18 @@ class HttpRequest implements RequestInterface
     {
         $session = self::getSessionConfig($overrides);
 
-        config([
-            'session.cookie'    => $session['cookie'],
-            'session.lifetime'  => $session['lifetime'],
-            'session.domain'    => $session['domain'],
-            'session.path'      => $session['path'],
-            'session.secure'    => $session['secure'],
-            'session.same_site' => $session['same_site'],
-        ]);
+        try {
+            config([
+                'session.cookie'    => $session['cookie'],
+                'session.lifetime'  => $session['lifetime'],
+                'session.domain'    => $session['domain'],
+                'session.path'      => $session['path'],
+                'session.secure'    => $session['secure'],
+                'session.same_site' => $session['same_site'],
+            ]);
+        } catch (\Throwable $th) {
+            // 
+        }
 
         return $session;
     }
@@ -466,7 +545,7 @@ class HttpRequest implements RequestInterface
      */
     public static function clearSessionConfigCache(): void
     {
-        self::$sessionConfigCache = null;
+        self::$sessionConfigCache = [];
     }
 
     /**
@@ -492,34 +571,28 @@ class HttpRequest implements RequestInterface
             ? $overrides['domain']
             : self::getCookieDomain($allowSubdomain);
 
-        // SameSite
-        $sameSite = array_key_exists('same_site', $overrides)
-            ? $overrides['same_site']
-            : ($secure ? 'none' : 'lax');
-
-        // Auto-fix: SameSite=None requires Secure=true
+        // lax is correct for first-party login and OAuth redirects (google/admin)
+        $sameSite = Str::lower(($overrides['same_site'] ?? 'lax'));
         if ($sameSite === 'none' && !$secure) {
             $sameSite = 'lax';
         }
 
-        // Path
-        $path = array_key_exists('path', $overrides)
-            ? $overrides['path']
-            : '/';
+        // Helper-only keys must not be merged into the final config
+        unset($overrides['allow_subdomain']);
 
-        // cookie and lifetime
-        $cookieName = $overrides['cookie'] ?? null;
-        $lifetime   = $overrides['lifetime'] ?? 120;
-
-        // Assemble, then merge remaining overrides
         return array_merge([
             'domain'    => $domain,
-            'path'      => $path,
+            'path'      => ($overrides['path'] ?? '/'),
             'secure'    => $secure,
             'same_site' => $sameSite,
-            'cookie'    => $cookieName,
-            'lifetime'  => $lifetime,
-        ], $overrides);
+            'cookie'    => ($overrides['cookie'] ?? null),
+            'lifetime'  => ($overrides['lifetime'] ?? 120),
+        ], $overrides, [
+            // computed values win over raw overrides
+            'domain'    => $domain,
+            'secure'    => $secure,
+            'same_site' => $sameSite,
+        ]);
     }
 
     /**
