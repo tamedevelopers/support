@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tamedevelopers\Support;
 
-use Tamedevelopers\Support\Process\Http;
 use Tamedevelopers\Support\Str;
 use Tamedevelopers\Support\Time;
+use Tamedevelopers\Support\Process\Http;
 
 final class Cookie{
     
@@ -111,11 +111,23 @@ final class Cookie{
      * Expire the given cookie.
      *
      * @param mixed $name
+     * @param bool $withSubdomain
      * @return void
      */
-    public static function forget($name)
+    public static function forget($name, $withSubdomain = false)
     {
-        self::set($name, null, -2628000); // 5 years ago
+        $expire = time() - 3600;
+
+        // Clear host-only variant (no domain)
+        self::set($name, null, $expire, '/', null);
+
+        // Clear subdomain-scoped variant if domain exists
+        if($withSubdomain){
+            $domain = Http::getCookieDomain($withSubdomain);
+            if (!empty($domain) && Str::startsWith($domain, '.')) {
+                self::set($name, null, $expire, '/', $domain);
+            }
+        }
     }
 
     /**
@@ -192,7 +204,7 @@ final class Cookie{
      */
     public static function all($name = null)
     {
-        return self::get($name) ?? $_COOKIE;
+        return self::get($name, $_COOKIE);
     }
 
     /**
@@ -205,7 +217,9 @@ final class Cookie{
     public static function pull($name, $default = null)
     {
         $value = self::get($name, $default);
+
         self::forget($name);
+
         return $value;
     }
 

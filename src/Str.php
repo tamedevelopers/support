@@ -827,27 +827,47 @@ class Str
     }
 
     /**
-     * Check if a string starts with a given substring.
+     * Determine if a given string starts with a given substring.
      *
      * @param string $haystack
-     * @param string $needle
+     * @param string|iterable<string> $needles
      * @return bool
      */
-    public static function startsWith(string $haystack, string $needle)
+    public static function startsWith($haystack, $needles)
     {
-        return strncmp($haystack, $needle, strlen($needle)) === 0;
+        if (! is_iterable($needles)) {
+            $needles = [$needles];
+        }
+
+        foreach ($needles as $needle) {
+            if ((string) $needle !== '' && str_starts_with((string) $haystack, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
-     * Check if a string ends with a given substring.
+     * Determine if a given string ends with a given substring.
      *
-     * @param string $haystack
-     * @param string $needle
+     * @param  string  $haystack
+     * @param  string|iterable<string>  $needles
      * @return bool
      */
-    public static function endsWith(string $haystack, string $needle)
+    public static function endsWith($haystack, $needles)
     {
-        return mb_substr($haystack, -strlen($needle)) === $needle;
+        if (! is_iterable($needles)) {
+            $needles = (array) $needles;
+        }
+
+        foreach ($needles as $needle) {
+            if ((string) $needle !== '' && str_ends_with((string) $haystack, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

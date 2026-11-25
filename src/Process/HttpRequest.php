@@ -331,13 +331,12 @@ class HttpRequest implements RequestInterface
             return null;
         }
 
-        // Host-only cookie unless subdomain sharing is explicitly wanted
-        if (!$withSubdomain) {
-            return null;
+        // Real domain: leading dot allows subdomains.
+        if ($withSubdomain) {
+            $host = '.' . ltrim($host, '.');
         }
         
-        // Real domain: leading dot allows subdomains.
-        return '.' . ltrim($host, '.');
+        return $host;
     }
 
     /**
@@ -431,9 +430,10 @@ class HttpRequest implements RequestInterface
      *
      * @param mixed $name
      * @param mixed $lifetime
+     * @param bool $force
      * @return void
      */
-    public static function resetBrowserState($name = null, $lifetime = 120): void
+    public static function resetBrowserState($name = null, $lifetime = 120, $force = false): void
     {
         if(headers_sent() || empty($name)){
             return;
@@ -441,7 +441,7 @@ class HttpRequest implements RequestInterface
 
         $class = new Cookie();
 
-        if($class->has($name)){
+        if($class->has($name) && !$force){
             return;
         }
         
@@ -449,7 +449,7 @@ class HttpRequest implements RequestInterface
         $cookies = self::cookies();
         if (!empty($cookies)) {
             foreach ($cookies as $cookieName => $value) {
-                $class->forget($cookieName);
+                $class->forget($cookieName, true);
             }
         }
 
@@ -557,22 +557,15 @@ class HttpRequest implements RequestInterface
      */
     private static function buildSessionConfig(array $overrides = []): array
     {
-        // Secure flag
-        $secure = array_key_exists('secure', $overrides)
-            ? (bool) $overrides['secure']
-            : self::isSecure();
+        $secure         = (bool) ($overrides['secure'] ?? self::isSecure());
+        $allowSubdomain = (bool) ($overrides['allow_subdomain'] ?? false);
+        $domain         = ($overrides['domain'] ?? self::getCookieDomain($allowSubdomain));
+        $sameSite       = Str::lower(($overrides['same_site'] ?? 'lax'));
+        $path           = ($overrides['path'] ?? self::getBasePath());
+        $cookie         = ($overrides['cookie'] ?? null);
+        $lifetime       = ($overrides['lifetime'] ?? 120);
 
-        // Domain
-        $allowSubdomain = array_key_exists('allow_subdomain', $overrides)
-            ? (bool) $overrides['allow_subdomain']
-            : false;
-
-        $domain = array_key_exists('domain', $overrides)
-            ? $overrides['domain']
-            : self::getCookieDomain($allowSubdomain);
-
-        // lax is correct for first-party login and OAuth redirects (google/admin)
-        $sameSite = Str::lower(($overrides['same_site'] ?? 'lax'));
+        // lax is correct for first-party login and OAuth redirects
         if ($sameSite === 'none' && !$secure) {
             $sameSite = 'lax';
         }
@@ -582,17 +575,12 @@ class HttpRequest implements RequestInterface
 
         return array_merge([
             'domain'    => $domain,
-            'path'      => ($overrides['path'] ?? '/'),
+            'path'      => $path,
             'secure'    => $secure,
             'same_site' => $sameSite,
-            'cookie'    => ($overrides['cookie'] ?? null),
-            'lifetime'  => ($overrides['lifetime'] ?? 120),
-        ], $overrides, [
-            // computed values win over raw overrides
-            'domain'    => $domain,
-            'secure'    => $secure,
-            'same_site' => $sameSite,
-        ]);
+            'cookie'    => $cookie,
+            'lifetime'  => $lifetime,
+        ], $overrides);
     }
 
     /**
